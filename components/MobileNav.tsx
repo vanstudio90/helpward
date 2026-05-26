@@ -46,11 +46,10 @@ export function MobileTopBar({ onOpen }: { onOpen: () => void }) {
           <Bell className="w-5 h-5 text-slate-700" />
           <span className="absolute top-0.5 right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">3</span>
         </button>
-        <Link
-          href="/new-request"
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold whitespace-nowrap"
-        >
-          New Request <Plus className="w-3.5 h-3.5" />
+        <Link href="/settings" className="shrink-0 relative">
+          <img src="https://i.pravatar.cc/80?img=12" className="w-8 h-8 rounded-full object-cover" alt="" />
+          <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+          <span className="sr-only">Profile</span>
         </Link>
       </div>
     </header>
