@@ -41,12 +41,12 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Stat cards (always 4-up, tighter on mobile) */}
-      <div className="grid grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-5">
-        <StatCard icon={<Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-brand-600" />} tint="bg-brand-50" label="Upcoming Tasks" value={String(stats.upcoming)} cta="View all" href="/bookings" arrow />
-        <StatCard icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />} tint="bg-amber-50" label="In Progress" value={String(stats.inProgress)} cta="Track now" href="/bookings" arrow />
-        <StatCard icon={<CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />} tint="bg-emerald-50" label="Completed" value={String(stats.completedMonth)} cta="This month" />
-        <StatCard icon={<DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />} tint="bg-orange-50" label="Total Spent" value={`$${stats.totalSpentMonth.toLocaleString()}`} cta="This month" />
+      {/* Stat cards — 2x2 mobile, 4-up sm+ */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3 lg:gap-4 mb-5">
+        <StatCard icon={<Calendar className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Upcoming Tasks" value={String(stats.upcoming)} cta="View all" href="/bookings" arrow />
+        <StatCard icon={<Activity className="w-5 h-5 text-amber-600" />} tint="bg-amber-50" label="In Progress" value={String(stats.inProgress)} cta="Track now" href="/bookings" arrow />
+        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />} tint="bg-emerald-50" label="Completed" value={String(stats.completedMonth)} cta="This month" />
+        <StatCard icon={<DollarSign className="w-5 h-5 text-orange-600" />} tint="bg-orange-50" label="Total Spent" value={`$${stats.totalSpentMonth.toLocaleString()}`} cta="This month" />
       </div>
 
       {/* MOBILE: Quick Request comes first. DESKTOP: lives in right column */}
@@ -57,9 +57,9 @@ export default function DashboardPage() {
       <div className="grid lg:grid-cols-3 gap-5 lg:gap-6">
         {/* Main column */}
         <div className="lg:col-span-2 space-y-5 lg:space-y-6">
-          {/* In progress — 2-col always, map on right */}
+          {/* In progress — stacked on smallest, 2-col on sm+, both cols on lg */}
           <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 lg:p-6">
-            <div className="grid grid-cols-[1fr_140px] sm:grid-cols-[1fr_180px] lg:grid-cols-2 gap-3 lg:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] lg:grid-cols-2 gap-4 lg:gap-5">
               {/* Left: details */}
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -97,8 +97,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Right: map */}
-              <div className="relative rounded-2xl overflow-hidden bg-slate-100 min-h-[200px] sm:min-h-[240px] lg:min-h-[260px]">
+              {/* Right: map (full-width when stacked on smallest mobile) */}
+              <div className="relative rounded-2xl overflow-hidden bg-slate-100 h-44 sm:h-auto sm:min-h-[240px] lg:min-h-[260px]">
                 <MapBackdrop />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs whitespace-nowrap">
                   <div className="font-bold text-emerald-600">12 min away</div>
@@ -226,7 +226,7 @@ function QuickRequestCard() {
   return (
     <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
       <h3 className="text-base font-bold text-slate-900 mb-3 sm:mb-4">Quick Request</h3>
-      <div className="grid grid-cols-6 lg:grid-cols-3 gap-2 sm:gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-3 gap-2 sm:gap-3">
         <Quick icon={<Car className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Ride / Driver" />
         <Quick icon={<ShoppingBag className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Errand" />
         <Quick icon={<Home className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Home Help" />
@@ -242,13 +242,13 @@ function StatCard({
   icon, tint, label, value, cta, href, arrow,
 }: { icon: React.ReactNode; tint: string; label: string; value: string; cta: string; href?: string; arrow?: boolean }) {
   const inner = (
-    <div className="rounded-2xl bg-white border border-slate-100 p-3 sm:p-4 lg:p-5 h-full flex flex-col gap-2 lg:gap-3 hover:border-slate-200 hover:-translate-y-0.5 transition">
+    <div className="rounded-2xl bg-white border border-slate-100 p-4 lg:p-5 h-full flex flex-col gap-2 lg:gap-3 hover:border-slate-200 hover:-translate-y-0.5 transition">
       <div className="flex items-start justify-between gap-2">
-        <div className="text-[10px] sm:text-xs text-slate-500 leading-tight">{label}</div>
-        <span className={`inline-flex w-7 h-7 sm:w-9 sm:h-9 ${tint} rounded-lg sm:rounded-xl items-center justify-center shrink-0`}>{icon}</span>
+        <div className="text-xs text-slate-500 leading-tight whitespace-nowrap">{label}</div>
+        <span className={`inline-flex w-9 h-9 ${tint} rounded-xl items-center justify-center shrink-0`}>{icon}</span>
       </div>
-      <div className="text-lg sm:text-2xl lg:text-3xl font-bold text-slate-900 leading-none">{value}</div>
-      <div className="text-[10px] sm:text-xs font-semibold text-brand-700 inline-flex items-center gap-0.5 mt-auto">
+      <div className="text-2xl lg:text-3xl font-bold text-slate-900 leading-none">{value}</div>
+      <div className="text-xs font-semibold text-brand-700 inline-flex items-center gap-0.5 mt-auto whitespace-nowrap">
         {cta} {arrow && href && <ChevronRight className="w-3 h-3" />}
       </div>
     </div>
