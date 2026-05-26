@@ -87,8 +87,6 @@ export const services: Service[] = [
     image: u("1511895426328-dc8714191300") },
   { slug: "wedding-guest", title: "Wedding Guest", blurb: "Trained guests fill seats at your wedding — smile, applaud, take group photos. Rehearsed roles on request.", fromPrice: 60, eta: "Schedule", category: "Lifestyle",
     image: u("1519741497674-611481863552") },
-  { slug: "professional-cuddler", title: "Professional Cuddler", blurb: "Certified cuddlers offer non-sexual hugs, hand-holding and quiet company — clearly consented, fully clothed.", fromPrice: 50, eta: "Today", category: "Lifestyle",
-    image: u("1573497019418-b400bb3ab074") },
   { slug: "shopping-companion", title: "Shopping Companion", blurb: "A second opinion at the mall — fashion eye, carries bags, keeps you company. Personal stylists available for a premium.", fromPrice: 22, eta: "Today", category: "Lifestyle",
     image: u("1483985988355-763728e1935b") },
   { slug: "dog-walking", title: "Dog Walking", blurb: "Vetted walker takes your dog out for 30 or 60 minutes — fresh water, treats, GPS-tracked route and photo update.", fromPrice: 20, eta: "Starts in 15 min", category: "Lifestyle",
