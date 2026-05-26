@@ -4,6 +4,7 @@ import {
   Home, Box, MessageSquare, Phone, Headphones, ChevronRight, Activity, MoreHorizontal,
 } from "lucide-react";
 import { ServiceIcon } from "@/components/ServiceIcon";
+import { MapBackdrop } from "@/components/MapBackdrop";
 import { stats, bookings, transactions, providerById } from "@/lib/mock";
 
 export default function DashboardPage() {
@@ -93,8 +94,7 @@ export default function DashboardPage() {
 
               {/* Map */}
               <div className="relative rounded-2xl overflow-hidden bg-slate-100 min-h-[260px]">
-                <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=900&q=70" className="absolute inset-0 w-full h-full object-cover" alt="" />
-                <div className="absolute inset-0 bg-gradient-to-t from-white/30 to-transparent" />
+                <MapBackdrop />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg px-3 py-2 text-xs">
                   <div className="font-bold text-slate-900">12 min away</div>
                   <div className="text-slate-500">1.2 km from you</div>

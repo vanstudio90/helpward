@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   Sparkles, Shield, MapPin, Lock, ArrowRight, Play, Car, Home, ShoppingBag,
-  User, Heart, Briefcase, CheckCircle2, Globe, Menu, ChevronDown, X, Star,
+  User, Heart, Briefcase, Globe, Menu, ChevronDown, X, Star,
 } from "lucide-react";
+import { MapBackdrop } from "@/components/MapBackdrop";
 
 const popular = [
   { icon: Car, tone: "bg-brand-50 text-brand-600", title: "Transportation",
@@ -119,18 +120,14 @@ export default function LandingPage() {
 
             {/* Map — mobile order 2, desktop right column spans both rows */}
             <div className="relative lg:row-start-1 lg:row-span-2 lg:col-start-2">
-              <div className="relative aspect-[4/3] sm:aspect-[5/4] rounded-3xl overflow-hidden shadow-xl shadow-brand-900/10 bg-gradient-to-br from-brand-100 to-sky-100">
-                <img
-                  src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1400&q=70"
-                  alt="Live tracking on map"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                {/* Route avatars overlay (decorative) */}
+              <div className="relative aspect-[4/3] sm:aspect-[5/4] rounded-3xl overflow-hidden shadow-xl shadow-brand-900/10">
+                <MapBackdrop />
+                {/* Route avatars (decorative — positioned along the SVG route) */}
                 <div className="absolute inset-0 pointer-events-none">
-                  <img src="https://i.pravatar.cc/60?img=12" className="absolute top-[28%] left-[42%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" />
-                  <img src="https://i.pravatar.cc/60?img=45" className="absolute top-[20%] right-[10%] w-9 h-9 sm:w-10 sm:h-10 rounded-full ring-2 ring-white shadow" alt="" />
-                  <img src="https://i.pravatar.cc/60?img=33" className="absolute top-[48%] left-[26%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" />
-                  <img src="https://i.pravatar.cc/60?img=58" className="absolute top-[60%] left-[48%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" />
+                  <img src="https://i.pravatar.cc/60?img=12" className="absolute top-[20%] left-[44%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" />
+                  <img src="https://i.pravatar.cc/60?img=45" className="absolute top-[16%] right-[10%] w-9 h-9 sm:w-10 sm:h-10 rounded-full ring-2 ring-white shadow" alt="" />
+                  <img src="https://i.pravatar.cc/60?img=33" className="absolute top-[36%] left-[24%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" />
+                  <img src="https://i.pravatar.cc/60?img=58" className="absolute top-[58%] left-[48%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" />
                 </div>
               </div>
 

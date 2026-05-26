@@ -6,6 +6,7 @@ import {
   Send, Plus, Bell, Headphones,
 } from "lucide-react";
 import { conversations, providerById } from "@/lib/mock";
+import { MapBackdrop } from "@/components/MapBackdrop";
 import { cn } from "@/lib/cn";
 
 export default function MessagesPage() {
@@ -177,7 +178,7 @@ export default function MessagesPage() {
               <Row k="Payment" v="$48.50" badge="Paid" />
             </dl>
             <div className="mt-4 rounded-xl overflow-hidden h-32 bg-slate-100 relative">
-              <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=800&q=70" className="absolute inset-0 w-full h-full object-cover" alt="" />
+              <MapBackdrop />
               <div className="absolute bottom-2 right-2 bg-white text-xs rounded-lg px-2 py-1 shadow">
                 <div className="font-bold">12 min away</div>
                 <div className="text-slate-500">1.2 km from you</div>
