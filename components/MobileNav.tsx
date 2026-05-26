@@ -6,6 +6,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Plus, Calendar, MessageCircle, Menu, X, Bell, User2,
   Grid3x3, Heart, CreditCard, Star, Briefcase, BarChart3, Settings, Gift,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -41,6 +42,9 @@ export function MobileTopBar({ onOpen }: { onOpen: () => void }) {
         <Link href="/" className="flex items-center gap-2 flex-1 min-w-0">
           <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center font-bold text-sm">H</div>
           <span className="text-base font-bold truncate">Helpward</span>
+        </Link>
+        <Link href="/messages" aria-label="Messages" className="p-2 rounded-lg hover:bg-slate-100">
+          <MessageSquare className="w-5 h-5 text-slate-700" />
         </Link>
         <button aria-label="Notifications" className="relative p-2 rounded-lg hover:bg-slate-100">
           <Bell className="w-5 h-5 text-slate-700" />
