@@ -64,6 +64,42 @@ export const services: Service[] = [
     image: u("1511795409834-ef04bbd61622") },
   { slug: "property-inspection", title: "Property Inspection", blurb: "A verified human inspects & reports.", fromPrice: 60, eta: "60 min", category: "Business",
     image: u("1564013799919-ab600027ffc6") },
+
+  // Transportation
+  { slug: "motorcycle-taxi", title: "Motorcycle Taxi", blurb: "A licensed rider zips you through traffic on a motorcycle.", fromPrice: 12, eta: "10 min", category: "Transportation",
+    image: u("1568772585407-9361f9bf3a87") },
+
+  // Home Help
+  { slug: "maid-service", title: "Maid Service", blurb: "Cleaning, cooking, laundry & household help by the hour.", fromPrice: 35, eta: "Today", category: "Home Help",
+    image: u("1527515637462-cff94eecc1ac") },
+  { slug: "appliance-repair", title: "Appliance Repair", blurb: "Fix dishwashers, fridges, washers, dryers and more.", fromPrice: 55, eta: "Same day", category: "Home Help",
+    image: u("1581092160562-40aa08e78837") },
+
+  // Errands
+  { slug: "food-delivery", title: "Food Delivery", blurb: "Pick up a restaurant order and bring it hot to your door.", fromPrice: 10, eta: "30-45 min", category: "Errands",
+    image: u("1565299624946-b28f40a0ae38") },
+  { slug: "medicine-pickup", title: "Medicine Pickup", blurb: "We pick up your prescription from the pharmacy.", fromPrice: 15, eta: "30 min", category: "Errands",
+    image: u("1471864190281-a93a3070b6de") },
+
+  // Presence
+  { slug: "listening-service", title: "Listening Service", blurb: "Pay someone to simply listen. No therapy, no advice — just attention.", fromPrice: 20, eta: "Today", category: "Presence",
+    image: u("1521737711867-e3b97375f902") },
+  { slug: "sleep-call-companion", title: "Sleep Call Companion", blurb: "Someone stays on voice or video call while you fall asleep.", fromPrice: 18, eta: "Tonight", category: "Presence",
+    image: u("1455642305367-68834a1da7ab") },
+
+  // Lifestyle — companionship
+  { slug: "rent-a-friend", title: "Rent-a-Friend", blurb: "Hire someone to hang out — events, meals, exploring the city.", fromPrice: 25, eta: "Today", category: "Lifestyle",
+    image: u("1529156069898-49953e39b3ac") },
+  { slug: "date-companion", title: "Date Companion", blurb: "Platonic plus-one for dinners, shopping and family events.", fromPrice: 40, eta: "Today", category: "Lifestyle",
+    image: u("1495546968767-f0573cca821e") },
+  { slug: "family-standin", title: "Family Stand-in", blurb: "Actors play a parent, spouse or sibling for weddings, visits & events.", fromPrice: 80, eta: "Schedule", category: "Lifestyle",
+    image: u("1511895426328-dc8714191300") },
+  { slug: "wedding-guest", title: "Wedding Guest", blurb: "Trained guests attend your wedding — smile, clap, take photos.", fromPrice: 60, eta: "Schedule", category: "Lifestyle",
+    image: u("1519741497674-611481863552") },
+  { slug: "professional-cuddler", title: "Professional Cuddler", blurb: "Non-sexual physical comfort — hugs, talking, emotional support.", fromPrice: 50, eta: "Today", category: "Lifestyle",
+    image: u("1573497019418-b400bb3ab074") },
+  { slug: "shopping-companion", title: "Shopping Companion", blurb: "Walk the mall with you — second opinion, carry bags, keep company.", fromPrice: 22, eta: "Today", category: "Lifestyle",
+    image: u("1483985988355-763728e1935b") },
 ];
 
 export type Provider = {
