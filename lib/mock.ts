@@ -28,43 +28,43 @@ export const categories: { label: ServiceCategory; icon: string }[] = [
   { label: "Business", icon: "briefcase" },
 ];
 
-const u = (id: number, w = 800) =>
+const u = (id: string, w = 800) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=70`;
 
 export const services: Service[] = [
   { slug: "designated-driver", title: "Designated Driver", blurb: "A verified driver drives you & your car home safely.", fromPrice: 29, eta: "20 min", category: "Transportation", popular: true,
-    image: "1502877338535-766e1452684a" },
+    image: u("1532974297617-c0f05fe48bff") },
   { slug: "furniture-assembly", title: "Furniture Assembly", blurb: "Experts assemble your furniture quickly. IKEA, couches, beds & more.", fromPrice: 50, eta: "30 min", category: "Home Help",
-    image: "1581578731548-c64695cc6952" },
+    image: u("1581578731548-c64695cc6952") },
   { slug: "grocery-pickup", title: "Grocery Pickup", blurb: "We shop and deliver groceries to your door.", fromPrice: 15, eta: "30-60 min", category: "Errands", popular: true,
-    image: "1542838132-92c53300491e" },
+    image: u("1543168256-418811576931") },
   { slug: "house-check-in", title: "House Check-In", blurb: "We check your home and send updates.", fromPrice: 20, eta: "30 min", category: "Home Help",
-    image: "1568605114967-8130f3a36994" },
+    image: u("1568605114967-8130f3a36994") },
   { slug: "package-return", title: "Package Return", blurb: "Return to any store/courier.", fromPrice: 20, eta: "20-40 min", category: "Errands",
-    image: "1607082348824-0a96f2a4b9da" },
+    image: u("1607082348824-0a96f2a4b9da") },
   { slug: "moving-help", title: "Moving Help", blurb: "Get help loading, unloading or moving.", fromPrice: 40, eta: "Arrives in 30 min", category: "Home Help",
-    image: "1600585154340-be6161a56a0c" },
+    image: u("1600585154340-be6161a56a0c") },
   { slug: "package-delivery", title: "Package Delivery", blurb: "Pick up and deliver any item quickly.", fromPrice: 12, eta: "30 min", category: "Errands",
-    image: "1586528116311-ad8dd3c8310d" },
+    image: u("1586528116311-ad8dd3c8310d") },
   { slug: "wait-in-line", title: "Wait in Line", blurb: "We wait in line so you don't have to.", fromPrice: 15, eta: "Starts in 15 min", category: "Presence",
-    image: "1521791136064-7986c2920216" },
+    image: u("1521791136064-7986c2920216") },
   { slug: "tv-mounting", title: "TV Mounting", blurb: "Securely mount any TV.", fromPrice: 60, eta: "30-45 min", category: "Home Help",
-    image: "1593359677879-a4bb92f829d1" },
+    image: u("1593359677879-a4bb92f829d1") },
   { slug: "dog-walking", title: "Dog Walking", blurb: "Walk & care for your dog.", fromPrice: 20, eta: "Starts in 15 min", category: "Lifestyle",
-    image: "1587300003388-59208cc962cb" },
+    image: u("1587300003388-59208cc962cb") },
   { slug: "errand-runner", title: "Errand Runner", blurb: "Any errand, any store.", fromPrice: 20, eta: "20-40 min", category: "Errands",
-    image: "1556909114-f6e7ad7d3136" },
+    image: u("1556909114-f6e7ad7d3136") },
   { slug: "elder-assistance", title: "Elder Assistance", blurb: "Companion & errands for seniors.", fromPrice: 25, eta: "45 min", category: "Lifestyle",
-    image: "1559839734-2b71ea197ec2" },
+    image: u("1559839734-2b71ea197ec2") },
   { slug: "car-battery-jump", title: "Car Battery Jump", blurb: "We jump-start your car.", fromPrice: 35, eta: "25 min", category: "Transportation",
-    image: "1485827404703-89b55fcc595e" },
+    image: u("1485827404703-89b55fcc595e") },
   { slug: "tech-setup", title: "Tech Setup", blurb: "Set up devices, Wi-Fi, smart home.", fromPrice: 45, eta: "45 min", category: "Home Help",
-    image: "1517048676732-d65bc937f952" },
+    image: u("1517048676732-d65bc937f952") },
   { slug: "event-companion", title: "Event Companion", blurb: "A plus-one for any event.", fromPrice: 50, eta: "On schedule", category: "Lifestyle",
-    image: "1511795409834-ef04bbd61622" },
+    image: u("1511795409834-ef04bbd61622") },
   { slug: "property-inspection", title: "Property Inspection", blurb: "A verified human inspects & reports.", fromPrice: 60, eta: "60 min", category: "Business",
-    image: "1568605114967-8130f3a36994" },
-].map((s) => ({ ...s, image: u(Number(s.image.replace(/[^0-9]/g, ""))) }));
+    image: u("1564013799919-ab600027ffc6") },
+];
 
 export type Provider = {
   id: string;
