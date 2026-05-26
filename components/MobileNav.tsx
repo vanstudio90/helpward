@@ -4,17 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  LayoutDashboard, Plus, Calendar, MessageCircle, Menu, X,
+  LayoutDashboard, Plus, Calendar, MessageCircle, Menu, X, Bell, User2,
   Grid3x3, Heart, CreditCard, Star, Briefcase, BarChart3, Settings, Gift,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const primary = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/services", label: "Services", icon: Grid3x3 },
-  { href: "/new-request", label: "Request", icon: Plus, primary: true },
-  { href: "/messages", label: "Chats", icon: MessageCircle, badge: 3 },
-  { href: "/bookings", label: "Tasks", icon: Calendar },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/bookings", label: "My Tasks", icon: Calendar },
+  { href: "/new-request", label: "", icon: Plus, primary: true },
+  { href: "/messages", label: "Messages", icon: MessageCircle, badge: 3 },
+  { href: "/settings", label: "Profile", icon: User2 },
 ];
 
 const drawer = [
@@ -33,20 +33,25 @@ const drawer = [
 
 export function MobileTopBar({ onOpen }: { onOpen: () => void }) {
   return (
-    <header className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
-      <div className="flex items-center justify-between px-4 h-14">
-        <button
-          aria-label="Open menu"
-          onClick={onOpen}
-          className="p-2 -ml-2 rounded-lg hover:bg-slate-100"
-        >
+    <header className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
+      <div className="flex items-center gap-3 px-4 h-14">
+        <button aria-label="Open menu" onClick={onOpen} className="p-2 -ml-2 rounded-lg hover:bg-slate-100">
           <Menu className="w-5 h-5" />
         </button>
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 flex-1 min-w-0">
           <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center font-bold text-sm">H</div>
-          <span className="text-base font-bold">Helpward</span>
+          <span className="text-base font-bold truncate">Helpward</span>
         </Link>
-        <img src="https://i.pravatar.cc/80?img=12" className="w-8 h-8 rounded-full object-cover" alt="" />
+        <button aria-label="Notifications" className="relative p-2 rounded-lg hover:bg-slate-100">
+          <Bell className="w-5 h-5 text-slate-700" />
+          <span className="absolute top-0.5 right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">3</span>
+        </button>
+        <Link
+          href="/new-request"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold whitespace-nowrap"
+        >
+          New Request <Plus className="w-3.5 h-3.5" />
+        </Link>
       </div>
     </header>
   );
@@ -65,12 +70,12 @@ export function MobileBottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center justify-end py-2"
+                aria-label="New Request"
+                className="flex flex-col items-center justify-center py-2"
               >
-                <span className="w-12 h-12 -mt-6 rounded-2xl bg-brand-600 text-white shadow-lg flex items-center justify-center">
+                <span className="w-12 h-12 -mt-6 rounded-full bg-brand-600 text-white shadow-lg flex items-center justify-center">
                   <Icon className="w-5 h-5" />
                 </span>
-                <span className="text-[10px] font-medium mt-1 text-slate-600">{item.label}</span>
               </Link>
             );
           }
