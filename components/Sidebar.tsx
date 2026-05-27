@@ -4,15 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Plus, Grid3x3, MessageCircle, Calendar, Heart,
-  CreditCard, Star, Briefcase, BarChart3, Settings, Gift, ChevronDown,
+  CreditCard, Star, Briefcase, BarChart3, Settings, Gift, ChevronDown, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { logoutAction } from "@/app/(auth)/auth/actions";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/new-request", label: "New Request", icon: Plus },
   { href: "/services", label: "All Services", icon: Grid3x3 },
-  { href: "/messages", label: "Messages", icon: MessageCircle, badge: 3 },
+  { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/bookings", label: "Bookings", icon: Calendar },
   { href: "/saved-providers", label: "Saved Providers", icon: Heart },
   { href: "/payments", label: "Payments", icon: CreditCard },
@@ -22,7 +23,11 @@ const nav = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  user,
+}: {
+  user?: { full_name: string; avatar_url: string | null; wallet_balance_cents: number } | null;
+}) {
   const pathname = usePathname();
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
@@ -48,11 +53,6 @@ export function Sidebar() {
             >
               <Icon className={cn("w-5 h-5", active ? "text-brand-600" : "text-slate-400 group-hover:text-slate-600")} />
               <span className="flex-1">{item.label}</span>
-              {item.badge ? (
-                <span className="bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
-                  {item.badge}
-                </span>
-              ) : null}
               {item.tag ? (
                 <span className="bg-brand-600 text-white text-[10px] font-semibold rounded-md px-1.5 py-0.5">
                   {item.tag}
@@ -77,22 +77,42 @@ export function Sidebar() {
           </button>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 flex items-center gap-3">
-          <img src="https://i.pravatar.cc/80?img=12" alt="" className="w-9 h-9 rounded-full object-cover" />
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-slate-900 truncate">Alex Morgan</div>
-            <div className="text-xs text-slate-500 truncate">View profile</div>
-          </div>
-          <ChevronDown className="w-4 h-4 text-slate-400" />
-        </div>
+        {user && (
+          <Link href="/settings" className="block rounded-2xl border border-slate-200 bg-white p-3 hover:bg-slate-50">
+            <div className="flex items-center gap-3">
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-sm">
+                  {user.full_name?.[0] ?? "?"}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-slate-900 truncate">{user.full_name}</div>
+                <div className="text-xs text-slate-500 truncate">View profile</div>
+              </div>
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            </div>
+          </Link>
+        )}
 
-        <div className="rounded-2xl bg-slate-50 p-3">
-          <div className="text-xs text-slate-500">Your Balance</div>
-          <div className="text-lg font-bold text-slate-900">$124.50</div>
-          <button className="mt-2 w-full text-xs font-semibold text-brand-700 bg-white border border-slate-200 rounded-lg py-2 hover:bg-brand-50 transition">
-            Add Credits +
+        {user && (
+          <div className="rounded-2xl bg-slate-50 p-3">
+            <div className="text-xs text-slate-500">Your Balance</div>
+            <div className="text-lg font-bold text-slate-900">
+              ${(user.wallet_balance_cents / 100).toFixed(2)}
+            </div>
+            <Link href="/payments" className="mt-2 block text-center text-xs font-semibold text-brand-700 bg-white border border-slate-200 rounded-lg py-2 hover:bg-brand-50 transition">
+              Add Credits +
+            </Link>
+          </div>
+        )}
+
+        <form action={logoutAction}>
+          <button className="w-full inline-flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg py-2 hover:bg-slate-50">
+            <LogOut className="w-3.5 h-3.5" /> Log out
           </button>
-        </div>
+        </form>
       </div>
     </aside>
   );

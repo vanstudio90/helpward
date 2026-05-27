@@ -32,7 +32,13 @@ const drawer = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function MobileTopBar({ onOpen }: { onOpen: () => void }) {
+export function MobileTopBar({
+  onOpen, avatarUrl, fullName,
+}: {
+  onOpen: () => void;
+  avatarUrl?: string | null;
+  fullName?: string | null;
+}) {
   return (
     <header className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
       <div className="flex items-center gap-3 px-4 h-14">
@@ -50,11 +56,18 @@ export function MobileTopBar({ onOpen }: { onOpen: () => void }) {
           <Bell className="w-5 h-5 text-slate-700" />
           <span className="absolute top-0.5 right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">3</span>
         </button>
-        <Link href="/settings" className="shrink-0 relative">
-          <img src="https://i.pravatar.cc/80?img=12" className="w-8 h-8 rounded-full object-cover" alt="" />
-          <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
-          <span className="sr-only">Profile</span>
-        </Link>
+        {avatarUrl ? (
+          <Link href="/settings" className="shrink-0 relative">
+            <img src={avatarUrl} className="w-8 h-8 rounded-full object-cover" alt="" />
+            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+            <span className="sr-only">Profile</span>
+          </Link>
+        ) : (
+          <Link href="/settings" className="shrink-0 relative w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">
+            {fullName?.[0] ?? "?"}
+            <span className="sr-only">Profile</span>
+          </Link>
+        )}
       </div>
     </header>
   );
@@ -177,11 +190,17 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
   );
 }
 
-export function MobileShell({ children }: { children: React.ReactNode }) {
+export function MobileShell({
+  children, avatarUrl, fullName,
+}: {
+  children: React.ReactNode;
+  avatarUrl?: string | null;
+  fullName?: string | null;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <MobileTopBar onOpen={() => setOpen(true)} />
+      <MobileTopBar onOpen={() => setOpen(true)} avatarUrl={avatarUrl} fullName={fullName} />
       <MobileDrawer open={open} onClose={() => setOpen(false)} />
       {children}
       <MobileBottomNav />

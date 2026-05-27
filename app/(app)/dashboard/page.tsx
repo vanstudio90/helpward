@@ -2,29 +2,34 @@ import Link from "next/link";
 import {
   Bell, Search, Plus, Calendar, CheckCircle2, DollarSign, Car, ShoppingBag,
   Home, Box, MessageSquare, Phone, Headphones, ChevronRight, Activity, MoreHorizontal, User,
+  Sparkles,
 } from "lucide-react";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { MapBackdrop } from "@/components/MapBackdrop";
-import { stats, bookings, transactions, providerById } from "@/lib/mock";
+import {
+  getMe, getDashboardStats, getActiveBooking, listMyBookings,
+} from "@/lib/data/customer";
 
-export default function DashboardPage() {
-  const inProgress = bookings.find((b) => b.status === "in_progress")!;
-  const provider = providerById(inProgress.providerId)!;
-  const upcoming = bookings.filter((b) => b.status === "scheduled").slice(0, 2);
-  const recent = transactions.slice(0, 4);
+export default async function DashboardPage() {
+  const me = await getMe();
+  const stats = await getDashboardStats();
+  const inProgress = await getActiveBooking();
+  const upcoming = await listMyBookings({ status: "scheduled", limit: 2 });
+  const recent = await listMyBookings({ limit: 4 });
+
+  const firstName = me?.profile.full_name?.split(" ")[0] || "there";
+  const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
-      {/* Heading + (desktop-only) actions */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4 lg:mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Good morning, Alex! 👋</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{greeting}, {firstName}! 👋</h1>
           <p className="text-sm text-slate-500 mt-1">How can we help you today?</p>
         </div>
         <div className="hidden lg:flex items-center gap-3">
           <button className="relative p-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50">
             <Bell className="w-5 h-5 text-slate-700" />
-            <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">2</span>
           </button>
           <Link href="/new-request" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800">
             <Plus className="w-4 h-4" /> New Request
@@ -32,7 +37,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Full-width search bar */}
       <div className="relative mb-5 lg:mb-6">
         <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
         <input
@@ -41,172 +45,89 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Stat cards — 2x2 mobile, 4-up sm+ */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3 lg:gap-4 mb-5">
         <StatCard icon={<Calendar className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Upcoming Tasks" value={String(stats.upcoming)} cta="View all" href="/bookings" arrow />
-        <StatCard icon={<Activity className="w-5 h-5 text-amber-600" />} tint="bg-amber-50" label="In Progress" value={String(stats.inProgress)} cta="Track now" href="/bookings" arrow />
-        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />} tint="bg-emerald-50" label="Completed" value={String(stats.completedMonth)} cta="This month" />
-        <StatCard icon={<DollarSign className="w-5 h-5 text-orange-600" />} tint="bg-orange-50" label="Total Spent" value={`$${stats.totalSpentMonth.toLocaleString()}`} cta="This month" />
+        <StatCard icon={<Activity className="w-5 h-5 text-amber-600" />} tint="bg-amber-50" label="In Progress" value={String(stats.in_progress)} cta={stats.in_progress > 0 ? "Track now" : "—"} href="/bookings" arrow={stats.in_progress > 0} />
+        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />} tint="bg-emerald-50" label="Completed" value={String(stats.completed_month)} cta="This month" />
+        <StatCard icon={<DollarSign className="w-5 h-5 text-orange-600" />} tint="bg-orange-50" label="Total Spent" value={`$${(stats.total_spent_month_cents / 100).toFixed(stats.total_spent_month_cents % 100 ? 2 : 0)}`} cta="This month" />
       </div>
 
-      {/* MOBILE: Quick Request comes first. DESKTOP: lives in right column */}
+      {/* MOBILE: Quick Request first */}
       <section className="lg:hidden mb-5">
         <QuickRequestCard />
       </section>
 
       <div className="grid lg:grid-cols-3 gap-5 lg:gap-6">
-        {/* Main column */}
         <div className="lg:col-span-2 space-y-5 lg:space-y-6">
-          {/* In progress — stacked on smallest, 2-col on sm+, both cols on lg */}
-          <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 lg:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] lg:grid-cols-2 gap-4 lg:gap-5">
-              {/* Left: details */}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <h2 className="text-base lg:text-lg font-bold text-slate-900">In Progress</h2>
-                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live tracking
-                  </span>
-                </div>
-                <div className="text-sm sm:text-base font-bold text-slate-900">{inProgress.service}</div>
-                <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5">Task ID: #{inProgress.id}</div>
+          {inProgress ? (
+            <InProgressCard booking={inProgress} />
+          ) : (
+            <NoActiveCard />
+          )}
 
-                <div className="flex items-center gap-2 mt-3 sm:mt-4">
-                  <img src={provider.avatar} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0" alt="" />
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 truncate">
-                      {provider.name} <span className="text-brand-700 text-xs ml-0.5">★ {provider.rating}</span>
-                    </div>
-                    <div className="text-xs text-slate-500">Your Tasker</div>
-                  </div>
-                </div>
-
-                <dl className="mt-3 sm:mt-4 text-xs sm:text-sm divide-y divide-slate-100 border-y border-slate-100">
-                  <Row k="Estimated arrival" v="12 min" />
-                  <Row k="Started" v="10:24 AM" />
-                  <Row k="Address" v={inProgress.address} />
-                </dl>
-
-                <div className="flex items-center gap-2 mt-3 sm:mt-4">
-                  <Link href="/messages" className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-xl py-2 sm:py-2.5">
-                    <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Message {provider.name.split(" ")[0]}
-                  </Link>
-                  <button aria-label="Call" className="p-2 sm:p-2.5 rounded-xl border border-brand-200 text-brand-700 hover:bg-brand-50">
-                    <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </button>
-                </div>
+          {upcoming.length > 0 && (
+            <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 lg:p-6 lg:hidden">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-bold text-slate-900">Upcoming</h2>
+                <Link href="/bookings" className="text-xs font-semibold text-brand-700 inline-flex items-center gap-1">View calendar <ChevronRight className="w-3 h-3" /></Link>
               </div>
-
-              {/* Right: map (full-width when stacked on smallest mobile) */}
-              <div className="relative rounded-2xl overflow-hidden bg-slate-100 h-44 sm:h-auto sm:min-h-[240px] lg:min-h-[260px]">
-                <MapBackdrop />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs whitespace-nowrap">
-                  <div className="font-bold text-emerald-600">12 min away</div>
-                  <div className="text-slate-500">1.2 km from you</div>
-                </div>
-                <div className="absolute bottom-2 right-2 bg-white rounded-full p-0.5 shadow">
-                  <img src={provider.avatar} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full" alt="" />
-                </div>
+              <div className="grid grid-cols-2 gap-3 items-center">
+                {upcoming.map((b) => (
+                  <UpcomingMini key={b.id} booking={b} />
+                ))}
               </div>
-            </div>
-          </section>
+            </section>
+          )}
 
-          {/* Upcoming — 2 items side by side on mobile */}
-          <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 lg:p-6 lg:hidden">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-slate-900">Upcoming</h2>
-              <Link href="/bookings" className="text-xs font-semibold text-brand-700 inline-flex items-center gap-1">View calendar <ChevronRight className="w-3 h-3" /></Link>
-            </div>
-            <div className="grid grid-cols-2 gap-3 items-center">
-              {upcoming.map((b) => (
-                <div key={b.id} className="flex items-start gap-2.5 min-w-0">
-                  <div className="text-center w-10 shrink-0 bg-rose-50/60 rounded-lg py-1.5">
-                    <div className="text-[10px] font-bold uppercase text-rose-500">JUN</div>
-                    <div className="text-base font-bold text-slate-900 leading-none mt-0.5">{b.id.endsWith("HJ1") ? 6 : 7}</div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-slate-900 truncate">{b.service}</div>
-                    <div className="text-[11px] text-slate-500 truncate">{b.whenLabel.split("·")[0].trim()}</div>
-                    <div className="text-[11px] text-slate-500 truncate">{b.address.split(",")[0]}</div>
-                  </div>
-                </div>
-              ))}
-              <ChevronRight className="w-4 h-4 text-slate-300 absolute right-6 hidden" />
-            </div>
-          </section>
-
-          {/* Recent tasks */}
           <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 lg:p-6">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h2 className="text-base lg:text-lg font-bold text-slate-900">Recent Tasks</h2>
-              <Link href="/bookings" className="text-xs sm:text-sm font-semibold text-brand-700 inline-flex items-center gap-1">View all <ChevronRight className="w-3 h-3" /></Link>
+              {recent.length > 0 && (
+                <Link href="/bookings" className="text-xs sm:text-sm font-semibold text-brand-700 inline-flex items-center gap-1">View all <ChevronRight className="w-3 h-3" /></Link>
+              )}
             </div>
-            <ul className="divide-y divide-slate-100 -mx-1">
-              {recent.map((t) => {
-                const p = providerById(t.providerId)!;
-                return (
-                  <li key={t.id} className="flex items-center gap-2.5 sm:gap-3 px-1 py-2.5 sm:py-3">
-                    <ServiceIcon name={t.icon} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">{t.service}</div>
-                      <div className="text-[11px] text-slate-500 truncate">{t.date.replace(" · ", " • ")}</div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <img src={p.avatar} className="w-6 h-6 rounded-full" alt="" />
-                      <span className="hidden sm:inline text-xs text-slate-700 whitespace-nowrap">{p.name.split(" ")[0]} {p.name.split(" ")[1]?.[0]}.</span>
-                    </div>
-                    <StatusBadge status={t.status} />
-                    <div className="text-xs sm:text-sm font-bold text-slate-900 w-14 sm:w-16 text-right shrink-0">${t.amount.toFixed(2)}</div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
-                  </li>
-                );
-              })}
-            </ul>
+            {recent.length === 0 ? (
+              <EmptyState
+                icon={<Sparkles className="w-6 h-6 text-brand-600" />}
+                title="No tasks yet"
+                sub="Create your first request — a verified helper will be matched in seconds."
+                cta={{ href: "/new-request", label: "Start a request" }}
+              />
+            ) : (
+              <ul className="divide-y divide-slate-100 -mx-1">
+                {recent.map((b) => <RecentRow key={b.id} booking={b} />)}
+              </ul>
+            )}
           </section>
         </div>
 
-        {/* Side column (desktop only on mobile order, but Quick Request also lives here on desktop) */}
         <div className="space-y-5 lg:space-y-6">
           <section className="hidden lg:block">
             <QuickRequestCard />
           </section>
 
-          {/* Upcoming (desktop) */}
-          <section className="hidden lg:block rounded-2xl bg-white border border-slate-100 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-900">Upcoming</h3>
-              <Link href="/bookings" className="text-xs font-semibold text-brand-700">View calendar</Link>
-            </div>
-            <ul className="space-y-3">
-              {upcoming.map((b) => (
-                <li key={b.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50">
-                  <div className="text-center w-12 shrink-0">
-                    <div className="text-[10px] font-semibold uppercase text-rose-500">JUN</div>
-                    <div className="text-lg font-bold text-slate-900 leading-none">{b.id.endsWith("HJ1") ? 6 : 7}</div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-slate-900 truncate">{b.service}</div>
-                    <div className="text-xs text-slate-500 truncate">{b.whenLabel.split("·")[0]}</div>
-                    <div className="text-xs text-slate-500 truncate">{b.address.split(",")[0]}</div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300" />
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold text-slate-900">Recent Activity</h3>
-              <Link href="#" className="text-xs font-semibold text-brand-700 inline-flex items-center gap-1">View all <ChevronRight className="w-3 h-3" /></Link>
-            </div>
-            <ul className="space-y-3 text-sm">
-              <Activity2 icon={<CheckCircle2 className="w-4 h-4 text-emerald-600" />} text='Your task "Furniture assembly" is in progress.' time="10 min ago" />
-              <Activity2 icon={<User className="w-4 h-4 text-orange-500" />} text="James Carter started working on your task." time="12 min ago" />
-              <Activity2 icon={<DollarSign className="w-4 h-4 text-emerald-600" />} text="Payment of $48.50 was successful." time="Jun 5, 11:42 PM" />
-              <Activity2 icon={<ShoppingBag className="w-4 h-4 text-brand-600" />} text="Sarah T. completed your grocery pickup." time="Jun 5, 6:45 PM" />
-            </ul>
-          </section>
+          {upcoming.length > 0 && (
+            <section className="hidden lg:block rounded-2xl bg-white border border-slate-100 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-slate-900">Upcoming</h3>
+                <Link href="/bookings" className="text-xs font-semibold text-brand-700">View calendar</Link>
+              </div>
+              <ul className="space-y-3">
+                {upcoming.map((b) => (
+                  <li key={b.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50">
+                    <ServiceIcon name="calendar" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-slate-900 truncate">{b.service.title}</div>
+                      <div className="text-xs text-slate-500 truncate">
+                        {b.scheduled_for ? new Date(b.scheduled_for).toLocaleString() : "—"}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300" />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="rounded-2xl bg-slate-900 text-white p-5 relative overflow-hidden">
             <Headphones className="absolute right-3 top-1/2 -translate-y-1/2 w-20 h-20 text-slate-700/40" />
@@ -219,6 +140,118 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function InProgressCard({ booking }: { booking: NonNullable<Awaited<ReturnType<typeof getActiveBooking>>> }) {
+  const providerName = booking.provider?.profile?.full_name ?? "Your provider";
+  return (
+    <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 lg:p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] lg:grid-cols-2 gap-4 lg:gap-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <h2 className="text-base lg:text-lg font-bold text-slate-900">In Progress</h2>
+            <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live tracking
+            </span>
+          </div>
+          <div className="text-sm sm:text-base font-bold text-slate-900">{booking.service.title}</div>
+          <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5">Booking ID: #{booking.id.slice(0, 8)}</div>
+
+          <div className="flex items-center gap-2 mt-3 sm:mt-4">
+            {booking.provider?.profile?.avatar_url ? (
+              <img src={booking.provider.profile.avatar_url} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full shrink-0" alt="" />
+            ) : (
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold shrink-0">
+                {providerName[0]}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-slate-900 truncate">
+                {providerName}
+                {booking.provider?.rating_avg && (
+                  <span className="text-brand-700 text-xs ml-1">★ {booking.provider.rating_avg}</span>
+                )}
+              </div>
+              <div className="text-xs text-slate-500">Your provider</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 mt-4">
+            <Link href="/messages" className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-xl py-2 sm:py-2.5">
+              <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Message
+            </Link>
+            <button aria-label="Call" className="p-2 sm:p-2.5 rounded-xl border border-brand-200 text-brand-700 hover:bg-brand-50">
+              <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="relative rounded-2xl overflow-hidden bg-slate-100 h-44 sm:h-auto sm:min-h-[240px] lg:min-h-[260px]">
+          <MapBackdrop />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function NoActiveCard() {
+  return (
+    <section className="rounded-2xl bg-gradient-to-br from-brand-50 to-violet-50 border border-brand-100 p-6 sm:p-8 text-center">
+      <span className="inline-flex w-12 h-12 rounded-2xl bg-white items-center justify-center mb-3">
+        <Sparkles className="w-6 h-6 text-brand-600" />
+      </span>
+      <h2 className="text-lg font-bold text-slate-900">Nothing in progress</h2>
+      <p className="mt-1 text-sm text-slate-600">When you create a request, your active task shows up here with live tracking.</p>
+      <Link href="/new-request" className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold">
+        <Plus className="w-4 h-4" /> Create a request
+      </Link>
+    </section>
+  );
+}
+
+function UpcomingMini({ booking }: { booking: BookingWithProvider }) {
+  const date = booking.scheduled_for ? new Date(booking.scheduled_for) : null;
+  const month = date?.toLocaleDateString("en-US", { month: "short" }).toUpperCase() ?? "—";
+  const day = date?.getDate() ?? "—";
+  return (
+    <div className="flex items-start gap-2.5 min-w-0">
+      <div className="text-center w-10 shrink-0 bg-rose-50/60 rounded-lg py-1.5">
+        <div className="text-[10px] font-bold uppercase text-rose-500">{month}</div>
+        <div className="text-base font-bold text-slate-900 leading-none mt-0.5">{day}</div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-xs font-bold text-slate-900 truncate">{booking.service.title}</div>
+        <div className="text-[11px] text-slate-500 truncate">
+          {date?.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecentRow({ booking }: { booking: BookingWithProvider }) {
+  const date = new Date(booking.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return (
+    <li className="flex items-center gap-2.5 sm:gap-3 px-1 py-2.5 sm:py-3">
+      <ServiceIcon name={iconForService(booking.service.id)} size="sm" />
+      <div className="min-w-0 flex-1">
+        <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">{booking.service.title}</div>
+        <div className="text-[11px] text-slate-500 truncate">{date}</div>
+      </div>
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+        booking.status === "completed" ? "bg-emerald-50 text-emerald-700" :
+        booking.status === "cancelled" ? "bg-rose-50 text-rose-700" :
+        booking.status === "in_progress" ? "bg-amber-50 text-amber-700" :
+        "bg-brand-50 text-brand-700"
+      }`}>
+        {booking.status === "in_progress" ? "Active" : booking.status[0].toUpperCase() + booking.status.slice(1)}
+      </span>
+      <div className="text-xs sm:text-sm font-bold text-slate-900 w-14 sm:w-16 text-right shrink-0">
+        ${(booking.total_cents / 100).toFixed(2)}
+      </div>
+      <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+    </li>
   );
 }
 
@@ -256,15 +289,6 @@ function StatCard({
   return href ? <Link href={href} className="block">{inner}</Link> : inner;
 }
 
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex items-start justify-between py-2 gap-3">
-      <dt className="text-slate-500">{k}</dt>
-      <dd className="text-slate-900 font-medium text-right">{v}</dd>
-    </div>
-  );
-}
-
 function Quick({ icon, tint, label }: { icon: React.ReactNode; tint: string; label: string }) {
   return (
     <Link href="/new-request" className="flex flex-col items-center gap-1.5 p-1 rounded-xl hover:bg-slate-50">
@@ -274,27 +298,33 @@ function Quick({ icon, tint, label }: { icon: React.ReactNode; tint: string; lab
   );
 }
 
-function Activity2({ icon, text, time }: { icon: React.ReactNode; text: string; time: string }) {
+function EmptyState({
+  icon, title, sub, cta,
+}: { icon: React.ReactNode; title: string; sub: string; cta?: { href: string; label: string } }) {
   return (
-    <li className="flex items-start gap-3">
-      <span className="w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center mt-0.5 shrink-0">{icon}</span>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm text-slate-700">{text}</div>
-        <div className="text-[11px] text-slate-400 mt-0.5">{time}</div>
-      </div>
-    </li>
+    <div className="text-center py-8 sm:py-12">
+      <span className="inline-flex w-12 h-12 rounded-2xl bg-brand-50 items-center justify-center mb-3">{icon}</span>
+      <h3 className="text-base font-bold text-slate-900">{title}</h3>
+      <p className="mt-1 text-sm text-slate-500 max-w-xs mx-auto">{sub}</p>
+      {cta && (
+        <Link href={cta.href} className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold">
+          <Plus className="w-4 h-4" /> {cta.label}
+        </Link>
+      )}
+    </div>
   );
 }
 
-function StatusBadge({ status }: { status: "completed" | "pending" | "refunded" }) {
-  const map = {
-    completed: "bg-emerald-50 text-emerald-700",
-    pending: "bg-amber-50 text-amber-700",
-    refunded: "bg-rose-50 text-rose-700",
-  } as const;
-  return (
-    <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[11px] font-semibold shrink-0 ${map[status]}`}>
-      {status[0].toUpperCase() + status.slice(1)}
-    </span>
-  );
+function iconForService(slug: string): string {
+  if (slug.includes("driver") || slug.includes("motorcycle") || slug.includes("battery")) return "car";
+  if (slug.includes("grocery") || slug.includes("errand") || slug.includes("shopping")) return "bag";
+  if (slug.includes("dog")) return "paw";
+  if (slug.includes("furniture") || slug.includes("appliance") || slug.includes("tech")) return "wrench";
+  if (slug.includes("moving")) return "truck";
+  if (slug.includes("package")) return "box";
+  if (slug.includes("house") || slug.includes("maid") || slug.includes("inspection")) return "home";
+  if (slug.includes("key")) return "key";
+  return "spark";
 }
+
+import type { BookingWithProvider } from "@/lib/data/customer";
