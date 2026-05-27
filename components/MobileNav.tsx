@@ -6,8 +6,9 @@ import { useState } from "react";
 import {
   LayoutDashboard, Plus, Calendar, MessageCircle, Menu, X, Bell, User2,
   Grid3x3, Heart, CreditCard, Star, Briefcase, BarChart3, Settings, Gift,
-  MessageSquare,
+  MessageSquare, LogOut,
 } from "lucide-react";
+import { logoutAction } from "@/app/(auth)/auth/actions";
 import { cn } from "@/lib/cn";
 
 const primary = [
@@ -184,6 +185,14 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
             </div>
             <p className="text-xs text-slate-500">Invite friends and earn $20 in credits.</p>
           </div>
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className="w-full inline-flex items-center justify-center gap-2 text-sm font-semibold text-rose-600 border border-slate-200 rounded-xl py-2.5 hover:bg-rose-50"
+            >
+              <LogOut className="w-4 h-4" /> Log out
+            </button>
+          </form>
         </div>
       </aside>
     </>
