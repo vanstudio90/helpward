@@ -91,6 +91,9 @@ export async function updateProfileAction(
   const default_currency = country === "CA" ? "CAD" : "USD";
 
   if (!full_name) return { error: "Name can't be empty." };
+  if (full_name.length > 80) return { error: "Name is too long (max 80 chars)." };
+  if (phone && phone.length > 30) return { error: "Phone is too long." };
+  if (!["US", "CA"].includes(country)) return { error: "Country must be US or CA." };
 
   const { error } = await supabase
     .from("profiles")

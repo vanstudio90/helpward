@@ -14,6 +14,12 @@ export const metadata: Metadata = {
     siteName: "Helpward",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Helpward — Real humans. Real help. Right now.",
+    description:
+      "On-demand verified humans for anything you need in the real world.",
+  },
   icons: { icon: "/favicon.svg" },
 };
 

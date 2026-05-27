@@ -48,6 +48,10 @@ export function ChatThread({
   const send = () => {
     const text = draft.trim();
     if (!text) return;
+    if (text.length > 2000) {
+      setSendError("Message too long (max 2000 chars). Split it into a few sends.");
+      return;
+    }
     setDraft("");
 
     start(async () => {

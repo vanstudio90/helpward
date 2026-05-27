@@ -30,6 +30,12 @@ export async function createServiceAction(
 
   if (!id || !title || !blurb || !category_id) return { error: "All fields are required." };
   if (!base_price_dollars || base_price_dollars <= 0) return { error: "Price must be > 0." };
+  if (id.length > 60) return { error: "Slug too long (max 60 chars)." };
+  if (title.length > 80) return { error: "Title too long (max 80 chars)." };
+  if (blurb.length > 400) return { error: "Blurb too long (max 400 chars)." };
+  if (eta_label && eta_label.length > 40) return { error: "ETA label too long." };
+  if (image_url && !/^https:\/\//.test(image_url)) return { error: "Image URL must start with https://" };
+  if (image_url && image_url.length > 500) return { error: "Image URL too long." };
 
   try {
     await requireAdmin();

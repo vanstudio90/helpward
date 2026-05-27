@@ -53,11 +53,19 @@ export async function signupAction(
   if (!email || !password || !fullName) {
     return { error: "All fields are required." };
   }
+  if (email.length > 254) return { error: "Email is too long." };
+  if (fullName.length > 80) return { error: "Name is too long (max 80 chars)." };
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters." };
   }
+  if (password.length > 128) {
+    return { error: "Password is too long (max 128 chars)." };
+  }
   if (!["customer", "provider"].includes(role)) {
     return { error: "Invalid role." };
+  }
+  if (!["US", "CA"].includes(country)) {
+    return { error: "Country must be US or CA." };
   }
 
   const supabase = await createSupabaseServerClient();

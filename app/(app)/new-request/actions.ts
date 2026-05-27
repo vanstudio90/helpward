@@ -31,6 +31,12 @@ export async function createRequestAction(
   if (!addressText) {
     return { error: "Please enter an address." };
   }
+  if (addressText.length > 300) {
+    return { error: "Address is too long (max 300 chars)." };
+  }
+  if (notes && notes.length > 1000) {
+    return { error: "Notes are too long (max 1000 chars)." };
+  }
 
   // Look up service to fill in estimated price + duration
   const { data: service, error: svcErr } = await supabase

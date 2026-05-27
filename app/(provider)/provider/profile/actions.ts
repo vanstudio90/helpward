@@ -19,6 +19,9 @@ export async function updateProviderProfileAction(
     .split(",").map((s) => s.trim()).filter(Boolean);
 
   if (radius < 1 || radius > 200) return { error: "Service radius must be 1-200 km." };
+  if (bio && bio.length > 2000) return { error: "Bio is too long (max 2000 chars)." };
+  if (languages.length > 10) return { error: "Too many languages (max 10)." };
+  if (languages.some((l) => l.length > 40)) return { error: "Language names too long." };
 
   const { error } = await supabase
     .from("provider_profiles")
