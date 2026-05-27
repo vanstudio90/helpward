@@ -87,3 +87,18 @@ export async function logoutAction() {
   revalidatePath("/", "layout");
   redirect("/login");
 }
+
+export async function forgotPasswordAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) return { error: "Email is required." };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com"}/auth/reset-password`,
+  });
+  if (error) return { error: error.message };
+  return { success: "Check your inbox — if that email is registered we just sent a reset link." };
+}

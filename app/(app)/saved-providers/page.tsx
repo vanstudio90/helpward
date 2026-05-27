@@ -45,8 +45,8 @@ export default async function SavedProvidersPage() {
                   {p.rating_avg ? `★ ${p.rating_avg} (${p.rating_count} reviews)` : "New provider"} · {p.tasks_completed} tasks
                 </div>
               </div>
-              <button className="p-2 rounded-lg border border-brand-200 text-brand-700"><MessageSquare className="w-4 h-4" /></button>
-              <button className="p-2 rounded-lg border border-brand-200 text-brand-700"><Phone className="w-4 h-4" /></button>
+              <button aria-label={`Message ${p.profile.full_name}`} className="p-2 rounded-lg border border-brand-200 text-brand-700"><MessageSquare className="w-4 h-4" /></button>
+              <button aria-label={`Call ${p.profile.full_name}`} className="p-2 rounded-lg border border-brand-200 text-brand-700"><Phone className="w-4 h-4" /></button>
             </li>
           ))}
         </ul>

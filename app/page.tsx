@@ -345,9 +345,10 @@ export default function LandingPage() {
             <span>© {new Date().getFullYear()} Helpward — Real humans, real help.</span>
           </div>
           <div className="flex items-center gap-5">
-            <a href="#" className="hover:text-slate-900">Terms</a>
-            <a href="#" className="hover:text-slate-900">Privacy</a>
-            <a href="#" className="hover:text-slate-900">Help Center</a>
+            <Link href="/terms" className="hover:text-slate-900">Terms</Link>
+            <Link href="/privacy" className="hover:text-slate-900">Privacy</Link>
+            <Link href="/help" className="hover:text-slate-900">Help Center</Link>
+            <Link href="/about" className="hover:text-slate-900">About</Link>
           </div>
         </div>
       </footer>

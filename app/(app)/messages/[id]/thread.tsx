@@ -18,6 +18,7 @@ export function ChatThread({
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [draft, setDraft] = useState("");
   const [pending, start] = useTransition();
+  const [sendError, setSendError] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // Subscribe to Realtime updates
@@ -61,10 +62,11 @@ export function ChatThread({
         .select()
         .single();
       if (error) {
-        console.error("send failed:", error.message);
+        setSendError(error.message);
         setDraft(text); // restore
         return;
       }
+      setSendError(null);
       // Optimistically add — the channel will dedupe
       if (data) {
         setMessages((prev) => prev.some((x) => x.id === data.id) ? prev : [...prev, data as Message]);
@@ -119,6 +121,11 @@ export function ChatThread({
       </div>
 
       {/* Composer */}
+      {sendError && (
+        <div className="border-t border-slate-100 bg-rose-50 text-rose-700 text-xs px-4 py-2">
+          Couldn&apos;t send: {sendError}
+        </div>
+      )}
       <div className="border-t border-slate-100 p-3 bg-white flex items-center gap-2">
         <button aria-label="Attach" className="p-2 text-slate-400" disabled><Paperclip className="w-4 h-4" /></button>
         <input
