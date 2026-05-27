@@ -25,14 +25,14 @@ export function NewRequestView({
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
-      <div className="flex items-center gap-3 mb-3 lg:mb-5">
+      <div className="flex items-center gap-3 mb-3 lg:mb-4">
         <Link href="/dashboard" aria-label="Back" className="p-2 -ml-2 rounded-lg hover:bg-slate-100">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">New Request</h1>
       </div>
 
-      <div className="mb-6 lg:mb-8 flex items-center gap-1.5 sm:gap-3">
+      <div className="mb-5 lg:mb-6 flex items-center gap-1.5 sm:gap-3">
         <StepDot n={1} label="Choose Service" active={true} done={false} />
         <Dash />
         <StepDot n={2} label="Provide Details" active={false} done={false} />
@@ -215,15 +215,15 @@ function StepDot({ n, label, active, done }: { n: number; label: string; active:
   return (
     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
       <span className={cn(
-        "w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-bold border-2 shrink-0",
+        "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border-2 shrink-0",
         active ? "bg-brand-600 text-white border-brand-600" :
         done ? "bg-emerald-500 text-white border-emerald-500" :
         "bg-white text-slate-400 border-slate-300"
       )}>
-        {done ? <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : n}
+        {done ? <Check className="w-3 h-3" /> : n}
       </span>
       <span className={cn(
-        "text-[11px] sm:text-sm whitespace-nowrap",
+        "text-[11px] sm:text-xs whitespace-nowrap",
         active ? "text-brand-700 font-semibold" : "text-slate-500"
       )}>{label}</span>
     </div>
