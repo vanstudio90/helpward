@@ -55,8 +55,11 @@ export async function POST(req: NextRequest) {
       }
     }
   } catch (err) {
+    // Ack with 200 so Stripe doesn't retry forever — log for human investigation.
+    // Signature is already verified above, so the event is authentic; the failure
+    // is in our handler, not Stripe's delivery.
     console.error("stripe-connect webhook handler error:", err);
-    return NextResponse.json({ ok: false, reason: "handler_error" }, { status: 500 });
+    return NextResponse.json({ ok: true, warning: "handler_error_logged" });
   }
 
   return NextResponse.json({ ok: true });

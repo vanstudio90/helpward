@@ -17,9 +17,11 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   if (!sig) return NextResponse.json({ ok: false, reason: "no_signature" }, { status: 400 });
 
-  // Verify HMAC
+  // Verify HMAC — timingSafeEqual requires equal-length buffers; bail early if not.
   const expected = createHmac("sha256", secret).update(body).digest("hex");
-  if (!timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+  const sigBuf = Buffer.from(sig);
+  const expBuf = Buffer.from(expected);
+  if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
     return NextResponse.json({ ok: false, reason: "bad_signature" }, { status: 400 });
   }
 
@@ -32,14 +34,21 @@ export async function POST(req: NextRequest) {
 
   if (payload.type === "report.completed" && payload.data?.object) {
     const { id, status } = payload.data.object;
+    // Whitelist statuses Checkr documents: pending, clear, consider, suspended, dispute
+    const ALLOWED = new Set(["pending", "clear", "consider", "suspended", "dispute"]);
+    const safeStatus = status && ALLOWED.has(status) ? status : "unknown";
+    // Checkr report IDs are alphanumeric+hyphen (UUID-like). Reject anything else.
+    if (!id || !/^[a-zA-Z0-9_-]{8,64}$/.test(id)) {
+      return NextResponse.json({ ok: false, reason: "bad_report_id" }, { status: 400 });
+    }
     const admin = createSupabaseServiceClient();
     await admin
       .from("provider_profiles")
       .update({
-        background_check_status: status ?? "unknown",
-        background_verified_at: status === "clear" ? new Date().toISOString() : null,
+        background_check_status: safeStatus,
+        background_verified_at: safeStatus === "clear" ? new Date().toISOString() : null,
       })
-      .eq("background_check_id", id ?? "");
+      .eq("background_check_id", id);
   }
 
   return NextResponse.json({ ok: true });
