@@ -1,4 +1,5 @@
-import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 
 const TONE: Record<string, string> = {
@@ -8,6 +9,10 @@ const TONE: Record<string, string> = {
 };
 
 export default async function AdminRefundsPage() {
+  const userClient = await createSupabaseServerClient();
+  const { data: { user } } = await userClient.auth.getUser();
+  if ((user?.app_metadata?.role as string | undefined) !== "admin") redirect("/login");
+
   const supabase = createSupabaseServiceClient();
   const { data } = await supabase
     .from("refunds")

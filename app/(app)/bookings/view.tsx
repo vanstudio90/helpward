@@ -30,9 +30,20 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 export function BookingsView({
-  bookings, requests,
+  bookings: allBookings, requests: allRequests,
 }: { bookings: BookingWithProvider[]; requests: RequestRow[] }) {
-  const [tab, setTab] = useState<TabKey>(requests.length > 0 ? "pending" : "upcoming");
+  const [tab, setTab] = useState<TabKey>(allRequests.length > 0 ? "pending" : "upcoming");
+  const [query, setQuery] = useState("");
+
+  const q = query.trim().toLowerCase();
+  const bookings = !q ? allBookings : allBookings.filter((b) =>
+    b.service?.title?.toLowerCase().includes(q) ||
+    b.id.toLowerCase().includes(q)
+  );
+  const requests = !q ? allRequests : allRequests.filter((r) =>
+    r.service?.title?.toLowerCase().includes(q) ||
+    r.pickup?.formatted?.toLowerCase().includes(q)
+  );
 
   const counts = {
     upcoming: bookings.filter((b) => b.status === "scheduled").length,
@@ -68,16 +79,13 @@ export function BookingsView({
           <div className="hidden lg:flex items-center gap-2">
             <div className="relative w-72">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input placeholder="Search bookings..." className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-slate-200 text-sm" />
+              <input placeholder="Search bookings..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-slate-200 text-sm" />
             </div>
-            <button className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm">
+            <button disabled title="Filters ship soon" aria-label="Filter" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm cursor-not-allowed opacity-70">
               <SlidersHorizontal className="w-4 h-4 text-slate-500" /> Filter
             </button>
-            <button className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm">
+            <button disabled title="Date-range picker ships soon" aria-label="Date range" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm cursor-not-allowed opacity-70">
               <Calendar className="w-4 h-4 text-slate-500" /> All Time <ChevronDown className="w-3 h-3 text-slate-400" />
-            </button>
-            <button className="relative p-2 rounded-xl bg-white border border-slate-200">
-              <Bell className="w-5 h-5 text-slate-700" />
             </button>
           </div>
         </div>
@@ -85,12 +93,12 @@ export function BookingsView({
         <div className="mt-4 lg:hidden grid grid-cols-[1fr_auto_auto] gap-2">
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input placeholder="Search bookings..." className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm" />
+            <input placeholder="Search bookings..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm" />
           </div>
-          <button className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm">
+          <button disabled title="Filters ship soon" aria-label="Filter" className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm cursor-not-allowed opacity-70">
             <SlidersHorizontal className="w-4 h-4 text-slate-500" />
           </button>
-          <button className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm">
+          <button disabled title="Date-range picker ships soon" aria-label="Date range" className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm cursor-not-allowed opacity-70">
             <Calendar className="w-4 h-4 text-slate-500" />
           </button>
         </div>

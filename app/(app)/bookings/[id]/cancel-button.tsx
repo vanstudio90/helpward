@@ -55,7 +55,7 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
         </button>
         <button
           type="button"
-          onClick={() => { setOpen(false); setErr(null); }}
+          onClick={() => { setOpen(false); setErr(null); setReason(""); }}
           className="px-3 py-2.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700"
         >
           Keep

@@ -1,9 +1,16 @@
-import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { FileText } from "lucide-react";
 
 export default async function AdminAuditLogPage({
   searchParams,
 }: { searchParams: Promise<{ action?: string }> }) {
+  // Defense-in-depth: proxy gates the route, but we double-check here so a
+  // direct render path can't leak service-role data.
+  const userClient = await createSupabaseServerClient();
+  const { data: { user } } = await userClient.auth.getUser();
+  if ((user?.app_metadata?.role as string | undefined) !== "admin") redirect("/login");
+
   const params = await searchParams;
   const supabase = createSupabaseServiceClient();
   let q = supabase

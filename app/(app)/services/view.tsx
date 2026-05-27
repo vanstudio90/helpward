@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   Search, MapPin, Sparkles, Car, Home, ShoppingBag, User, Heart, Briefcase,
   MoreHorizontal, ChevronDown, X, CheckCircle2, Clock, Star, Plus, ArrowLeft,
-  SlidersHorizontal, Bell, type LucideIcon,
+  SlidersHorizontal, type LucideIcon,
 } from "lucide-react";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
@@ -76,12 +76,13 @@ export function ServicesView({
           />
           <Sparkles className="w-4 h-4 text-brand-500 absolute right-3 top-1/2 -translate-y-1/2" />
         </div>
-        <button className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-medium text-slate-700">
+        <button
+          disabled
+          title="City picker ships with Mapbox geocoding (Phase 5)"
+          aria-label="Vancouver, BC location"
+          className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-medium text-slate-700 cursor-not-allowed opacity-70"
+        >
           <MapPin className="w-4 h-4 text-slate-500" /> Vancouver, BC <ChevronDown className="w-3 h-3 text-slate-400" />
-        </button>
-        <button className="relative p-2.5 rounded-xl bg-white border border-slate-200">
-          <Bell className="w-5 h-5 text-slate-700" />
-          <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">3</span>
         </button>
       </div>
 
@@ -122,20 +123,28 @@ export function ServicesView({
             onClick={() => setActiveTab(cat.label)}
           />
         ))}
-        <button className="shrink-0 inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-white border border-slate-200 text-slate-700">
+        <button
+          disabled
+          title="More categories ship soon"
+          className="shrink-0 inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-white border border-slate-200 text-slate-700 cursor-not-allowed opacity-70"
+        >
           <MoreHorizontal className="w-4 h-4" /> More
         </button>
       </div>
 
       <div className="mt-4 flex items-center gap-2 text-sm overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
-        <button className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-700">
+        <button
+          disabled
+          title="Advanced filters ship soon"
+          className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 cursor-not-allowed opacity-70"
+        >
           <SlidersHorizontal className="w-4 h-4 text-slate-500" /> Filter
         </button>
-        <FilterPill label="Category" />
-        <FilterPill label="Price" />
-        <FilterPill label="Availability" />
-        <FilterPill label="Rating 4.0+" className="hidden sm:inline-flex" />
-        <div className="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 shrink-0">
+        <FilterPill label="Category" disabled />
+        <FilterPill label="Price" disabled />
+        <FilterPill label="Availability" disabled />
+        <FilterPill label="Rating 4.0+" disabled className="hidden sm:inline-flex" />
+        <div className="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 shrink-0 opacity-60" title="Real-time availability ships with provider GPS rollout">
           <span className="text-slate-700">Available Now</span>
           <span className="relative inline-flex w-9 h-5 bg-brand-600 rounded-full">
             <span className="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full" />
@@ -228,9 +237,17 @@ function CategoryChip({
   );
 }
 
-function FilterPill({ label, className }: { label: string; className?: string }) {
+function FilterPill({ label, className, disabled }: { label: string; className?: string; disabled?: boolean }) {
   return (
-    <button className={cn("shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-700", className)}>
+    <button
+      disabled={disabled}
+      title={disabled ? "Filter ships soon" : undefined}
+      className={cn(
+        "shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-700",
+        disabled && "cursor-not-allowed opacity-70",
+        className
+      )}
+    >
       {label} <ChevronDown className="w-3 h-3 text-slate-400" />
     </button>
   );
