@@ -108,8 +108,8 @@ export function ServicesView({
         </div>
       </div>
 
-      <div className="mt-6 grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-6">
-        <section>
+      <div className="mt-6 grid lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px] gap-6">
+        <section className="min-w-0">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
             <h2 className="text-base font-bold text-slate-900">Popular Services</h2>
             <button className="text-sm font-semibold text-brand-700">View all</button>

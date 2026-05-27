@@ -46,10 +46,10 @@ export function NewRequestView({
         </div>
       )}
 
-      <form action={formAction} className="grid lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px] gap-6">
+      <form action={formAction} className="grid lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px] gap-6">
         <input type="hidden" name="service_id" value={selected?.id ?? ""} />
 
-        <section>
+        <section className="min-w-0">
           <h2 className="text-base sm:text-xl font-bold text-slate-900">What do you need help with?</h2>
 
           <div className="mt-3 sm:mt-4 relative">
@@ -60,7 +60,7 @@ export function NewRequestView({
             />
           </div>
 
-          <div className="mt-4 flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
+          <div className="mt-4 flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 lg:mx-0 lg:px-0 pb-1">
             {(["Popular", ...categories.map((c) => c.label)] as string[]).map((c) => (
               <button
                 type="button"
