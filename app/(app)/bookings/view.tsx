@@ -4,12 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Search, SlidersHorizontal, Plus, Star, ChevronRight, MapPin, Calendar,
-  ChevronDown, ArrowLeft, Bell, Sparkles, Clock,
+  ChevronDown, ArrowLeft, Bell, Sparkles, Clock, X,
 } from "lucide-react";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import type { BookingWithProvider } from "@/lib/data/customer";
 import type { RequestRow } from "@/lib/data/requests";
 import { cn } from "@/lib/cn";
+import { cancelRequestAction } from "./actions";
 
 const TABS = [
   { key: "upcoming" as const, label: "Upcoming" },
@@ -156,7 +157,13 @@ function BookingRow({ booking }: { booking: BookingWithProvider }) {
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
           <div className="text-sm font-bold text-slate-900">${(booking.total_cents / 100).toFixed(2)}</div>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
+          {booking.status === "completed" ? (
+            <Link href={`/bookings/${booking.id}/rate`} className="text-xs font-semibold text-brand-700 inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-brand-200">
+              <Star className="w-3 h-3" /> Rate
+            </Link>
+          ) : (
+            <ChevronRight className="w-4 h-4 text-slate-300" />
+          )}
         </div>
       </div>
     </div>
@@ -182,7 +189,19 @@ function RequestRowView({ request }: { request: RequestRow }) {
           <div className="text-sm font-bold text-slate-900">
             Est. ${request.estimated_price_cents ? (request.estimated_price_cents / 100).toFixed(2) : "—"}
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
+          <form action={async () => { "use server"; }}>
+            <button
+              type="button"
+              onClick={async () => {
+                if (confirm("Cancel this request?")) {
+                  await cancelRequestAction(request.id);
+                }
+              }}
+              className="text-xs font-semibold text-rose-600 inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-200"
+            >
+              <X className="w-3 h-3" /> Cancel
+            </button>
+          </form>
         </div>
       </div>
     </div>

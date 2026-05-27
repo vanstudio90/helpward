@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
-  LayoutDashboard, Plus, Calendar, MessageCircle, Menu, X, Bell, User2,
+  LayoutDashboard, Plus, Calendar, MessageCircle, Menu, X, User2,
   Grid3x3, Heart, CreditCard, Star, Briefcase, BarChart3, Settings, Gift,
   MessageSquare, LogOut,
 } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/auth/actions";
+import { NotificationBell } from "@/components/NotificationBell";
 import { cn } from "@/lib/cn";
 
 const primary = [
@@ -34,11 +35,13 @@ const drawer = [
 ];
 
 export function MobileTopBar({
-  onOpen, avatarUrl, fullName,
+  onOpen, avatarUrl, fullName, userId, initialUnread,
 }: {
   onOpen: () => void;
   avatarUrl?: string | null;
   fullName?: string | null;
+  userId?: string | null;
+  initialUnread?: number;
 }) {
   return (
     <header className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
@@ -53,10 +56,7 @@ export function MobileTopBar({
         <Link href="/messages" aria-label="Messages" className="p-2 rounded-lg hover:bg-slate-100">
           <MessageSquare className="w-5 h-5 text-slate-700" />
         </Link>
-        <button aria-label="Notifications" className="relative p-2 rounded-lg hover:bg-slate-100">
-          <Bell className="w-5 h-5 text-slate-700" />
-          <span className="absolute top-0.5 right-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">3</span>
-        </button>
+        {userId && <NotificationBell userId={userId} initialUnread={initialUnread ?? 0} />}
         {avatarUrl ? (
           <Link href="/settings" className="shrink-0 relative">
             <img src={avatarUrl} className="w-8 h-8 rounded-full object-cover" alt="" />
@@ -200,16 +200,24 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
 }
 
 export function MobileShell({
-  children, avatarUrl, fullName,
+  children, avatarUrl, fullName, userId, initialUnread,
 }: {
   children: React.ReactNode;
   avatarUrl?: string | null;
   fullName?: string | null;
+  userId?: string | null;
+  initialUnread?: number;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <MobileTopBar onOpen={() => setOpen(true)} avatarUrl={avatarUrl} fullName={fullName} />
+      <MobileTopBar
+        onOpen={() => setOpen(true)}
+        avatarUrl={avatarUrl}
+        fullName={fullName}
+        userId={userId}
+        initialUnread={initialUnread}
+      />
       <MobileDrawer open={open} onClose={() => setOpen(false)} />
       {children}
       <MobileBottomNav />

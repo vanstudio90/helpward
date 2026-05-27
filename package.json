@@ -15,7 +15,8 @@
     "lucide-react": "^0.479.0",
     "clsx": "^2.1.1",
     "@supabase/ssr": "^0.5.2",
-    "@supabase/supabase-js": "^2.49.1"
+    "@supabase/supabase-js": "^2.49.1",
+    "stripe": "^17.5.0"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

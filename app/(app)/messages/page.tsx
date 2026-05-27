@@ -30,20 +30,22 @@ export default async function MessagesPage() {
           {conversations.map((c) => {
             const p = (c as { provider: { profile: { full_name: string; avatar_url: string | null } } | null }).provider;
             return (
-              <li key={c.id} className="p-4 flex items-center gap-3 hover:bg-slate-50">
-                {p?.profile?.avatar_url ? (
-                  <img src={p.profile.avatar_url} className="w-11 h-11 rounded-full" alt="" />
-                ) : (
-                  <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold">
-                    {p?.profile?.full_name?.[0] ?? "?"}
+              <li key={c.id}>
+                <Link href={`/messages/${c.id}`} className="p-4 flex items-center gap-3 hover:bg-slate-50 block">
+                  {p?.profile?.avatar_url ? (
+                    <img src={p.profile.avatar_url} className="w-11 h-11 rounded-full" alt="" />
+                  ) : (
+                    <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold">
+                      {p?.profile?.full_name?.[0] ?? "?"}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold text-slate-900 truncate">{p?.profile?.full_name ?? "Provider"}</div>
+                    <div className="text-xs text-slate-500 truncate">
+                      Last message {new Date(c.last_message_at).toLocaleString()}
+                    </div>
                   </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-slate-900 truncate">{p?.profile?.full_name ?? "Provider"}</div>
-                  <div className="text-xs text-slate-500 truncate">
-                    Last message {new Date(c.last_message_at).toLocaleString()}
-                  </div>
-                </div>
+                </Link>
               </li>
             );
           })}
