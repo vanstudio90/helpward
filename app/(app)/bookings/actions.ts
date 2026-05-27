@@ -9,6 +9,7 @@ export async function cancelRequestAction(requestId: string) {
   if (error) return { error: error.message };
   revalidatePath("/bookings");
   revalidatePath("/dashboard");
+  revalidatePath("/admin/bookings");
   return { success: "Cancelled." };
 }
 
@@ -22,5 +23,6 @@ export async function cancelBookingAction(bookingId: string, reason?: string) {
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/dashboard");
+  revalidatePath("/admin/bookings");
   return { success: "Cancelled." };
 }

@@ -48,5 +48,6 @@ export async function submitReviewAction(
 
   revalidatePath("/bookings");
   revalidatePath("/dashboard");
+  revalidatePath(`/providers/${booking.provider_id}`);
   redirect("/bookings");
 }

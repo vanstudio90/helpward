@@ -205,11 +205,11 @@ export function ServicesView({
           <div className="absolute inset-0 bg-slate-900/40 transition-opacity" onClick={() => setPanelOpen(false)} />
           <div className="absolute bottom-0 inset-x-0 rounded-t-3xl bg-white max-h-[92vh] overflow-y-auto shadow-2xl">
             <div className="sticky top-0 bg-white px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-              <button onClick={() => setPanelOpen(false)} className="p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100">
+              <button aria-label="Back" onClick={() => setPanelOpen(false)} className="p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100">
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div className="text-sm font-bold text-slate-900">Service Details</div>
-              <button onClick={() => setPanelOpen(false)} className="p-1.5 -mr-1.5 rounded-lg hover:bg-slate-100">
+              <button aria-label="Close details" onClick={() => setPanelOpen(false)} className="p-1.5 -mr-1.5 rounded-lg hover:bg-slate-100">
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
@@ -264,7 +264,7 @@ function SidePanel({ service, onClose, mobile }: { service: ServiceWithCategory;
       {!mobile && (
         <div className="flex items-center justify-between mb-4">
           <div className="text-xs font-semibold text-slate-500">Service Details</div>
-          <button onClick={onClose} className="p-1"><X className="w-4 h-4 text-slate-400" /></button>
+          <button aria-label="Close" onClick={onClose} className="p-1"><X className="w-4 h-4 text-slate-400" /></button>
         </div>
       )}
 

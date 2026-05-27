@@ -49,5 +49,6 @@ export async function openDisputeAction(
 
   revalidatePath("/bookings");
   revalidatePath("/admin/disputes");
+  revalidatePath("/admin");
   redirect(`/bookings/${bookingId}?dispute=opened`);
 }

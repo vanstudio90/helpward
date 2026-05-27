@@ -27,6 +27,7 @@ export async function updateProviderProfileAction(
 
   if (error) return { error: error.message };
   revalidatePath("/provider/profile");
+  revalidatePath(`/providers/${user.id}`);
   return { success: "Profile updated." };
 }
 
@@ -51,6 +52,7 @@ export async function setProviderServicesAction(
 
   revalidatePath("/provider/profile");
   revalidatePath("/provider/onboard");
+  revalidatePath(`/providers/${user.id}`);
   return { success: `Saved ${services.length} service${services.length === 1 ? "" : "s"}.` };
 }
 
