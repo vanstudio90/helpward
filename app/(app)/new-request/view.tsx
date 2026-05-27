@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Search, Sparkles, Check, ArrowRight, Calendar, MapPin,
-  AlertCircle, Info,
+  AlertCircle, Info, Clock, Star, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createRequestAction } from "./actions";
