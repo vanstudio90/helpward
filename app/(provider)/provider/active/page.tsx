@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { Activity, MessageSquare, Phone, CheckCircle2, Play } from "lucide-react";
 import { OnlineToggle, BookingActions } from "./client";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function ProviderActivePage() {
   const supabase = await createSupabaseServerClient();
@@ -106,7 +107,7 @@ export default async function ProviderActivePage() {
               <div className="text-slate-900 mt-0.5">{booking.pickup_addr?.pickup?.formatted ?? "—"}</div>
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mt-2">When</div>
               <div className="text-slate-900 mt-0.5">
-                {booking.scheduled_for ? new Date(booking.scheduled_for).toLocaleString() : "ASAP"}
+                {booking.scheduled_for ? <ClientDateTime iso={booking.scheduled_for} /> : "ASAP"}
               </div>
             </div>
 

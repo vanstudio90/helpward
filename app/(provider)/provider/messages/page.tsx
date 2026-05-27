@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function ProviderMessagesPage() {
   const supabase = await createSupabaseServerClient();
@@ -50,7 +51,7 @@ export default async function ProviderMessagesPage() {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-bold text-slate-900 truncate">{c.customer?.full_name ?? "Customer"}</div>
                   <div className="text-xs text-slate-500 truncate">
-                    {c.booking?.service?.title ?? "Helpward"} · {new Date(c.last_message_at).toLocaleString()}
+                    {c.booking?.service?.title ?? "Helpward"} · <ClientDateTime iso={c.last_message_at} />
                   </div>
                 </div>
               </Link>

@@ -1,6 +1,7 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { FileText } from "lucide-react";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function AdminAuditLogPage({
   searchParams,
@@ -96,7 +97,7 @@ export default async function AdminAuditLogPage({
                       {JSON.stringify(r.payload, null, 2)}
                     </pre>
                   )}
-                  <div className="text-[10px] text-slate-400 mt-1">{new Date(r.created_at).toLocaleString()}{r.ip ? ` · ${r.ip}` : ""}</div>
+                  <div className="text-[10px] text-slate-400 mt-1"><ClientDateTime iso={r.created_at} />{r.ip ? ` · ${r.ip}` : ""}</div>
                 </div>
               </li>
             );

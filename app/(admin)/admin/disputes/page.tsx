@@ -1,6 +1,7 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { AlertOctagon } from "lucide-react";
 import { ResolveButton } from "./resolve";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 const TONE: Record<string, string> = {
   open: "bg-amber-50 text-amber-700",
@@ -59,7 +60,7 @@ export default async function AdminDisputesPage() {
                       <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
                         {CAT_LABEL[d.category] ?? d.category}
                       </span>
-                      <span className="text-xs text-slate-500">{new Date(d.created_at).toLocaleString()}</span>
+                      <span className="text-xs text-slate-500"><ClientDateTime iso={d.created_at} /></span>
                     </div>
                     <div className="text-sm font-bold text-slate-900 mt-2">
                       {booking?.service?.title ?? "—"} · ${((booking?.total_cents ?? 0) / 100).toFixed(2)}
@@ -78,7 +79,7 @@ export default async function AdminDisputesPage() {
                   <div className="mt-3 rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-sm text-emerald-900">
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">Resolution</div>
                     <div className="mt-1">{d.resolution}</div>
-                    {d.resolved_at && <div className="text-[11px] text-emerald-600 mt-2">{new Date(d.resolved_at).toLocaleString()}</div>}
+                    {d.resolved_at && <div className="text-[11px] text-emerald-600 mt-2"><ClientDateTime iso={d.resolved_at} /></div>}
                   </div>
                 )}
 

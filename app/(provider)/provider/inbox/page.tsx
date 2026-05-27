@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Inbox, Check, X, MapPin, Clock, DollarSign } from "lucide-react";
 import { InboxRow } from "./row";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function ProviderInboxPage() {
   const supabase = await createSupabaseServerClient();
@@ -69,7 +70,7 @@ export default async function ProviderInboxPage() {
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <Field icon={<MapPin className="w-3 h-3" />} label="Pickup" value={req.pickup?.formatted ?? "—"} />
-                    <Field icon={<Clock className="w-3 h-3" />} label="When" value={req.scheduled_for ? new Date(req.scheduled_for).toLocaleString() : "ASAP"} />
+                    <Field icon={<Clock className="w-3 h-3" />} label="When" value={req.scheduled_for ? <ClientDateTime iso={req.scheduled_for} /> : "ASAP"} />
                     <Field icon={<DollarSign className="w-3 h-3" />} label="Est. payout (80%)" value={`$${(((req.estimated_price_cents ?? 0) + 450) * 0.8 / 100).toFixed(2)}`} />
                     <Field icon={<MapPin className="w-3 h-3" />} label="Distance" value={`${row.distance_km} km`} />
                   </dl>

@@ -19,7 +19,8 @@ export async function listMyRequests() {
       service:services(id, title),
       pickup:addresses!requests_pickup_address_id_fkey(formatted)
     `)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(100);
   if (error) {
     console.error("listMyRequests:", error.message);
     return [];

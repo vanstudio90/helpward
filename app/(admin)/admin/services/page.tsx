@@ -23,6 +23,12 @@ export default async function AdminServicesPage() {
         <AddServiceForm categories={cats ?? []} />
       </div>
 
+      {(data?.length ?? 0) === 0 ? (
+        <div className="rounded-2xl bg-white border border-slate-100 p-12 text-center">
+          <p className="text-sm font-semibold text-slate-700">No services yet</p>
+          <p className="text-xs text-slate-500 mt-1">Use the form above to add your first service category.</p>
+        </div>
+      ) : (
       <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
         {(data ?? []).map((s) => (
           <li key={s.id} className="p-4 flex items-start gap-3">
@@ -61,6 +67,7 @@ export default async function AdminServicesPage() {
           </li>
         ))}
       </ul>
+      )}
 
       <p className="mt-6 text-xs text-slate-400 text-center">
         Add/edit forms ship in Phase 6.2 — for now you can toggle visibility.

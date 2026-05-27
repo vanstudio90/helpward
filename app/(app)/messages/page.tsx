@@ -1,6 +1,7 @@
 import { listConversationsWithLatest } from "@/lib/data/customer";
 import Link from "next/link";
 import { MessageSquare, Plus } from "lucide-react";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function MessagesPage() {
   const conversations = await listConversationsWithLatest();
@@ -42,7 +43,7 @@ export default async function MessagesPage() {
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold text-slate-900 truncate">{p?.profile?.full_name ?? "Provider"}</div>
                     <div className="text-xs text-slate-500 truncate">
-                      Last message {new Date(c.last_message_at).toLocaleString()}
+                      Last message <ClientDateTime iso={c.last_message_at} />
                     </div>
                   </div>
                 </Link>

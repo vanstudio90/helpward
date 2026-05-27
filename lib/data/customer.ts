@@ -48,7 +48,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     supabase.from("bookings").select("total_cents,status,completed_at")
       .eq("status", "completed")
       .gte("completed_at", startOfMonth.toISOString()),
-    supabase.from("bookings").select("total_cents,status").eq("status", "completed"),
+    supabase.from("bookings").select("total_cents,status").eq("status", "completed").limit(1000),
   ]);
 
   const completed_month = monthRows?.length ?? 0;
@@ -88,7 +88,7 @@ export async function listMyBookings(opts?: { status?: BookingStatus; limit?: nu
     `)
     .order("created_at", { ascending: false });
   if (opts?.status) q = q.eq("status", opts.status);
-  if (opts?.limit) q = q.limit(opts.limit);
+  q = q.limit(opts?.limit ?? 200);
 
   const { data, error } = await q;
   if (error) {
@@ -115,7 +115,8 @@ export async function listConversationsWithLatest() {
         profile:profiles!provider_profiles_user_id_fkey(full_name, avatar_url)
       )
     `)
-    .order("last_message_at", { ascending: false });
+    .order("last_message_at", { ascending: false })
+    .limit(200);
 
   if (error) {
     console.error("listConversationsWithLatest:", error.message);
@@ -126,21 +127,24 @@ export async function listConversationsWithLatest() {
 
 export async function getConversationMessages(conversationId: string): Promise<Message[]> {
   const supabase = await createSupabaseServerClient();
+  // Pull the most recent 200 messages, then return chronological order.
+  // Avoids OOM/load-storm on threads that have thousands of messages.
   const { data, error } = await supabase
     .from("messages")
     .select("*")
     .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(200);
   if (error) {
     console.error("getConversationMessages:", error.message);
     return [];
   }
-  return data ?? [];
+  return (data ?? []).reverse();
 }
 
 export async function listFavoritesByKind(kind?: "provider" | "service" | "address") {
   const supabase = await createSupabaseServerClient();
-  let q = supabase.from("favorites").select("*").order("created_at", { ascending: false });
+  let q = supabase.from("favorites").select("*").order("created_at", { ascending: false }).limit(200);
   if (kind) q = q.eq("kind", kind);
   const { data, error } = await q;
   if (error) {
@@ -187,7 +191,8 @@ export async function listMyAddresses() {
   const { data, error } = await supabase
     .from("addresses")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
   if (error) {
     console.error("listMyAddresses:", error.message);
     return [];
@@ -201,7 +206,8 @@ export async function listMyPaymentMethods() {
     .from("payment_methods")
     .select("*")
     .order("is_default", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
   if (error) {
     console.error("listMyPaymentMethods:", error.message);
     return [];

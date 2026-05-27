@@ -1,6 +1,7 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { RefreshCw } from "lucide-react";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 const TONE: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700",
@@ -59,7 +60,7 @@ export default async function AdminRefundsPage() {
                     <div className="text-xs text-slate-600 mt-1">{r.reason}</div>
                   )}
                   <div className="text-[10px] text-slate-400 mt-1">
-                    {new Date(r.created_at).toLocaleString()}
+                    <ClientDateTime iso={r.created_at} />
                     {initiator && ` · by ${initiator.full_name} (${initiator.role})`}
                     {r.stripe_refund_id && ` · ${r.stripe_refund_id.slice(0, 14)}…`}
                   </div>

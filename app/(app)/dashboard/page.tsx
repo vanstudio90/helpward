@@ -120,7 +120,7 @@ export default async function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-semibold text-slate-900 truncate">{b.service.title}</div>
                       <div className="text-xs text-slate-500 truncate">
-                        {b.scheduled_for ? new Date(b.scheduled_for).toLocaleString() : "—"}
+                        <ClientDateTime iso={b.scheduled_for} />
                       </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-300" />

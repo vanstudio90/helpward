@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, Clock, Search, Sparkles } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function RequestSubmittedPage({
   params,
@@ -30,7 +31,7 @@ export default async function RequestSubmittedPage({
         <dl className="text-sm space-y-3">
           <Row label="Service" value={request.service?.title ?? "—"} />
           <Row label="Address" value={request.pickup?.formatted ?? "—"} />
-          <Row label="When" value={request.scheduled_for ? new Date(request.scheduled_for).toLocaleString() : "ASAP"} />
+          <Row label="When" value={request.scheduled_for ? <ClientDateTime iso={request.scheduled_for} /> : "ASAP"} />
           <Row label="Estimated price" value={request.estimated_price_cents ? `$${(request.estimated_price_cents / 100).toFixed(2)}` : "—"} />
           <Row label="Status" value={
             <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full text-[10px] font-semibold">
