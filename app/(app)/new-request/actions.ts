@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 
 type State = { error?: string; success?: string } | undefined;
 
@@ -77,6 +77,16 @@ export async function createRequestAction(
 
   if (reqErr || !request) {
     return { error: "Couldn't create the request: " + (reqErr?.message ?? "unknown") };
+  }
+
+  // Broadcast to nearby providers — runs as service role so it can insert
+  // match_attempts + notifications on behalf of providers.
+  try {
+    const admin = createSupabaseServiceClient();
+    await admin.rpc("broadcast_request", { p_request_id: request.id, p_radius_km: 20 });
+  } catch (e) {
+    console.error("broadcast_request failed:", e);
+    // Non-fatal — request is created, admin can manually re-broadcast
   }
 
   revalidatePath("/dashboard", "page");

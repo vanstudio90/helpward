@@ -1,5 +1,6 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import { ShieldCheck, Clock, X } from "lucide-react";
+import { ShieldCheck, Clock } from "lucide-react";
+import { approveProviderAction, rejectProviderAction } from "./actions";
 
 export default async function AdminProvidersPage() {
   const supabase = createSupabaseServiceClient();
@@ -38,12 +39,16 @@ export default async function AdminProvidersPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-2 shrink-0">
-                <button className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-lg disabled:opacity-50" disabled>
-                  Approve
-                </button>
-                <button className="px-3 py-1.5 text-xs font-semibold text-rose-700 border border-rose-200 rounded-lg disabled:opacity-50" disabled>
-                  Reject
-                </button>
+                <form action={async () => { "use server"; await approveProviderAction(p.user_id); }}>
+                  <button className="w-full px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">
+                    Approve
+                  </button>
+                </form>
+                <form action={async () => { "use server"; await rejectProviderAction(p.user_id); }}>
+                  <button className="w-full px-3 py-1.5 text-xs font-semibold text-rose-700 border border-rose-200 rounded-lg hover:bg-rose-50">
+                    Reject
+                  </button>
+                </form>
               </div>
             </li>
           );
@@ -56,7 +61,8 @@ export default async function AdminProvidersPage() {
       </ul>
 
       <p className="mt-8 text-xs text-slate-400 text-center">
-        Approve/Reject actions ship in Phase 6 once Stripe Identity webhooks are wired up.
+        Approving here sets status='approved' so the provider can go online and start
+        accepting matches. Stripe Identity + Checkr webhook integration lands in Phase 4.
       </p>
     </div>
   );
