@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServiceClient, createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/admin";
 
 export async function approveProviderAction(providerId: string) {
+  await requireAdmin();
   // Audit who approved
   const supabaseUser = await createSupabaseServerClient();
   const { data: { user } } = await supabaseUser.auth.getUser();
@@ -35,6 +37,7 @@ export async function approveProviderAction(providerId: string) {
 }
 
 export async function rejectProviderAction(providerId: string, reason?: string) {
+  await requireAdmin();
   const supabaseUser = await createSupabaseServerClient();
   const { data: { user } } = await supabaseUser.auth.getUser();
 

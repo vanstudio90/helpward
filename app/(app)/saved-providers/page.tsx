@@ -45,8 +45,24 @@ export default async function SavedProvidersPage() {
                   {p.rating_avg ? `★ ${p.rating_avg} (${p.rating_count} reviews)` : "New provider"} · {p.tasks_completed} tasks
                 </div>
               </div>
-              <button aria-label={`Message ${p.profile.full_name}`} className="p-2 rounded-lg border border-brand-200 text-brand-700"><MessageSquare className="w-4 h-4" /></button>
-              <button aria-label={`Call ${p.profile.full_name}`} className="p-2 rounded-lg border border-brand-200 text-brand-700"><Phone className="w-4 h-4" /></button>
+              <button
+                type="button"
+                disabled
+                title="Direct messaging from saved list ships soon — message via your active booking for now"
+                aria-label={`Message ${p.profile.full_name}`}
+                className="p-2 rounded-lg border border-brand-200 text-brand-700 cursor-not-allowed opacity-60"
+              >
+                <MessageSquare className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                disabled
+                title="In-app calling ships with Twilio integration"
+                aria-label={`Call ${p.profile.full_name}`}
+                className="p-2 rounded-lg border border-brand-200 text-brand-700 cursor-not-allowed opacity-60"
+              >
+                <Phone className="w-4 h-4" />
+              </button>
             </li>
           ))}
         </ul>

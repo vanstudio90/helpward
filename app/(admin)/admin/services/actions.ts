@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/admin";
 
 type State = { error?: string; success?: string } | undefined;
 
 export async function toggleServiceActiveAction(serviceId: string, active: boolean) {
+  await requireAdmin();
   const supabase = createSupabaseServiceClient();
   await supabase.from("services").update({ active }).eq("id", serviceId);
   revalidatePath("/admin/services");
@@ -29,6 +31,11 @@ export async function createServiceAction(
   if (!id || !title || !blurb || !category_id) return { error: "All fields are required." };
   if (!base_price_dollars || base_price_dollars <= 0) return { error: "Price must be > 0." };
 
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Forbidden." };
+  }
   const supabase = createSupabaseServiceClient();
   const { error } = await supabase.from("services").insert({
     id, category_id, title, blurb,

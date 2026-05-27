@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServiceClient, createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/admin";
 
 export async function resolveDisputeAction(
   disputeId: string, resolution: string, newStatus: "resolved" | "escalated" = "resolved"
 ) {
+  await requireAdmin();
   const supabaseUser = await createSupabaseServerClient();
   const { data: { user } } = await supabaseUser.auth.getUser();
 
