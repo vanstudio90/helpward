@@ -9,6 +9,7 @@ import { ServiceIcon } from "@/components/ServiceIcon";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { LiveProviderMap } from "@/components/LiveProviderMap";
 import { CancelBookingButton } from "./cancel-button";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 const STATUS_TONE: Record<string, string> = {
   scheduled: "bg-brand-50 text-brand-700",
@@ -118,13 +119,13 @@ export default async function BookingDetailPage({
             <div className="rounded-xl bg-slate-50 p-3">
               <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5 uppercase tracking-wide"><Calendar className="w-3 h-3" />Scheduled</div>
               <div className="font-semibold text-slate-900 mt-1">
-                {b.scheduled_for ? new Date(b.scheduled_for).toLocaleString() : "—"}
+                <ClientDateTime iso={b.scheduled_for} />
               </div>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{b.completed_at ? "Completed" : "Created"}</div>
               <div className="font-semibold text-slate-900 mt-1">
-                {new Date(b.completed_at ?? b.created_at).toLocaleString()}
+                <ClientDateTime iso={b.completed_at ?? b.created_at} />
               </div>
             </div>
           </div>

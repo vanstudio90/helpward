@@ -173,14 +173,7 @@ export function NewRequestView({
                   </button>
                 </div>
                 {scheduled === "later" && (
-                  <div className="mt-2 relative">
-                    <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="datetime-local"
-                      name="scheduled_for"
-                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
-                    />
-                  </div>
+                  <ScheduledPicker />
                 )}
               </fieldset>
 
@@ -342,6 +335,29 @@ function SummaryCard({ selected }: { selected: ServiceWithCategory | null }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ScheduledPicker() {
+  // datetime-local values are timezone-naive ("2026-05-27T14:30"). If we let
+  // the server parse them with `new Date(str)`, it interprets the string as
+  // UTC and stores the wrong time. So we convert locally — `new Date(local)`
+  // in the browser parses in the user's TZ — and submit a real ISO string
+  // via a hidden input. The visible datetime-local input is unnamed so the
+  // server only sees `scheduled_for` (the converted ISO).
+  const [local, setLocal] = useState("");
+  const iso = local ? new Date(local).toISOString() : "";
+  return (
+    <div className="mt-2 relative">
+      <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      <input
+        type="datetime-local"
+        value={local}
+        onChange={(e) => setLocal(e.target.value)}
+        className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+      />
+      <input type="hidden" name="scheduled_for" value={iso} />
     </div>
   );
 }

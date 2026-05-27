@@ -9,6 +9,7 @@ import { MapBackdrop } from "@/components/MapBackdrop";
 import {
   getMe, getDashboardStats, getActiveBooking, listMyBookings,
 } from "@/lib/data/customer";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function DashboardPage() {
   const me = await getMe();
@@ -223,7 +224,7 @@ function UpcomingMini({ booking }: { booking: BookingWithProvider }) {
       <div className="min-w-0 flex-1">
         <div className="text-xs font-bold text-slate-900 truncate">{booking.service.title}</div>
         <div className="text-[11px] text-slate-500 truncate">
-          {date?.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+          <ClientDateTime iso={booking.scheduled_for} mode="time" />
         </div>
       </div>
     </div>

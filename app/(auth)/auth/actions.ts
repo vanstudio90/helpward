@@ -117,6 +117,7 @@ export async function resetPasswordAction(
 ): Promise<ActionState> {
   const password = String(formData.get("password") ?? "");
   if (password.length < 8) return { error: "Password must be at least 8 characters." };
+  if (password.length > 128) return { error: "Password is too long (max 128 chars)." };
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.updateUser({ password });
