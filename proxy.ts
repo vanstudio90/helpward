@@ -3,10 +3,10 @@ import { updateSupabaseSession } from "@/lib/supabase/middleware";
 
 const PUBLIC_PATHS = new Set([
   "/", "/login", "/signup", "/forgot-password", "/verify-email",
-  "/terms", "/privacy", "/about", "/safety", "/providers",
+  "/terms", "/privacy", "/about", "/safety",
 ]);
 
-const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/api/public/"];
+const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/api/public/", "/api/webhooks/", "/providers/"];
 
 const CUSTOMER_PREFIXES = [
   "/dashboard", "/services", "/new-request", "/messages",
@@ -18,7 +18,7 @@ const PROVIDER_PREFIXES = ["/provider"];
 const ADMIN_PREFIXES = ["/admin"];
 
 function startsWithAny(pathname: string, prefixes: string[]) {
-  return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p));
+  return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
 export async function proxy(request: NextRequest) {
