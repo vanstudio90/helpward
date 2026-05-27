@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Search, MapPin, Sparkles, Car, Home, ShoppingBag, User, Heart, Briefcase,
   MoreHorizontal, ChevronDown, X, CheckCircle2, Clock, Star, Plus, ArrowLeft,
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
+import { toggleFavoriteAction } from "@/app/(app)/favorites/actions";
 import { cn } from "@/lib/cn";
 
 const CAT_ICONS: Record<string, LucideIcon> = {
@@ -15,18 +16,48 @@ const CAT_ICONS: Record<string, LucideIcon> = {
 };
 
 export function ServicesView({
-  services, categories,
+  services, categories, initialFavoritedIds = [],
 }: {
   services: ServiceWithCategory[];
   categories: ServiceCategory[];
+  initialFavoritedIds?: string[];
 }) {
   const [activeTab, setActiveTab] = useState<string>("All Services");
   const [selected, setSelected] = useState<ServiceWithCategory | null>(services[0] ?? null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [favorited, setFavorited] = useState<Set<string>>(new Set(initialFavoritedIds));
+  const [, startTransition] = useTransition();
 
-  const filtered = activeTab === "All Services"
-    ? services
-    : services.filter((s) => s.category.label === activeTab);
+  const toggleFav = (serviceId: string) => {
+    const next = new Set(favorited);
+    if (next.has(serviceId)) next.delete(serviceId);
+    else next.add(serviceId);
+    setFavorited(next);
+    startTransition(async () => {
+      const r = await toggleFavoriteAction("service", serviceId);
+      if ("error" in r) {
+        // rollback
+        const rb = new Set(favorited);
+        if (rb.has(serviceId)) rb.delete(serviceId);
+        else rb.add(serviceId);
+        setFavorited(rb);
+      }
+    });
+  };
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return services.filter((s) => {
+      if (activeTab !== "All Services" && s.category.label !== activeTab) return false;
+      if (!q) return true;
+      return (
+        s.title.toLowerCase().includes(q) ||
+        s.blurb.toLowerCase().includes(q) ||
+        s.category.label.toLowerCase().includes(q)
+      );
+    });
+  }, [services, activeTab, query]);
 
   if (!selected) {
     return <div className="p-8 text-center text-slate-500">No services available yet.</div>;
@@ -39,6 +70,8 @@ export function ServicesView({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             placeholder="What do you need help with?"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
           <Sparkles className="w-4 h-4 text-brand-500 absolute right-3 top-1/2 -translate-y-1/2" />
@@ -56,6 +89,8 @@ export function ServicesView({
         <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
         <input
           placeholder="What do you need help with?"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           className="w-full pl-11 pr-11 py-3 rounded-full bg-white border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
         />
         <Sparkles className="w-4 h-4 text-brand-500 absolute right-4 top-1/2 -translate-y-1/2" />
@@ -129,11 +164,11 @@ export function ServicesView({
                     <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wide bg-violet-600 text-white px-2 py-1 rounded-md">Popular</span>
                   )}
                   <button
-                    aria-label="Save"
-                    onClick={(e) => { e.stopPropagation(); }}
+                    aria-label={favorited.has(s.id) ? "Remove from favorites" : "Save to favorites"}
+                    onClick={(e) => { e.stopPropagation(); toggleFav(s.id); }}
                     className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/95 backdrop-blur flex items-center justify-center shadow-sm hover:bg-white"
                   >
-                    <Heart className="w-3.5 h-3.5 text-slate-500" />
+                    <Heart className={cn("w-3.5 h-3.5", favorited.has(s.id) ? "text-rose-500 fill-rose-500" : "text-slate-500")} />
                   </button>
                 </div>
                 <div className="p-3 sm:p-4">

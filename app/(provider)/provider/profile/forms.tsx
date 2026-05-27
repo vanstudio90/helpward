@@ -1,9 +1,65 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import { AlertCircle, CheckCircle2, Edit3 } from "lucide-react";
-import { updateProviderProfileAction, setProviderServicesAction } from "./actions";
+import { useActionState, useRef, useState, useTransition } from "react";
+import { AlertCircle, CheckCircle2, Edit3, Camera } from "lucide-react";
+import { updateProviderProfileAction, setProviderServicesAction, uploadProviderAvatarAction } from "./actions";
 import { cn } from "@/lib/cn";
+
+export function ProviderAvatarUpload({ avatarUrl, fullName }: { avatarUrl: string | null; fullName: string }) {
+  const [state, formAction, pending] = useActionState(uploadProviderAvatarAction, undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  return (
+    <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
+      <h2 className="text-base font-bold text-slate-900 mb-3">Profile photo</h2>
+      {state?.error && (
+        <div className="mb-3 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
+          <AlertCircle className="w-3.5 h-3.5 mt-0.5" /> {state.error}
+        </div>
+      )}
+      {state?.success && (
+        <div className="mb-3 flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">
+          <CheckCircle2 className="w-3.5 h-3.5 mt-0.5" /> {state.success}
+        </div>
+      )}
+      <div className="flex items-center gap-4">
+        <div className="relative shrink-0">
+          {avatarUrl ? (
+            <img src={avatarUrl} className="w-20 h-20 rounded-full object-cover" alt="" />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold">
+              {fullName[0] ?? "?"}
+            </div>
+          )}
+          <form ref={formRef} action={formAction}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Change photo"
+              disabled={pending}
+              className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-brand-600 text-white shadow-md hover:bg-brand-700 disabled:opacity-50"
+            >
+              <Camera className="w-3.5 h-3.5" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              name="avatar"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={() => formRef.current?.requestSubmit()}
+            />
+          </form>
+        </div>
+        <div className="text-sm text-slate-600">
+          A clear headshot helps customers trust you.<br />
+          <span className="text-xs text-slate-400">JPEG/PNG/WEBP/GIF, up to 5 MB.</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ProfileForm({
   initial,
@@ -74,12 +130,18 @@ export function ProfileForm({
 }
 
 export function ServicesForm({
-  allServices, initialSelected,
+  allServices, initialSelected, initialCustomPrices = {},
 }: {
-  allServices: { id: string; title: string; category: string; blurb: string }[];
+  allServices: { id: string; title: string; category: string; blurb: string; basePriceCents: number }[];
   initialSelected: string[];
+  initialCustomPrices?: Record<string, number | null>;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set(initialSelected));
+  const [customDollars, setCustomDollars] = useState<Record<string, string>>(
+    Object.fromEntries(
+      Object.entries(initialCustomPrices).map(([k, v]) => [k, v != null ? (v / 100).toString() : ""])
+    )
+  );
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok?: string; err?: string } | null>(null);
 
@@ -90,8 +152,16 @@ export function ServicesForm({
 
   const save = () => {
     setMsg(null);
+    const payload = Array.from(selected).map((id) => {
+      const raw = customDollars[id]?.trim();
+      const dollars = raw ? parseFloat(raw) : NaN;
+      return {
+        id,
+        custom_price_cents: isFinite(dollars) && dollars > 0 ? Math.round(dollars * 100) : null,
+      };
+    });
     start(async () => {
-      const r = await setProviderServicesAction(Array.from(selected));
+      const r = await setProviderServicesAction(payload);
       if (r?.error) setMsg({ err: r.error });
       else setMsg({ ok: r?.success ?? "Saved." });
     });
@@ -118,29 +188,49 @@ export function ServicesForm({
               {list.map((s) => {
                 const isOn = selected.has(s.id);
                 return (
-                  <label
+                  <div
                     key={s.id}
                     className={cn(
-                      "flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition",
+                      "flex flex-col gap-2 p-3 rounded-xl border transition",
                       isOn ? "border-brand-300 bg-brand-50/40" : "border-slate-100 hover:border-slate-300"
                     )}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isOn}
-                      onChange={(e) => {
-                        const next = new Set(selected);
-                        if (e.target.checked) next.add(s.id);
-                        else next.delete(s.id);
-                        setSelected(next);
-                      }}
-                      className="mt-0.5"
-                    />
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-slate-900">{s.title}</div>
-                      <div className="text-[11px] text-slate-500 line-clamp-2">{s.blurb}</div>
-                    </div>
-                  </label>
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isOn}
+                        onChange={(e) => {
+                          const next = new Set(selected);
+                          if (e.target.checked) next.add(s.id);
+                          else next.delete(s.id);
+                          setSelected(next);
+                        }}
+                        className="mt-0.5"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900">{s.title}</div>
+                        <div className="text-[11px] text-slate-500 line-clamp-2">{s.blurb}</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">Base ${(s.basePriceCents / 100).toFixed(0)}</div>
+                      </div>
+                    </label>
+                    {isOn && (
+                      <div className="pl-6">
+                        <label className="text-[11px] text-slate-500 inline-flex items-center gap-1.5">
+                          Your price (optional)
+                          <span className="text-slate-400">$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder={(s.basePriceCents / 100).toFixed(0)}
+                            value={customDollars[s.id] ?? ""}
+                            onChange={(e) => setCustomDollars({ ...customDollars, [s.id]: e.target.value })}
+                            className="w-20 px-2 py-1 rounded border border-slate-200 text-xs"
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

@@ -8,6 +8,7 @@ import {
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { LiveProviderMap } from "@/components/LiveProviderMap";
+import { CancelBookingButton } from "./cancel-button";
 
 const STATUS_TONE: Record<string, string> = {
   scheduled: "bg-brand-50 text-brand-700",
@@ -171,10 +172,13 @@ export default async function BookingDetailPage({
                 <CheckCircle2 className="w-4 h-4" /> You rated this {review.rating}/5
               </div>
             )}
-            {b.status !== "cancelled" && b.status !== "completed" && b.status !== "disputed" && (
-              <Link href={`/bookings/${b.id}/dispute`} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl border border-rose-200 text-rose-700 text-sm font-semibold">
-                <AlertOctagon className="w-4 h-4" /> Report an issue
-              </Link>
+            {(b.status === "scheduled" || b.status === "in_progress") && (
+              <>
+                <Link href={`/bookings/${b.id}/dispute`} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl border border-amber-200 text-amber-700 text-sm font-semibold">
+                  <AlertOctagon className="w-4 h-4" /> Report an issue
+                </Link>
+                <CancelBookingButton bookingId={b.id} />
+              </>
             )}
             {b.status === "completed" && (
               <Link href={`/bookings/${b.id}/dispute`} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl border border-rose-200 text-rose-700 text-sm font-semibold">

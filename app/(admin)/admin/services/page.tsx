@@ -1,18 +1,27 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { toggleServiceActiveAction } from "./actions";
+import { AddServiceForm } from "./add-form";
 
 export default async function AdminServicesPage() {
   const supabase = createSupabaseServiceClient();
-  const { data } = await supabase
-    .from("services")
-    .select("id, title, blurb, base_price_cents, eta_label, active, category_id, image_url")
-    .order("category_id")
-    .order("title");
+  const [{ data }, { data: cats }] = await Promise.all([
+    supabase
+      .from("services")
+      .select("id, title, blurb, base_price_cents, eta_label, active, category_id, image_url")
+      .order("category_id")
+      .order("title"),
+    supabase.from("service_categories").select("id, label").order("sort_order"),
+  ]);
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Service catalog</h1>
-      <p className="text-sm text-slate-500 mt-1 mb-5">{data?.length ?? 0} services across the platform</p>
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Service catalog</h1>
+          <p className="text-sm text-slate-500 mt-1">{data?.length ?? 0} services across the platform</p>
+        </div>
+        <AddServiceForm categories={cats ?? []} />
+      </div>
 
       <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
         {(data ?? []).map((s) => (

@@ -1,12 +1,23 @@
 import { getMe } from "@/lib/data/customer";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import { SettingsForm } from "./form";
+import { NotificationPrefs } from "./preferences";
 import { Shield, Lock, Smartphone, Download, Trash2, LogOut, Headphones, ChevronRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
 export default async function SettingsPage() {
   const me = await getMe();
   if (!me) return null;
+  const supabase = await createSupabaseServerClient();
+  const { data: prefs } = await supabase
+    .from("notification_prefs")
+    .select("push_booking, push_messages, email_receipts, email_digest, sms_critical")
+    .single();
+  const prefsInitial = prefs ?? {
+    push_booking: true, push_messages: true, email_receipts: true,
+    email_digest: false, sms_critical: true,
+  };
 
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-3xl mx-auto pb-12">
@@ -24,6 +35,8 @@ export default async function SettingsPage() {
           avatar_url: me.profile.avatar_url,
           email_verified: true,
         }} />
+
+        <NotificationPrefs initial={prefsInitial} />
 
         <Card>
           <div className="flex items-center justify-between mb-3">

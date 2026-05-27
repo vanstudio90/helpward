@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import {
   LayoutDashboard, Inbox, Activity, DollarSign, Calendar, MessageCircle,
-  UserCircle, LogOut,
+  UserCircle, LogOut, Star,
 } from "lucide-react";
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/provider/active", label: "Active task", icon: Activity },
   { href: "/provider/schedule", label: "Schedule", icon: Calendar },
   { href: "/provider/messages", label: "Messages", icon: MessageCircle },
+  { href: "/provider/reviews", label: "Reviews", icon: Star },
   { href: "/provider/earnings", label: "Earnings", icon: DollarSign },
   { href: "/provider/profile", label: "Profile", icon: UserCircle },
 ];

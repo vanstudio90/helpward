@@ -8,6 +8,33 @@ type State = { error?: string; success?: string } | undefined;
 const ALLOWED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
 
+export async function setNotificationPrefAction(
+  key: "push_booking" | "push_messages" | "email_receipts" | "email_digest" | "sms_critical",
+  value: boolean
+): Promise<{ error?: string } | undefined> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not logged in." };
+
+  const { error } = await supabase
+    .from("notification_prefs")
+    .update({ [key]: value })
+    .eq("user_id", user.id);
+  if (error) return { error: error.message };
+  return undefined;
+}
+
+export async function setAppPrefAction(
+  key: "dark_mode" | "save_searches" | "auto_select" | "in_app_sounds",
+  value: boolean
+): Promise<{ error?: string } | undefined> {
+  // App prefs are client-only (browser localStorage) — server action is a noop
+  // returning success so the UI can update without a DB round-trip. Kept here
+  // to make future server-persisted prefs trivial to wire.
+  void key; void value;
+  return undefined;
+}
+
 export async function uploadAvatarAction(
   _prev: State,
   formData: FormData
