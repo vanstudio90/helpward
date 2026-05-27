@@ -189,19 +189,17 @@ function RequestRowView({ request }: { request: RequestRow }) {
           <div className="text-sm font-bold text-slate-900">
             Est. ${request.estimated_price_cents ? (request.estimated_price_cents / 100).toFixed(2) : "—"}
           </div>
-          <form action={async () => { "use server"; }}>
-            <button
-              type="button"
-              onClick={async () => {
-                if (confirm("Cancel this request?")) {
-                  await cancelRequestAction(request.id);
-                }
-              }}
-              className="text-xs font-semibold text-rose-600 inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-200"
-            >
-              <X className="w-3 h-3" /> Cancel
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={async () => {
+              if (confirm("Cancel this request?")) {
+                await cancelRequestAction(request.id);
+              }
+            }}
+            className="text-xs font-semibold text-rose-600 inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-200"
+          >
+            <X className="w-3 h-3" /> Cancel
+          </button>
         </div>
       </div>
     </div>
