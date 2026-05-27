@@ -102,3 +102,16 @@ export async function forgotPasswordAction(
   if (error) return { error: error.message };
   return { success: "Check your inbox — if that email is registered we just sent a reset link." };
 }
+
+export async function resetPasswordAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const password = String(formData.get("password") ?? "");
+  if (password.length < 8) return { error: "Password must be at least 8 characters." };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: error.message };
+  return { success: "Password updated. You can now log in." };
+}

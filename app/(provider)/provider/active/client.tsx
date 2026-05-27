@@ -1,14 +1,40 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { CheckCircle2, Play, AlertCircle } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { CheckCircle2, Play, AlertCircle, MapPin } from "lucide-react";
 import { setOnlineAction, startBookingAction, completeBookingAction } from "./actions";
+import { startGpsPings } from "@/lib/gps/ping";
 import { cn } from "@/lib/cn";
 
 export function OnlineToggle({ initialOnline }: { initialOnline: boolean }) {
   const [on, setOn] = useState(initialOnline);
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
+  const [gpsNote, setGpsNote] = useState<string | null>(null);
+  const stopGpsRef = useRef<(() => void) | null>(null);
+
+  // Start/stop GPS pings when online state changes
+  useEffect(() => {
+    if (on) {
+      setGpsNote(null);
+      const stop = startGpsPings({
+        onError: (e) => {
+          const msg = e instanceof GeolocationPositionError
+            ? (e.code === 1 ? "Location permission denied — task offers may not reach you accurately."
+              : e.code === 2 ? "Location unavailable. Check device GPS."
+              : "Location request timed out.")
+            : e.message;
+          setGpsNote(msg);
+        },
+        onUpdate: () => setGpsNote(null),
+      });
+      stopGpsRef.current = stop;
+      return () => stop();
+    } else {
+      stopGpsRef.current?.();
+      stopGpsRef.current = null;
+    }
+  }, [on]);
 
   return (
     <div className="flex flex-col items-end gap-1">
@@ -36,6 +62,11 @@ export function OnlineToggle({ initialOnline }: { initialOnline: boolean }) {
         {on ? "Online" : "Offline"}
       </button>
       {err && <div className="text-[11px] text-rose-600">{err}</div>}
+      {gpsNote && (
+        <div className="text-[11px] text-amber-700 inline-flex items-center gap-1">
+          <MapPin className="w-3 h-3" /> {gpsNote}
+        </div>
+      )}
     </div>
   );
 }

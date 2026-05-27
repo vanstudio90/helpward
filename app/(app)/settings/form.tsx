@@ -1,19 +1,33 @@
 "use client";
 
-import { useActionState } from "react";
-import { updateProfileAction } from "./actions";
-import { Edit3, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useActionState, useRef } from "react";
+import { updateProfileAction, uploadAvatarAction } from "./actions";
+import { Edit3, AlertCircle, CheckCircle2, Camera } from "lucide-react";
 
 export function SettingsForm({
   initial,
 }: { initial: { full_name: string; phone: string; country: string; email: string; avatar_url: string | null; email_verified: boolean } }) {
   const [state, formAction, pending] = useActionState(updateProfileAction, undefined);
+  const [uploadState, uploadAction, uploadPending] = useActionState(uploadAvatarAction, undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarFormRef = useRef<HTMLFormElement>(null);
 
   return (
     <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-bold text-slate-900">Profile Information</h2>
       </div>
+
+      {uploadState?.error && (
+        <div className="mb-3 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
+          <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {uploadState.error}
+        </div>
+      )}
+      {uploadState?.success && (
+        <div className="mb-3 flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">
+          <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {uploadState.success}
+        </div>
+      )}
 
       {state?.error && (
         <div className="mb-3 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
@@ -28,13 +42,34 @@ export function SettingsForm({
 
       <form action={formAction} className="space-y-4">
         <div className="flex items-start gap-4">
-          {initial.avatar_url ? (
-            <img src={initial.avatar_url} className="w-20 h-20 rounded-full" alt="" />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold">
-              {initial.full_name?.[0] ?? "?"}
-            </div>
-          )}
+          <div className="relative shrink-0">
+            {initial.avatar_url ? (
+              <img src={initial.avatar_url} className="w-20 h-20 rounded-full object-cover" alt="" />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-xl font-bold">
+                {initial.full_name?.[0] ?? "?"}
+              </div>
+            )}
+            <form ref={avatarFormRef} action={uploadAction}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label="Change photo"
+                disabled={uploadPending}
+                className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-brand-600 text-white shadow-md hover:bg-brand-700 disabled:opacity-50"
+              >
+                <Camera className="w-3.5 h-3.5" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                name="avatar"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={() => avatarFormRef.current?.requestSubmit()}
+              />
+            </form>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 w-full min-w-0">
             <label className="block">
               <span className="text-[11px] text-slate-500">Full Name</span>

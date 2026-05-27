@@ -143,7 +143,7 @@ export function BookingsView({
 
 function BookingRow({ booking }: { booking: BookingWithProvider }) {
   return (
-    <div className="p-4 flex items-start gap-3 hover:bg-slate-50">
+    <Link href={`/bookings/${booking.id}`} className="p-4 flex items-start gap-3 hover:bg-slate-50">
       <ServiceIcon name="spark" size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
@@ -157,16 +157,10 @@ function BookingRow({ booking }: { booking: BookingWithProvider }) {
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
           <div className="text-sm font-bold text-slate-900">${(booking.total_cents / 100).toFixed(2)}</div>
-          {booking.status === "completed" ? (
-            <Link href={`/bookings/${booking.id}/rate`} className="text-xs font-semibold text-brand-700 inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-brand-200">
-              <Star className="w-3 h-3" /> Rate
-            </Link>
-          ) : (
-            <ChevronRight className="w-4 h-4 text-slate-300" />
-          )}
+          <ChevronRight className="w-4 h-4 text-slate-300" />
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

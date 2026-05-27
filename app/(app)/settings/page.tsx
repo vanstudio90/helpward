@@ -43,17 +43,17 @@ export default async function SettingsPage() {
             <Shield className="w-4 h-4 text-brand-600" />
             <h2 className="text-base font-bold text-slate-900">Security</h2>
           </div>
-          <SecRow icon={<Lock className="w-4 h-4 text-slate-500" />} label="Password" sub="Set on signup" action="Change" disabled />
-          <SecRow icon={<Shield className="w-4 h-4 text-slate-500" />} label="Two-Factor Authentication" sub="Disabled" action="Enable" disabled />
-          <SecRow icon={<Smartphone className="w-4 h-4 text-slate-500" />} label="Login Devices" sub="1 active session" action="View" disabled last />
+          <SecRow icon={<Lock className="w-4 h-4 text-slate-500" />} label="Password" sub="Set on signup" action="Change" disabled tooltip="Use 'Forgot password' on /login for now — in-app change ships in Phase 6.2" />
+          <SecRow icon={<Shield className="w-4 h-4 text-slate-500" />} label="Two-Factor Authentication" sub="Disabled" action="Enable" disabled tooltip="Coming in Phase 6.2 (Supabase TOTP)" />
+          <SecRow icon={<Smartphone className="w-4 h-4 text-slate-500" />} label="Login Devices" sub="1 active session" action="View" disabled last tooltip="Coming in Phase 6.2" />
           <p className="text-[11px] text-slate-400 mt-3">Security actions land in Phase 6.</p>
         </Card>
 
         <Card>
           <h2 className="text-base font-bold text-slate-900 mb-3">Quick Actions</h2>
           <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Quick icon={<Download className="w-4 h-4 text-slate-500" />} label="Download My Data" sub="Export your data" disabled />
-            <Quick icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete Account" sub="Permanent" tone="text-rose-600" disabled />
+            <Quick icon={<Download className="w-4 h-4 text-slate-500" />} label="Download My Data" sub="Export your data" disabled tooltip="Coming in Phase 6.2 (CCPA / PIPEDA compliance export)" />
+            <Quick icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete Account" sub="Permanent" tone="text-rose-600" disabled tooltip="Coming in Phase 6.2. Email privacy@helpward.com to delete in the meantime." />
             <li>
               <form action={logoutAction}>
                 <button className="w-full text-left flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50">
@@ -106,23 +106,23 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SecRow({ icon, label, sub, action, disabled, last }: { icon: React.ReactNode; label: string; sub: string; action: string; disabled?: boolean; last?: boolean }) {
+function SecRow({ icon, label, sub, action, disabled, last, tooltip, subTone }: { icon: React.ReactNode; label: string; sub: string; action: string; disabled?: boolean; last?: boolean; tooltip?: string; subTone?: string }) {
   return (
     <div className={`flex items-center gap-3 py-3 ${!last ? "border-b border-slate-100" : ""}`}>
       <span className="w-9 h-9 rounded-lg bg-slate-50 inline-flex items-center justify-center shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold text-slate-900">{label}</div>
-        <div className="text-[11px] text-slate-500">{sub}</div>
+        <div className={`text-[11px] ${subTone ?? "text-slate-500"}`}>{sub}</div>
       </div>
-      <button disabled={disabled} className="text-xs font-semibold text-brand-700 shrink-0 disabled:opacity-50">{action}</button>
+      <button disabled={disabled} title={tooltip} className={`text-xs font-semibold text-brand-700 shrink-0 disabled:opacity-50 ${disabled ? "cursor-not-allowed" : ""}`}>{action}</button>
     </div>
   );
 }
 
-function Quick({ icon, label, sub, tone, disabled }: { icon: React.ReactNode; label: string; sub: string; tone?: string; disabled?: boolean }) {
+function Quick({ icon, label, sub, tone, disabled, tooltip }: { icon: React.ReactNode; label: string; sub: string; tone?: string; disabled?: boolean; tooltip?: string }) {
   return (
     <li>
-      <button disabled={disabled} className="w-full text-left flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 disabled:opacity-50">
+      <button disabled={disabled} title={tooltip} className={`w-full text-left flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 disabled:opacity-50 ${disabled ? "cursor-not-allowed" : ""}`}>
         <span className="w-8 h-8 rounded-lg bg-slate-50 inline-flex items-center justify-center shrink-0">{icon}</span>
         <div className="flex-1 min-w-0">
           <div className={`text-sm font-semibold ${tone ?? "text-slate-900"}`}>{label}</div>

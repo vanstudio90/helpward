@@ -127,7 +127,7 @@ export function ChatThread({
         </div>
       )}
       <div className="border-t border-slate-100 p-3 bg-white flex items-center gap-2">
-        <button aria-label="Attach" className="p-2 text-slate-400" disabled><Paperclip className="w-4 h-4" /></button>
+        <button aria-label="Attach" title="File attachments ship once Supabase Storage upload UI is wired" className="p-2 text-slate-400 cursor-not-allowed" disabled><Paperclip className="w-4 h-4" /></button>
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
