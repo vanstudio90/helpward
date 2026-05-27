@@ -28,7 +28,7 @@ export function ResolveButton({ disputeId }: { disputeId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 text-white text-xs font-semibold"
+        className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-900 text-white text-xs font-semibold"
       >
         Resolve dispute
       </button>
@@ -53,7 +53,7 @@ export function ResolveButton({ disputeId }: { disputeId: string }) {
           type="button"
           onClick={() => submit("resolved")}
           disabled={pending}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50"
         >
           <CheckCircle2 className="w-3.5 h-3.5" /> Mark resolved
         </button>
@@ -61,7 +61,7 @@ export function ResolveButton({ disputeId }: { disputeId: string }) {
           type="button"
           onClick={() => submit("escalated")}
           disabled={pending}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-rose-600 text-white text-xs font-semibold disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-rose-600 text-white text-xs font-semibold disabled:opacity-50"
         >
           <ArrowUp className="w-3.5 h-3.5" /> Escalate
         </button>
