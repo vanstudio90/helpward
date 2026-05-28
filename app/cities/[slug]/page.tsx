@@ -146,7 +146,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
                     {items.map((s) => (
                       <li key={s.id}>
                         <Link
-                          href={`/services/${s.id}`}
+                          href={`/cities/${city.slug}/${s.id}`}
                           className="block rounded-xl bg-white border border-slate-100 p-3 hover:border-brand-300 hover:shadow transition"
                         >
                           <div className="font-bold text-slate-900 truncate">{s.title} in {city.name}</div>

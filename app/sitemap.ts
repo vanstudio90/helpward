@@ -27,8 +27,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  // Programmatic: one entry per service landing page (/services/<slug>)
+  // Programmatic: one entry per service landing (/services/<slug>) AND one
+  // per city-service combo (/cities/<city>/<service>) — the cartesian gives
+  // us ~270 long-tail URLs for "<service> in <city>" queries.
   let serviceRoutes: MetadataRoute.Sitemap = [];
+  let cityServiceRoutes: MetadataRoute.Sitemap = [];
   try {
     const services = await listServicesPublic();
     serviceRoutes = services.map((s) => ({
@@ -37,6 +40,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: s.popular ? 0.9 : 0.7,
     }));
+    cityServiceRoutes = CITIES.flatMap((c) =>
+      services.map((s) => ({
+        url: `${BASE}/cities/${c.slug}/${s.id}`,
+        lastModified: now,
+        changeFrequency: "weekly" as const,
+        priority: s.popular ? 0.7 : 0.5,
+      }))
+    );
   } catch (e) {
     console.error("sitemap services fetch failed:", e);
   }
@@ -62,5 +73,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("sitemap providers fetch failed:", e);
   }
 
-  return [...staticRoutes, ...cityRoutes, ...serviceRoutes, ...providerRoutes];
+  return [...staticRoutes, ...cityRoutes, ...serviceRoutes, ...cityServiceRoutes, ...providerRoutes];
 }

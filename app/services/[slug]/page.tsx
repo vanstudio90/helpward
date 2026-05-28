@@ -245,7 +245,7 @@ export default async function ServiceDetailPage({
             {CITIES.map((c) => (
               <li key={c.slug}>
                 <Link
-                  href={`/cities/${c.slug}`}
+                  href={`/cities/${c.slug}/${service.id}`}
                   className="inline-flex items-center px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:border-brand-300 hover:text-brand-700"
                 >
                   {service.title} in {c.name}
