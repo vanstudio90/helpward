@@ -6,7 +6,12 @@ const PUBLIC_PATHS = new Set([
   "/terms", "/privacy", "/about", "/safety",
 ]);
 
-const PUBLIC_PREFIXES = ["/auth/", "/_next/", "/api/public/", "/api/webhooks/", "/providers/"];
+// Trailing slashes are intentional: "/services/" matches /services/anything
+// but NOT /services exact (that's the auth-gated customer browse).
+const PUBLIC_PREFIXES = [
+  "/auth/", "/_next/", "/api/public/", "/api/webhooks/",
+  "/providers/", "/services/", "/cities/",
+];
 
 const CUSTOMER_PREFIXES = [
   "/dashboard", "/services", "/new-request", "/messages",

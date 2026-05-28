@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { ServiceIcon } from "@/components/ServiceIcon";
+import { categorySummary } from "@/lib/marketing";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 
@@ -67,11 +68,16 @@ export function ServicesCatalog({
                   </button>
                 )}
               </div>
+              {/* AI-extraction-friendly summary — leads the section with a
+                  complete-sentence answer so search assistants can quote it. */}
+              <p className="text-xs sm:text-sm text-slate-600 mb-4 lg:mb-5 max-w-3xl leading-relaxed">
+                {categorySummary(category.id, items)}
+              </p>
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 {items.map((s) => (
                   <Link
                     key={s.id}
-                    href={`/new-request?service=${s.id}`}
+                    href={`/services/${s.id}`}
                     className="group flex flex-col rounded-2xl border border-slate-100 bg-white hover:border-brand-300 hover:shadow-lg hover:-translate-y-0.5 transition overflow-hidden"
                   >
                     {s.image_url && (

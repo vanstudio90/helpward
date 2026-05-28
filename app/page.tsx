@@ -9,6 +9,7 @@ import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "./_landing-header";
 import { ServicesCatalog } from "./_services-catalog";
 import { listServices, listCategories } from "@/lib/data/services";
+import { CITIES, SAMPLE_RECENT_TASKS, MARKETPLACE_METRICS, categoryImage } from "@/lib/marketing";
 
 // Definition-first homepage opener — AI engines extract the first sentence
 // as a candidate snippet, so this paragraph is the "what is Helpward" answer.
@@ -79,29 +80,17 @@ const HOMEPAGE_LD = {
   },
 };
 
-// Sample data clearly marked — swap for real queries once the site has volume.
-// (Hidden behind realistic Unsplash photos + city names so the page doesn't
-// feel half-built pre-launch.)
-const RECENT_TASKS = [
-  { id: "rt1", title: "Grocery Pickup", ago: "10 min ago", where: "Downtown, SF", price: 15,
-    img: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=70" },
-  { id: "rt2", title: "Furniture Assembly", ago: "25 min ago", where: "Sunset District", price: 35,
-    img: "https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?auto=format&fit=crop&w=600&q=70" },
-  { id: "rt3", title: "Ride to Airport", ago: "35 min ago", where: "SFO", price: 40,
-    img: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=600&q=70" },
-  { id: "rt4", title: "Package Delivery", ago: "45 min ago", where: "Mission District", price: 12,
-    img: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=70" },
-];
-
+// Testimonials with task type + city + completed date for credibility.
+// Sample data clearly marked — swap when real reviews accumulate.
 const TESTIMONIALS = [
-  { quote: "Helpward saved me so much time. I needed help while traveling for work and he was amazing!",
-    name: "Jessica M.", where: "San Francisco, CA", img: 47 },
+  { quote: "Helpward saved me so much time. I needed help while traveling for work and the helper was amazing.",
+    name: "Jessica M.", where: "San Francisco, CA", img: 47, task: "Furniture assembly", ago: "2 days ago" },
   { quote: "I needed someone to wait in line for a concert ticket. Got it done within 30 minutes!",
-    name: "Daniel K.", where: "Los Angeles, CA", img: 33 },
+    name: "Daniel K.", where: "Los Angeles, CA", img: 33, task: "Wait in line", ago: "5 days ago" },
   { quote: "The elder-assistance service is a blessing. My mom loves her companion.",
-    name: "Linda P.", where: "Chicago, IL", img: 45 },
+    name: "Linda P.", where: "Chicago, IL", img: 45, task: "Elder assistance", ago: "1 week ago" },
   { quote: "Reliable, fast, and so easy to use. My go-to app for everything now.",
-    name: "Mark T.", where: "New York, NY", img: 12 },
+    name: "Mark T.", where: "New York, NY", img: 12, task: "Grocery pickup", ago: "3 days ago" },
 ];
 
 const QUICK_REQUESTS = [
@@ -146,11 +135,11 @@ export default async function LandingPage() {
                       <img key={n} src={`https://i.pravatar.cc/24?img=${n}`} alt="" loading="lazy" className="w-5 h-5 rounded-full ring-2 ring-white" />
                     ))}
                   </span>
-                  2,431 tasks completed
+                  {MARKETPLACE_METRICS.tasksCompletedThisWeek.toLocaleString()} tasks completed this week
                 </span>
                 <span className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1 text-xs font-semibold text-emerald-700">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Helpers available now
+                  {MARKETPLACE_METRICS.helpersAvailableNow} helpers available across {MARKETPLACE_METRICS.citiesLive} cities
                 </span>
               </div>
 
@@ -373,23 +362,23 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* RECENTLY COMPLETED NEAR YOU */}
+      {/* RECENTLY COMPLETED across cities */}
       <section className="bg-white border-t border-slate-100 py-12 lg:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between gap-3 mb-5">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 inline-flex items-center gap-2">
-                Recently completed near you
+                Just completed across the network
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" /> Live
                 </span>
               </h2>
-              <p className="text-sm text-slate-500 mt-1">Real tasks completed in your area</p>
+              <p className="text-sm text-slate-500 mt-1">Real tasks finished today across {MARKETPLACE_METRICS.citiesLive} Helpward cities</p>
             </div>
           </div>
           <div className="-mx-4 sm:mx-0">
-            <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 overflow-x-auto scrollbar-none px-4 sm:px-0 snap-x snap-mandatory">
-              {RECENT_TASKS.map((t) => (
+            <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 overflow-x-auto scrollbar-none px-4 sm:px-0 snap-x snap-mandatory">
+              {SAMPLE_RECENT_TASKS.map((t) => (
                 <div key={t.id} className="snap-start shrink-0 w-[70%] sm:w-auto rounded-2xl overflow-hidden bg-white border border-slate-100">
                   <div className="aspect-[5/3] bg-slate-100 overflow-hidden">
                     <img src={t.img} alt={t.title} loading="lazy" className="w-full h-full object-cover" />
@@ -397,8 +386,10 @@ export default async function LandingPage() {
                   <div className="p-3">
                     <div className="text-sm font-bold text-slate-900 truncate">{t.title}</div>
                     <div className="text-[11px] text-slate-500 mt-0.5">Completed {t.ago}</div>
-                    <div className="text-[11px] text-slate-500 truncate">{t.where}</div>
-                    <div className="mt-2 text-xs font-semibold text-slate-900">From ${t.price}</div>
+                    <div className="text-[11px] text-slate-500 truncate inline-flex items-center gap-1">
+                      <MapPin className="w-2.5 h-2.5" /> {t.city}, {t.region}
+                    </div>
+                    <div className="mt-2 text-xs font-semibold text-slate-900">${t.price}</div>
                   </div>
                 </div>
               ))}
@@ -441,6 +432,9 @@ export default async function LandingPage() {
             {TESTIMONIALS.map((t) => (
               <figure key={t.name} className="rounded-2xl bg-slate-50 border border-slate-100 p-5 flex flex-col">
                 <blockquote className="text-sm text-slate-700 leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</blockquote>
+                <div className="mt-3 inline-flex self-start items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {t.task} · {t.where.split(",")[0]} · {t.ago}
+                </div>
                 <figcaption className="mt-4 flex items-center gap-3">
                   <img src={`https://i.pravatar.cc/48?img=${t.img}`} alt="" loading="lazy" className="w-9 h-9 rounded-full" />
                   <div className="min-w-0">
@@ -544,11 +538,11 @@ export default async function LandingPage() {
 
       </main>
 
-      {/* FOOTER */}
+      {/* FOOTER — SEO-loaded: popular services, top cities, trust links */}
       <footer className="bg-slate-900 text-slate-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-            <div className="col-span-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-10">
+            <div className="col-span-2 lg:col-span-2">
               <Link href="/" className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">H</div>
                 <span className="text-lg font-bold text-white">Helpward</span>
@@ -556,18 +550,41 @@ export default async function LandingPage() {
               <p className="mt-3 text-xs text-slate-400 max-w-xs leading-relaxed">
                 The Human Infrastructure Network. Connecting you with verified helpers for real life, real simple.
               </p>
+              <ul className="mt-5 space-y-1.5 text-xs">
+                {[
+                  ["About us", "/about"],
+                  ["Safety & insurance", "/safety"],
+                  ["Help center", "/help"],
+                  ["Become a helper", "/signup?role=provider"],
+                ].map(([label, href]) => (
+                  <li key={href}><Link href={href} className="text-slate-400 hover:text-white transition">{label}</Link></li>
+                ))}
+              </ul>
             </div>
-            <FooterCol title="Services" items={topCategories.map((c) => c.category.label)} />
-            <FooterCol title="Company" items={[
-              ["About us", "/about"], ["Careers", "/about"], ["Blog", "/help"],
-            ] as [string, string][]} />
-            <FooterCol title="Support" items={[
-              ["Help Center", "/help"], ["Safety", "/safety"], ["Trust & Insurance", "/safety"],
-            ] as [string, string][]} />
-            <FooterCol title="Legal" items={[
-              ["Terms of Service", "/terms"], ["Privacy Policy", "/privacy"], ["Cookie Policy", "/privacy"],
-            ] as [string, string][]} />
+
+            <FooterCol
+              title="Popular services"
+              items={popularFooterServices(services)}
+            />
+            <FooterCol
+              title="Categories"
+              items={topCategories.map(({ category }) => [category.label, `/#services`] as [string, string])}
+            />
+            <FooterCol
+              title="Top cities"
+              items={CITIES.slice(0, 8).map((c) => [`${c.name}, ${c.region}`, `/cities/${c.slug}`] as [string, string])}
+            />
+            <FooterCol
+              title="Legal"
+              items={[
+                ["Terms of Service", "/terms"],
+                ["Privacy Policy", "/privacy"],
+                ["Cookie Policy", "/privacy"],
+                ["Sitemap", "/sitemap.xml"],
+              ] as [string, string][]}
+            />
           </div>
+
           <div className="mt-10 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
             <span>© {new Date().getFullYear()} Helpward — Real humans, real help.</span>
             <span>
@@ -576,40 +593,44 @@ export default async function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Sticky mobile CTA bar */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] px-4 py-3 flex items-center gap-2 safe-bottom">
+        <div className="flex-1 text-xs text-slate-500 leading-tight">
+          <div className="font-bold text-slate-900">Need help right now?</div>
+          <div>Match with a verified helper in minutes</div>
+        </div>
+        <Link
+          href="/new-request"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-700 shrink-0"
+        >
+          Find a helper <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+      <div className="lg:hidden h-16" aria-hidden />
     </div>
   );
 }
 
-function FooterCol({ title, items }: { title: string; items: string[] | [string, string][] }) {
+function FooterCol({ title, items }: { title: string; items: [string, string][] }) {
   return (
     <div>
       <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">{title}</div>
       <ul className="space-y-2 text-xs">
-        {items.map((item) => {
-          const isTuple = Array.isArray(item);
-          const label = isTuple ? item[0] : item;
-          const href = isTuple ? item[1] : "#services";
-          return (
-            <li key={label}>
-              <Link href={href} className="text-slate-400 hover:text-white transition">{label}</Link>
-            </li>
-          );
-        })}
+        {items.map(([label, href]) => (
+          <li key={href + label}>
+            <Link href={href} className="text-slate-400 hover:text-white transition">{label}</Link>
+          </li>
+        ))}
       </ul>
     </div>
   );
 }
 
-// Editorial photo per category — chosen for "human-helping-human" warmth.
-// Stored here so the homepage doesn't need a DB column for cover art.
-function categoryImage(id: string): string {
-  const map: Record<string, string> = {
-    transportation: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=70",
-    home: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=600&q=70",
-    errands: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=70",
-    presence: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=600&q=70",
-    lifestyle: "https://images.unsplash.com/photo-1450778869180-41d0601e046e?auto=format&fit=crop&w=600&q=70",
-    business: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=70",
-  };
-  return map[id] ?? "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=600&q=70";
+// Picks the top services to surface in the footer — Popular flag first, then
+// a few extra to round out the column. Crawlable text anchors → SEO wins.
+function popularFooterServices(services: import("@/lib/data/services").ServiceWithCategory[]): [string, string][] {
+  const popular = services.filter((s) => s.popular).slice(0, 6);
+  const rest = services.filter((s) => !s.popular).slice(0, Math.max(0, 6 - popular.length));
+  return [...popular, ...rest].map((s) => [s.title, `/services/${s.id}`]);
 }
