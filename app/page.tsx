@@ -1,11 +1,83 @@
 import Link from "next/link";
 import {
-  Sparkles, Shield, MapPin, Lock, ArrowRight, Play, Star,
+  Sparkles, Shield, MapPin, Lock, ArrowRight, Play, Star, HelpCircle,
 } from "lucide-react";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "./_landing-header";
 import { listServices, listCategories } from "@/lib/data/services";
+
+// Definition-first homepage opener — AI engines extract the first sentence
+// as a candidate snippet, so this paragraph is the "what is Helpward" answer.
+const TLDR =
+  "Helpward is the Human Infrastructure Network: an on-demand marketplace that connects you with verified, background-checked humans for rides, errands, home help, deliveries, and almost any real-world task across the U.S. and Canada. Pricing is shown upfront, payment is held until your task is marked complete, and every helper is identity-verified and insured during the booking.";
+
+const FAQS: { q: string; a: string }[] = [
+  {
+    q: "What is Helpward?",
+    a: "Helpward is an on-demand marketplace that matches people who need help with verified, background-checked humans nearby. Real-world tasks — rides, errands, furniture assembly, package waiting, elder check-ins, and more — are requested in seconds and tracked end-to-end with live GPS and chat.",
+  },
+  {
+    q: "How does Helpward work?",
+    a: "You describe what you need, our matching engine notifies nearby qualified providers in real time, and the first to accept becomes your helper. You see their identity, rating, and ETA before they arrive, follow their progress live, and only pay when they mark the task complete.",
+  },
+  {
+    q: "Are Helpward providers actually verified?",
+    a: "Yes. Every provider passes government-ID verification through Stripe Identity, a background check through Checkr/Triton, and is covered by Helpward's platform insurance while the booking is active. Approval is reviewed by a human at Helpward before a provider can take any task.",
+  },
+  {
+    q: "How much does it cost?",
+    a: "Each service has a published base price (for example $20 for a designated driver). Helpward adds a flat $4.50 service fee and the total is shown before you submit the request. There is no surge pricing, no hidden fees, and no charge until the helper marks the task complete.",
+  },
+  {
+    q: "What can I request on Helpward?",
+    a: "The active catalog spans six categories — Transportation, Home Help, Errands, Presence, Lifestyle, and Business — with dozens of specific services. If your need is legal, safe, and a human nearby can do it, you can describe it in your own words and the matching engine will route it to someone qualified.",
+  },
+  {
+    q: "Where is Helpward available?",
+    a: "Helpward operates across the United States and Canada, with denser provider coverage in major metros (Vancouver, Seattle, San Francisco, Los Angeles, Austin, Chicago, New York, Toronto, Montreal). New cities are added as the verified-provider supply meets quality thresholds.",
+  },
+  {
+    q: "How do I become a Helpward provider?",
+    a: "Sign up at /signup as a provider, complete your profile, pick the services you want to offer, verify your ID, pass the background check, and link your bank for payouts via Stripe Connect. Once a human at Helpward approves your application, you can go online from /provider/active and start receiving offers.",
+  },
+];
+
+const FAQ_LD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+
+// dateModified for the homepage — bumped whenever the catalog or copy
+// meaningfully changes so AI engines see recent freshness signal.
+const LAST_UPDATED_ISO = "2026-05-27";
+
+const HOMEPAGE_LD = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://helpward.com/#webpage",
+  url: "https://helpward.com",
+  name: "Helpward — Real humans. Real help. Right now.",
+  description: TLDR,
+  isPartOf: { "@id": "https://helpward.com/#website" },
+  about: { "@id": "https://helpward.com/#organization" },
+  dateModified: LAST_UPDATED_ISO,
+  primaryImageOfPage: {
+    "@type": "ImageObject",
+    url: "https://helpward.com/opengraph-image",
+  },
+  breadcrumb: {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://helpward.com" },
+    ],
+  },
+};
 
 const live = [
   { who: "Sophie", verb: "completed a grocery pickup", where: "Downtown, Vancouver", ago: "2 min ago", img: 47 },
@@ -26,7 +98,16 @@ export default async function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(HOMEPAGE_LD) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_LD) }}
+      />
       <LandingHeader />
+      <main>
 
       {/* Hero */}
       <section className="relative overflow-hidden">
@@ -39,8 +120,7 @@ export default async function LandingPage() {
                 Real help. <span className="text-brand-600">Right now.</span>
               </h1>
               <p className="mt-4 lg:mt-5 text-base lg:text-lg text-slate-600 max-w-xl">
-                The Human Infrastructure Network.<br className="hidden sm:block" />
-                Anything you need in the real world, on demand.
+                {TLDR}
               </p>
             </div>
 
@@ -318,6 +398,35 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* FAQ — direct Q&A pairs, lifted into FAQPage schema for AI engines */}
+      <section id="faq" className="bg-slate-50 border-t border-slate-100 py-12 lg:py-20">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8 lg:mb-10">
+            <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-brand-700 mb-2">
+              <HelpCircle className="w-3.5 h-3.5" /> Common questions
+            </div>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900">Frequently asked</h2>
+            <p className="mt-2 text-sm sm:text-base text-slate-600">Short, direct answers to the questions people actually ask before their first request.</p>
+          </div>
+          <dl className="space-y-3">
+            {FAQS.map((f) => (
+              <details key={f.q} className="group rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 open:shadow-md transition">
+                <summary className="cursor-pointer list-none flex items-start justify-between gap-4">
+                  <dt className="text-sm sm:text-base font-bold text-slate-900">{f.q}</dt>
+                  <span className="shrink-0 text-slate-400 text-xl leading-none transition group-open:rotate-45">+</span>
+                </summary>
+                <dd className="mt-3 text-sm text-slate-700 leading-relaxed">{f.a}</dd>
+              </details>
+            ))}
+          </dl>
+          <p className="mt-8 text-center text-xs text-slate-500">
+            Still have a question? <Link href="/help" className="text-brand-700 font-semibold underline-offset-2 hover:underline">Visit the help center</Link>.
+          </p>
+        </div>
+      </section>
+
+      </main>
+
       {/* Footer */}
       <footer className="bg-slate-50 border-t border-slate-100 py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
@@ -326,6 +435,9 @@ export default async function LandingPage() {
             <span>© {new Date().getFullYear()} Helpward — Real humans, real help.</span>
           </div>
           <div className="flex items-center gap-5">
+            <span className="text-slate-400">
+              Last updated <time dateTime={LAST_UPDATED_ISO}>May&nbsp;27,&nbsp;2026</time>
+            </span>
             <Link href="/terms" className="hover:text-slate-900">Terms</Link>
             <Link href="/privacy" className="hover:text-slate-900">Privacy</Link>
             <Link href="/help" className="hover:text-slate-900">Help Center</Link>
