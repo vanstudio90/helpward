@@ -5,7 +5,9 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 // keyed by service_id so callers can do `counts.get(s.id) ?? 0` cheaply.
 //
 // Service-role client because we read across all users and the catalog is
-// not user-scoped. Cached in-memory for 60s via Next's request memoization.
+// not user-scoped. SERVER-ONLY — re-exporting `bookingBadge` lives in a
+// separate file so client components can import the pure formatter without
+// pulling next/headers into the browser bundle.
 export async function getBookingCountsByService(days = 7): Promise<Map<string, number>> {
   const since = new Date(Date.now() - days * 86400_000).toISOString();
   const supabase = createSupabaseServiceClient();
@@ -24,18 +26,4 @@ export async function getBookingCountsByService(days = 7): Promise<Map<string, n
     counts.set(row.service_id, (counts.get(row.service_id) ?? 0) + 1);
   }
   return counts;
-}
-
-// Pretty social-proof label. Below 5 we say "Newly listed" to avoid the
-// awkward "Booked 1 time this week" — better social signal than a tiny number.
-export function bookingBadge(count: number): { label: string; tone: "new" | "warm" | "hot" } {
-  if (count === 0) return { label: "Newly listed", tone: "new" };
-  if (count < 5) return { label: "Newly listed", tone: "new" };
-  if (count < 25) return { label: `Booked ${roundDown(count, 5)}+ times this week`, tone: "warm" };
-  if (count < 100) return { label: `Booked ${roundDown(count, 10)}+ times this week`, tone: "warm" };
-  return { label: `Booked ${roundDown(count, 50)}+ times this week`, tone: "hot" };
-}
-
-function roundDown(n: number, step: number): number {
-  return Math.floor(n / step) * step;
 }

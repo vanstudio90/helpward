@@ -6,7 +6,7 @@ import { TrendingUp, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { categorySummary } from "@/lib/marketing";
-import { bookingBadge } from "@/lib/data/service-stats";
+import { bookingBadge } from "@/lib/booking-badge";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 
