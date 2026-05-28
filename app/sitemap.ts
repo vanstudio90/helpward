@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import { listServices } from "@/lib/data/services";
+import { listServicesPublic } from "@/lib/data/services";
 import { CITIES } from "@/lib/marketing";
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com";
@@ -30,7 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Programmatic: one entry per service landing page (/services/<slug>)
   let serviceRoutes: MetadataRoute.Sitemap = [];
   try {
-    const services = await listServices();
+    const services = await listServicesPublic();
     serviceRoutes = services.map((s) => ({
       url: `${BASE}/services/${s.id}`,
       lastModified: now,

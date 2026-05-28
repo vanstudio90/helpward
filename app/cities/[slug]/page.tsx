@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, ShieldCheck, Clock, Users, MapPin } from "lucide-react";
 import type { Metadata } from "next";
-import { listServices, listCategories } from "@/lib/data/services";
+import { listServicesPublic, listCategoriesPublic } from "@/lib/data/services";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../_landing-header";
 import { CITIES, getCity } from "@/lib/marketing";
@@ -41,7 +41,7 @@ export default async function CityPage({ params }: { params: Promise<{ slug: str
   const city = getCity(slug);
   if (!city) notFound();
 
-  const [services, categories] = await Promise.all([listServices(), listCategories()]);
+  const [services, categories] = await Promise.all([listServicesPublic(), listCategoriesPublic()]);
   const grouped = categories
     .map((c) => ({ category: c, items: services.filter((s) => s.category?.id === c.id) }))
     .filter((g) => g.items.length > 0);

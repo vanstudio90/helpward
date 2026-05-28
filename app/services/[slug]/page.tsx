@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CheckCircle2, Clock, ShieldCheck, Star, Users, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
-import { listServices, listCategories, getService } from "@/lib/data/services";
+import { listServicesPublic, listCategoriesPublic, getServicePublic } from "@/lib/data/services";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../_landing-header";
 import { CITIES } from "@/lib/marketing";
@@ -15,7 +15,7 @@ export const dynamic = "force-static";
 export const revalidate = 3600; // 1h ISR — refreshes when admin adds/edits services
 
 export async function generateStaticParams() {
-  const services = await listServices();
+  const services = await listServicesPublic();
   return services.map((s) => ({ slug: s.id }));
 }
 
@@ -23,7 +23,7 @@ export async function generateMetadata({
   params,
 }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const service = await getService(slug);
+  const service = await getServicePublic(slug);
   if (!service) return { title: "Service not found — Helpward" };
   const title = `${service.title} — Book a verified helper | Helpward`;
   const description = `${service.blurb} Helpers in your area, background-checked, insured, average response ${service.eta_label ?? "under 20 min"}. From $${(service.base_price_cents / 100).toFixed(0)}.`;
@@ -41,9 +41,9 @@ export default async function ServiceDetailPage({
 }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const [service, allServices, categories] = await Promise.all([
-    getService(slug),
-    listServices(),
-    listCategories(),
+    getServicePublic(slug),
+    listServicesPublic(),
+    listCategoriesPublic(),
   ]);
   if (!service) notFound();
 
