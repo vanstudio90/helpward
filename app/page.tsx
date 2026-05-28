@@ -1,27 +1,11 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
 import {
-  Sparkles, Shield, MapPin, Lock, ArrowRight, Play, Car, Home, ShoppingBag,
-  User, Heart, Briefcase, Globe, Menu, ChevronDown, X, Star,
+  Sparkles, Shield, MapPin, Lock, ArrowRight, Play, Star,
 } from "lucide-react";
 import { MapBackdrop } from "@/components/MapBackdrop";
-
-const popular = [
-  { icon: Car, tone: "bg-brand-50 text-brand-600", title: "Transportation",
-    items: ["Designated driver", "Ride assistance", "Vehicle delivery"] },
-  { icon: Home, tone: "bg-emerald-50 text-emerald-600", title: "Home Help",
-    items: ["Furniture assembly", "TV mounting", "Moving help"] },
-  { icon: ShoppingBag, tone: "bg-amber-50 text-amber-600", title: "Errands",
-    items: ["Grocery pickup", "Package returns", "Line waiting"] },
-  { icon: User, tone: "bg-brand-50 text-brand-600", title: "Presence",
-    items: ["House check-ins", "Elder visits", "Property inspections"] },
-  { icon: Heart, tone: "bg-rose-50 text-rose-600", title: "Lifestyle",
-    items: ["Event companion", "Dog walking", "Shopping assistant"] },
-  { icon: Briefcase, tone: "bg-violet-50 text-violet-600", title: "Business",
-    items: ["Inventory checks", "Local inspections", "Temporary labor"] },
-];
+import { ServiceIcon } from "@/components/ServiceIcon";
+import { LandingHeader } from "./_landing-header";
+import { listServices, listCategories } from "@/lib/data/services";
 
 const live = [
   { who: "Sophie", verb: "completed a grocery pickup", where: "Downtown, Vancouver", ago: "2 min ago", img: 47 },
@@ -30,83 +14,25 @@ const live = [
   { who: "Emily", verb: "completed a furniture assembly", where: "Mount Pleasant, Vancouver", ago: "7 min ago", img: 45 },
 ];
 
-export default function LandingPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
+export default async function LandingPage() {
+  const [services, categories] = await Promise.all([listServices(), listCategories()]);
+
+  // Group services under their category, in category sort_order. Empty
+  // categories drop out so we never show a header with no children.
+  const grouped = categories
+    .map((c) => ({ category: c, items: services.filter((s) => s.category?.id === c.id) }))
+    .filter((g) => g.items.length > 0);
+  const totalServices = services.length;
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Top nav */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">H</div>
-            <span className="text-lg font-bold tracking-tight">Helpward</span>
-          </Link>
-
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-700">
-            <a href="#how" className="hover:text-slate-900">How it works</a>
-            <a href="#services" className="hover:text-slate-900">Services</a>
-            <a href="#business" className="hover:text-slate-900">For Business</a>
-            <a href="#safety" className="hover:text-slate-900">Safety</a>
-            <a href="#providers" className="hover:text-slate-900">Become a Provider</a>
-          </nav>
-
-          {/* Desktop actions */}
-          <div className="hidden md:flex items-center gap-2">
-            <Link href="/dashboard" className="text-sm font-medium px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-100">Log in</Link>
-            <Link href="/dashboard" className="text-sm font-semibold px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800">Sign up</Link>
-          </div>
-
-          {/* Mobile actions */}
-          <div className="flex md:hidden items-center gap-1">
-            <button className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm text-slate-700 hover:bg-slate-100">
-              <Globe className="w-4 h-4" />
-              <span className="font-semibold">EN</span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
-            <button onClick={() => setMenuOpen(true)} aria-label="Open menu" className="p-2 rounded-lg hover:bg-slate-100">
-              <Menu className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile drawer */}
-      <div
-        className={`md:hidden fixed inset-0 z-40 bg-slate-900/40 transition ${menuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-        onClick={() => setMenuOpen(false)}
-      />
-      <aside
-        className={`md:hidden fixed top-0 right-0 z-50 h-full w-72 bg-white shadow-2xl transition-transform ${menuOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="flex items-center justify-between px-5 h-16 border-b border-slate-100">
-          <span className="text-base font-bold">Menu</span>
-          <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="p-2 rounded-lg hover:bg-slate-100"><X className="w-5 h-5" /></button>
-        </div>
-        <nav className="px-3 py-4 space-y-1 text-sm font-medium text-slate-700">
-          {[
-            ["#how", "How it works"],
-            ["#services", "Services"],
-            ["#business", "For Business"],
-            ["#safety", "Safety"],
-            ["#providers", "Become a Provider"],
-          ].map(([href, label]) => (
-            <a key={href} href={href} onClick={() => setMenuOpen(false)} className="block px-3 py-2.5 rounded-lg hover:bg-slate-50">{label}</a>
-          ))}
-        </nav>
-        <div className="px-3 mt-4 space-y-2">
-          <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block text-center text-sm font-medium px-3 py-2.5 rounded-xl border border-slate-200 text-slate-700">Log in</Link>
-          <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block text-center text-sm font-semibold px-3 py-2.5 rounded-xl bg-slate-900 text-white">Sign up</Link>
-        </div>
-      </aside>
+      <LandingHeader />
 
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-brand-50 via-white to-sky-50 -z-10" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 lg:pt-20 lg:pb-24">
           <div className="grid gap-6 lg:gap-12 lg:grid-cols-2 lg:items-start">
-            {/* Hero text */}
             <div className="lg:row-start-1 lg:col-start-1">
               <h1 className="text-[42px] sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.05]">
                 Real humans.<br />
@@ -118,11 +44,9 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Map — mobile order 2, desktop right column spans both rows */}
             <div className="relative lg:row-start-1 lg:row-span-2 lg:col-start-2">
               <div className="relative aspect-[4/3] sm:aspect-[5/4] rounded-3xl overflow-hidden shadow-xl shadow-brand-900/10">
                 <MapBackdrop />
-                {/* Route avatars (decorative — positioned along the SVG route) */}
                 <div className="absolute inset-0 pointer-events-none">
                   <img src="https://i.pravatar.cc/60?img=12" className="absolute top-[20%] left-[44%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" loading="lazy" />
                   <img src="https://i.pravatar.cc/60?img=45" className="absolute top-[16%] right-[10%] w-9 h-9 sm:w-10 sm:h-10 rounded-full ring-2 ring-white shadow" alt="" loading="lazy" />
@@ -131,7 +55,6 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Floating overlays */}
               <FloatingCard className="top-3 left-3">
                 <img src="https://i.pravatar.cc/40?img=12" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full" alt="" loading="lazy" />
                 <div className="min-w-0">
@@ -165,7 +88,6 @@ export default function LandingPage() {
               </FloatingCard>
             </div>
 
-            {/* Search card + trust pills — mobile order 3, desktop col 1 row 2 */}
             <div className="space-y-3 lg:space-y-4 lg:row-start-2 lg:col-start-1">
               <div className="bg-white rounded-2xl shadow-xl shadow-brand-900/5 border border-slate-100 p-4 sm:p-5">
                 <label className="text-sm font-semibold text-slate-900">What do you need help with?</label>
@@ -195,25 +117,84 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Popular services */}
+      {/* Full services catalog — grouped by category, every active service shown */}
       <section id="services" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-        <div className="flex items-end justify-between mb-6 lg:mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Popular services</h2>
-          <Link href="/services" className="text-xs sm:text-sm font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1 whitespace-nowrap">
-            View all services <ArrowRight className="w-4 h-4" />
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6 lg:mb-10">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-widest text-brand-700 mb-2">Everything we help with</div>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900">
+              {totalServices} services across {grouped.length} categories
+            </h2>
+            <p className="mt-2 text-sm sm:text-base text-slate-600 max-w-2xl">
+              From rides home to TV mounting, errands to elder check-ins — request a verified human for almost anything in the real world. Pricing is upfront, payment lands after the task is done, and every helper is background-checked and insured.
+            </p>
+          </div>
+          <Link href="/new-request" className="self-start sm:self-end shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition">
+            Request something <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
 
-        {/* Mobile: horizontal scroll. Desktop: grid */}
-        <div className="-mx-4 sm:mx-0 sm:hidden">
-          <div className="flex gap-3 overflow-x-auto scrollbar-none px-4 snap-x snap-mandatory">
-            {popular.map((cat) => (
-              <CategoryCard key={cat.title} cat={cat} className="snap-start shrink-0 w-[44%]" />
+        {grouped.length === 0 ? (
+          <div className="rounded-2xl bg-white border border-slate-100 p-12 text-center text-sm text-slate-500">
+            Catalog is loading. Check back in a moment.
+          </div>
+        ) : (
+          <div className="space-y-8 lg:space-y-10">
+            {grouped.map(({ category, items }) => (
+              <div key={category.id}>
+                <div className="flex items-center gap-3 mb-3 lg:mb-4">
+                  <ServiceIcon name={category.icon ?? "spark"} size="md" />
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-900">{category.label}</h3>
+                    <p className="text-xs sm:text-sm text-slate-500">{items.length} service{items.length === 1 ? "" : "s"}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                  {items.map((s) => (
+                    <Link
+                      key={s.id}
+                      href={`/new-request?service=${s.id}`}
+                      className="group flex flex-col rounded-2xl border border-slate-100 bg-white hover:border-brand-300 hover:shadow-lg hover:-translate-y-0.5 transition overflow-hidden"
+                    >
+                      {s.image_url && (
+                        <div className="relative aspect-[5/3] bg-slate-100 overflow-hidden">
+                          <img
+                            src={s.image_url}
+                            alt={s.title}
+                            loading="lazy"
+                            className="w-full h-full object-cover group-hover:scale-105 transition"
+                          />
+                          {s.popular && (
+                            <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wide bg-violet-600 text-white px-2 py-1 rounded-md">
+                              Popular
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className="p-3 sm:p-4 flex-1 flex flex-col">
+                        <div className="text-sm font-bold text-slate-900 truncate">{s.title}</div>
+                        <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-2 flex-1">{s.blurb}</div>
+                        <div className="mt-2 sm:mt-3 flex items-center justify-between gap-2 text-[11px] sm:text-xs">
+                          <span className="font-semibold text-slate-900 truncate">From ${(s.base_price_cents / 100).toFixed(0)}</span>
+                          <span className="text-slate-500 whitespace-nowrap shrink-0">{s.eta_label}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
-        </div>
-        <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {popular.map((cat) => <CategoryCard key={cat.title} cat={cat} />)}
+        )}
+
+        <div className="mt-10 rounded-2xl bg-slate-50 border border-slate-100 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-sm font-bold text-slate-900">Need something not on this list?</div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Describe what you need — if it's legal, safe, and a human can do it, someone in the network can probably help.</p>
+          </div>
+          <Link href="/new-request" className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-100">
+            Describe your task <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
       </section>
 
@@ -372,20 +353,6 @@ function FloatingCard({ children, className = "" }: { children: React.ReactNode;
   return (
     <div className={`absolute ${className} flex items-center gap-2 sm:gap-3 bg-white rounded-2xl shadow-xl shadow-slate-900/10 px-2.5 py-2 sm:px-3 sm:py-2.5 border border-slate-100 max-w-[60%]`}>
       {children}
-    </div>
-  );
-}
-
-function CategoryCard({ cat, className = "" }: { cat: typeof popular[number]; className?: string }) {
-  return (
-    <div className={`rounded-2xl border border-slate-100 bg-white p-4 sm:p-5 hover:shadow-lg hover:-translate-y-0.5 transition ${className}`}>
-      <span className={`inline-flex w-11 h-11 rounded-xl ${cat.tone} items-center justify-center mb-3 sm:mb-4`}>
-        <cat.icon className="w-5 h-5" />
-      </span>
-      <div className="text-sm font-bold text-slate-900 mb-2">{cat.title}</div>
-      <ul className="space-y-1 text-xs text-slate-600">
-        {cat.items.map((i) => <li key={i}>{i}</li>)}
-      </ul>
     </div>
   );
 }

@@ -12,10 +12,12 @@ import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 
 export function NewRequestView({
-  services, categories,
-}: { services: ServiceWithCategory[]; categories: ServiceCategory[] }) {
+  services, categories, initialServiceId,
+}: { services: ServiceWithCategory[]; categories: ServiceCategory[]; initialServiceId?: string | null }) {
   const [state, formAction, pending] = useActionState(createRequestAction, undefined);
-  const [selected, setSelected] = useState<ServiceWithCategory | null>(services[0] ?? null);
+  const [selected, setSelected] = useState<ServiceWithCategory | null>(
+    services.find((s) => s.id === initialServiceId) ?? services[0] ?? null
+  );
   const [tab, setTab] = useState<string>("Popular");
   const [scheduled, setScheduled] = useState<"asap" | "later">("asap");
 
