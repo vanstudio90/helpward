@@ -41,16 +41,35 @@ export async function setProviderServicesAction(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not logged in." };
 
-  // Replace the set: delete all then insert
-  await supabase.from("provider_services").delete().eq("provider_id", user.id);
+  // Replace the set safely: upsert first (so insert failures don't wipe
+  // existing rows), THEN delete only rows the provider dropped. The naive
+  // delete-then-insert pattern can leave a provider with zero services if
+  // the insert errors mid-flight.
   if (services.length > 0) {
     const rows = services.map((s) => ({
       provider_id: user.id,
       service_id: s.id,
       custom_price_cents: s.custom_price_cents ?? null,
     }));
-    const { error } = await supabase.from("provider_services").insert(rows);
-    if (error) return { error: error.message };
+    const { error: upErr } = await supabase
+      .from("provider_services")
+      .upsert(rows, { onConflict: "provider_id,service_id" });
+    if (upErr) return { error: upErr.message };
+  }
+
+  const { data: existing } = await supabase
+    .from("provider_services")
+    .select("service_id")
+    .eq("provider_id", user.id);
+  const keep = new Set(services.map((s) => s.id));
+  const toDelete = (existing ?? []).map((r) => r.service_id).filter((id) => !keep.has(id));
+  if (toDelete.length > 0) {
+    const { error: delErr } = await supabase
+      .from("provider_services")
+      .delete()
+      .eq("provider_id", user.id)
+      .in("service_id", toDelete);
+    if (delErr) return { error: delErr.message };
   }
 
   revalidatePath("/provider/profile");

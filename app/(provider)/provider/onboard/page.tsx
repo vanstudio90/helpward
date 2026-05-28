@@ -5,15 +5,22 @@ import { Check, Clock } from "lucide-react";
 
 export default async function ProviderOnboardPage() {
   const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
   const { data: pp } = await supabase
     .from("provider_profiles")
     .select("*")
     .single();
   const services = await listServices();
+  const { count: providerServiceCount } = user
+    ? await supabase
+        .from("provider_services")
+        .select("service_id", { count: "exact", head: true })
+        .eq("provider_id", user.id)
+    : { count: 0 };
 
   const steps = [
     { key: "profile", title: "Basic profile", done: !!pp?.bio },
-    { key: "services", title: "Pick services you offer", done: false /* TODO: count provider_services */ },
+    { key: "services", title: "Pick services you offer", done: (providerServiceCount ?? 0) > 0 },
     { key: "id", title: "Verify your ID", done: !!pp?.id_verified_at, blocked: "Pending Stripe Identity wiring" },
     { key: "background", title: "Background check", done: !!pp?.background_verified_at, blocked: "Pending Checkr / Triton wiring" },
     { key: "payouts", title: "Connect a bank account", done: !!pp?.stripe_connect_account_id, blocked: "Pending Stripe Connect wiring" },

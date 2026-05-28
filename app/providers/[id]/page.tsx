@@ -30,7 +30,7 @@ export default async function PublicProviderProfile({
 
   const { data: reviews } = await supabase
     .from("reviews")
-    .select("rating, comment, created_at, customer:profiles!reviews_customer_id_fkey(full_name)")
+    .select("id, rating, comment, created_at, customer:profiles!reviews_customer_id_fkey(full_name)")
     .eq("provider_id", id)
     .eq("customer_visible", true)
     .order("created_at", { ascending: false })
@@ -102,8 +102,8 @@ export default async function PublicProviderProfile({
           <section className="mt-6 rounded-2xl bg-white border border-slate-100 p-5">
             <h2 className="text-sm font-bold text-slate-900 mb-3">Recent reviews</h2>
             <ul className="space-y-4">
-              {(reviews ?? []).map((r, i) => (
-                <li key={i} className="border-b border-slate-100 last:border-b-0 pb-3 last:pb-0">
+              {(reviews ?? []).map((r) => (
+                <li key={r.id} className="border-b border-slate-100 last:border-b-0 pb-3 last:pb-0">
                   <div className="flex items-center gap-2 text-amber-500 text-sm">
                     {Array.from({ length: r.rating }).map((_, j) => <Star key={j} className="w-3.5 h-3.5 fill-amber-400" />)}
                     <span className="text-xs text-slate-500 ml-1">

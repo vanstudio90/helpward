@@ -229,8 +229,8 @@ export default function LandingPage() {
               <div className="bg-slate-100 rounded-xl p-4">
                 <div className="bg-white rounded-lg p-3 text-sm text-slate-700">I need someone to wait for my package</div>
                 <div className="grid grid-cols-10 gap-1 mt-3 text-[10px] text-slate-500 font-mono">
-                  {"QWERTYUIOPASDFGHJKL".split("").map((k, i) => (
-                    <div key={i} className="bg-white rounded text-center py-1">{k}</div>
+                  {"QWERTYUIOPASDFGHJKL".split("").map((k) => (
+                    <div key={k} className="bg-white rounded text-center py-1">{k}</div>
                   ))}
                 </div>
               </div>
@@ -291,8 +291,8 @@ export default function LandingPage() {
             <Link href="/dashboard" className="text-xs font-semibold text-brand-700">View live map →</Link>
           </div>
           <ul className="space-y-4">
-            {live.map((a, i) => (
-              <li key={i} className="flex items-center gap-3">
+            {live.map((a) => (
+              <li key={`${a.who}-${a.ago}`} className="flex items-center gap-3">
                 <img src={`https://i.pravatar.cc/40?img=${a.img}`} className="w-9 h-9 rounded-full" alt="" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm"><span className="font-semibold text-slate-900">{a.who}</span> <span className="text-slate-600">{a.verb}</span></div>

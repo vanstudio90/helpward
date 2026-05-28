@@ -135,7 +135,6 @@ export function NewRequestView({
                     name="address"
                     required
                     placeholder="123 Main St, Vancouver, BC"
-                    defaultValue="123 Main St, Vancouver, BC"
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
                   />
                 </div>
