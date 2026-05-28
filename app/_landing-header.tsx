@@ -9,7 +9,7 @@ const NAV_LINKS: [string, string][] = [
   ["#services", "Services"],
   ["#business", "For Business"],
   ["#safety", "Safety"],
-  ["#providers", "Become a Provider"],
+  ["#providers", "Become a Helper"],
 ];
 
 export function LandingHeader() {
