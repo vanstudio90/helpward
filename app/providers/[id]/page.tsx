@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck, Star, MapPin, Clock, ArrowRight } from "lucide-react";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +107,7 @@ export default async function PublicProviderProfile({
                   <div className="flex items-center gap-2 text-amber-500 text-sm">
                     {Array.from({ length: r.rating }).map((_, j) => <Star key={j} className="w-3.5 h-3.5 fill-amber-400" />)}
                     <span className="text-xs text-slate-500 ml-1">
-                      {(r as { customer: { full_name: string } | null }).customer?.full_name ?? "Anonymous"} · {new Date(r.created_at).toLocaleDateString()}
+                      {(r as { customer: { full_name: string } | null }).customer?.full_name ?? "Anonymous"} · <ClientDateTime iso={r.created_at} mode="date" />
                     </span>
                   </div>
                   {r.comment && <p className="text-sm text-slate-700 mt-1">{r.comment}</p>}

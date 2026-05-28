@@ -1,5 +1,6 @@
 import { listMyBookings, getDashboardStats } from "@/lib/data/customer";
 import { BarChart3 } from "lucide-react";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function AnalyticsPage() {
   const [stats, completed] = await Promise.all([
@@ -38,7 +39,7 @@ export default async function AnalyticsPage() {
                 <li key={b.id} className="flex items-center justify-between">
                   <div className="min-w-0">
                     <div className="font-semibold text-slate-900 truncate">{b.service.title}</div>
-                    <div className="text-xs text-slate-500">{b.completed_at ? new Date(b.completed_at).toLocaleDateString() : "—"}</div>
+                    <div className="text-xs text-slate-500"><ClientDateTime iso={b.completed_at} mode="date" /></div>
                   </div>
                   <div className="font-bold text-slate-900">${(b.total_cents / 100).toFixed(2)}</div>
                 </li>

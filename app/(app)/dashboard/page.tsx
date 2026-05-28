@@ -232,13 +232,12 @@ function UpcomingMini({ booking }: { booking: BookingWithProvider }) {
 }
 
 function RecentRow({ booking }: { booking: BookingWithProvider }) {
-  const date = new Date(booking.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return (
     <li className="flex items-center gap-2.5 sm:gap-3 px-1 py-2.5 sm:py-3">
       <ServiceIcon name={iconForService(booking.service.id)} size="sm" />
       <div className="min-w-0 flex-1">
         <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">{booking.service.title}</div>
-        <div className="text-[11px] text-slate-500 truncate">{date}</div>
+        <div className="text-[11px] text-slate-500 truncate"><ClientDateTime iso={booking.created_at} mode="date" /></div>
       </div>
       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
         booking.status === "completed" ? "bg-emerald-50 text-emerald-700" :

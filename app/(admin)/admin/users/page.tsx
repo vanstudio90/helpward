@@ -1,5 +1,6 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { Shield } from "lucide-react";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function AdminUsersPage({
   searchParams,
@@ -74,7 +75,7 @@ export default async function AdminUsersPage({
               </span>
               <span className="text-slate-700">{r.country}</span>
               <span className="text-slate-700">{r.default_currency}</span>
-              <span className="text-slate-500 text-xs">{new Date(r.created_at).toLocaleDateString()}</span>
+              <span className="text-slate-500 text-xs"><ClientDateTime iso={r.created_at} mode="date" /></span>
             </li>
           ))}
           {(rows?.length ?? 0) === 0 && (

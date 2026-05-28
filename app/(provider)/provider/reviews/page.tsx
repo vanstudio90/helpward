@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Star } from "lucide-react";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function ProviderReviewsPage() {
   const supabase = await createSupabaseServerClient();
@@ -75,7 +76,7 @@ export default async function ProviderReviewsPage() {
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold text-slate-900 truncate">{c?.full_name ?? "Anonymous"}</div>
-                    <div className="text-[11px] text-slate-500">{new Date(r.created_at).toLocaleDateString()}</div>
+                    <div className="text-[11px] text-slate-500"><ClientDateTime iso={r.created_at} mode="date" /></div>
                   </div>
                   <div className="flex items-center gap-0.5">
                     {Array.from({ length: r.rating }).map((_, j) => (

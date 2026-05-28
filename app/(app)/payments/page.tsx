@@ -1,6 +1,7 @@
 import { listMyBookings, listMyPaymentMethods, getMe } from "@/lib/data/customer";
 import Link from "next/link";
 import { CreditCard, Plus, Wallet, Gift, DollarSign, Download } from "lucide-react";
+import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function PaymentsPage() {
   const me = await getMe();
@@ -57,7 +58,7 @@ export default async function PaymentsPage() {
               <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center"><CreditCard className="w-4 h-4 text-brand-600" /></div>
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-bold text-slate-900 truncate">{b.service.title}</div>
-                <div className="text-[11px] text-slate-500">{b.completed_at ? new Date(b.completed_at).toLocaleDateString() : "—"}</div>
+                <div className="text-[11px] text-slate-500"><ClientDateTime iso={b.completed_at} mode="date" /></div>
               </div>
               <div className="text-sm font-bold text-slate-900">${(b.total_cents / 100).toFixed(2)}</div>
               <button className="p-2 rounded-lg border border-slate-200" aria-label="Download receipt">
