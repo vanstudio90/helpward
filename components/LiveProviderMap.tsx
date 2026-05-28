@@ -25,7 +25,11 @@ export function LiveProviderMap({
       .select("location, updated_at")
       .eq("provider_id", providerId)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("provider_locations initial fetch:", error.message);
+          return;
+        }
         if (data) {
           const coords = parsePoint(data.location);
           if (coords) setLoc({ ...coords, updatedAt: data.updated_at });

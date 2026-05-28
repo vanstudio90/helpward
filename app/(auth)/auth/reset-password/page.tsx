@@ -1,24 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState } from "react";
 import Link from "next/link";
 import { Lock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { resetPasswordAction } from "../actions";
 
 export default function ResetPasswordPage() {
   const [state, formAction, pending] = useActionState(resetPasswordAction, undefined);
-  const [hasSession, setHasSession] = useState<boolean | null>(null);
-
-  // When Supabase redirects here after the reset link, it puts the access_token
-  // in the URL fragment. The supabase-js client picks it up automatically when
-  // a browser client is instantiated. We just check the URL hash to know if we
-  // should expect a fresh session.
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const hash = window.location.hash;
-      setHasSession(hash.includes("access_token") || true /* assume valid session set by callback */);
-    }
-  }, []);
+  // Supabase's PKCE flow puts the recovery session into cookies via the auth
+  // callback before redirecting here, so we just render the form. The server
+  // action enforces the actual session check via supabase.auth.updateUser.
 
   return (
     <div className="bg-white rounded-2xl shadow-xl shadow-brand-900/5 border border-slate-100 p-6 sm:p-8">

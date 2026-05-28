@@ -35,14 +35,21 @@ export function NotificationBell({
       .select("*")
       .order("created_at", { ascending: false })
       .limit(15)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("notifications load:", error.message);
+          return;
+        }
         if (data) setItems(data);
-        // Mark unread as read
+        // Mark unread as read — best-effort; only flip badge if write succeeds
         supabase
           .from("notifications")
           .update({ read_at: new Date().toISOString() })
           .is("read_at", null)
-          .then(() => setCount(0));
+          .then(({ error: updErr }) => {
+            if (updErr) console.error("notifications mark-read:", updErr.message);
+            else setCount(0);
+          });
       });
   }, [open]);
 

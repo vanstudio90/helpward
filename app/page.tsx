@@ -124,16 +124,16 @@ export default function LandingPage() {
                 <MapBackdrop />
                 {/* Route avatars (decorative — positioned along the SVG route) */}
                 <div className="absolute inset-0 pointer-events-none">
-                  <img src="https://i.pravatar.cc/60?img=12" className="absolute top-[20%] left-[44%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" />
-                  <img src="https://i.pravatar.cc/60?img=45" className="absolute top-[16%] right-[10%] w-9 h-9 sm:w-10 sm:h-10 rounded-full ring-2 ring-white shadow" alt="" />
-                  <img src="https://i.pravatar.cc/60?img=33" className="absolute top-[36%] left-[24%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" />
-                  <img src="https://i.pravatar.cc/60?img=58" className="absolute top-[58%] left-[48%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" />
+                  <img src="https://i.pravatar.cc/60?img=12" className="absolute top-[20%] left-[44%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" loading="lazy" />
+                  <img src="https://i.pravatar.cc/60?img=45" className="absolute top-[16%] right-[10%] w-9 h-9 sm:w-10 sm:h-10 rounded-full ring-2 ring-white shadow" alt="" loading="lazy" />
+                  <img src="https://i.pravatar.cc/60?img=33" className="absolute top-[36%] left-[24%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" loading="lazy" />
+                  <img src="https://i.pravatar.cc/60?img=58" className="absolute top-[58%] left-[48%] w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white shadow" alt="" loading="lazy" />
                 </div>
               </div>
 
               {/* Floating overlays */}
               <FloatingCard className="top-3 left-3">
-                <img src="https://i.pravatar.cc/40?img=12" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full" alt="" />
+                <img src="https://i.pravatar.cc/40?img=12" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full" alt="" loading="lazy" />
                 <div className="min-w-0">
                   <div className="text-[11px] text-slate-500">Driver on the way</div>
                   <div className="text-xs sm:text-sm font-semibold text-slate-900 whitespace-nowrap">2 min away</div>
@@ -142,7 +142,7 @@ export default function LandingPage() {
               </FloatingCard>
 
               <FloatingCard className="top-[42%] right-2 sm:right-4">
-                <img src="https://i.pravatar.cc/40?img=33" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full" alt="" />
+                <img src="https://i.pravatar.cc/40?img=33" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full" alt="" loading="lazy" />
                 <div className="min-w-0">
                   <div className="text-[11px] text-slate-500">Task in progress</div>
                   <div className="text-xs sm:text-sm font-semibold text-slate-900 whitespace-nowrap">Furniture assembly</div>
@@ -150,7 +150,7 @@ export default function LandingPage() {
               </FloatingCard>
 
               <FloatingCard className="bottom-3 right-3">
-                <img src="https://i.pravatar.cc/40?img=58" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full" alt="" />
+                <img src="https://i.pravatar.cc/40?img=58" className="w-8 h-8 sm:w-9 sm:h-9 rounded-full" alt="" loading="lazy" />
                 <div className="min-w-0">
                   <div className="text-[11px] text-slate-500">Task completed</div>
                   <div className="flex items-center gap-1 text-amber-500 text-[11px]">
@@ -239,7 +239,7 @@ export default function LandingPage() {
             <Step n={2} title="AI matches instantly" sub="We find the best human for the job">
               <div className="bg-gradient-to-br from-brand-50 to-sky-50 rounded-xl aspect-video flex items-end p-3">
                 <div className="bg-white rounded-lg px-3 py-2 flex items-center gap-2 shadow-sm">
-                  <img src="https://i.pravatar.cc/30?img=12" className="w-7 h-7 rounded-full" alt="" />
+                  <img src="https://i.pravatar.cc/30?img=12" className="w-7 h-7 rounded-full" alt="" loading="lazy" />
                   <div className="text-xs">
                     <div className="font-semibold text-slate-900">Best match</div>
                     <div className="text-slate-500">2 min away</div>
@@ -250,7 +250,7 @@ export default function LandingPage() {
             <div className="hidden md:hidden" />
             <Step n={3} title="Task completed" sub="Track in real time, pay securely">
               <div className="bg-emerald-50 rounded-xl p-4 flex items-center gap-3">
-                <img src="https://i.pravatar.cc/40?img=47" className="w-10 h-10 rounded-full" alt="" />
+                <img src="https://i.pravatar.cc/40?img=47" className="w-10 h-10 rounded-full" alt="" loading="lazy" />
                 <div>
                   <div className="text-sm font-semibold">Task completed!</div>
                   <div className="text-xs text-slate-500">Thank you!</div>
@@ -293,7 +293,7 @@ export default function LandingPage() {
           <ul className="space-y-4">
             {live.map((a) => (
               <li key={`${a.who}-${a.ago}`} className="flex items-center gap-3">
-                <img src={`https://i.pravatar.cc/40?img=${a.img}`} className="w-9 h-9 rounded-full" alt="" />
+                <img src={`https://i.pravatar.cc/40?img=${a.img}`} className="w-9 h-9 rounded-full" alt="" loading="lazy" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm"><span className="font-semibold text-slate-900">{a.who}</span> <span className="text-slate-600">{a.verb}</span></div>
                   <div className="text-xs text-slate-500">{a.where}</div>
@@ -305,7 +305,7 @@ export default function LandingPage() {
         </div>
 
         <div className="relative rounded-2xl overflow-hidden bg-slate-100 min-h-[260px] sm:min-h-[280px]">
-          <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=1000&q=70" alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" />
+          <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=1000&q=70" alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/10 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
             <h3 className="text-xl font-bold leading-tight">Too much to do?<br />We've got you.</h3>
@@ -315,7 +315,7 @@ export default function LandingPage() {
         </div>
 
         <div className="relative rounded-2xl overflow-hidden bg-brand-50 min-h-[260px] sm:min-h-[280px]">
-          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1000&q=70" alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" />
+          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1000&q=70" alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-t from-brand-900/70 via-brand-900/10 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
             <h3 className="text-xl font-bold leading-tight">Work with us</h3>

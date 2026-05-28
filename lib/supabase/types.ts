@@ -87,6 +87,10 @@ export type Address = {
   region: string | null;
   country: Country | null;
   postal_code: string | null;
+  // PostGIS geography(Point, 4326). Serialized as WKT/GeoJSON depending on
+  // the query; treated as opaque on the TS side since we never read coords
+  // app-side (all proximity math runs in SQL via find_nearby_providers).
+  location: unknown | null;
   created_at: string;
 };
 

@@ -313,15 +313,15 @@ function SummaryCard({ selected }: { selected: ServiceWithCategory | null }) {
           </p>
         </div>
 
-        {/* Real-time availability */}
+        {/* Service highlights — real-time provider count lands once matching has live capacity data. */}
         <div className="mt-4 rounded-xl bg-brand-50 p-3">
-          <div className="text-[10px] font-bold text-brand-700 uppercase tracking-wide mb-2">Right now near you</div>
+          <div className="text-[10px] font-bold text-brand-700 uppercase tracking-wide mb-2">What you can count on</div>
           <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
             <div>
               <div className="font-bold text-slate-900 inline-flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> 12
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live
               </div>
-              <div className="text-slate-500 mt-0.5 leading-tight">providers</div>
+              <div className="text-slate-500 mt-0.5 leading-tight">matching</div>
             </div>
             <div>
               <div className="font-bold text-slate-900">ETA</div>

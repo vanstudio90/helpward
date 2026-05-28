@@ -51,7 +51,7 @@ export function startGpsPings(opts: GpsOptions = {}): () => void {
 
       // PostGIS geography expects POINT(lng lat)
       const point = `POINT(${lng} ${lat})`;
-      await supabase
+      const { error: upErr } = await supabase
         .from("provider_locations")
         .upsert(
           {
@@ -63,6 +63,7 @@ export function startGpsPings(opts: GpsOptions = {}): () => void {
           },
           { onConflict: "provider_id" }
         );
+      if (upErr) onError?.(new Error("Location upsert failed: " + upErr.message));
 
       // Also append to booking_location_pings if there's an in-progress booking
       const { data: active } = await supabase
@@ -72,10 +73,11 @@ export function startGpsPings(opts: GpsOptions = {}): () => void {
         .eq("status", "in_progress")
         .limit(1);
       if (active && active.length > 0) {
-        await supabase.from("booking_location_pings").insert({
+        const { error: pingErr } = await supabase.from("booking_location_pings").insert({
           booking_id: active[0].id,
           location: point,
         });
+        if (pingErr) onError?.(new Error("Ping insert failed: " + pingErr.message));
       }
     },
     (err) => {
