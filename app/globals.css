@@ -48,3 +48,18 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 /* Hide scrollbar for chip rows */
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Respect prefers-reduced-motion: disable transforms, transitions, and
+   animation loops for users who set the OS-level accessibility flag.
+   Doesn't kill functionality — pulsing dots / spinners just hold still. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* iOS safe area for the sticky mobile CTA — keeps the bar above the home indicator. */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }

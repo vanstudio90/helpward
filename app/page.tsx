@@ -8,9 +8,11 @@ import { MapBackdrop } from "@/components/MapBackdrop";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "./_landing-header";
 import { ServicesCatalog } from "./_services-catalog";
+import { HeroSearch } from "./_hero-search";
 import { listServices, listCategories } from "@/lib/data/services";
 import { CITIES, SAMPLE_RECENT_TASKS, MARKETPLACE_METRICS, categoryImage } from "@/lib/marketing";
 import { getVisitor } from "@/lib/geo";
+import { getBookingCountsByService } from "@/lib/data/service-stats";
 
 // Homepage reads Vercel edge geo headers per request so the hero / activity
 // section can address the visitor's city by name. Forces dynamic rendering;
@@ -113,12 +115,14 @@ const WHY_FEATURES = [
 ];
 
 export default async function LandingPage() {
-  const [services, categories, visitor] = await Promise.all([
+  const [services, categories, visitor, bookingCountsMap] = await Promise.all([
     listServices(),
     listCategories(),
     getVisitor(),
+    getBookingCountsByService(7),
   ]);
   const visitorCity = visitor.matchedCity;
+  const bookingCounts = Object.fromEntries(bookingCountsMap);
 
   // Top 6 categories for the popular row (by sort_order)
   const topCategories = categories
@@ -166,37 +170,8 @@ export default async function LandingPage() {
                 Book verified local helpers{visitorCity ? ` in ${visitorCity.metro ?? visitorCity.name}` : ""} in minutes for rides, errands, home tasks, deliveries, and more.
               </p>
 
-              {/* Request card */}
-              <div className="mt-6 bg-white rounded-2xl shadow-xl shadow-brand-900/5 border border-slate-100 p-4 sm:p-5">
-                <label className="text-sm font-semibold text-slate-900">What do you need help with today?</label>
-                <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="text"
-                    placeholder="Example: Ride to airport, furniture assembly, grocery pickup..."
-                    className="flex-1 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm placeholder:text-slate-400 focus:bg-white focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-100"
-                  />
-                  <Link
-                    href="/new-request"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition whitespace-nowrap"
-                  >
-                    Find a helper <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
-                <div className="mt-4">
-                  <div className="text-[11px] font-semibold text-slate-500 mb-2">Popular right now:</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {QUICK_REQUESTS.map((q) => (
-                      <Link
-                        key={q}
-                        href="/new-request"
-                        className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 hover:bg-brand-50 hover:border-brand-200 hover:text-brand-700 transition"
-                      >
-                        {q}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              {/* Request card — client island: voice search + recent-search dropdown */}
+              <HeroSearch quickRequests={QUICK_REQUESTS} />
             </div>
 
             {/* Phone mockup */}
@@ -427,7 +402,7 @@ export default async function LandingPage() {
       </section>
 
       {/* FULL CATALOG (client component handles filter tabs) */}
-      <ServicesCatalog services={services} categories={categories} />
+      <ServicesCatalog services={services} categories={categories} bookingCounts={bookingCounts} />
 
       {/* WHY CHOOSE HELPWARD */}
       <section id="business" className="bg-slate-50 border-t border-slate-100 py-14 lg:py-20">

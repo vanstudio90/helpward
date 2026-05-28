@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { TrendingUp, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { categorySummary } from "@/lib/marketing";
+import { bookingBadge } from "@/lib/data/service-stats";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 
@@ -12,8 +14,13 @@ import type { ServiceCategory } from "@/lib/supabase/types";
 // but every service still renders in the SSR'd HTML — the tabs just toggle
 // visibility client-side so AI crawlers see the full inventory regardless.
 export function ServicesCatalog({
-  services, categories,
-}: { services: ServiceWithCategory[]; categories: ServiceCategory[] }) {
+  services, categories, bookingCounts,
+}: {
+  services: ServiceWithCategory[];
+  categories: ServiceCategory[];
+  // Plain Record (not Map) — Map isn't serialisable across the server/client boundary.
+  bookingCounts: Record<string, number>;
+}) {
   const [tab, setTab] = useState<string>("all");
 
   // Pre-group services by category once
@@ -98,6 +105,19 @@ export function ServicesCatalog({
                     <div className="p-3 sm:p-4 flex-1 flex flex-col">
                       <div className="text-sm font-bold text-slate-900 truncate">{s.title}</div>
                       <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-2 flex-1">{s.blurb}</div>
+                      {(() => {
+                        const badge = bookingBadge(bookingCounts[s.id] ?? 0);
+                        const Icon = badge.tone === "new" ? Sparkles : TrendingUp;
+                        const tone =
+                          badge.tone === "hot" ? "text-rose-700 bg-rose-50" :
+                          badge.tone === "warm" ? "text-amber-700 bg-amber-50" :
+                          "text-brand-700 bg-brand-50";
+                        return (
+                          <span className={cn("mt-2 inline-flex self-start items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide", tone)}>
+                            <Icon className="w-2.5 h-2.5" /> {badge.label}
+                          </span>
+                        );
+                      })()}
                       <div className="mt-2 sm:mt-3 flex items-center justify-between gap-2 text-[11px] sm:text-xs">
                         <span className="font-semibold text-slate-900 truncate">From ${(s.base_price_cents / 100).toFixed(0)}</span>
                         <span className="text-slate-500 whitespace-nowrap shrink-0">{s.eta_label}</span>

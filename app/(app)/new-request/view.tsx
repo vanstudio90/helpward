@@ -12,8 +12,13 @@ import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 
 export function NewRequestView({
-  services, categories, initialServiceId,
-}: { services: ServiceWithCategory[]; categories: ServiceCategory[]; initialServiceId?: string | null }) {
+  services, categories, initialServiceId, initialQuery,
+}: {
+  services: ServiceWithCategory[];
+  categories: ServiceCategory[];
+  initialServiceId?: string | null;
+  initialQuery?: string | null;
+}) {
   const [state, formAction, pending] = useActionState(createRequestAction, undefined);
   const [selected, setSelected] = useState<ServiceWithCategory | null>(
     services.find((s) => s.id === initialServiceId) ?? services[0] ?? null
@@ -183,6 +188,7 @@ export function NewRequestView({
                 <textarea
                   name="notes"
                   rows={3}
+                  defaultValue={initialQuery ?? ""}
                   placeholder="Any special instructions..."
                   className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
                 />
