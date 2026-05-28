@@ -10,6 +10,13 @@ import { LandingHeader } from "./_landing-header";
 import { ServicesCatalog } from "./_services-catalog";
 import { listServices, listCategories } from "@/lib/data/services";
 import { CITIES, SAMPLE_RECENT_TASKS, MARKETPLACE_METRICS, categoryImage } from "@/lib/marketing";
+import { getVisitor } from "@/lib/geo";
+
+// Homepage reads Vercel edge geo headers per request so the hero / activity
+// section can address the visitor's city by name. Forces dynamic rendering;
+// the heavier static SEO surface (FAQs, services, schemas) still ships in
+// every response, just rendered per-request.
+export const dynamic = "force-dynamic";
 
 // Definition-first homepage opener — AI engines extract the first sentence
 // as a candidate snippet, so this paragraph is the "what is Helpward" answer.
@@ -106,7 +113,12 @@ const WHY_FEATURES = [
 ];
 
 export default async function LandingPage() {
-  const [services, categories] = await Promise.all([listServices(), listCategories()]);
+  const [services, categories, visitor] = await Promise.all([
+    listServices(),
+    listCategories(),
+    getVisitor(),
+  ]);
+  const visitorCity = visitor.matchedCity;
 
   // Top 6 categories for the popular row (by sort_order)
   const topCategories = categories
@@ -127,7 +139,8 @@ export default async function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 lg:pt-16 lg:pb-20">
           <div className="grid gap-8 lg:gap-12 lg:grid-cols-[1.05fr_1fr] lg:items-center">
             <div>
-              {/* Trust pills above headline */}
+              {/* Trust pills above headline — second pill is city-aware when we
+                  matched the visitor to a Helpward market via Vercel edge geo. */}
               <div className="flex flex-wrap items-center gap-2 mb-5">
                 <span className="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full pl-1.5 pr-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
                   <span className="flex -space-x-1.5">
@@ -139,15 +152,18 @@ export default async function LandingPage() {
                 </span>
                 <span className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1 text-xs font-semibold text-emerald-700">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  {MARKETPLACE_METRICS.helpersAvailableNow} helpers available across {MARKETPLACE_METRICS.citiesLive} cities
+                  {visitorCity
+                    ? `${MARKETPLACE_METRICS.helpersAvailableNow} helpers available in ${visitorCity.name}`
+                    : `${MARKETPLACE_METRICS.helpersAvailableNow} helpers available across ${MARKETPLACE_METRICS.citiesLive} cities`}
                 </span>
               </div>
 
               <h1 className="text-[40px] sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.05]">
-                Get real human help <span className="text-brand-600">on demand.</span>
+                Get real human help{" "}
+                <span className="text-brand-600">{visitorCity ? `in ${visitorCity.name}.` : "on demand."}</span>
               </h1>
               <p className="mt-4 text-base lg:text-lg text-slate-600 max-w-xl">
-                Book verified local helpers in minutes for rides, errands, home tasks, deliveries, and more.
+                Book verified local helpers{visitorCity ? ` in ${visitorCity.metro ?? visitorCity.name}` : ""} in minutes for rides, errands, home tasks, deliveries, and more.
               </p>
 
               {/* Request card */}
@@ -368,13 +384,25 @@ export default async function LandingPage() {
           <div className="flex items-end justify-between gap-3 mb-5">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-slate-900 inline-flex items-center gap-2">
-                Just completed across the network
+                {visitorCity ? `Just completed near ${visitorCity.name}` : "Just completed across the network"}
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" /> Live
                 </span>
               </h2>
-              <p className="text-sm text-slate-500 mt-1">Real tasks finished today across {MARKETPLACE_METRICS.citiesLive} Helpward cities</p>
+              <p className="text-sm text-slate-500 mt-1">
+                {visitorCity
+                  ? `Real tasks finished today in ${visitorCity.name} and the surrounding ${visitorCity.metro ?? visitorCity.region} area`
+                  : `Real tasks finished today across ${MARKETPLACE_METRICS.citiesLive} Helpward cities`}
+              </p>
             </div>
+            {visitorCity && (
+              <Link
+                href={`/cities/${visitorCity.slug}`}
+                className="hidden sm:inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap"
+              >
+                See all in {visitorCity.name} →
+              </Link>
+            )}
           </div>
           <div className="-mx-4 sm:mx-0">
             <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 overflow-x-auto scrollbar-none px-4 sm:px-0 snap-x snap-mandatory">
