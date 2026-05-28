@@ -53,6 +53,12 @@ export async function signupAction(
   if (!email || !password || !fullName) {
     return { error: "All fields are required." };
   }
+  // Sanity check: email must contain an @ and a dot AFTER the @. Supabase
+  // also validates but rejecting here gives a clearer error than the generic
+  // "Unable to validate email address" we'd get from auth.signUp.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Please enter a valid email address." };
+  }
   if (email.length > 254) return { error: "Email is too long." };
   if (fullName.length > 80) return { error: "Name is too long (max 80 chars)." };
   if (password.length < 8) {

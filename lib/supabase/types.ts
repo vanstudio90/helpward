@@ -90,7 +90,7 @@ export type Address = {
   // PostGIS geography(Point, 4326). Serialized as WKT/GeoJSON depending on
   // the query; treated as opaque on the TS side since we never read coords
   // app-side (all proximity math runs in SQL via find_nearby_providers).
-  location: unknown | null;
+  location: unknown;
   created_at: string;
 };
 

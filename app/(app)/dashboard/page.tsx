@@ -41,8 +41,11 @@ export default async function DashboardPage() {
       <div className="relative mb-5 lg:mb-6">
         <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
         <input
-          placeholder="Search anything..."
-          className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+          placeholder="Search across services and bookings (ships soon)…"
+          disabled
+          title="Global search ships soon — use /services or /bookings to filter for now"
+          aria-label="Global search (coming soon)"
+          className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-slate-200 text-sm placeholder:text-slate-400 cursor-not-allowed opacity-70"
         />
       </div>
 

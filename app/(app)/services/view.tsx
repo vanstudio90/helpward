@@ -185,7 +185,7 @@ export function ServicesView({
                   <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-1">{s.blurb}</div>
                   <div className="mt-2 sm:mt-3 flex items-center justify-between gap-2 text-[11px] sm:text-xs">
                     <span className="font-semibold text-slate-900 truncate">
-                      ${(s.base_price_cents / 100).toFixed(0)} - ${(s.base_price_cents / 50).toFixed(0)}
+                      From ${(s.base_price_cents / 100).toFixed(0)}
                     </span>
                     <span className="text-slate-500 whitespace-nowrap shrink-0">{s.eta_label}</span>
                   </div>

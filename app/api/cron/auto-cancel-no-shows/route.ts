@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { isAuthorizedCron } from "@/lib/cron-auth";
 
 // Auto-cancel 'scheduled' bookings where the scheduled_for time passed by
 // >GRACE_MINUTES and the provider still hasn't called start_booking.
@@ -9,9 +10,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 const GRACE_MINUTES = 20;
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization") ?? "";
-  const secret = process.env.CRON_SECRET;
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!isAuthorizedCron(req.headers.get("authorization"))) {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
 

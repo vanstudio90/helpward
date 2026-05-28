@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { isAuthorizedCron } from "@/lib/cron-auth";
 
 // Vercel Cron pings this every 15 minutes (see vercel.json).
 // Marks requests stuck in 'matching' for >30 minutes as 'expired' and notifies
@@ -9,9 +10,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 const STALE_MINUTES = 30;
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization") ?? "";
-  const secret = process.env.CRON_SECRET;
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!isAuthorizedCron(req.headers.get("authorization"))) {
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
 
