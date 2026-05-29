@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { createRequestAction } from "./actions";
+import { RecurrencePicker } from "./recurrence-picker";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 
@@ -193,6 +194,8 @@ export function NewRequestView({
                   className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
                 />
               </label>
+
+              <RecurrencePicker />
             </div>
           </div>
 

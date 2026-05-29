@@ -279,6 +279,50 @@ export const HELP_ARTICLES: HelpArticle[] = [
     updatedAt: "2026-05-28",
   },
   {
+    slug: "recurring-bookings",
+    category: "bookings",
+    title: "Setting up a recurring booking",
+    summary:
+      "Schedule a weekly, biweekly, or monthly task once and Helpward materialises the next occurrence as a real booking 48 hours before it's due. Pause, resume, skip a single date, or cancel the whole series any time.",
+    body: [
+      { type: "h2", text: "Why use a recurring series" },
+      { type: "p", text:
+        "If you need the same thing on a predictable cadence — Tuesday dog walks, the third of the month elder check-in, biweekly grocery pickup — a recurring series saves you from re-entering the same details every time. You set the rule once; Helpward turns it into individual bookings on the right dates." },
+      { type: "h2", text: "How to set one up" },
+      { type: "ol", items: [
+        "Open /new-request and pick a service.",
+        "Enter the pickup address, time, and any notes — just like a one-shot booking.",
+        "Scroll to the 'Repeat this task' toggle and turn it on.",
+        "Pick the cadence (weekly, biweekly, or monthly).",
+        "For weekly/biweekly, pick the weekday. For monthly, pick the day of the month.",
+        "Optionally cap the series at a specific end date or a maximum number of occurrences.",
+        "Submit. We'll create the series and materialise the first occurrence immediately.",
+      ] },
+      { type: "h2", text: "When the next occurrence becomes a real booking" },
+      { type: "p", text:
+        "Helpward's materialisation cron runs daily. It looks 48 hours ahead and turns each upcoming series occurrence into a regular request, which the matching engine then routes to a nearby helper just like a one-shot booking. You'll see the materialised occurrence on /bookings under Pending or Upcoming, and on the series detail page under History." },
+      { type: "h2", text: "Pausing, skipping, cancelling" },
+      { type: "ul", items: [
+        "Pause: the series stops materialising new occurrences. Already-scheduled bookings still happen. Resume any time.",
+        "Skip next: cancels the soonest pending request for this series; subsequent occurrences continue normally.",
+        "Cancel: the series stops permanently. Already-scheduled bookings still happen — cancel each from its booking page if you want to skip those too.",
+      ] },
+      { type: "h2", text: "Timezones and daylight saving" },
+      { type: "p", text:
+        "Your local time of day is stored with the series. When the cron materialises an occurrence it converts to UTC using your registered timezone — including handling daylight-saving transitions, so 9am-every-Tuesday stays 9am after a clock change. If you move to a new timezone, update it in /settings before creating new series." },
+      { type: "h2", text: "If the service is removed from the catalogue" },
+      { type: "p", text:
+        "We auto-pause your series and send you a notification. The historical occurrences stay intact; you can either resume after the service comes back or create a new series with a different service." },
+    ],
+    faqs: [
+      { q: "Can I change the cadence after creating a series?", a: "Not directly — cancel the existing series and create a new one with the new cadence. We're working on in-place editing for v2." },
+      { q: "What if I want to change a single occurrence's time?", a: "Skip the affected occurrence (it cancels the materialised request) and create a one-shot request at the new time. The series keeps running normally for subsequent dates." },
+      { q: "Does each occurrence cost the same?", a: "Yes — the price is locked when you create the series, so future catalogue price changes don't retroactively reprice your existing occurrences. If we ever do increase prices, we'll surface it to you explicitly." },
+      { q: "What's the maximum number of occurrences I can schedule?", a: "520 — about ten years of weekly bookings. If you need more, you can chain a follow-up series or contact support." },
+    ],
+    updatedAt: "2026-05-29",
+  },
+  {
     slug: "setting-up-2fa",
     category: "account",
     title: "Setting up two-factor authentication",

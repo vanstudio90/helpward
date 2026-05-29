@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { createSeriesAction } from "@/app/(app)/bookings/series/actions";
 
 type State = { error?: string; success?: string } | undefined;
 
@@ -13,6 +14,16 @@ export async function createRequestAction(
   _prev: State,
   formData: FormData
 ): Promise<State> {
+  // Branch on the recurrence picker — if the user toggled "Repeat this task"
+  // we route to createSeriesAction which writes a booking_series row and
+  // materialises the first occurrence. Otherwise it's a one-shot request.
+  if (formData.get("repeat_on") === "1") {
+    const r = await createSeriesAction(undefined, formData);
+    if (r?.error) return { error: r.error };
+    if (r?.seriesId) redirect(`/bookings/series/${r.seriesId}`);
+    return { error: "Couldn't create the series." };
+  }
+
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
