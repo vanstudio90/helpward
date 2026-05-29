@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signupAction } from "../auth/actions";
 import { Mail, Lock, User, AlertCircle, Globe } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { ReferralBanner } from "./referral-banner";
 
 export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signupAction, undefined);
@@ -14,6 +15,8 @@ export default function SignupPage() {
     <div className="bg-white rounded-2xl shadow-xl shadow-brand-900/5 border border-slate-100 p-6 sm:p-8">
       <h1 className="text-2xl font-bold text-slate-900">Create your account</h1>
       <p className="text-sm text-slate-500 mt-1">Start using Helpward today.</p>
+
+      <ReferralBanner rewardLabel="$10" />
 
       {/* Role selector */}
       <div className="mt-5 grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">

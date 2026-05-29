@@ -16,7 +16,7 @@ const PUBLIC_PREFIXES = [
 const CUSTOMER_PREFIXES = [
   "/dashboard", "/services", "/new-request", "/messages",
   "/bookings", "/saved-providers", "/favorites", "/payments",
-  "/analytics", "/settings", "/business",
+  "/analytics", "/settings", "/business", "/referrals",
 ];
 
 const PROVIDER_PREFIXES = ["/provider"];
@@ -26,9 +26,31 @@ function startsWithAny(pathname: string, prefixes: string[]) {
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
+// Referral-code capture: any request that carries ?ref=CODE on the URL gets
+// the code stored in a cookie (30 days). signupAction reads the cookie when
+// the new user submits the form, so a friend can land at the homepage, the
+// safety page, anywhere — the attribution still happens at signup time.
+const REFERRAL_COOKIE = "hw_ref";
+const REFERRAL_MAX_AGE_DAYS = 30;
+
 export async function proxy(request: NextRequest) {
   const { response, user } = await updateSupabaseSession(request);
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  const incomingRef = searchParams.get("ref");
+  if (incomingRef) {
+    // Light validation up-front so we don't store nonsense. Real existence
+    // check happens at signup. Cookie is NOT HttpOnly because the /signup
+    // client component reads it to show a "$10 credit applied" banner.
+    const cleaned = incomingRef.trim().toUpperCase();
+    if (/^[A-Z0-9]{4,16}$/.test(cleaned)) {
+      response.cookies.set(REFERRAL_COOKIE, cleaned, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * REFERRAL_MAX_AGE_DAYS,
+        sameSite: "lax",
+      });
+    }
+  }
 
   // Always allow static assets & API routes that opt-in to public
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return response;

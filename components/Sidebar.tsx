@@ -20,6 +20,7 @@ const nav = [
   { href: "/favorites", label: "Favorites", icon: Star },
   { href: "/business", label: "Business Tools", icon: Briefcase, tag: "New" },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/referrals", label: "Refer a friend", icon: Gift, tag: "$10" },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

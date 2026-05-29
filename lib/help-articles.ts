@@ -279,6 +279,43 @@ export const HELP_ARTICLES: HelpArticle[] = [
     updatedAt: "2026-05-28",
   },
   {
+    slug: "referring-friends",
+    category: "account",
+    title: "Referring friends — give $10, get $10",
+    summary:
+      "Share your unique Helpward code or link. Your friend gets $10 off their first booking; you get $10 in credit when they complete it.",
+    body: [
+      { type: "h2", text: "How the rewards work" },
+      { type: "ol", items: [
+        "Open /referrals to grab your code and shareable link.",
+        "Send it to a friend — text, email, or any channel you'd like.",
+        "Your friend signs up at helpward.com/signup?ref=YOURCODE (the link does this automatically).",
+        "The moment they sign up they see a $10 credit on their first booking.",
+        "When they complete that first task, you earn $10 in credit too. It applies automatically to your next booking once payment processing is wired.",
+      ] },
+      { type: "h2", text: "What's tracked" },
+      { type: "p", text:
+        "The /referrals dashboard shows everyone who signed up with your code, who has qualified (completed a first task), how much you've earned in total, and your current spendable balance." },
+      { type: "h2", text: "Program rules" },
+      { type: "ul", items: [
+        "One referral per new account — codes cannot be applied retroactively.",
+        "Self-referrals, multi-account abuse, and incentivised signups for accounts that never actually use Helpward are flagged and voided.",
+        "Helpward reviews referrals showing high signup velocity from the same IP / device — legitimate referrals always sail through.",
+        "Credit is non-cash and non-transferable. It applies to base + service fee, not to tips.",
+        "Helpward may adjust the reward amount with notice, but already-earned credit is honoured at the rate it was earned.",
+      ] },
+      { type: "h2", text: "Custom share message" },
+      { type: "p", text:
+        "From the referrals dashboard you can replace the default share blurb with your own words — useful if you want to highlight a specific service or share why you like Helpward in your own voice." },
+    ],
+    faqs: [
+      { q: "When does the credit actually apply?", a: "Credit applies automatically at checkout once payment processing is wired. Today the balance accumulates on your account; the moment Stripe integration ships, it draws down as you book." },
+      { q: "Can I refer myself?", a: "No. Self-referrals and multi-account abuse are detected and voided. Helpward's anti-fraud check compares signup IPs and devices for attribution review." },
+      { q: "Is there a limit to how many friends I can refer?", a: "No fixed cap — refer as many as you'd like. Helpward reviews accounts showing unusual referral patterns to protect the program for everyone." },
+    ],
+    updatedAt: "2026-05-29",
+  },
+  {
     slug: "setting-your-availability",
     category: "helpers",
     title: "Setting your availability",

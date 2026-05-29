@@ -2,7 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies, headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { recordReferralAttribution } from "@/lib/data/referrals";
 
 type ActionState = { error?: string; success?: string } | undefined;
 
@@ -75,7 +77,7 @@ export async function signupAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -90,6 +92,26 @@ export async function signupAction(
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Best-effort referral attribution. If the visitor was carrying an hw_ref
+  // cookie (set by proxy.ts when they landed via ?ref=CODE), we record an
+  // attribution row now. Failures here don't block signup — referrals are a
+  // nice-to-have, the account is the must-have.
+  try {
+    const cookieStore = await cookies();
+    const refCode = cookieStore.get("hw_ref")?.value;
+    if (refCode && data.user?.id) {
+      const h = await headers();
+      const ip = h.get("x-forwarded-for") ?? h.get("x-real-ip") ?? null;
+      const ua = h.get("user-agent");
+      await recordReferralAttribution(data.user.id, refCode, ip, ua);
+      // Clear the cookie so a friend who shares a device doesn't get
+      // double-credited when they sign up next.
+      cookieStore.delete("hw_ref");
+    }
+  } catch (e) {
+    console.error("referral attribution failed:", e);
   }
 
   redirect("/verify-email?email=" + encodeURIComponent(email));
