@@ -4,6 +4,8 @@ import { listServicesPublic } from "@/lib/data/services";
 import { CITIES } from "@/lib/marketing";
 import { HELP_ARTICLES } from "@/lib/help-articles";
 import { SAFETY_PAGES } from "./safety/_safety-shell";
+import { JOBS } from "@/lib/careers";
+import { BLOG_POSTS } from "@/lib/blog-posts";
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com";
 
@@ -19,6 +21,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/privacy`, lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
     { url: `${BASE}/login`,   lastModified: now, changeFrequency: "yearly",  priority: 0.4 },
     { url: `${BASE}/signup`,  lastModified: now, changeFrequency: "yearly",  priority: 0.5 },
+    { url: `${BASE}/careers`, lastModified: now, changeFrequency: "weekly",  priority: 0.6 },
+    { url: `${BASE}/blog`,    lastModified: now, changeFrequency: "weekly",  priority: 0.6 },
   ];
 
   // Programmatic: one entry per city landing page (/cities/<slug>)
@@ -89,8 +93,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  const careerRoutes: MetadataRoute.Sitemap = JOBS.map((j) => ({
+    url: `${BASE}/careers/${j.slug}`,
+    lastModified: new Date(j.postedAt),
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
+  const blogRoutes: MetadataRoute.Sitemap = BLOG_POSTS.map((p) => ({
+    url: `${BASE}/blog/${p.slug}`,
+    lastModified: new Date(p.updatedAt ?? p.publishedAt),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
   return [
     ...staticRoutes, ...cityRoutes, ...serviceRoutes, ...cityServiceRoutes,
-    ...helpRoutes, ...safetyRoutes, ...providerRoutes,
+    ...helpRoutes, ...safetyRoutes, ...careerRoutes, ...blogRoutes, ...providerRoutes,
   ];
 }

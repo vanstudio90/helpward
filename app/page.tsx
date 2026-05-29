@@ -556,6 +556,8 @@ export default async function LandingPage() {
               <ul className="mt-5 space-y-1.5 text-xs">
                 {[
                   ["About us", "/about"],
+                  ["Careers", "/careers"],
+                  ["Blog", "/blog"],
                   ["Safety & insurance", "/safety"],
                   ["Help center", "/help"],
                   ["Become a helper", "/signup?role=provider"],

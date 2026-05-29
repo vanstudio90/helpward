@@ -29,9 +29,12 @@ export function MarketingShell({
       <footer className="border-t border-slate-100 py-8">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <span>© {new Date().getFullYear()} Helpward</span>
-          <nav className="flex items-center gap-5">
+          <nav className="flex items-center gap-5 flex-wrap justify-center">
             <Link href="/about" className="hover:text-slate-900">About</Link>
+            <Link href="/careers" className="hover:text-slate-900">Careers</Link>
+            <Link href="/blog" className="hover:text-slate-900">Blog</Link>
             <Link href="/safety" className="hover:text-slate-900">Safety</Link>
+            <Link href="/help" className="hover:text-slate-900">Help</Link>
             <Link href="/terms" className="hover:text-slate-900">Terms</Link>
             <Link href="/privacy" className="hover:text-slate-900">Privacy</Link>
           </nav>
