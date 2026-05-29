@@ -9,6 +9,7 @@ import { ServiceIcon } from "@/components/ServiceIcon";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { LiveProviderMap } from "@/components/LiveProviderMap";
 import { CancelBookingButton } from "./cancel-button";
+import { TipCard } from "./tip-card";
 import { ClientDateTime } from "@/components/ClientDateTime";
 
 const STATUS_TONE: Record<string, string> = {
@@ -159,6 +160,17 @@ export default async function BookingDetailPage({
                 providerInitial={provider.profile?.full_name?.[0] ?? "?"}
               />
             </div>
+          )}
+
+          {/* Tip card — only after completion */}
+          {b.status === "completed" && provider && (
+            <TipCard
+              bookingId={b.id}
+              basePriceCents={b.base_price_cents}
+              currentTipCents={b.tip_cents ?? 0}
+              currency={b.currency}
+              helperName={provider.profile?.full_name?.split(" ")[0] ?? "your helper"}
+            />
           )}
 
           {/* CTAs */}

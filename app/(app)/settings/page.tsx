@@ -67,8 +67,8 @@ export default async function SettingsPage() {
         <Card>
           <h2 className="text-base font-bold text-slate-900 mb-3">Quick Actions</h2>
           <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Quick icon={<Download className="w-4 h-4 text-slate-500" />} label="Download My Data" sub="Export your data" disabled tooltip="Coming in Phase 6.2 (CCPA / PIPEDA compliance export)" />
-            <Quick icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete Account" sub="Permanent" tone="text-rose-600" disabled tooltip="Coming in Phase 6.2. Email privacy@helpward.com to delete in the meantime." />
+            <Quick icon={<Download className="w-4 h-4 text-slate-500" />} label="Download My Data" sub="Export everything" href="/settings/data" />
+            <Quick icon={<Trash2 className="w-4 h-4 text-rose-500" />} label="Delete Account" sub="30-day grace period" tone="text-rose-600" href="/settings/data" />
             <li>
               <form action={logoutAction}>
                 <button className="w-full text-left flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50">
@@ -138,16 +138,25 @@ function SecRow({ icon, label, sub, action, disabled, last, tooltip, subTone, hr
   );
 }
 
-function Quick({ icon, label, sub, tone, disabled, tooltip }: { icon: React.ReactNode; label: string; sub: string; tone?: string; disabled?: boolean; tooltip?: string }) {
+function Quick({ icon, label, sub, tone, disabled, tooltip, href }: { icon: React.ReactNode; label: string; sub: string; tone?: string; disabled?: boolean; tooltip?: string; href?: string }) {
+  const inner = (
+    <>
+      <span className="w-8 h-8 rounded-lg bg-slate-50 inline-flex items-center justify-center shrink-0">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className={`text-sm font-semibold ${tone ?? "text-slate-900"}`}>{label}</div>
+        <div className="text-[11px] text-slate-500">{sub}</div>
+      </div>
+    </>
+  );
   return (
     <li>
-      <button disabled={disabled} title={tooltip} className={`w-full text-left flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 disabled:opacity-50 ${disabled ? "cursor-not-allowed" : ""}`}>
-        <span className="w-8 h-8 rounded-lg bg-slate-50 inline-flex items-center justify-center shrink-0">{icon}</span>
-        <div className="flex-1 min-w-0">
-          <div className={`text-sm font-semibold ${tone ?? "text-slate-900"}`}>{label}</div>
-          <div className="text-[11px] text-slate-500">{sub}</div>
-        </div>
-      </button>
+      {href ? (
+        <Link href={href} className="w-full text-left flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50">{inner}</Link>
+      ) : (
+        <button disabled={disabled} title={tooltip} className={`w-full text-left flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 disabled:opacity-50 ${disabled ? "cursor-not-allowed" : ""}`}>
+          {inner}
+        </button>
+      )}
     </li>
   );
 }
