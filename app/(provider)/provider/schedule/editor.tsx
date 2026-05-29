@@ -9,8 +9,8 @@ import {
   saveWeeklyRulesAction, addOverrideAction, removeOverrideAction,
   setVacationModeAction, type WeeklyRulePayload,
 } from "./actions";
-import type { WeeklyRule, DateOverride } from "@/lib/data/availability";
-import { totalWeeklyHours } from "@/lib/data/availability";
+import type { WeeklyRule, DateOverride } from "@/lib/availability-pure";
+import { totalWeeklyHours } from "@/lib/availability-pure";
 
 const WEEKDAYS = [
   { id: 0, short: "Sun", long: "Sunday" },
