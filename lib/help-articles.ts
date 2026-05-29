@@ -452,6 +452,43 @@ export const HELP_ARTICLES: HelpArticle[] = [
     ],
     updatedAt: "2026-05-28",
   },
+  {
+    slug: "bundling-multiple-tasks",
+    category: "bookings",
+    title: "Bundling multiple tasks in one trip",
+    summary:
+      "Stack up to 5 tasks into a single request and pay one service fee. The helper completes each stop in order and you watch progress live as each item is marked done.",
+    body: [
+      { type: "p", text:
+        "Bundling lets you put several related tasks — say, a grocery pickup, a pharmacy stop, and a dry-cleaning return — into one booking handled by one helper. You pay for each task plus a single flat service fee for the whole trip, not one fee per stop." },
+      { type: "h2", text: "When bundling is worth it" },
+      { type: "ul", items: [
+        "You have 2–5 tasks that are reasonably close to each other geographically.",
+        "All stops fit inside roughly the same time window (an hour or two).",
+        "Each task is small enough that paying a full service fee for it on its own would feel wasteful.",
+      ] },
+      { type: "h2", text: "How to create a bundle" },
+      { type: "ol", items: [
+        "Open /new-request and pick the first service.",
+        "Tick the \"Bundle multiple tasks in one trip\" box just below the recurrence options.",
+        "Use \"Add another stop\" to add up to 5 stops in total. Each stop gets its own service selection and notes field.",
+        "Review the price breakdown — items subtotal, single service fee, total — and submit.",
+      ] },
+      { type: "h2", text: "What the helper sees" },
+      { type: "p", text:
+        "When a helper accepts your bundle, their active-task screen shows a checklist with every stop. They tap each item to advance it from pending → in progress → done. You see the same statuses update live on your booking page so you always know which stop is happening right now." },
+      { type: "note", text:
+        "Helpers are paid per-stop plus a share of the bundle service fee, so they're rewarded for completing every item rather than rushing." },
+    ],
+    faqs: [
+      { q: "What if my helper can't complete one of the stops?", a: "The helper can mark any individual stop as skipped from their checklist — for example if a store is closed or an item is out of stock. You're refunded for the skipped item's price (the bundle service fee is non-refundable as long as at least one stop completes)." },
+      { q: "Can the stops be in different service categories?", a: "Yes. A bundle can mix categories — grocery pickup + dog walk + dry-cleaning return is fine. The matching engine routes the whole bundle to a helper qualified for the primary (first) service in the list." },
+      { q: "Is there a discount for bundling?", a: "You pay one $4.50 service fee for the whole bundle instead of one per task. On a 3-stop bundle that's effectively a $9.00 saving versus three separate requests, before factoring in the helper's travel time." },
+      { q: "What's the maximum bundle size?", a: "Five stops. We cap it there because past 5 the helper's time blows out our distance and ETA estimates, and the upfront price starts to feel less honest. If you need more, split into two bookings." },
+      { q: "Can I add a stop after the booking starts?", a: "Not yet. Once a helper has accepted the bundle the list is locked so the helper can plan their route. You can always create a second small request and message your helper to ask if they're available right after." },
+    ],
+    updatedAt: "2026-05-29",
+  },
 ];
 
 export function getArticle(slug: string): HelpArticle | null {

@@ -3,6 +3,7 @@ import { MapBackdrop } from "@/components/MapBackdrop";
 import { Activity, MessageSquare, Phone, CheckCircle2, Play } from "lucide-react";
 import { OnlineToggle, BookingActions } from "./client";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { BundleChecklist, type BundleChecklistItem } from "./bundle-checklist";
 
 export default async function ProviderActivePage() {
   const supabase = await createSupabaseServerClient();
@@ -19,10 +20,11 @@ export default async function ProviderActivePage() {
   const { data: bookings } = await supabase
     .from("bookings")
     .select(`
-      id, status, scheduled_for, started_at, total_cents, payout_cents, currency,
+      id, status, scheduled_for, started_at, total_cents, payout_cents, currency, request_id,
       service:services(title, image_url),
       customer:profiles!bookings_customer_id_fkey(full_name, avatar_url, phone),
       pickup_addr:requests!bookings_request_id_fkey(
+        id, is_bundle,
         pickup:addresses!requests_pickup_address_id_fkey(formatted)
       )
     `)
@@ -30,7 +32,26 @@ export default async function ProviderActivePage() {
     .order("created_at", { ascending: false })
     .limit(1);
 
-  const booking = (bookings as Array<{ id: string; status: string; scheduled_for: string | null; started_at: string | null; total_cents: number; payout_cents: number; currency: string; service: { title: string; image_url: string | null }; customer: { full_name: string; avatar_url: string | null; phone: string | null }; pickup_addr: { pickup: { formatted: string } | null } | null }> | null)?.[0] ?? null;
+  const booking = (bookings as Array<{ id: string; status: string; scheduled_for: string | null; started_at: string | null; total_cents: number; payout_cents: number; currency: string; request_id: string; service: { title: string; image_url: string | null }; customer: { full_name: string; avatar_url: string | null; phone: string | null }; pickup_addr: { id: string; is_bundle: boolean | null; pickup: { formatted: string } | null } | null }> | null)?.[0] ?? null;
+
+  // If the booking's parent request is a bundle, pull the child stops so the
+  // helper sees a tap-to-advance checklist for each task in the trip.
+  let bundleItems: BundleChecklistItem[] = [];
+  if (booking?.pickup_addr?.is_bundle && booking.request_id) {
+    const { data: rows } = await supabase
+      .from("request_bundle_items")
+      .select("id, position, notes, item_price_cents, status, service:services(title)")
+      .eq("request_id", booking.request_id)
+      .order("position", { ascending: true });
+    bundleItems = ((rows as Array<{ id: string; position: number; notes: string | null; item_price_cents: number; status: BundleChecklistItem["status"]; service: { title: string } | null }> | null) ?? []).map((r) => ({
+      id: r.id,
+      position: r.position,
+      title: r.service?.title ?? "Task",
+      notes: r.notes,
+      itemPriceCents: r.item_price_cents,
+      status: r.status,
+    }));
+  }
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto">
@@ -110,6 +131,10 @@ export default async function ProviderActivePage() {
                 {booking.scheduled_for ? <ClientDateTime iso={booking.scheduled_for} /> : "ASAP"}
               </div>
             </div>
+
+            {bundleItems.length > 0 && (
+              <BundleChecklist items={bundleItems} />
+            )}
 
             <div className="relative rounded-xl overflow-hidden h-44 bg-slate-100">
               <MapBackdrop />

@@ -36,6 +36,7 @@ export default async function BookingDetailPage({
         profile:profiles!provider_profiles_user_id_fkey(full_name, avatar_url, phone)
       ),
       request:requests(
+        id, is_bundle, bundle_item_count,
         pickup:addresses!requests_pickup_address_id_fkey(formatted)
       ),
       conversation:conversations(id),
@@ -48,9 +49,25 @@ export default async function BookingDetailPage({
 
   const provider = (b as { provider: { user_id: string; rating_avg: number | null; profile: { full_name: string; avatar_url: string | null; phone: string | null } | null } | null }).provider;
   const service = (b as { service: { title: string; image_url: string | null } | null }).service;
-  const pickup = (b as { request: { pickup: { formatted: string } | null } | null }).request?.pickup;
+  const request = (b as { request: { id: string; is_bundle: boolean; bundle_item_count: number | null; pickup: { formatted: string } | null } | null }).request;
+  const pickup = request?.pickup;
   const convo = (b as { conversation: { id: string }[] | null }).conversation?.[0];
   const review = (b as { review: { id: string; rating: number }[] | null }).review?.[0];
+
+  // Pull bundle items if this booking is for a bundled request. RLS lets
+  // the booking's owner read items (via the parent request's customer_id).
+  let bundleItems: Array<{
+    id: string; position: number; status: string; notes: string | null;
+    item_price_cents: number; service: { title: string } | null;
+  }> = [];
+  if (request?.is_bundle) {
+    const { data } = await supabase
+      .from("request_bundle_items")
+      .select("id, position, status, notes, item_price_cents, service:services(title)")
+      .eq("request_id", request.id)
+      .order("position");
+    bundleItems = (data ?? []) as unknown as typeof bundleItems;
+  }
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-8 max-w-3xl mx-auto pb-12">
@@ -112,6 +129,40 @@ export default async function BookingDetailPage({
               <div className="text-sm text-slate-900 inline-flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-brand-600" /> {pickup.formatted}
               </div>
+            </div>
+          )}
+
+          {/* Bundle items — shown only for multi-task bundles */}
+          {bundleItems.length > 0 && (
+            <div className="border-t border-slate-100 pt-4">
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <Calendar className="w-3 h-3" /> {bundleItems.length}-stop bundle
+              </div>
+              <ol className="space-y-2">
+                {bundleItems.map((it) => (
+                  <li key={it.id} className="flex items-start gap-3 rounded-xl bg-slate-50 p-3">
+                    <span className={
+                      it.status === "completed"
+                        ? "w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold inline-flex items-center justify-center shrink-0"
+                        : it.status === "in_progress"
+                        ? "w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-bold inline-flex items-center justify-center shrink-0 animate-pulse"
+                        : "w-6 h-6 rounded-full bg-white border border-slate-300 text-slate-500 text-xs font-bold inline-flex items-center justify-center shrink-0"
+                    }>
+                      {it.status === "completed" ? <CheckCircle2 className="w-3 h-3" /> : it.position}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold text-slate-900">{it.service?.title ?? "Stop"}</div>
+                      {it.notes && <div className="text-xs text-slate-500 mt-0.5 leading-snug">{it.notes}</div>}
+                    </div>
+                    <div className="text-xs font-semibold text-slate-700 tabular-nums shrink-0">
+                      ${(it.item_price_cents / 100).toFixed(2)}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <p className="text-[11px] text-slate-500 mt-2 leading-snug">
+                One helper, one trip. Your helper marks each stop done as they go.
+              </p>
             </div>
           )}
 

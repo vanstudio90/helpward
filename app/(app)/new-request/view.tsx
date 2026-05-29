@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/cn";
 import { createRequestAction } from "./actions";
 import { RecurrencePicker } from "./recurrence-picker";
+import { BundlePicker } from "./bundle-picker";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 
@@ -195,6 +196,7 @@ export function NewRequestView({
                 />
               </label>
 
+              <BundlePicker services={services} primaryService={selected} />
               <RecurrencePicker />
             </div>
           </div>
