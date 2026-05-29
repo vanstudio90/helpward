@@ -3,6 +3,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { listServicesPublic } from "@/lib/data/services";
 import { CITIES } from "@/lib/marketing";
 import { HELP_ARTICLES } from "@/lib/help-articles";
+import { SAFETY_PAGES } from "./safety/_safety-shell";
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com";
 
@@ -81,5 +82,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...cityRoutes, ...serviceRoutes, ...cityServiceRoutes, ...helpRoutes, ...providerRoutes];
+  const safetyRoutes: MetadataRoute.Sitemap = SAFETY_PAGES.map((p) => ({
+    url: `${BASE}/safety/${p.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly",
+    priority: 0.7,
+  }));
+
+  return [
+    ...staticRoutes, ...cityRoutes, ...serviceRoutes, ...cityServiceRoutes,
+    ...helpRoutes, ...safetyRoutes, ...providerRoutes,
+  ];
 }
