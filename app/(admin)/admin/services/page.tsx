@@ -1,13 +1,14 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { toggleServiceActiveAction } from "./actions";
 import { AddServiceForm } from "./add-form";
+import { EditServiceTrigger } from "./edit-form";
 
 export default async function AdminServicesPage() {
   const supabase = createSupabaseServiceClient();
   const [{ data }, { data: cats }] = await Promise.all([
     supabase
       .from("services")
-      .select("id, title, blurb, base_price_cents, eta_label, active, category_id, image_url")
+      .select("id, title, blurb, base_price_cents, eta_label, active, category_id, image_url, popular")
       .order("category_id")
       .order("title"),
     supabase.from("service_categories").select("id, label").order("sort_order"),
@@ -54,24 +55,24 @@ export default async function AdminServicesPage() {
                 ${(s.base_price_cents / 100).toFixed(2)} · {s.eta_label}
               </div>
             </div>
-            <form action={async () => {
-              "use server";
-              await toggleServiceActiveAction(s.id, !s.active);
-            }}>
-              <button className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                s.active ? "border border-slate-200 text-slate-700" : "bg-emerald-600 text-white"
-              }`}>
-                {s.active ? "Disable" : "Enable"}
-              </button>
-            </form>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <EditServiceTrigger service={s} />
+              <form action={async () => {
+                "use server";
+                await toggleServiceActiveAction(s.id, !s.active);
+              }}>
+                <button className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                  s.active ? "border border-slate-200 text-slate-700" : "bg-emerald-600 text-white"
+                }`}>
+                  {s.active ? "Disable" : "Enable"}
+                </button>
+              </form>
+            </div>
           </li>
         ))}
       </ul>
       )}
 
-      <p className="mt-6 text-xs text-slate-400 text-center">
-        Add/edit forms ship in Phase 6.2 — for now you can toggle visibility.
-      </p>
     </div>
   );
 }

@@ -1,0 +1,312 @@
+// Help-center article catalog. Pure data — no DB, no fetches. Each article is
+// authored in code so writers can review diffs in PRs (and so AI engines see
+// the entire knowledge base inlined in /help and /help/[slug] HTML).
+//
+// Each article gets its own programmatic page at /help/[slug], shows up in
+// the sitemap, and emits Article + BreadcrumbList JSON-LD.
+
+export type HelpCategory =
+  | "getting-started"
+  | "bookings"
+  | "payments"
+  | "safety"
+  | "account"
+  | "helpers";
+
+export type HelpArticle = {
+  slug: string;
+  category: HelpCategory;
+  title: string;
+  summary: string; // 1-2 sentence opener — extracted by AI engines as the snippet
+  // Body is structured so we can render headings + paragraphs + lists. Each
+  // section is a block; the whole array renders in order.
+  body: HelpBlock[];
+  // Optional FAQ pairs appended at the bottom — fed into FAQPage JSON-LD.
+  faqs?: { q: string; a: string }[];
+  updatedAt: string; // YYYY-MM-DD
+};
+
+export type HelpBlock =
+  | { type: "p"; text: string }
+  | { type: "h2"; text: string }
+  | { type: "h3"; text: string }
+  | { type: "ul"; items: string[] }
+  | { type: "ol"; items: string[] }
+  | { type: "note"; text: string };
+
+export const HELP_CATEGORIES: { id: HelpCategory; label: string; blurb: string }[] = [
+  { id: "getting-started", label: "Getting started", blurb: "How Helpward works, first booking, account setup." },
+  { id: "bookings", label: "Bookings", blurb: "Cancelling, rescheduling, tracking, disputes." },
+  { id: "payments", label: "Payments & refunds", blurb: "Pricing, fees, refunds, receipts, taxes." },
+  { id: "safety", label: "Safety & insurance", blurb: "Background checks, insurance, what to do if something goes wrong." },
+  { id: "account", label: "Account & privacy", blurb: "Password, notifications, data export, deletion." },
+  { id: "helpers", label: "For helpers", blurb: "Becoming a helper, payouts, schedule, taxes." },
+];
+
+export const HELP_ARTICLES: HelpArticle[] = [
+  {
+    slug: "what-is-helpward",
+    category: "getting-started",
+    title: "What is Helpward?",
+    summary:
+      "Helpward is the Human Infrastructure Network — an on-demand marketplace that matches you with verified, background-checked humans for almost any real-world task in the U.S. and Canada.",
+    body: [
+      { type: "p", text:
+        "Helpward connects people who need help with verified humans nearby. Customers (we call them askers) post a request, the matching engine notifies qualified helpers in their area, and the first to accept becomes your helper. Tasks are tracked end-to-end with live GPS and in-app chat, and payment is held until the task is marked complete." },
+      { type: "h2", text: "How is it different from a regular gig app?" },
+      { type: "ul", items: [
+        "Every helper passes ID verification, a background check, and is insured during the booking.",
+        "Pricing is published upfront — no surge fees, no after-the-fact markups.",
+        "You only pay after the helper marks the task complete and you've had 24 hours to review.",
+        "Real humans only. No autonomous bots or drones.",
+      ] },
+      { type: "h2", text: "What can I request?" },
+      { type: "p", text:
+        "The catalog covers six categories — Transportation, Home Help, Errands, Presence, Lifestyle, and Business — with dozens of specific services. If it's legal, safe, and a human nearby can do it, you can probably request it." },
+    ],
+    faqs: [
+      { q: "Is Helpward a delivery service?", a: "Helpward includes delivery as one of many categories. We also offer transportation, errands, home tasks, presence visits, and business services — anything a verified human can do." },
+      { q: "Is Helpward available in my city?", a: "Helpward operates across the U.S. and Canada with denser supply in Vancouver, Toronto, Montreal, Seattle, San Francisco, Los Angeles, Austin, Chicago, New York, and Miami. We add cities as helper-supply density meets quality thresholds." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "creating-your-first-request",
+    category: "getting-started",
+    title: "Creating your first request",
+    summary:
+      "Pick a service, enter where and when you need it, and submit. The matching engine notifies nearby verified helpers; the first to accept becomes yours.",
+    body: [
+      { type: "ol", items: [
+        "Open the /new-request page from your dashboard or the homepage.",
+        "Tap the service that best matches what you need.",
+        "Enter the address (real geocoding ships when our Mapbox integration is live).",
+        "Choose ASAP or schedule for later.",
+        "Add notes the helper should see — anything specific they need to bring or know.",
+        "Submit. You'll see helpers' identities, ratings, and ETAs as they accept.",
+      ] },
+      { type: "note", text:
+        "Tip: if you don't see a perfect service match, pick the closest one and describe the actual task in the notes. The matching engine is designed to route fuzzy requests to the right helper category." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "cancel-or-reschedule-a-booking",
+    category: "bookings",
+    title: "Cancelling or rescheduling a booking",
+    summary:
+      "Cancel a pending request for free from /bookings. Once a helper has accepted, cancellation policies depend on how close you are to the scheduled time.",
+    body: [
+      { type: "h2", text: "Before a helper accepts" },
+      { type: "p", text:
+        "Open /bookings, find the Pending tab, and tap Cancel. There's no fee — your card is only authorised once a helper accepts." },
+      { type: "h2", text: "After a helper accepts" },
+      { type: "p", text:
+        "Open the booking page and tap Cancel booking. A small cancellation fee may apply close to the scheduled time so we can fairly compensate the helper for time blocked off. The exact policy is shown on the cancel screen before you confirm." },
+      { type: "h2", text: "Need to reschedule?" },
+      { type: "p", text:
+        "Right now the cleanest path is to cancel and re-submit. A real reschedule flow ships in the next release." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "how-pricing-works",
+    category: "payments",
+    title: "How Helpward pricing works",
+    summary:
+      "Every service has a published base price. Helpward adds a flat $4.50 service fee. Total is shown before you submit. You're only charged after the task is marked complete.",
+    body: [
+      { type: "h2", text: "Base price" },
+      { type: "p", text:
+        "Each service has a base price published on the catalog page — for example, a designated driver might start at $29. The base price covers the helper's time for the typical task in that category." },
+      { type: "h2", text: "Service fee" },
+      { type: "p", text:
+        "Helpward adds a flat $4.50 service fee to every booking. The fee funds platform insurance, 24/7 support, identity verification, and background checks. It's the same regardless of task size." },
+      { type: "h2", text: "Distance, time, and tips" },
+      { type: "p", text:
+        "Long-distance or extended tasks may incur additional charges, always shown on the booking page before you confirm. Tipping is optional and goes 100% to the helper." },
+      { type: "h2", text: "Currency" },
+      { type: "p", text:
+        "Bookings in the U.S. are priced in USD; bookings in Canada are priced in CAD. The current price is converted automatically based on your city." },
+    ],
+    faqs: [
+      { q: "Why a flat service fee?", a: "We chose a flat fee over a percentage so a $20 errand isn't penalised vs a $200 booking. The fee covers fixed costs (insurance, verification, support) that don't scale with task size." },
+      { q: "Is the service fee refundable?", a: "If the task is cancelled before a helper accepts, the service fee is not charged. If a dispute is resolved in your favour, the service fee is refunded along with the base price." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "refunds-and-disputes",
+    category: "payments",
+    title: "Refunds and disputes",
+    summary:
+      "You have a 24-hour window after task completion to open a dispute. Helpward's support team reviews the case and can refund partial or full payment depending on what the evidence shows.",
+    body: [
+      { type: "ol", items: [
+        "Open the booking page within 24 hours of completion.",
+        "Tap Report an issue.",
+        "Pick a category — quality, damage, safety, no-show, billing, or other.",
+        "Describe what happened in at least 20 characters.",
+        "Submit. Helpward's support team reviews within 24 hours and contacts both parties.",
+      ] },
+      { type: "p", text:
+        "Refunds are issued back to the original payment method through Stripe. You'll see them on the Refunds tab on your /payments page and on your card statement within 5–10 business days." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "background-checks-and-insurance",
+    category: "safety",
+    title: "How Helpward verifies helpers and what's insured",
+    summary:
+      "Every helper passes government-ID verification (Stripe Identity), a background check (Checkr/Triton), and is covered by Helpward's platform insurance — up to $1M per booking.",
+    body: [
+      { type: "h2", text: "Identity verification" },
+      { type: "p", text:
+        "Before a helper can accept any task, they must verify a government-issued ID through Stripe Identity. The face on the ID is matched against a live selfie. We re-verify if a helper's account is dormant for an extended period." },
+      { type: "h2", text: "Background checks" },
+      { type: "p", text:
+        "U.S. helpers are screened via Checkr; Canadian helpers via Triton Canada. Both run county-level criminal record searches plus national sex-offender registries. A human at Helpward reviews any flagged report before approving." },
+      { type: "h2", text: "Insurance" },
+      { type: "p", text:
+        "Every booking is covered by Helpward's platform insurance, up to $1M per incident. Coverage applies during the active booking window — from helper acceptance through task completion or cancellation." },
+      { type: "note", text:
+        "Insurance does not cover anything illegal, reckless, or outside the scope of the booking. Read /safety for the detailed policy." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "what-to-do-if-something-goes-wrong",
+    category: "safety",
+    title: "What to do if something goes wrong",
+    summary:
+      "For active safety concerns during a task, end the booking and call 911 if needed. For everything else, open a dispute from the booking page or email safety@helpward.com.",
+    body: [
+      { type: "h2", text: "During the task — immediate safety concern" },
+      { type: "ol", items: [
+        "Get to a safe location.",
+        "Call 911 (U.S.) or 911 (Canada) for emergencies.",
+        "Use the in-app End booking button to stop tracking and flag the booking.",
+        "Email safety@helpward.com — we respond within 4 hours.",
+      ] },
+      { type: "h2", text: "Property damage or theft" },
+      { type: "p", text:
+        "File a report at safety@helpward.com with photos and your booking ID within 24 hours. Helpward's insurance covers damage up to $1M; you'll be asked for documentation." },
+      { type: "h2", text: "Helper no-show" },
+      { type: "p", text:
+        "Bookings auto-cancel 20 minutes past the scheduled time if the helper hasn't started. You'll receive a notification and your card is not charged." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "manage-notifications",
+    category: "account",
+    title: "Managing your notifications",
+    summary:
+      "Open Settings → Notifications to pick which booking, message, receipt, and safety notifications you want by push, email, and SMS.",
+    body: [
+      { type: "p", text:
+        "Helpward sends notifications across three channels: push (in-app + browser/native), email, and SMS. Each notification type can be toggled on or off independently." },
+      { type: "ul", items: [
+        "Booking updates: accepted, started, arriving soon, completed.",
+        "Messages: a helper or customer sent you an in-app message.",
+        "Receipts: a booking was charged or refunded.",
+        "Safety: dispute updates and account-security alerts (cannot be disabled).",
+      ] },
+      { type: "note", text:
+        "Critical safety + account-security notifications are always sent — you can't opt out. Everything else respects your preference." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "change-your-password",
+    category: "account",
+    title: "Changing your password",
+    summary:
+      "Open Settings → Security and tap Change password. You'll need your current password plus a new one (8–128 characters).",
+    body: [
+      { type: "ol", items: [
+        "Go to /settings.",
+        "Find the Security section.",
+        "Tap Change next to Password.",
+        "Enter your current password.",
+        "Pick a new password between 8 and 128 characters.",
+        "Submit. You'll stay signed in on the current device; other sessions are signed out for safety.",
+      ] },
+      { type: "p", text:
+        "Forgot your current password? Use the Forgot password link on the login page instead — we'll send a reset link to your email." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "download-or-delete-your-data",
+    category: "account",
+    title: "Downloading or deleting your data",
+    summary:
+      "From Settings → Quick Actions, you can request a full export of your Helpward data, or permanently delete your account. Exports arrive by email within 48 hours.",
+    body: [
+      { type: "h2", text: "Download your data" },
+      { type: "p", text:
+        "Open Settings, tap Download my data, and confirm. We package everything your account holds — profile, bookings, messages, reviews, payment history — into a JSON archive and email it to your registered address within 48 hours." },
+      { type: "h2", text: "Delete your account" },
+      { type: "p", text:
+        "From Settings, tap Delete account. You'll be asked to confirm with your password. Deletion is permanent: profile, messages, and personal data are removed within 30 days. Bookings and reviews you posted are anonymised but retained for the other party's records (required by our tax obligations)." },
+      { type: "note", text:
+        "If you have an active booking or unresolved dispute, you'll need to resolve it before deletion. Outstanding payouts to helpers are still processed after deletion." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "become-a-helper",
+    category: "helpers",
+    title: "Becoming a Helpward helper",
+    summary:
+      "Sign up as a helper, complete ID verification + background check, link a bank for payouts, and once approved you can go online from /provider/active to start accepting tasks.",
+    body: [
+      { type: "ol", items: [
+        "Sign up at /signup?role=provider with your full name, email, and password.",
+        "Complete your basic profile — bio, languages, service radius.",
+        "Pick the services you want to offer from the catalog.",
+        "Verify your ID through Stripe Identity (takes 2–5 minutes).",
+        "Pass the background check (typically 24–72 hours).",
+        "Link your bank for payouts via Stripe Connect.",
+        "A human at Helpward reviews and approves your application.",
+        "Go online from /provider/active to start receiving offers.",
+      ] },
+      { type: "p", text:
+        "Helpers keep 80% of the base + distance fee, plus 100% of any tip. Helpward takes 20% to cover insurance, support, identity verification, and platform costs." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+  {
+    slug: "helper-payouts-and-earnings",
+    category: "helpers",
+    title: "How helper payouts work",
+    summary:
+      "Earnings are deposited via Stripe Connect once per week (Tuesday) for the previous Mon–Sun. Tips arrive the same week as the booking. Tax forms are issued in January.",
+    body: [
+      { type: "h2", text: "When you get paid" },
+      { type: "p", text:
+        "Every Tuesday, your previous week's earnings (Monday through Sunday) land in the bank account you linked at onboarding. Standard ACH takes 2–3 business days to settle." },
+      { type: "h2", text: "What you keep" },
+      { type: "ul", items: [
+        "80% of the base price for the service.",
+        "80% of any distance / time fees.",
+        "100% of any tip the customer adds.",
+        "Helpward keeps 20% of the base + distance to fund insurance, support, and platform costs.",
+      ] },
+      { type: "h2", text: "Tax forms" },
+      { type: "p", text:
+        "U.S. helpers who earn over $600 in a calendar year receive a 1099-NEC by January 31. Canadian helpers receive a T4A. Both are issued through Stripe and emailed to your registered address." },
+    ],
+    updatedAt: "2026-05-28",
+  },
+];
+
+export function getArticle(slug: string): HelpArticle | null {
+  return HELP_ARTICLES.find((a) => a.slug === slug) ?? null;
+}
+
+export function getArticlesByCategory(category: HelpCategory): HelpArticle[] {
+  return HELP_ARTICLES.filter((a) => a.category === category);
+}

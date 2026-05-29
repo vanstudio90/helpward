@@ -117,6 +117,52 @@ export async function forgotPasswordAction(
   return { success: "Check your inbox — if that email is registered we just sent a reset link." };
 }
 
+// In-app password change for an already-authenticated user. Requires the
+// current password (re-authenticates via signInWithPassword) before updating
+// — Supabase's updateUser({ password }) does NOT enforce re-auth on its own,
+// so an attacker who steals a session cookie could otherwise silently rotate
+// the password. We check the current password first to close that gap.
+export async function changePasswordAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const currentPassword = String(formData.get("current_password") ?? "");
+  const newPassword = String(formData.get("new_password") ?? "");
+
+  if (!currentPassword) return { error: "Enter your current password." };
+  if (newPassword.length < 8) return { error: "New password must be at least 8 characters." };
+  if (newPassword.length > 128) return { error: "New password is too long (max 128)." };
+  if (newPassword === currentPassword) return { error: "New password must differ from the current one." };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) return { error: "Not logged in." };
+
+  // Re-authenticate. signInWithPassword issues a fresh session even when the
+  // user is already signed in — that's the supported way to verify the
+  // current password without bespoke server-side hashing.
+  const { error: reauthErr } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  if (reauthErr) return { error: "Current password is incorrect." };
+
+  const { error: updErr } = await supabase.auth.updateUser({ password: newPassword });
+  if (updErr) return { error: updErr.message };
+
+  // Best-effort audit trail; admin reviewers can spot suspicious patterns.
+  try {
+    await supabase.from("audit_log").insert({
+      actor_id: user.id,
+      action: "user.password_changed",
+      target_table: "auth.users",
+      target_id: user.id,
+    });
+  } catch {/* table read-only by user but accept silent fail */}
+
+  return { success: "Password updated." };
+}
+
 export async function resetPasswordAction(
   _prev: ActionState,
   formData: FormData

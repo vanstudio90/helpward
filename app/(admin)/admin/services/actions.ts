@@ -55,3 +55,57 @@ export async function createServiceAction(
   revalidatePath("/new-request");
   return { success: `${title} added.` };
 }
+
+// Update an existing service. Slug + category are immutable post-creation
+// (changing them would break inbound /services/<slug> and /cities/<x>/<slug>
+// SEO URLs) — all the editable copy/pricing/image go through this single action.
+export async function updateServiceAction(
+  serviceId: string,
+  _prev: State,
+  formData: FormData,
+): Promise<State> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Forbidden." };
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  const blurb = String(formData.get("blurb") ?? "").trim();
+  const base_price_dollars = parseFloat(String(formData.get("base_price") ?? "0"));
+  const eta_label = String(formData.get("eta_label") ?? "").trim() || null;
+  const image_url = String(formData.get("image_url") ?? "").trim() || null;
+  const popular = formData.get("popular") === "on";
+
+  if (!title || !blurb) return { error: "Title and blurb are required." };
+  if (!base_price_dollars || base_price_dollars <= 0) return { error: "Price must be > 0." };
+  if (title.length > 80) return { error: "Title too long (max 80 chars)." };
+  if (blurb.length > 400) return { error: "Blurb too long (max 400 chars)." };
+  if (eta_label && eta_label.length > 40) return { error: "ETA label too long." };
+  if (image_url && !/^https:\/\//.test(image_url)) return { error: "Image URL must start with https://" };
+  if (image_url && image_url.length > 500) return { error: "Image URL too long." };
+
+  const supabase = createSupabaseServiceClient();
+  const { error } = await supabase
+    .from("services")
+    .update({
+      title, blurb,
+      base_price_cents: Math.round(base_price_dollars * 100),
+      eta_label, image_url, popular,
+    })
+    .eq("id", serviceId);
+  if (error) return { error: error.message };
+
+  // Refresh every surface that renders service data — homepage uses it via
+  // ServicesCatalog, /services/[slug] is its own page, /cities/[city]/[service]
+  // joins both, /new-request lists services. Don't skip these or the admin
+  // sees stale prices after editing.
+  revalidatePath("/admin/services");
+  revalidatePath("/");
+  revalidatePath("/services");
+  revalidatePath("/new-request");
+  revalidatePath(`/services/${serviceId}`);
+  revalidatePath("/cities", "layout");
+
+  return { success: `${title} updated.` };
+}

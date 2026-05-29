@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { listServicesPublic } from "@/lib/data/services";
 import { CITIES } from "@/lib/marketing";
+import { HELP_ARTICLES } from "@/lib/help-articles";
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com";
 
@@ -73,5 +74,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("sitemap providers fetch failed:", e);
   }
 
-  return [...staticRoutes, ...cityRoutes, ...serviceRoutes, ...cityServiceRoutes, ...providerRoutes];
+  const helpRoutes: MetadataRoute.Sitemap = HELP_ARTICLES.map((a) => ({
+    url: `${BASE}/help/${a.slug}`,
+    lastModified: new Date(a.updatedAt),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...cityRoutes, ...serviceRoutes, ...cityServiceRoutes, ...helpRoutes, ...providerRoutes];
 }

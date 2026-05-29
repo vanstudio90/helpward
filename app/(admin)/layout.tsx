@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import {
   LayoutDashboard, Users, ShieldCheck, Calendar, AlertOctagon,
-  CreditCard, RefreshCw, Sparkles, FileText, LogOut,
+  CreditCard, RefreshCw, Sparkles, FileText, LogOut, MessageSquare,
 } from "lucide-react";
 
 const NAV = [
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/admin/providers", label: "Provider queue", icon: ShieldCheck },
   { href: "/admin/bookings", label: "Bookings", icon: Calendar },
   { href: "/admin/disputes", label: "Disputes", icon: AlertOctagon },
+  { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/refunds", label: "Refunds", icon: RefreshCw },
   { href: "/admin/services", label: "Service catalog", icon: Sparkles },

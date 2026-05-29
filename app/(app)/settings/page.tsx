@@ -56,10 +56,12 @@ export default async function SettingsPage() {
             <Shield className="w-4 h-4 text-brand-600" />
             <h2 className="text-base font-bold text-slate-900">Security</h2>
           </div>
-          <SecRow icon={<Lock className="w-4 h-4 text-slate-500" />} label="Password" sub="Set on signup" action="Change" disabled tooltip="Use 'Forgot password' on /login for now — in-app change ships in Phase 6.2" />
-          <SecRow icon={<Shield className="w-4 h-4 text-slate-500" />} label="Two-Factor Authentication" sub="Disabled" action="Enable" disabled tooltip="Coming in Phase 6.2 (Supabase TOTP)" />
-          <SecRow icon={<Smartphone className="w-4 h-4 text-slate-500" />} label="Login Devices" sub="1 active session" action="View" disabled last tooltip="Coming in Phase 6.2" />
-          <p className="text-[11px] text-slate-400 mt-3">Security actions land in Phase 6.</p>
+          <SecRow icon={<Lock className="w-4 h-4 text-slate-500" />} label="Password" sub="Change anytime" action="Change" href="/settings/security" />
+          <SecRow icon={<Shield className="w-4 h-4 text-slate-500" />} label="Two-Factor Authentication" sub="Disabled" action="Enable" disabled tooltip="Supabase TOTP enrollment ships next round" />
+          <SecRow icon={<Smartphone className="w-4 h-4 text-slate-500" />} label="Login Devices" sub="1 active session" action="View" disabled last tooltip="Per-device session tracking ships with TOTP" />
+          <p className="text-[11px] text-slate-400 mt-3">
+            More security tools roll out as the underlying auth model lands.
+          </p>
         </Card>
 
         <Card>
@@ -119,7 +121,7 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SecRow({ icon, label, sub, action, disabled, last, tooltip, subTone }: { icon: React.ReactNode; label: string; sub: string; action: string; disabled?: boolean; last?: boolean; tooltip?: string; subTone?: string }) {
+function SecRow({ icon, label, sub, action, disabled, last, tooltip, subTone, href }: { icon: React.ReactNode; label: string; sub: string; action: string; disabled?: boolean; last?: boolean; tooltip?: string; subTone?: string; href?: string }) {
   return (
     <div className={`flex items-center gap-3 py-3 ${!last ? "border-b border-slate-100" : ""}`}>
       <span className="w-9 h-9 rounded-lg bg-slate-50 inline-flex items-center justify-center shrink-0">{icon}</span>
@@ -127,7 +129,11 @@ function SecRow({ icon, label, sub, action, disabled, last, tooltip, subTone }: 
         <div className="text-sm font-semibold text-slate-900">{label}</div>
         <div className={`text-[11px] ${subTone ?? "text-slate-500"}`}>{sub}</div>
       </div>
-      <button disabled={disabled} title={tooltip} className={`text-xs font-semibold text-brand-700 shrink-0 disabled:opacity-50 ${disabled ? "cursor-not-allowed" : ""}`}>{action}</button>
+      {href ? (
+        <Link href={href} className="text-xs font-semibold text-brand-700 shrink-0 hover:text-brand-800">{action}</Link>
+      ) : (
+        <button disabled={disabled} title={tooltip} className={`text-xs font-semibold text-brand-700 shrink-0 disabled:opacity-50 ${disabled ? "cursor-not-allowed" : ""}`}>{action}</button>
+      )}
     </div>
   );
 }
