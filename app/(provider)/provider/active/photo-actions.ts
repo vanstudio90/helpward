@@ -2,16 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import {
+  MAX_COMPLETION_PHOTOS,
+  COMPLETION_PHOTO_MAX_BYTES,
+  COMPLETION_PHOTO_ALLOWED_TYPES,
+} from "@/lib/completion-photo-pure";
 
 type State = { error?: string; success?: string; photoId?: string } | undefined;
-
-// Max 3 photos per booking — keeps storage modest and forces the helper to
-// pick the few that genuinely prove the task is done rather than dumping a
-// gallery. Customer attention is finite.
-export const MAX_COMPLETION_PHOTOS = 3;
-
-const MAX_BYTES = 8 * 1024 * 1024; // 8 MB per photo — phones easily exceed this
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 // Helper uploads a single proof-of-completion photo. The booking must be
 // in_progress and the caller must be the assigned helper. We push the bytes
@@ -26,8 +23,8 @@ export async function uploadCompletionPhotoAction(
 
   if (!(file instanceof File)) return { error: "No file attached." };
   if (file.size === 0) return { error: "File is empty." };
-  if (file.size > MAX_BYTES) return { error: "Photo too large — max 8 MB." };
-  if (!ALLOWED_TYPES.includes(file.type)) {
+  if (file.size > COMPLETION_PHOTO_MAX_BYTES) return { error: "Photo too large — max 8 MB." };
+  if (!COMPLETION_PHOTO_ALLOWED_TYPES.includes(file.type as (typeof COMPLETION_PHOTO_ALLOWED_TYPES)[number])) {
     return { error: "Unsupported file type — use JPEG, PNG, WebP, or HEIC." };
   }
 

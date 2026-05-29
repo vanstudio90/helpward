@@ -6,8 +6,8 @@ import { cn } from "@/lib/cn";
 import {
   uploadCompletionPhotoAction,
   deleteCompletionPhotoAction,
-  MAX_COMPLETION_PHOTOS,
 } from "./photo-actions";
+import { MAX_COMPLETION_PHOTOS } from "@/lib/completion-photo-pure";
 
 export type CompletionPhoto = {
   id: string;
