@@ -489,6 +489,39 @@ export const HELP_ARTICLES: HelpArticle[] = [
     ],
     updatedAt: "2026-05-29",
   },
+  {
+    slug: "photo-proof-of-completion",
+    category: "safety",
+    title: "Photo proof of completion",
+    summary:
+      "Helpers attach up to 3 photos when wrapping up a task — the doorstep with the groceries, the receipt, the dry-cleaning ticket. You see them on your booking page before the 24-hour review window closes.",
+    body: [
+      { type: "p", text:
+        "Photo proof is one of the simplest trust signals we have. Most disputes are resolved instantly by a 3-second glance at a photo of the bag on the front porch or the package handed to the doorman. Bookings with at least one proof photo have an ~80% lower dispute rate." },
+      { type: "h2", text: "How it works" },
+      { type: "ol", items: [
+        "While the task is in progress, the helper sees a \"Proof photos\" tile on their active-task screen.",
+        "They tap to take a photo (or upload from gallery) and can add a one-line caption like \"left at the side door\".",
+        "Up to 3 photos per booking. Photos appear on your booking page as soon as they're uploaded — you don't have to wait for the task to be marked complete.",
+        "Once the helper marks the task complete the photos are locked — they can't be added, removed, or replaced after that point.",
+      ] },
+      { type: "h2", text: "Privacy and access" },
+      { type: "ul", items: [
+        "Only you, your helper, and our support team can view the photos.",
+        "Photos are stored in a private bucket — the URLs you see are short-lived signed links that expire after an hour.",
+        "If you open a dispute, the photos are automatically attached to the case file for the support agent.",
+      ] },
+      { type: "note", text:
+        "Helpers can't be forced to attach photos — some tasks don't have a sensible \"after\" shot (e.g. a 30-minute presence visit). If you specifically need proof, mention it in the request notes when you book." },
+    ],
+    faqs: [
+      { q: "Why a 3-photo cap?", a: "Proof works best when it's curated. A handful of intentional shots beats a 30-photo dump that nobody scrolls through. Three is enough for almost every real-world task." },
+      { q: "Can the helper edit or fake the photos?", a: "Helpers can't modify or delete photos once the booking is marked complete. Each upload records the helper's user id, timestamp, file size, and content type — anything tampered-with would be visible to our team in the audit log." },
+      { q: "What if the photo shows something private (mail with my address, package label)?", a: "Photos are only ever shared between you, your helper, and Helpward support — never with other users or third parties. You can ask the support team to delete a photo from a booking at any time." },
+      { q: "Do photos count as proof in a dispute?", a: "Yes. Photos are the primary piece of evidence our support team weighs when adjudicating delivery-style disputes. \"No proof photo\" doesn't auto-resolve in either direction, but a clear photo of the item at the agreed drop point makes for a fast resolution." },
+    ],
+    updatedAt: "2026-05-29",
+  },
 ];
 
 export function getArticle(slug: string): HelpArticle | null {

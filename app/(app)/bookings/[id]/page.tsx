@@ -1,9 +1,9 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, MessageSquare, Phone, Star, MapPin, Calendar, AlertOctagon,
-  CheckCircle2,
+  CheckCircle2, Camera,
 } from "lucide-react";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { MapBackdrop } from "@/components/MapBackdrop";
@@ -67,6 +67,29 @@ export default async function BookingDetailPage({
       .eq("request_id", request.id)
       .order("position");
     bundleItems = (data ?? []) as unknown as typeof bundleItems;
+  }
+
+  // Proof-of-completion photos uploaded by the helper. Shown to the customer
+  // for any booking that has them — typically once the task hits in_progress
+  // or completed. Bucket is private; signed URLs minted with service role.
+  let completionPhotos: Array<{ id: string; url: string; caption: string | null; created_at: string }> = [];
+  {
+    const { data: photoRows } = await supabase
+      .from("booking_completion_photos")
+      .select("id, storage_path, caption, created_at")
+      .eq("booking_id", id)
+      .order("created_at", { ascending: true });
+    const rows = (photoRows as Array<{ id: string; storage_path: string; caption: string | null; created_at: string }> | null) ?? [];
+    if (rows.length > 0) {
+      const svc = createSupabaseServiceClient();
+      const { data: signed } = await svc.storage
+        .from("booking-photos")
+        .createSignedUrls(rows.map((r) => r.storage_path), 3600);
+      const urlByPath = new Map((signed ?? []).map((s) => [s.path ?? "", s.signedUrl ?? ""] as const));
+      completionPhotos = rows
+        .map((r) => ({ id: r.id, url: urlByPath.get(r.storage_path) || "", caption: r.caption, created_at: r.created_at }))
+        .filter((p) => p.url);
+    }
   }
 
   return (
@@ -210,6 +233,39 @@ export default async function BookingDetailPage({
                 providerAvatar={provider.profile?.avatar_url ?? null}
                 providerInitial={provider.profile?.full_name?.[0] ?? "?"}
               />
+            </div>
+          )}
+
+          {/* Proof photos uploaded by the helper. Shown for any booking with
+              attached photos so the customer can see in-progress evidence
+              (e.g. front porch) and post-completion proof side by side. */}
+          {completionPhotos.length > 0 && (
+            <div>
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2 inline-flex items-center gap-1.5">
+                <Camera className="w-3 h-3" /> Proof photos from your helper
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {completionPhotos.map((p) => (
+                  <a
+                    key={p.id}
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener"
+                    className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 group"
+                  >
+                    <img src={p.url} alt={p.caption ?? "Proof of completion"} className="w-full h-full object-cover transition group-hover:scale-105" />
+                    {p.caption && (
+                      <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] px-1.5 py-1 leading-tight line-clamp-2">
+                        {p.caption}
+                      </div>
+                    )}
+                  </a>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-2 leading-snug">
+                Tap a photo to view full-size. If anything looks wrong, you have 24 hours to
+                <Link href={`/bookings/${b.id}/dispute`} className="text-rose-600 font-semibold underline ml-1">open a dispute</Link>.
+              </p>
             </div>
           )}
 

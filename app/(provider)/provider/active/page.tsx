@@ -1,9 +1,10 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { Activity, MessageSquare, Phone, CheckCircle2, Play } from "lucide-react";
 import { OnlineToggle, BookingActions } from "./client";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { BundleChecklist, type BundleChecklistItem } from "./bundle-checklist";
+import { CompletionPhotos, type CompletionPhoto } from "./completion-photos";
 
 export default async function ProviderActivePage() {
   const supabase = await createSupabaseServerClient();
@@ -51,6 +52,32 @@ export default async function ProviderActivePage() {
       itemPriceCents: r.item_price_cents,
       status: r.status,
     }));
+  }
+
+  // Pull proof-of-completion photos the helper has already uploaded so the
+  // tile re-hydrates correctly between renders. Signed URLs are minted with
+  // service role since the bucket is private — they expire in an hour which
+  // is well past any active session.
+  let completionPhotos: CompletionPhoto[] = [];
+  if (booking?.status === "in_progress") {
+    const { data: rows } = await supabase
+      .from("booking_completion_photos")
+      .select("id, storage_path, caption")
+      .eq("booking_id", booking.id)
+      .order("created_at", { ascending: true });
+    const list = (rows as Array<{ id: string; storage_path: string; caption: string | null }> | null) ?? [];
+    if (list.length > 0) {
+      const svc = createSupabaseServiceClient();
+      const { data: signed } = await svc.storage
+        .from("booking-photos")
+        .createSignedUrls(list.map((r) => r.storage_path), 3600);
+      const urlByPath = new Map((signed ?? []).map((s) => [s.path ?? "", s.signedUrl ?? ""] as const));
+      completionPhotos = list.map((r) => ({
+        id: r.id,
+        previewUrl: urlByPath.get(r.storage_path) || null,
+        caption: r.caption,
+      }));
+    }
   }
 
   return (
@@ -139,6 +166,10 @@ export default async function ProviderActivePage() {
             <div className="relative rounded-xl overflow-hidden h-44 bg-slate-100">
               <MapBackdrop />
             </div>
+
+            {booking.status === "in_progress" && (
+              <CompletionPhotos bookingId={booking.id} initial={completionPhotos} />
+            )}
 
             <BookingActions bookingId={booking.id} status={booking.status} />
           </div>
