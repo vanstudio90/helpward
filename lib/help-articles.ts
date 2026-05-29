@@ -279,6 +279,50 @@ export const HELP_ARTICLES: HelpArticle[] = [
     updatedAt: "2026-05-28",
   },
   {
+    slug: "setting-up-2fa",
+    category: "account",
+    title: "Setting up two-factor authentication",
+    summary:
+      "Add a second layer to your sign-in: an authenticator app plus 10 single-use recovery codes. Setup takes 2 minutes. Storing the recovery codes properly is the part that matters.",
+    body: [
+      { type: "h2", text: "Why turn 2FA on" },
+      { type: "p", text:
+        "A leaked password isn't enough to sign in to your Helpward account once 2FA is on — an attacker would also need your phone (or one of your recovery codes). If you've ever reused a password across sites, or if you handle bookings involving children, elders, or your home, this is the change with the biggest security return per minute spent." },
+      { type: "h2", text: "What you'll need" },
+      { type: "ul", items: [
+        "An authenticator app on your phone. We recommend 1Password, Bitwarden, or Authy — all three keep backups, so swapping phones doesn't lock you out. Google Authenticator and Microsoft Authenticator also work.",
+        "Somewhere safe to store 10 recovery codes — a password manager works, a printed sheet in a drawer works, a sealed envelope in a fireproof box works.",
+      ] },
+      { type: "h2", text: "How to enroll" },
+      { type: "ol", items: [
+        "Go to /settings/security.",
+        "Tap Set up 2FA. We'll show you a QR code.",
+        "In your authenticator app, tap Add account and scan the QR code. If your camera can't scan it, tap Enter setup key in the app and paste the secret we show.",
+        "Your app will start displaying a 6-digit code that refreshes every 30 seconds. Type the current code into Helpward and tap Verify.",
+        "We'll show you 10 recovery codes. Save them right then — this is the only time we'll show them.",
+        "Done. From the next sign-in onward, after your password we'll ask for a fresh 6-digit code from your app.",
+      ] },
+      { type: "h2", text: "What recovery codes are for" },
+      { type: "p", text:
+        "Recovery codes exist for the scenario where your phone is broken, stolen, lost, or you've changed device and didn't migrate the authenticator app. You'll use them once each — a recovery code that works once doesn't work again." },
+      { type: "p", text:
+        "After signing in with a recovery code, the best practice is to immediately go to /settings/security, disable 2FA, and re-enroll on your new device. That gives you a fresh set of recovery codes too." },
+      { type: "h2", text: "If you've lost both" },
+      { type: "p", text:
+        "Email safety@helpward.com from the email address registered on your account. We'll verify your identity through a different channel (typically by texting a code to the phone on file, or by asking you to confirm details only you'd know) and remove the factor manually. Expect 24-72 hours." },
+      { type: "h2", text: "Disabling 2FA" },
+      { type: "p", text:
+        "From /settings/security, tap Disable 2FA, verify a fresh code (or a recovery code), and confirm. We log the disable event to the audit trail so you can see when it happened. We don't recommend disabling 2FA unless you're about to re-enroll on a new device." },
+    ],
+    faqs: [
+      { q: "Do helpers need 2FA too?", a: "It's optional for everyone today. We strongly recommend it for helpers given the access they have to customer addresses and the payouts in their account. We'll make it mandatory for helpers later this year." },
+      { q: "Can I use SMS instead of an authenticator app?", a: "No. SMS-based 2FA is vulnerable to SIM-swap attacks where someone convinces a carrier to port your number to a new SIM. Authenticator apps don't have that exposure. We don't offer SMS even as an option for that reason." },
+      { q: "What happens to my recovery codes when I regenerate?", a: "The previous set stops working immediately. The new set is the only valid set. Make sure you save the new ones before navigating away — we won't show them again unless you regenerate." },
+      { q: "Does 2FA slow down my sign-in?", a: "By about 5 seconds — the time to open your authenticator app and type 6 digits. If you use a password manager that supports TOTP (1Password, Bitwarden), the code auto-fills and the extra step is closer to 1 second." },
+    ],
+    updatedAt: "2026-05-29",
+  },
+  {
     slug: "referring-friends",
     category: "account",
     title: "Referring friends — give $10, get $10",

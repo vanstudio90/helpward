@@ -26,6 +26,29 @@ export async function loginAction(
     return { error: error.message };
   }
 
+  // If the account has a verified TOTP factor, the password sign-in lands us
+  // at AAL1 (authentication assurance level 1 — single-factor). We redirect
+  // to /login/mfa to step up to AAL2 before letting the user into the app.
+  //
+  // listFactors only returns factors for the current authenticated user, so
+  // we can call it right after sign-in without leaking factor existence to
+  // unauthenticated probers.
+  const { data: factors } = await supabase.auth.mfa.listFactors();
+  const verifiedTotp = factors?.totp?.find((f) => f.status === "verified");
+  if (verifiedTotp) {
+    // Stash the destination so the challenge page can redirect properly
+    // after the step-up succeeds.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .single();
+    const destination =
+      profile?.role === "provider" ? "/provider/dashboard"
+      : profile?.role === "admin" ? "/admin"
+      : "/dashboard";
+    redirect(`/login/mfa?next=${encodeURIComponent(destination)}`);
+  }
+
   // Determine role to send them to the right home
   const { data: profile } = await supabase
     .from("profiles")

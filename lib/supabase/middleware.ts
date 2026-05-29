@@ -30,5 +30,14 @@ export async function updateSupabaseSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  return { response, user };
+  // Authentication assurance level — drives step-up enforcement in proxy.ts.
+  // Cheap because it's read from the existing JWT, no DB roundtrip.
+  let needsMfaStepUp = false;
+  if (user) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    needsMfaStepUp =
+      aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2";
+  }
+
+  return { response, user, needsMfaStepUp };
 }

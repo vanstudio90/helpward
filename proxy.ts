@@ -33,8 +33,14 @@ function startsWithAny(pathname: string, prefixes: string[]) {
 const REFERRAL_COOKIE = "hw_ref";
 const REFERRAL_MAX_AGE_DAYS = 30;
 
+// Paths a partially-authenticated (AAL1) user can still reach. /login/mfa
+// is the challenge itself; settings/security lets the user re-enroll after
+// using a recovery code; the help article describes the flow. Logout is on
+// /api/auth so it's covered by the API public prefix.
+const MFA_STEPUP_ALLOWLIST = new Set<string>(["/login/mfa", "/help/setting-up-2fa"]);
+
 export async function proxy(request: NextRequest) {
-  const { response, user } = await updateSupabaseSession(request);
+  const { response, user, needsMfaStepUp } = await updateSupabaseSession(request);
   const { pathname, searchParams } = request.nextUrl;
 
   const incomingRef = searchParams.get("ref");
@@ -68,6 +74,17 @@ export async function proxy(request: NextRequest) {
   if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // 2FA step-up — user is authenticated at AAL1 but has a verified TOTP
+  // factor, so they need to complete the MFA challenge before reaching the
+  // app. Without this gate, a stolen password defeats 2FA entirely by
+  // letting an attacker URL-hack past /login/mfa.
+  if (needsMfaStepUp && !MFA_STEPUP_ALLOWLIST.has(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login/mfa";
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
