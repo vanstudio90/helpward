@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/complete-stale-in-progress",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/expire-old-overrides",
+      "schedule": "0 3 * * *"
     }
   ]
 }

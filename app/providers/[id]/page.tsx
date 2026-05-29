@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck, Star, MapPin, Clock, ArrowRight } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { AvailabilityBadge, AvailabilityTable } from "./availability";
+import { getProviderAvailability, computeAvailabilityStatus } from "@/lib/data/availability";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,13 @@ export default async function PublicProviderProfile({
     .eq("customer_visible", true)
     .order("created_at", { ascending: false })
     .limit(5);
+
+  // Availability: one fetch, used by both the badge (header) and the
+  // weekly-schedule table (below "Services offered").
+  const availability = await getProviderAvailability(id);
+  const availabilityStatus = computeAvailabilityStatus(
+    availability.rules, availability.overrides, availability.vacation,
+  );
 
   const prof = (pp as { profile: { full_name: string; avatar_url: string | null; country: string } | null }).profile;
   const services = (svcs ?? []).map((row) => (row as { services: { id: string; title: string; base_price_cents: number; eta_label: string | null } | null }).services).filter(Boolean);
@@ -71,6 +80,10 @@ export default async function PublicProviderProfile({
               <span className="text-slate-500">({pp.rating_count} reviews)</span>
             </div>
           )}
+          {/* Availability badge — live, computed server-side per request */}
+          <div className="mt-3 flex justify-center">
+            <AvailabilityBadge status={availabilityStatus} />
+          </div>
           <div className="mt-4 flex flex-wrap justify-center gap-2 text-[11px] font-semibold">
             <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">✓ ID Verified</span>
             <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">✓ Background Checked</span>
@@ -83,6 +96,8 @@ export default async function PublicProviderProfile({
             <Stat value={(pp.languages ?? []).join(", ") || "—"} label="Languages" />
           </div>
         </div>
+
+        <AvailabilityTable rules={availability.rules} overrides={availability.overrides} />
 
         {services.length > 0 && (
           <section className="mt-6 rounded-2xl bg-white border border-slate-100 p-5">

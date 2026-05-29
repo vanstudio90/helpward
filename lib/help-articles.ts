@@ -279,6 +279,32 @@ export const HELP_ARTICLES: HelpArticle[] = [
     updatedAt: "2026-05-28",
   },
   {
+    slug: "setting-your-availability",
+    category: "helpers",
+    title: "Setting your availability",
+    summary:
+      "Use the Schedule tab to tell customers when you're typically available. The hours show on your public profile and shape the 'Available now' badge. You can still go online manually any time.",
+    body: [
+      { type: "h2", text: "Weekly hours" },
+      { type: "p", text:
+        "Open /provider/schedule and add a shift for each day you work. You can add multiple shifts on the same day (a split shift like 9-12 plus 5-9pm), and the editor totals your weekly hours so you can see at a glance how much you've scheduled." },
+      { type: "h2", text: "One-off dates" },
+      { type: "p", text:
+        "Mark a single date as off (vacation, sick day) or add an extra shift outside your weekly hours. Overrides win over the weekly rule for that date, so a Tuesday-off override hides your normal Tuesday shifts only for that one Tuesday." },
+      { type: "h2", text: "Vacation mode" },
+      { type: "p", text:
+        "Going away for a stretch? Toggle vacation mode and optionally pick a return date. Your weekly schedule stays saved — you just appear as Away on your public profile until you flip it back." },
+      { type: "h2", text: "Does this auto-decline tasks I'm offered outside my hours?" },
+      { type: "p", text:
+        "Not yet. The schedule is currently informational — it shapes the badge on your public profile and helps customers see when you usually work. Wiring the matching engine to filter on schedule lands in a future release. For now, going Offline from /provider/active is what stops the offers." },
+    ],
+    faqs: [
+      { q: "Can I have a different schedule each week?", a: "The weekly schedule represents your typical week. For exceptions — a one-off Saturday shift, a Wednesday off, a holiday — use the One-off dates section. Anything you add there wins over the weekly rule for that date." },
+      { q: "Will customers see if I'm vacationing?", a: "Yes. The badge on your public profile flips to 'Away until [date]' so customers can either reach out for after-return scheduling or pick another helper. Your reviews and rating stay visible." },
+    ],
+    updatedAt: "2026-05-29",
+  },
+  {
     slug: "helper-payouts-and-earnings",
     category: "helpers",
     title: "How helper payouts work",
