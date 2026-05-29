@@ -45,7 +45,7 @@ export function getCity(slug: string): City | null {
 // (`select bookings where status='completed' order by completed_at desc limit 8`)
 // once the platform has volume.
 export const SAMPLE_RECENT_TASKS = [
-  { id: "rt1", title: "Grocery Pickup", ago: "10 min ago", city: "San Francisco", region: "CA", price: 15,
+  { id: "rt1", title: "Errand Runner", ago: "10 min ago", city: "San Francisco", region: "CA", price: 20,
     img: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=70" },
   { id: "rt2", title: "Furniture Assembly", ago: "25 min ago", city: "Los Angeles", region: "CA", price: 35,
     img: "https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?auto=format&fit=crop&w=600&q=70" },

@@ -41,12 +41,15 @@ export async function getServicePublic(slug: string): Promise<ServiceWithCategor
     .from("services")
     .select("*, category:service_categories(*)")
     .eq("id", slug)
-    .single();
+    .eq("active", true)
+    .maybeSingle();
   if (error) {
     console.error("getServicePublic error:", error.message);
     return null;
   }
-  return data as ServiceWithCategory;
+  // maybeSingle returns null (not error) when no row matches active=true,
+  // which makes inactive services 404 cleanly via the page's notFound() call.
+  return (data as ServiceWithCategory) ?? null;
 }
 
 /* Service catalog reads. Always use server client — RLS lets anyone read

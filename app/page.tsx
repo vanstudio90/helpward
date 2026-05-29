@@ -99,11 +99,11 @@ const TESTIMONIALS = [
   { quote: "The elder-assistance service is a blessing. My mom loves her companion.",
     name: "Linda P.", where: "Chicago, IL", img: 45, task: "Elder assistance", ago: "1 week ago" },
   { quote: "Reliable, fast, and so easy to use. My go-to app for everything now.",
-    name: "Mark T.", where: "New York, NY", img: 12, task: "Grocery pickup", ago: "3 days ago" },
+    name: "Mark T.", where: "New York, NY", img: 12, task: "Package delivery", ago: "3 days ago" },
 ];
 
 const QUICK_REQUESTS = [
-  "Ride to airport", "Furniture assembly", "Grocery pickup", "Wait in line", "Elder companion",
+  "Ride to airport", "Furniture assembly", "Package delivery", "Wait in line", "Elder companion",
 ];
 
 const WHY_FEATURES = [
