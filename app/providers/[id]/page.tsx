@@ -5,6 +5,7 @@ import { ShieldCheck, Star, MapPin, Clock, ArrowRight } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { AvailabilityBadge, AvailabilityTable } from "./availability";
 import { getProviderAvailability, computeAvailabilityStatus } from "@/lib/data/availability";
+import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,21 @@ export default async function PublicProviderProfile({
   const prof = (pp as { profile: { full_name: string; avatar_url: string | null; country: string } | null }).profile;
   const services = (svcs ?? []).map((row) => (row as { services: { id: string; title: string; base_price_cents: number; eta_label: string | null } | null }).services).filter(Boolean);
 
+  // Has the viewer (if any) already favourited this helper? Lets the heart
+  // button render in its filled state on first paint instead of flickering.
+  const { data: { user } } = await supabase.auth.getUser();
+  let initialSaved = false;
+  if (user) {
+    const { data: fav } = await supabase
+      .from("favorites")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .eq("kind", "provider")
+      .eq("target_id", id)
+      .maybeSingle();
+    initialSaved = !!fav;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-100">
@@ -72,6 +88,15 @@ export default async function PublicProviderProfile({
             {prof?.full_name}
             <ShieldCheck className="w-5 h-5 text-brand-600" />
           </h1>
+          <div className="mt-3 flex justify-center">
+            <FavoriteHelperButton
+              helperId={id}
+              initialSaved={initialSaved}
+              isAuthed={!!user}
+              signupNext={`/providers/${id}`}
+              variant="pill"
+            />
+          </div>
           <div className="mt-1 text-sm text-slate-500">{prof?.country === "CA" ? "Canada" : "United States"}</div>
           {pp.rating_avg && (
             <div className="mt-2 inline-flex items-center gap-1 text-sm">

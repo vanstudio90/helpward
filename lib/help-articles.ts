@@ -554,6 +554,34 @@ export const HELP_ARTICLES: HelpArticle[] = [
     ],
     updatedAt: "2026-05-29",
   },
+  {
+    slug: "favorite-helpers",
+    category: "bookings",
+    title: "Saving favorite helpers",
+    summary:
+      "Tap the heart on any helper to save them. Saved helpers live on /favorites with one-tap re-book — the matching engine routes new requests to them first when they're online.",
+    body: [
+      { type: "p", text:
+        "Most customers settle on a small handful of helpers they trust — the one who always nails the grocery list, the one who's great with the dog, the one who's been at three of their kids' birthdays. Saved helpers turn that recurring trust into a single tap." },
+      { type: "h2", text: "How to save a helper" },
+      { type: "ul", items: [
+        "From any helper's public profile (/providers/[id]): tap the \"Save helper\" pill under their name.",
+        "From your booking page (/bookings/[id]): tap the heart icon on the helper row.",
+        "Hearts turn rose-pink when saved. Tap again to un-save.",
+      ] },
+      { type: "h2", text: "Booking a saved helper again" },
+      { type: "p", text:
+        "Open /favorites and tap \"Book again\" on any saved helper card. The new-request screen opens with the helper marked as preferred — when you submit, the matching engine offers the task to them first instead of broadcasting to the whole pool. If they don't accept within a couple of minutes (or they're offline), the request rolls out to everyone else qualified." },
+      { type: "note", text:
+        "Saved helpers don't get any priority pay or guaranteed bookings on their end — it's purely a routing preference on yours. If you want to leave a positive note for support to remember the relationship, drop it in the booking notes when you re-book." },
+    ],
+    faqs: [
+      { q: "Does saving a helper share my info with them?", a: "No — saving is private to your account. The helper doesn't get a notification and isn't told they've been saved. The only signal they see is a slightly higher rate of repeat bookings from you." },
+      { q: "How many helpers can I save?", a: "There's no hard cap. In practice most customers settle on three to five for different task categories — one for errands, one for home help, one for pet care." },
+      { q: "What if a saved helper leaves Helpward?", a: "Their card stays in your favorites with a status badge so you know not to count on them. We don't auto-remove because you might want to remember the name for a possible return." },
+    ],
+    updatedAt: "2026-05-29",
+  },
 ];
 
 export function getArticle(slug: string): HelpArticle | null {

@@ -11,6 +11,7 @@ import { LiveProviderMap } from "@/components/LiveProviderMap";
 import { CancelBookingButton } from "./cancel-button";
 import { TipCard } from "./tip-card";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 
 const STATUS_TONE: Record<string, string> = {
   scheduled: "bg-brand-50 text-brand-700",
@@ -67,6 +68,22 @@ export default async function BookingDetailPage({
       .eq("request_id", request.id)
       .order("position");
     bundleItems = (data ?? []) as unknown as typeof bundleItems;
+  }
+
+  // Has the viewer already favourited this booking's helper? Drives the
+  // initial state of the heart on the helper row + the post-completion
+  // save-as-favorite prompt so neither flickers.
+  const { data: { user } } = await supabase.auth.getUser();
+  let helperIsFavorited = false;
+  if (user && provider?.user_id) {
+    const { data: fav } = await supabase
+      .from("favorites")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .eq("kind", "provider")
+      .eq("target_id", provider.user_id)
+      .maybeSingle();
+    helperIsFavorited = !!fav;
   }
 
   // Proof-of-completion photos uploaded by the helper. Shown to the customer
@@ -142,6 +159,13 @@ export default async function BookingDetailPage({
               <a href={`tel:${provider.profile?.phone ?? ""}`} aria-label="Call" className="p-2 rounded-lg border border-brand-200 text-brand-700">
                 <Phone className="w-4 h-4" />
               </a>
+              <FavoriteHelperButton
+                helperId={provider.user_id}
+                initialSaved={helperIsFavorited}
+                isAuthed={!!user}
+                signupNext={`/bookings/${b.id}`}
+                size="sm"
+              />
             </div>
           )}
 

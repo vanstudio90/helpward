@@ -1,7 +1,8 @@
 import { listFavoritesByKind, listSavedProviders, listMyAddresses } from "@/lib/data/customer";
 import { listServices } from "@/lib/data/services";
 import Link from "next/link";
-import { Heart, Plus, Sparkles } from "lucide-react";
+import { Heart, Plus, Sparkles, ArrowRight, ExternalLink } from "lucide-react";
+import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 
 export default async function FavoritesPage() {
   const [providers, addresses, serviceFavs, allServices] = await Promise.all([
@@ -29,22 +30,54 @@ export default async function FavoritesPage() {
       ) : (
         <div className="space-y-6">
           {providers.length > 0 && (
-            <Section title={`Providers (${providers.length})`}>
-              <ul className="space-y-3">
+            <Section title={`Saved helpers (${providers.length})`}>
+              <ul className="grid sm:grid-cols-2 gap-3">
                 {providers.map((p) => (
-                  <li key={p.user_id} className="rounded-2xl bg-white border border-slate-100 p-4 flex items-center gap-3">
-                    {p.profile.avatar_url ? (
-                      <img src={p.profile.avatar_url} className="w-12 h-12 rounded-full" alt="" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold">
-                        {p.profile.full_name?.[0] ?? "?"}
+                  <li key={p.user_id} className="rounded-2xl bg-white border border-slate-100 p-4">
+                    <div className="flex items-center gap-3">
+                      <Link href={`/providers/${p.user_id}`} className="shrink-0">
+                        {p.profile.avatar_url ? (
+                          <img src={p.profile.avatar_url} className="w-14 h-14 rounded-full" alt="" />
+                        ) : (
+                          <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold">
+                            {p.profile.full_name?.[0] ?? "?"}
+                          </div>
+                        )}
+                      </Link>
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/providers/${p.user_id}`} className="text-sm font-bold text-slate-900 truncate hover:underline block">
+                          {p.profile.full_name}
+                        </Link>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {p.rating_avg ? `★ ${p.rating_avg} (${p.rating_count} reviews)` : "New helper"}
+                        </div>
+                        {p.tasks_completed > 0 && (
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            {p.tasks_completed} task{p.tasks_completed === 1 ? "" : "s"} completed
+                          </div>
+                        )}
                       </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-bold text-slate-900 truncate">{p.profile.full_name}</div>
-                      <div className="text-xs text-slate-500">
-                        {p.rating_avg ? `★ ${p.rating_avg} (${p.rating_count})` : "New"}
-                      </div>
+                      <FavoriteHelperButton
+                        helperId={p.user_id}
+                        initialSaved={true}
+                        isAuthed={true}
+                        signupNext={`/favorites`}
+                        size="sm"
+                      />
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <Link
+                        href={`/new-request?preferred_helper=${p.user_id}`}
+                        className="inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 text-white text-xs font-bold"
+                      >
+                        Book again <ArrowRight className="w-3 h-3" />
+                      </Link>
+                      <Link
+                        href={`/providers/${p.user_id}`}
+                        className="inline-flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50"
+                      >
+                        View profile <ExternalLink className="w-3 h-3" />
+                      </Link>
                     </div>
                   </li>
                 ))}
