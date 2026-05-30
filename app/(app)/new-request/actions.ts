@@ -77,6 +77,21 @@ export async function createRequestAction(
     return { error: "Notes are too long (max 1000 chars)." };
   }
 
+  // Preferred helper — from the favorite-helper "Book again" flow.
+  // Validate it's a real approved provider before persisting; if not, fall
+  // through to the normal broadcast as if the param wasn't there.
+  const preferredHelperRaw = String(formData.get("preferred_helper_id") ?? "").trim();
+  let preferredHelperId: string | null = null;
+  if (preferredHelperRaw && /^[0-9a-f-]{36}$/i.test(preferredHelperRaw)) {
+    const { data: pp } = await supabase
+      .from("provider_profiles")
+      .select("user_id")
+      .eq("user_id", preferredHelperRaw)
+      .eq("status", "approved")
+      .maybeSingle();
+    if (pp) preferredHelperId = pp.user_id;
+  }
+
   // Bundle path — when the picker has 2+ stops, we build a parent request
   // with is_bundle=true and insert one row per stop into request_bundle_items.
   // Validation: every stop must reference an active service; total capped at
@@ -131,6 +146,7 @@ export async function createRequestAction(
         status: "matching",
         is_bundle: true,
         bundle_item_count: bundleItems.length,
+        preferred_helper_id: preferredHelperId,
       })
       .select()
       .single();
@@ -207,6 +223,7 @@ export async function createRequestAction(
       estimated_price_cents: service.base_price_cents,
       estimated_duration_min: 45,
       status: "matching",
+      preferred_helper_id: preferredHelperId,
     })
     .select()
     .single();

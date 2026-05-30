@@ -20,14 +20,21 @@ export type SavedAddressOption = {
   is_default: boolean;
 };
 
+export type PreferredHelper = {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+};
+
 export function NewRequestView({
-  services, categories, initialServiceId, initialQuery, savedAddresses = [],
+  services, categories, initialServiceId, initialQuery, savedAddresses = [], preferredHelper = null,
 }: {
   services: ServiceWithCategory[];
   categories: ServiceCategory[];
   initialServiceId?: string | null;
   initialQuery?: string | null;
   savedAddresses?: SavedAddressOption[];
+  preferredHelper?: PreferredHelper | null;
 }) {
   const [state, formAction, pending] = useActionState(createRequestAction, undefined);
   const [selected, setSelected] = useState<ServiceWithCategory | null>(
@@ -67,8 +74,32 @@ export function NewRequestView({
         </div>
       )}
 
+      {preferredHelper && (
+        <div className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-100 p-3">
+          {preferredHelper.avatar_url ? (
+            <img src={preferredHelper.avatar_url} className="w-10 h-10 rounded-full ring-2 ring-white shadow-sm" alt="" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-bold ring-2 ring-white shadow-sm">
+              {preferredHelper.full_name[0] ?? "?"}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold text-rose-900">
+              Booking again with {preferredHelper.full_name.split(" ")[0]}
+            </div>
+            <div className="text-[11px] text-rose-700/80 leading-snug">
+              They&apos;ll be offered this task first. If they don&apos;t accept within 2 minutes
+              (or aren&apos;t online), it opens up to other nearby helpers automatically.
+            </div>
+          </div>
+        </div>
+      )}
+
       <form action={formAction} className="grid lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px] gap-6">
         <input type="hidden" name="service_id" value={selected?.id ?? ""} />
+        {preferredHelper && (
+          <input type="hidden" name="preferred_helper_id" value={preferredHelper.id} />
+        )}
 
         <section className="min-w-0">
           <h2 className="text-base sm:text-xl font-bold text-slate-900">What do you need help with?</h2>
