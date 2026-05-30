@@ -1,23 +1,27 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { Inbox, Check, X, MapPin, Clock, DollarSign } from "lucide-react";
+import { Inbox, Check, X, MapPin, Clock, DollarSign, Heart } from "lucide-react";
 import { InboxRow } from "./row";
 import { ClientDateTime } from "@/components/ClientDateTime";
 
 export default async function ProviderInboxPage() {
   const supabase = await createSupabaseServerClient();
 
-  // match_attempts where the current provider was offered and hasn't responded
+  // match_attempts where the current provider was offered and hasn't responded.
+  // We also pull the customer's full_name (and avatar) when the attempt is
+  // flagged preferred so the helper sees who specifically requested them.
   const { data } = await supabase
     .from("match_attempts")
     .select(`
-      id, distance_km, rank_score, notified_at,
+      id, distance_km, rank_score, notified_at, preferred,
       request:requests(
         id, status, scheduled_for, notes, estimated_price_cents,
         service:services(id, title, blurb, base_price_cents, eta_label, image_url),
-        pickup:addresses!requests_pickup_address_id_fkey(formatted)
+        pickup:addresses!requests_pickup_address_id_fkey(formatted),
+        customer:profiles!requests_customer_id_fkey(full_name, avatar_url)
       )
     `)
     .is("responded_at", null)
+    .order("preferred", { ascending: false })
     .order("notified_at", { ascending: false });
 
   // Filter out attempts whose request has already been taken
@@ -50,9 +54,33 @@ export default async function ProviderInboxPage() {
       ) : (
         <ul className="space-y-3">
           {offers.map((row) => {
-            const req = (row as { request: NonNullable<typeof row.request> }).request;
+            const req = (row as { request: NonNullable<typeof row.request> & { customer?: { full_name: string; avatar_url: string | null } | null } }).request;
+            const preferred = (row as { preferred: boolean }).preferred;
+            const customer = req.customer;
             return (
-              <li key={row.id} className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
+              <li
+                key={row.id}
+                className={`rounded-2xl border overflow-hidden ${
+                  preferred
+                    ? "bg-gradient-to-br from-rose-50 to-pink-50 border-rose-200 ring-2 ring-rose-100"
+                    : "bg-white border-slate-100"
+                }`}
+              >
+                {preferred && customer && (
+                  <div className="px-4 py-2.5 bg-rose-600 text-white flex items-center gap-2.5 text-xs">
+                    {customer.avatar_url ? (
+                      <img src={customer.avatar_url} className="w-6 h-6 rounded-full ring-2 ring-white shrink-0" alt="" />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-rose-700 ring-2 ring-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {customer.full_name?.[0] ?? "?"}
+                      </div>
+                    )}
+                    <div className="font-bold inline-flex items-center gap-1.5">
+                      <Heart className="w-3 h-3 fill-current" />
+                      {customer.full_name?.split(" ")[0] ?? "A customer"} specifically requested you
+                    </div>
+                  </div>
+                )}
                 {req.service?.image_url && (
                   <div className="h-32 bg-slate-100 relative">
                     <img src={req.service.image_url} alt="" className="w-full h-full object-cover" />
@@ -64,8 +92,10 @@ export default async function ProviderInboxPage() {
                       <div className="text-base font-bold text-slate-900">{req.service?.title}</div>
                       <div className="text-xs text-slate-500 mt-1 line-clamp-2">{req.service?.blurb}</div>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 px-2 py-1 rounded-full shrink-0">
-                      Live
+                    <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full shrink-0 ${
+                      preferred ? "text-rose-700 bg-white" : "text-amber-700 bg-amber-50"
+                    }`}>
+                      {preferred ? "Exclusive 2 min" : "Live"}
                     </span>
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
