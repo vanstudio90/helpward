@@ -522,6 +522,38 @@ export const HELP_ARTICLES: HelpArticle[] = [
     ],
     updatedAt: "2026-05-29",
   },
+  {
+    slug: "saved-addresses",
+    category: "account",
+    title: "Saved addresses",
+    summary:
+      "Save the places you book to often — Home, Work, Mom's, the gym — and tap a chip on /new-request to fill the address in one move. Set one as default and it pre-fills every new request automatically.",
+    body: [
+      { type: "p", text:
+        "Saved addresses are a personal rolodex of the places you book to. Once you save an address, it shows up as a one-tap chip above the address input on the new-request screen so you never retype the same line twice." },
+      { type: "h2", text: "How to save one" },
+      { type: "ol", items: [
+        "Open /settings and find the \"Saved addresses\" card.",
+        "Tap \"Add\" and pick a label — Home, Work, Gym, or anything you want.",
+        "Type the full address.",
+        "Optionally tick \"Use as the default for new requests\" — this address will pre-fill every new booking, ready to overwrite if needed.",
+      ] },
+      { type: "h2", text: "Editing and deleting" },
+      { type: "ul", items: [
+        "Tap the trash icon on any saved address to remove it. Existing bookings keep the address that was used at the time — saved addresses are templates, not foreign keys.",
+        "Tap the star icon on a non-default address to promote it. The previous default loses its star automatically.",
+        "Each account can have at most one default address. There's no cap on how many you can save in total.",
+      ] },
+      { type: "note", text:
+        "Saved addresses are private to your account — they're never shown to helpers, support staff, or anyone else outside of an active booking." },
+    ],
+    faqs: [
+      { q: "Will deleting a saved address affect my past bookings?", a: "No. When you submit a request, the address is copied into the booking as a separate record. Renaming or deleting the saved address later doesn't touch any past or in-flight booking." },
+      { q: "Can I save someone else's address (like a relative's)?", a: "Yes. Any address you book to regularly — your mom's, a friend's, a partner's office — is fair game. Use a label that makes sense to you (\"Mom's\", \"Dad's house\")." },
+      { q: "Why doesn't it autocomplete real cities yet?", a: "Real address autocomplete needs Mapbox tiles, which land when our Mapbox integration is wired. Until then it's a free-text field — type the address as you'd write it on an envelope." },
+    ],
+    updatedAt: "2026-05-29",
+  },
 ];
 
 export function getArticle(slug: string): HelpArticle | null {

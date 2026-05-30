@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import { SettingsForm } from "./form";
 import { NotificationPrefs } from "./preferences";
+import { SavedAddressesManager, type SavedAddress } from "./addresses/manager";
 import { Shield, Lock, Smartphone, Download, Trash2, LogOut, Headphones, ChevronRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
@@ -18,6 +19,13 @@ export default async function SettingsPage() {
     push_booking: true, push_messages: true, email_receipts: true,
     email_digest: false, sms_critical: true,
   };
+
+  const { data: savedAddrs } = await supabase
+    .from("saved_addresses")
+    .select("id, label, formatted, is_default")
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: false });
+  const savedAddrsInitial = (savedAddrs as SavedAddress[] | null) ?? [];
 
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-3xl mx-auto pb-12">
@@ -35,6 +43,8 @@ export default async function SettingsPage() {
           avatar_url: me.profile.avatar_url,
           email_verified: true,
         }} />
+
+        <SavedAddressesManager initial={savedAddrsInitial} />
 
         <NotificationPrefs initial={prefsInitial} />
 
