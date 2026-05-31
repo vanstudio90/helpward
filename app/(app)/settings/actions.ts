@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { verifyPasswordStepUp } from "@/lib/step-up";
 
 type State = { error?: string; success?: string } | undefined;
 
@@ -117,7 +118,15 @@ export async function updateProfileAction(
 // in flight — we don't let users spam-queue more than one pending request.
 type DataState = { error?: string; success?: string; pending?: boolean } | undefined;
 
-export async function requestDataExportAction(): Promise<DataState> {
+export async function requestDataExportAction(
+  _prev: DataState,
+  formData: FormData,
+): Promise<DataState> {
+  // Step-up: archive contains the user's full booking + message history,
+  // so a momentary session-hijack should NOT be enough to walk away with it.
+  const stepUp = await verifyPasswordStepUp(String(formData.get("password") ?? ""));
+  if (!stepUp.ok) return { error: stepUp.error };
+
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not logged in." };
@@ -169,6 +178,12 @@ export async function requestAccountDeletionAction(
   if (confirm !== "DELETE") {
     return { error: 'Type "DELETE" exactly to confirm.' };
   }
+
+  // Step-up: password re-entry is the last line of defence before scheduling
+  // the irreversible 30-day countdown. A leaked session cookie alone must
+  // not be enough to put someone's account on the chopping block.
+  const stepUp = await verifyPasswordStepUp(String(formData.get("password") ?? ""));
+  if (!stepUp.ok) return { error: stepUp.error };
 
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

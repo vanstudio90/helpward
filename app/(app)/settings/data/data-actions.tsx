@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import {
-  Download, Trash2, AlertTriangle, CheckCircle2, AlertCircle, Loader2, RotateCcw,
+  Download, Trash2, AlertTriangle, CheckCircle2, AlertCircle, Loader2, RotateCcw, Lock,
 } from "lucide-react";
 import {
   requestDataExportAction,
@@ -13,18 +13,11 @@ import {
 export function DataExportCard({
   pendingExportAt,
 }: { pendingExportAt: string | null }) {
-  const [pending, start] = useTransition();
-  const [state, setState] = useState<{ error?: string; success?: string } | undefined>(
-    pendingExportAt ? { success: `An export is in progress — requested ${new Date(pendingExportAt).toLocaleDateString()}.` } : undefined
-  );
-
-  const request = () => {
-    setState(undefined);
-    start(async () => {
-      const r = await requestDataExportAction();
-      setState(r);
-    });
-  };
+  const [state, formAction, pending] = useActionState(requestDataExportAction, undefined);
+  const [open, setOpen] = useState(false);
+  const initialBanner = pendingExportAt && !state
+    ? `An export is in progress — requested ${new Date(pendingExportAt).toLocaleDateString()}.`
+    : null;
 
   return (
     <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
@@ -36,11 +29,17 @@ export function DataExportCard({
           <h2 className="text-base font-bold text-slate-900">Download my data</h2>
           <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
             Get a copy of everything your Helpward account holds — profile, bookings, messages, reviews, payment
-            history — in a JSON archive emailed to your registered address within 48 hours.
+            history — in a JSON archive. Auto-assembles within 30 minutes; a download link appears at the top of
+            this page when ready.
           </p>
         </div>
       </div>
 
+      {initialBanner && !state?.success && (
+        <div className="mb-3 flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-2.5">
+          <Loader2 className="w-4 h-4 mt-0.5 shrink-0 animate-spin" /> {initialBanner}
+        </div>
+      )}
       {state?.error && (
         <div className="mb-3 flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {state.error}
@@ -52,23 +51,54 @@ export function DataExportCard({
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={request}
-        disabled={pending || !!state?.success}
-        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold disabled:opacity-50"
-      >
-        {pending ? (
-          <><Loader2 className="w-4 h-4 animate-spin" /> Queuing…</>
-        ) : state?.success ? (
-          <><CheckCircle2 className="w-4 h-4" /> Queued</>
-        ) : (
-          <><Download className="w-4 h-4" /> Request my data</>
-        )}
-      </button>
+      {!open && !state?.success ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold"
+        >
+          <Download className="w-4 h-4" /> Request my data
+        </button>
+      ) : !state?.success ? (
+        <form action={formAction} className="space-y-3 border-t border-slate-100 pt-3">
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-700 inline-flex items-center gap-1">
+              <Lock className="w-3 h-3" /> Confirm your password
+            </span>
+            <input
+              type="password"
+              name="password"
+              required
+              autoComplete="current-password"
+              placeholder="Your account password"
+              className="mt-1 w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+            />
+            <span className="text-[10px] text-slate-500 mt-1 block leading-snug">
+              Re-entering your password protects the archive from anyone who might have momentary access to your session.
+            </span>
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={pending}
+              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold disabled:opacity-50"
+            >
+              {pending ? <><Loader2 className="w-4 h-4 animate-spin" /> Queuing…</> : <><Download className="w-4 h-4" /> Request my data</>}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              disabled={pending}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : null}
 
-      <p className="text-[11px] text-slate-400 mt-2">
-        Exports are assembled and emailed by Helpward operations. The download link expires after 7 days.
+      <p className="text-[11px] text-slate-400 mt-3">
+        Archives auto-assemble via cron. The download link expires after 7 days; request a new export anytime.
       </p>
     </section>
   );
@@ -184,6 +214,24 @@ export function DeleteAccountCard({
               placeholder="DELETE"
               className="mt-1 w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-400"
             />
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-700 inline-flex items-center gap-1">
+              <Lock className="w-3 h-3" /> Confirm your password
+            </span>
+            <input
+              type="password"
+              name="password"
+              required
+              autoComplete="current-password"
+              placeholder="Your account password"
+              className="mt-1 w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-400"
+            />
+            <span className="text-[10px] text-slate-500 mt-1 block leading-snug">
+              Required even for the scheduled-not-immediate flow — a leaked session shouldn&apos;t be enough to start
+              the 30-day countdown.
+            </span>
           </label>
 
           <div className="flex items-center gap-2">
