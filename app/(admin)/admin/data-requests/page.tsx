@@ -4,9 +4,14 @@ import { Download, Trash2, Shield, AlertCircle, CheckCircle2, Clock } from "luci
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { ClientDateTime } from "@/components/ClientDateTime";
 
-// Admin queue for CCPA/PIPEDA/GDPR requests. v1 is read-only with manual
-// processing — a follow-up round adds a cron that auto-assembles export
-// archives and executes deletions after grace_until passes.
+// Admin queue for CCPA/PIPEDA/GDPR requests. Auto-processing is now wired:
+//   * /api/cron/process-data-exports runs every 30 minutes and flips
+//     pending → ready (or → failed) for every export request.
+//   * /api/cron/execute-account-deletions runs daily at 05:00 UTC and
+//     deletes accounts whose grace_until has passed via the Supabase Auth
+//     Admin REST API (cascading FKs handle the rest).
+// This page is the operator view — eyes on failures + visibility into the
+// queue. Manual SQL still works for one-offs.
 
 const EXPORT_TONE: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700",
@@ -56,8 +61,9 @@ export default async function AdminDataRequestsPage() {
         <Shield className="w-6 h-6 text-brand-600" /> Data requests
       </h1>
       <p className="text-sm text-slate-500 mt-1 mb-5">
-        CCPA, PIPEDA, and GDPR-compliance queue. Auto-processing cron ships next round; for now ops handles each
-        manually and updates status via Supabase SQL.
+        CCPA, PIPEDA, and GDPR-compliance queue. Exports auto-process every 30 min via cron; account deletions
+        auto-execute daily at 05:00 UTC once <code className="text-[11px] bg-slate-100 px-1 py-0.5 rounded">grace_until</code> passes.
+        Failures show up here with the captured reason — eyes on red rows only.
       </p>
 
       <section className="mb-8">

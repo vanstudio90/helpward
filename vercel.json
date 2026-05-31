@@ -23,6 +23,14 @@
     {
       "path": "/api/cron/expand-preferred-broadcasts",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/process-data-exports",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/execute-account-deletions",
+      "schedule": "0 5 * * *"
     }
   ]
 }
