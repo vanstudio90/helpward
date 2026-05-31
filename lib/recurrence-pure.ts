@@ -145,6 +145,60 @@ export function occurrenceToISOAtTimezone(
   return corrected.toISOString();
 }
 
+// Validate a patch applied to an existing series. Returns null when the
+// resulting rule is internally consistent (cadence/weekday/day-of-month line
+// up, time looks like HH:MM, end_date and max_occurrences are sane). Drives
+// the inline error on the in-place series editor.
+export type SeriesPatch = {
+  cadence: Cadence;
+  weekday?: number | null;
+  dayOfMonth?: number | null;
+  timeOfDay: string;
+  endDate?: string | null;
+  maxOccurrences?: number | null;
+  notes?: string | null;
+  // Caller passes this so we can reject max_occurrences < already-materialised
+  occurrencesCreated?: number;
+};
+export function validateSeriesPatch(p: SeriesPatch): string | null {
+  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(p.timeOfDay)) return "Time must be HH:MM.";
+  if (p.cadence === "weekly" || p.cadence === "biweekly") {
+    const wd = p.weekday;
+    if (wd == null || wd < 0 || wd > 6) return "Pick a weekday.";
+    if (p.dayOfMonth != null) return "Weekly schedules can't also have a day-of-month.";
+  } else if (p.cadence === "monthly") {
+    const dom = p.dayOfMonth;
+    if (dom == null || dom < 1 || dom > 31) return "Pick a day of the month (1–31).";
+    if (p.weekday != null) return "Monthly schedules can't also have a weekday.";
+  } else {
+    return "Unknown cadence.";
+  }
+  if (p.endDate && !/^\d{4}-\d{2}-\d{2}$/.test(p.endDate)) return "End date must be YYYY-MM-DD.";
+  if (p.maxOccurrences != null) {
+    if (!Number.isFinite(p.maxOccurrences) || p.maxOccurrences < 1) return "Max occurrences must be at least 1.";
+    if (p.occurrencesCreated != null && p.maxOccurrences < p.occurrencesCreated) {
+      return `You've already had ${p.occurrencesCreated} occurrence${p.occurrencesCreated === 1 ? "" : "s"} — set the cap to that or higher, or cancel the series instead.`;
+    }
+  }
+  if (p.notes != null && p.notes.length > 1000) return "Notes are too long (max 1000 chars).";
+  return null;
+}
+
+// True iff the patch changes anything that affects WHEN occurrences land
+// (so the action knows to cancel any pending materialised next-occurrence
+// before its cron picks up the new rule).
+export function patchAffectsSchedule(
+  patch: SeriesPatch,
+  current: { cadence: Cadence; weekday: number | null; dayOfMonth: number | null; timeOfDay: string; endDate: string | null; maxOccurrences: number | null }
+): boolean {
+  return patch.cadence !== current.cadence
+    || (patch.weekday ?? null) !== current.weekday
+    || (patch.dayOfMonth ?? null) !== current.dayOfMonth
+    || patch.timeOfDay !== current.timeOfDay
+    || (patch.endDate ?? null) !== current.endDate
+    || (patch.maxOccurrences ?? null) !== current.maxOccurrences;
+}
+
 // =========================================================================
 // Internals
 // =========================================================================

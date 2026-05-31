@@ -10,6 +10,7 @@ import {
   describeRule, type Cadence, nextNOccurrenceDates, type RecurrenceRule,
 } from "@/lib/recurrence-pure";
 import { SeriesActionButtons } from "./action-buttons";
+import { SeriesEditForm } from "./edit-form";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +110,23 @@ export default async function SeriesDetailPage({
           />
         </div>
       </div>
+
+      {isPaused && (
+        <SeriesEditForm
+          seriesId={series.id}
+          serviceTitle={series.service?.title ?? "this series"}
+          initial={{
+            cadence: series.cadence as Cadence,
+            weekday: series.weekday,
+            dayOfMonth: series.day_of_month,
+            timeOfDay: typeof series.time_of_day === "string" ? series.time_of_day.slice(0, 5) : "09:00",
+            endDate: series.end_date,
+            maxOccurrences: series.max_occurrences,
+            notes: series.notes,
+            occurrencesCreated: series.occurrences_created ?? 0,
+          }}
+        />
+      )}
 
       {/* Upcoming */}
       {upcomingPreview.length > 0 && (
