@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 
 type State = { error?: string; success?: string } | undefined;
 
@@ -32,12 +32,56 @@ export async function setPortfolioPhotoAction(
   }
   if (Object.keys(update).length === 0) return { error: "Nothing to update." };
 
+  // Read prior state so we can detect a false→true transition. We need this
+  // for the customer-notification side-effect — toggling OFF or editing a
+  // caption shouldn't bother the customer; only the moment a photo of
+  // theirs becomes publicly featured should.
+  const { data: prior } = await supabase
+    .from("booking_completion_photos")
+    .select("is_portfolio, booking_id")
+    .eq("id", photoId)
+    .eq("uploaded_by_user_id", user.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("booking_completion_photos")
     .update(update)
     .eq("id", photoId)
     .eq("uploaded_by_user_id", user.id);
   if (error) return { error: error.message };
+
+  // Notify the customer when their photo just became public. Service role
+  // for the insert because notifications has no broad-insert RLS — same
+  // pattern as the matching engine + cron handlers. Best-effort: a failed
+  // notification doesn't roll back the toggle.
+  if (
+    prior
+    && prior.is_portfolio === false
+    && next.isPortfolio === true
+    && prior.booking_id
+  ) {
+    try {
+      const admin = createSupabaseServiceClient();
+      const { data: booking } = await admin
+        .from("bookings")
+        .select("customer_id")
+        .eq("id", prior.booking_id)
+        .maybeSingle();
+      if (booking?.customer_id) {
+        await admin.from("notifications").insert({
+          user_id: booking.customer_id,
+          type: "portfolio_photo_featured",
+          payload: {
+            booking_id: prior.booking_id,
+            photo_id: photoId,
+            helper_id: user.id,
+          },
+        });
+      }
+    } catch (e) {
+      console.error("portfolio_photo_featured notify failed:", e);
+    }
+  }
 
   revalidatePath("/provider/portfolio");
   // Public profile may be cached server-side; bust it so the change shows up.

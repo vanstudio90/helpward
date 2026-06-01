@@ -111,6 +111,8 @@ function labelFor(type: string) {
     case "dispute_opened": return "A dispute was opened";
     case "provider_approved": return "You're approved! You can now accept tasks";
     case "provider_rejected": return "Your provider application was reviewed";
+    case "data_export_ready": return "Your data export is ready to download";
+    case "portfolio_photo_featured": return "Your helper featured a photo from your booking";
     default: return type.replace(/_/g, " ");
   }
 }
