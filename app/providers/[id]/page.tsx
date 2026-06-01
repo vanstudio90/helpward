@@ -1,7 +1,7 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheck, Star, MapPin, Clock, ArrowRight } from "lucide-react";
+import { ShieldCheck, Star, MapPin, Clock, ArrowRight, GalleryHorizontal } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { AvailabilityBadge, AvailabilityTable } from "./availability";
 import { getProviderAvailability, computeAvailabilityStatus } from "@/lib/data/availability";
@@ -62,6 +62,34 @@ export default async function PublicProviderProfile({
       .eq("target_id", id)
       .maybeSingle();
     initialSaved = !!fav;
+  }
+
+  // Portfolio — featured completion photos from past completed bookings.
+  // RLS lets anon read these rows when is_portfolio=true + helper.status=approved.
+  // Signed URLs minted with service role since the bucket is private.
+  const { data: portfolioRows } = await supabase
+    .from("booking_completion_photos")
+    .select("id, storage_path, portfolio_caption, caption, created_at")
+    .eq("uploaded_by_user_id", id)
+    .eq("is_portfolio", true)
+    .order("created_at", { ascending: false })
+    .limit(12);
+  type PortfolioRow = { id: string; storage_path: string; portfolio_caption: string | null; caption: string | null; created_at: string };
+  const portfolio = (portfolioRows as PortfolioRow[] | null) ?? [];
+  let portfolioSigned: { id: string; url: string; caption: string | null }[] = [];
+  if (portfolio.length > 0) {
+    const svc = createSupabaseServiceClient();
+    const { data: signed } = await svc.storage
+      .from("booking-photos")
+      .createSignedUrls(portfolio.map((r) => r.storage_path), 60 * 60);
+    const urlByPath = new Map((signed ?? []).map((s) => [s.path ?? "", s.signedUrl ?? ""] as const));
+    portfolioSigned = portfolio
+      .map((r) => ({
+        id: r.id,
+        url: urlByPath.get(r.storage_path) ?? "",
+        caption: r.portfolio_caption ?? r.caption,
+      }))
+      .filter((p) => p.url);
   }
 
   return (
@@ -132,6 +160,31 @@ export default async function PublicProviderProfile({
                 <li key={s!.id} className="rounded-lg border border-slate-100 p-3">
                   <div className="text-sm font-semibold text-slate-900">{s!.title}</div>
                   <div className="text-[11px] text-slate-500 mt-0.5">From ${(s!.base_price_cents / 100).toFixed(0)} · {s!.eta_label}</div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {portfolioSigned.length > 0 && (
+          <section className="mt-6 rounded-2xl bg-white border border-slate-100 p-5">
+            <h2 className="text-sm font-bold text-slate-900 mb-3 inline-flex items-center gap-2">
+              <GalleryHorizontal className="w-4 h-4 text-amber-600" /> Recent work
+            </h2>
+            <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {portfolioSigned.map((p) => (
+                <li key={p.id} className="relative aspect-square rounded-xl overflow-hidden bg-slate-100 group">
+                  <img
+                    src={p.url}
+                    alt={p.caption ?? "Helper's past work"}
+                    loading="lazy"
+                    className="w-full h-full object-cover transition group-hover:scale-105"
+                  />
+                  {p.caption && (
+                    <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] px-2 py-1.5 leading-tight line-clamp-2">
+                      {p.caption}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

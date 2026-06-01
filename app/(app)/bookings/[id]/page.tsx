@@ -12,6 +12,7 @@ import { CancelBookingButton } from "./cancel-button";
 import { TipCard } from "./tip-card";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
+import { PortfolioRevokeButton, PortfolioBadge } from "./portfolio-revoke";
 
 const STATUS_TONE: Record<string, string> = {
   scheduled: "bg-brand-50 text-brand-700",
@@ -89,14 +90,14 @@ export default async function BookingDetailPage({
   // Proof-of-completion photos uploaded by the helper. Shown to the customer
   // for any booking that has them — typically once the task hits in_progress
   // or completed. Bucket is private; signed URLs minted with service role.
-  let completionPhotos: Array<{ id: string; url: string; caption: string | null; created_at: string }> = [];
+  let completionPhotos: Array<{ id: string; url: string; caption: string | null; created_at: string; isPortfolio: boolean }> = [];
   {
     const { data: photoRows } = await supabase
       .from("booking_completion_photos")
-      .select("id, storage_path, caption, created_at")
+      .select("id, storage_path, caption, created_at, is_portfolio")
       .eq("booking_id", id)
       .order("created_at", { ascending: true });
-    const rows = (photoRows as Array<{ id: string; storage_path: string; caption: string | null; created_at: string }> | null) ?? [];
+    const rows = (photoRows as Array<{ id: string; storage_path: string; caption: string | null; created_at: string; is_portfolio: boolean }> | null) ?? [];
     if (rows.length > 0) {
       const svc = createSupabaseServiceClient();
       const { data: signed } = await svc.storage
@@ -104,7 +105,13 @@ export default async function BookingDetailPage({
         .createSignedUrls(rows.map((r) => r.storage_path), 3600);
       const urlByPath = new Map((signed ?? []).map((s) => [s.path ?? "", s.signedUrl ?? ""] as const));
       completionPhotos = rows
-        .map((r) => ({ id: r.id, url: urlByPath.get(r.storage_path) || "", caption: r.caption, created_at: r.created_at }))
+        .map((r) => ({
+          id: r.id,
+          url: urlByPath.get(r.storage_path) || "",
+          caption: r.caption,
+          created_at: r.created_at,
+          isPortfolio: r.is_portfolio,
+        }))
         .filter((p) => p.url);
     }
   }
@@ -270,20 +277,23 @@ export default async function BookingDetailPage({
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {completionPhotos.map((p) => (
-                  <a
-                    key={p.id}
-                    href={p.url}
-                    target="_blank"
-                    rel="noopener"
-                    className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 group"
-                  >
-                    <img src={p.url} alt={p.caption ?? "Proof of completion"} className="w-full h-full object-cover transition group-hover:scale-105" />
-                    {p.caption && (
-                      <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] px-1.5 py-1 leading-tight line-clamp-2">
-                        {p.caption}
-                      </div>
-                    )}
-                  </a>
+                  <div key={p.id} className="space-y-1">
+                    <a
+                      href={p.url}
+                      target="_blank"
+                      rel="noopener"
+                      className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 group block"
+                    >
+                      <img src={p.url} alt={p.caption ?? "Proof of completion"} className="w-full h-full object-cover transition group-hover:scale-105" />
+                      {p.isPortfolio && <PortfolioBadge />}
+                      {p.caption && (
+                        <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] px-1.5 py-1 leading-tight line-clamp-2">
+                          {p.caption}
+                        </div>
+                      )}
+                    </a>
+                    {p.isPortfolio && <PortfolioRevokeButton photoId={p.id} />}
+                  </div>
                 ))}
               </div>
               <p className="text-[11px] text-slate-500 mt-2 leading-snug">

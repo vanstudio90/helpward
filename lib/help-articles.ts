@@ -582,6 +582,43 @@ export const HELP_ARTICLES: HelpArticle[] = [
     ],
     updatedAt: "2026-05-29",
   },
+  {
+    slug: "helper-portfolio-photos",
+    category: "helpers",
+    title: "Featuring your work in your public portfolio",
+    summary:
+      "Turn proof photos from completed bookings into a portfolio gallery on your public profile. Customers see real work; you get a passive conversion lever. Customer always has final say on what stays public.",
+    body: [
+      { type: "p", text:
+        "Helpers with portfolio photos on their profile get noticeably more direct-booking traffic than helpers without — prospective customers want to see real work, not just stars and a tagline. The proof photos you already snap to wrap up tasks double as portfolio content with one tap." },
+      { type: "h2", text: "How to add a photo to your portfolio" },
+      { type: "ol", items: [
+        "Open /provider/portfolio from the nav.",
+        "You'll see every proof photo from every booking you've ever completed.",
+        "Tap \"Feature on profile\" on any photo. It instantly appears on your public /providers/[id] profile under \"Recent work\".",
+        "Optionally rewrite the caption — the original is customer-facing (\"left at side door\") but for portfolio it's better to describe the work (\"mulched + edged 200 sqft front yard, 2 hrs\").",
+        "Tap \"Hide from profile\" any time to pull a photo back to private.",
+      ] },
+      { type: "h2", text: "Customer consent" },
+      { type: "p", text:
+        "Customers can revoke any individual photo from their booking page. We never feature a photo the customer has opted out of. The relationship is asymmetric on purpose: you propose, they veto — but they can't put a photo back into your portfolio once they've pulled it." },
+      { type: "h2", text: "Visibility safeguards" },
+      { type: "ul", items: [
+        "Photos only show up publicly when YOUR account is in 'approved' status. If you're paused, suspended, or removed, your whole portfolio hides instantly.",
+        "We don't surface portfolio photos in search engines yet — they're rendered behind signed URLs with a 1-hour expiry, which is short enough that Google won't index them.",
+        "The customer's name, address, and any face that happens to be in frame are NEVER overlaid. The photo speaks for itself.",
+      ] },
+      { type: "note", text:
+        "Best portfolio photos: clear lighting, the finished work clearly in frame, no people, no clutter. A 3-second pause before you snap the proof photo pays compound dividends over the next year of bookings." },
+    ],
+    faqs: [
+      { q: "Do I need to ask the customer before featuring a photo?", a: "Not in advance — you can feature any photo you took on a completed booking. The customer gets visibility on every photo you've featured via their booking page and can revoke any of them instantly. We send them a notification when you feature a photo from their booking so they're never surprised." },
+      { q: "Can I feature photos from in-progress bookings?", a: "No. Only photos from bookings that have hit 'completed' status are eligible. The RLS policy on the database enforces this — you can't accidentally feature a half-done task." },
+      { q: "What happens to my portfolio if I take a break and pause my account?", a: "Auto-hidden. The public-read RLS policy checks your provider_profiles.status = 'approved' on every read, so the moment you pause, your portfolio vanishes from /providers/[id]. When you come back online, it re-appears — no manual re-flagging needed." },
+      { q: "How many photos can I feature?", a: "No hard cap, but we render the 12 most recent on your profile. Older featured photos still count as portfolio content (and remain on individual booking pages) — we just don't surface more than 12 in the gallery to keep it scannable." },
+    ],
+    updatedAt: "2026-06-01",
+  },
 ];
 
 export function getArticle(slug: string): HelpArticle | null {
