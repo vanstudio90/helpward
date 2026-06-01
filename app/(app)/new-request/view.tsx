@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import { createRequestAction } from "./actions";
 import { RecurrencePicker } from "./recurrence-picker";
 import { BundlePicker } from "./bundle-picker";
+import { UseCurrentLocationButton } from "./use-current-location";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 
@@ -18,6 +19,8 @@ export type SavedAddressOption = {
   label: string;
   formatted: string;
   is_default: boolean;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 export type PreferredHelper = {
@@ -43,9 +46,24 @@ export function NewRequestView({
   const [tab, setTab] = useState<string>("Popular");
   const [scheduled, setScheduled] = useState<"asap" | "later">("asap");
   // Auto-fill the address field from the default saved address (if any) so
-  // a returning customer doesn't have to retype "Home" every time.
+  // a returning customer doesn't have to retype "Home" every time. Saved
+  // addresses already carry geocoded lat/lng, so we also seed those so the
+  // server can skip the forward-geocode round-trip.
   const defaultSavedAddr = savedAddresses.find((a) => a.is_default) ?? null;
   const [address, setAddress] = useState<string>(defaultSavedAddr?.formatted ?? "");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
+    defaultSavedAddr && defaultSavedAddr.lat != null && defaultSavedAddr.lng != null
+      ? { lat: defaultSavedAddr.lat, lng: defaultSavedAddr.lng }
+      : null
+  );
+
+  // When the user types directly into the input we clear any cached coords
+  // (they no longer line up with the text). The server will forward-geocode
+  // on submit instead.
+  const onAddressChange = (v: string) => {
+    setAddress(v);
+    setCoords(null);
+  };
 
   const filtered = tab === "Popular"
     ? services.filter((s) => s.popular).concat(services.filter((s) => !s.popular)).slice(0, 12)
@@ -188,7 +206,10 @@ export function NewRequestView({
                         <button
                           key={a.id}
                           type="button"
-                          onClick={() => setAddress(a.formatted)}
+                          onClick={() => {
+                            setAddress(a.formatted);
+                            setCoords(a.lat != null && a.lng != null ? { lat: a.lat, lng: a.lng } : null);
+                          }}
                           className={cn(
                             "inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-full border transition",
                             active
@@ -219,16 +240,30 @@ export function NewRequestView({
                     name="address"
                     required
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    onChange={(e) => onAddressChange(e.target.value)}
                     placeholder="123 Main St, Vancouver, BC"
                     className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
                   />
                 </div>
+                {coords && (
+                  <input type="hidden" name="address_lat" value={coords.lat} />
+                )}
+                {coords && (
+                  <input type="hidden" name="address_lng" value={coords.lng} />
+                )}
+                <UseCurrentLocationButton
+                  onResolved={(formatted, lat, lng) => {
+                    setAddress(formatted);
+                    setCoords({ lat, lng });
+                  }}
+                />
                 <p className="text-[11px] text-slate-500 mt-1 inline-flex items-center gap-1">
                   <Info className="w-3 h-3" />
-                  {savedAddresses.length === 0
+                  {coords
+                    ? <>Location pinned — your helper will be matched against the real coordinates.</>
+                    : savedAddresses.length === 0
                     ? <>Tip: <Link href="/settings" className="text-brand-700 font-semibold">save your addresses</Link> for one-tap fill next time.</>
-                    : <>Real geocoding lands in Phase 3 (Mapbox).</>}
+                    : <>Pick a saved address or tap &ldquo;Use my current location&rdquo; for precise matching.</>}
                 </p>
               </label>
 

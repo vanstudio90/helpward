@@ -49,6 +49,7 @@ export const PLACEHOLDER_POINT = toPointWKT(-123.1207, 49.2827);
 export const PLACEHOLDER_COUNTRY = "US";
 
 const ENDPOINT = "https://api.mapbox.com/search/geocode/v6/forward";
+const REVERSE_ENDPOINT = "https://api.mapbox.com/search/geocode/v6/reverse";
 
 // Forward-geocode an address string. Restricted to US + CA since that's
 // our launch geo. Returns null on any failure (no token, bad input,
@@ -127,6 +128,73 @@ export async function geocodeAddress(
   };
 }
 
+// Reverse-geocode lat/lng → formatted address. Used by the "use my current
+// location" button on /new-request so the customer's actual GPS coords get
+// translated to a human-readable address before the form submits.
+//
+// Same fail-soft posture as forward: returns null on any error (no token,
+// out-of-range coords, network fail) so the caller can decide whether to
+// fall back to a different flow or show a hint to type the address.
+export async function reverseGeocode(
+  lat: number, lng: number,
+): Promise<GeocodeResult | null> {
+  const token = process.env.MAPBOX_TOKEN;
+  if (!token) return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+
+  const url = new URL(REVERSE_ENDPOINT);
+  url.searchParams.set("longitude", String(lng));
+  url.searchParams.set("latitude", String(lat));
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("access_token", token);
+
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), { signal: AbortSignal.timeout(12_000) });
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch {
+    return null;
+  }
+
+  const features = (body as { features?: Array<unknown> } | null)?.features;
+  if (!Array.isArray(features) || features.length === 0) return null;
+
+  const f = features[0] as {
+    properties?: {
+      full_address?: string;
+      name?: string;
+      context?: {
+        country?: { country_code?: string; country_code_alpha_2?: string };
+        region?: { name?: string };
+        place?: { name?: string };
+        postcode?: { name?: string };
+      };
+    };
+  };
+
+  const ctx = f.properties?.context ?? {};
+  const countryCode = (ctx.country?.country_code_alpha_2 ?? ctx.country?.country_code ?? "").toUpperCase();
+  const country = countryCode === "US" || countryCode === "CA" ? countryCode : PLACEHOLDER_COUNTRY;
+
+  return {
+    formatted: f.properties?.full_address ?? f.properties?.name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+    lng,
+    lat,
+    country,
+    region: ctx.region?.name ?? null,
+    city: ctx.place?.name ?? null,
+    postalCode: ctx.postcode?.name ?? null,
+  };
+}
+
 // Convenience: geocode and return everything needed to insert an addresses
 // row, or fall through to the placeholder if geocoding is unavailable.
 // Keeps every call site to a single line.
@@ -138,6 +206,41 @@ export type ResolvedAddress = {
   lat: number | null;
   verified: boolean;      // true when Mapbox confirmed it
 };
+
+// Build a ResolvedAddress directly from coords the client already supplied
+// (saved-address chip or use-my-current-location flow). We trust the coords
+// at face value — if the customer's lying about their location to game the
+// matching engine, they're scammed someone into doing a task at the wrong
+// address, not us. Reverse-geocode for a canonical formatted string when
+// possible; fall back to the user-typed text if Mapbox is unavailable.
+export async function resolveAddressFromCoords(
+  rawText: string, lat: number, lng: number,
+): Promise<ResolvedAddress> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return resolveAddressForInsert(rawText);
+  }
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return resolveAddressForInsert(rawText);
+  }
+
+  let formatted = rawText.trim();
+  let country = PLACEHOLDER_COUNTRY;
+  if (isGeocodingEnabled()) {
+    const r = await reverseGeocode(lat, lng);
+    if (r) {
+      formatted = r.formatted;
+      country = r.country;
+    }
+  }
+  return {
+    formatted,
+    location: toPointWKT(lng, lat),
+    country,
+    lng,
+    lat,
+    verified: true,
+  };
+}
 
 export async function resolveAddressForInsert(rawText: string): Promise<ResolvedAddress> {
   if (isGeocodingEnabled()) {

@@ -7,7 +7,7 @@ import { createSeriesAction } from "@/app/(app)/bookings/series/actions";
 import {
   MAX_BUNDLE_ITEMS, BUNDLE_SERVICE_FEE_CENTS,
 } from "@/lib/bundle-pure";
-import { resolveAddressForInsert } from "@/lib/geocode";
+import { resolveAddressForInsert, resolveAddressFromCoords } from "@/lib/geocode";
 
 type State = { error?: string; success?: string } | undefined;
 
@@ -78,6 +78,17 @@ export async function createRequestAction(
     return { error: "Notes are too long (max 1000 chars)." };
   }
 
+  // Client-supplied coords come from the saved-address chips or the Use my
+  // current location button. When present, we trust them and skip the
+  // forward-geocode round-trip — saved-address coords were verified at save
+  // time, browser GPS coords are inherently authoritative.
+  const latRaw = String(formData.get("address_lat") ?? "");
+  const lngRaw = String(formData.get("address_lng") ?? "");
+  const clientLat = latRaw ? Number(latRaw) : null;
+  const clientLng = lngRaw ? Number(lngRaw) : null;
+  const haveClientCoords = clientLat != null && clientLng != null
+    && Number.isFinite(clientLat) && Number.isFinite(clientLng);
+
   // Preferred helper — from the favorite-helper "Book again" flow.
   // Validate it's a real approved provider before persisting; if not, fall
   // through to the normal broadcast as if the param wasn't there.
@@ -114,10 +125,13 @@ export async function createRequestAction(
       if (!s || !s.active) return { error: `One of the stops references an unavailable service.` };
     }
 
-    // Geocode the address — Mapbox v6 forward when MAPBOX_TOKEN is set,
-    // graceful fallback to the placeholder otherwise so the booking still
-    // goes through during the pre-key period.
-    const resolved = await resolveAddressForInsert(addressText);
+    // Resolve address coords: trust client-supplied lat/lng when present
+    // (saved-address chip or use-current-location), forward-geocode the
+    // typed text otherwise. Either way falls back to the placeholder if
+    // Mapbox is unavailable.
+    const resolved = haveClientCoords
+      ? await resolveAddressFromCoords(addressText, clientLat!, clientLng!)
+      : await resolveAddressForInsert(addressText);
     const { data: bundleAddress, error: bundleAddrErr } = await supabase
       .from("addresses")
       .insert({
@@ -198,12 +212,14 @@ export async function createRequestAction(
     return { error: "That service isn't available right now." };
   }
 
-  // Geocode the address — Mapbox v6 forward when MAPBOX_TOKEN is set,
-  // graceful fallback to a Vancouver-downtown placeholder otherwise. The
-  // matching engine reads addresses.location for find_nearby_providers so
-  // a real lat/lng here is what turns the engine from "broadcast to BC"
-  // into "broadcast to the customer's actual neighbourhood".
-  const resolved = await resolveAddressForInsert(addressText);
+  // Resolve address coords: trust client-supplied lat/lng when present
+  // (saved-address chip or use-current-location button), forward-geocode
+  // the typed text otherwise. Either path falls back to the placeholder
+  // if Mapbox is unavailable. find_nearby_providers reads the resulting
+  // POINT for proximity matching.
+  const resolved = haveClientCoords
+    ? await resolveAddressFromCoords(addressText, clientLat!, clientLng!)
+    : await resolveAddressForInsert(addressText);
   const { data: address, error: addrErr } = await supabase
     .from("addresses")
     .insert({
