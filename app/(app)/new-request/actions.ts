@@ -7,6 +7,7 @@ import { createSeriesAction } from "@/app/(app)/bookings/series/actions";
 import {
   MAX_BUNDLE_ITEMS, BUNDLE_SERVICE_FEE_CENTS,
 } from "@/lib/bundle-pure";
+import { resolveAddressForInsert } from "@/lib/geocode";
 
 type State = { error?: string; success?: string } | undefined;
 
@@ -113,14 +114,17 @@ export async function createRequestAction(
       if (!s || !s.active) return { error: `One of the stops references an unavailable service.` };
     }
 
-    // Address row reuses the same fake-Vancouver POINT until Mapbox lands.
+    // Geocode the address — Mapbox v6 forward when MAPBOX_TOKEN is set,
+    // graceful fallback to the placeholder otherwise so the booking still
+    // goes through during the pre-key period.
+    const resolved = await resolveAddressForInsert(addressText);
     const { data: bundleAddress, error: bundleAddrErr } = await supabase
       .from("addresses")
       .insert({
         user_id: user.id,
-        formatted: addressText,
-        location: "POINT(-123.1207 49.2827)" as unknown as string,
-        country: "US",
+        formatted: resolved.formatted,
+        location: resolved.location as unknown as string,
+        country: resolved.country,
       })
       .select()
       .single();
@@ -194,16 +198,19 @@ export async function createRequestAction(
     return { error: "That service isn't available right now." };
   }
 
-  // Create the address row (Phase: no geocoder yet — store text only, coords set later)
-  // PostGIS REQUIRES a geography point, so we use Vancouver default for now.
-  // TODO Phase 3: integrate Mapbox geocoding to convert addressText → real lat/lng.
+  // Geocode the address — Mapbox v6 forward when MAPBOX_TOKEN is set,
+  // graceful fallback to a Vancouver-downtown placeholder otherwise. The
+  // matching engine reads addresses.location for find_nearby_providers so
+  // a real lat/lng here is what turns the engine from "broadcast to BC"
+  // into "broadcast to the customer's actual neighbourhood".
+  const resolved = await resolveAddressForInsert(addressText);
   const { data: address, error: addrErr } = await supabase
     .from("addresses")
     .insert({
       user_id: user.id,
-      formatted: addressText,
-      location: "POINT(-123.1207 49.2827)" as unknown as string, // Vancouver downtown placeholder
-      country: "US",
+      formatted: resolved.formatted,
+      location: resolved.location as unknown as string,
+      country: resolved.country,
     })
     .select()
     .single();

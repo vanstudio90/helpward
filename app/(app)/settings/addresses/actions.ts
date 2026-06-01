@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { validateSavedAddress } from "@/lib/saved-addresses-pure";
+import { geocodeAddress, isGeocodingEnabled } from "@/lib/geocode";
 
 type State = { error?: string; success?: string } | undefined;
 
@@ -28,12 +29,31 @@ export async function createSavedAddressAction(formData: FormData): Promise<Stat
       .eq("is_default", true);
   }
 
+  // Geocode if we can — saved_addresses.lat + lng are nullable so a
+  // pre-token environment still inserts the row, just without coords.
+  // We pre-compute once at save time rather than every request submit so
+  // the booking-creation path stays fast for the common "pick a saved
+  // address" flow.
+  let lat: number | null = null;
+  let lng: number | null = null;
+  let canonical = formatted.trim();
+  if (isGeocodingEnabled()) {
+    const g = await geocodeAddress(canonical);
+    if (g) {
+      lat = g.lat;
+      lng = g.lng;
+      canonical = g.formatted;
+    }
+  }
+
   const { error: insErr } = await supabase
     .from("saved_addresses")
     .insert({
       user_id: user.id,
       label: label.trim(),
-      formatted: formatted.trim(),
+      formatted: canonical,
+      lat,
+      lng,
       is_default: makeDefault,
     });
   if (insErr) return { error: insErr.message };

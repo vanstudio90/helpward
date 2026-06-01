@@ -6,6 +6,7 @@ import {
   type Cadence, nextOccurrenceDate, occurrenceToISOAtTimezone,
   validateSeriesPatch, patchAffectsSchedule, type SeriesPatch,
 } from "@/lib/recurrence-pure";
+import { resolveAddressForInsert } from "@/lib/geocode";
 
 type State = { error?: string; success?: string; seriesId?: string } | undefined;
 
@@ -66,14 +67,18 @@ export async function createSeriesAction(
     .maybeSingle();
   if (!service) return { error: "Service isn't available." };
 
-  // Address creation reuses the same fake-Vancouver POINT until Mapbox lands.
+  // Geocode address — Mapbox v6 forward when MAPBOX_TOKEN is set, graceful
+  // placeholder otherwise. Series materialisation pulls this row's
+  // pickup_address_id into every occurrence, so a real lat/lng here flows
+  // through to every future booking.
+  const resolved = await resolveAddressForInsert(addressText);
   const { data: address, error: addrErr } = await supabase
     .from("addresses")
     .insert({
       user_id: user.id,
-      formatted: addressText,
-      location: "POINT(-123.1207 49.2827)" as unknown as string,
-      country: "US",
+      formatted: resolved.formatted,
+      location: resolved.location as unknown as string,
+      country: resolved.country,
     })
     .select()
     .single();
