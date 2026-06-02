@@ -6,14 +6,22 @@ import { ClientDateTime } from "@/components/ClientDateTime";
 import { AvailabilityBadge, AvailabilityTable } from "./availability";
 import { getProviderAvailability, computeAvailabilityStatus } from "@/lib/data/availability";
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
+import { isUuid } from "@/lib/slug";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function PublicProviderProfile({
   params,
 }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+  const { id: raw } = await params;
   const supabase = await createSupabaseServerClient();
+
+  // Resolve the URL param as either a UUID (legacy) or a slug (new). UUID
+  // form gets a permanent redirect to the slug URL so search engines + saved
+  // links converge on the human-readable canonical.
+  const isUuidParam = isUuid(raw);
+  const lookupColumn = isUuidParam ? "user_id" : "slug";
 
   const { data: pp } = await supabase
     .from("provider_profiles")
@@ -21,10 +29,22 @@ export default async function PublicProviderProfile({
       *,
       profile:profiles!provider_profiles_user_id_fkey(full_name, avatar_url, country)
     `)
-    .eq("user_id", id)
+    .eq(lookupColumn, raw)
     .single();
 
   if (!pp || pp.status !== "approved") notFound();
+
+  // UUID requested but a slug exists — bounce to the canonical slug URL.
+  // Keeps inbound links from /favorites + /bookings + bookmarks alive while
+  // teaching crawlers about the canonical form.
+  if (isUuidParam && pp.slug && pp.slug !== raw) {
+    redirect(`/providers/${pp.slug}`);
+  }
+
+  // Once we've resolved the row, everything downstream queries by user_id —
+  // services, reviews, portfolio, etc. all reference provider_id which is
+  // always the user_id, never the slug.
+  const id = pp.user_id;
 
   const { data: svcs } = await supabase
     .from("provider_services")

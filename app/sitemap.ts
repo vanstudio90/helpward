@@ -64,13 +64,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const supabase = createSupabaseServiceClient();
     const { data: providers } = await supabase
       .from("provider_profiles")
-      .select("user_id, created_at")
+      .select("user_id, slug, created_at")
       .eq("status", "approved")
       .order("created_at", { ascending: false })
       .limit(5000);
 
+    // Prefer slug URL when present — the loader 301s UUID → slug anyway,
+    // so emitting the canonical form keeps Google from chasing redirects.
     providerRoutes = (providers ?? []).map((p) => ({
-      url: `${BASE}/providers/${p.user_id}`,
+      url: `${BASE}/providers/${p.slug ?? p.user_id}`,
       lastModified: new Date(p.created_at),
       changeFrequency: "weekly",
       priority: 0.7,

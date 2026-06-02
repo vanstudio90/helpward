@@ -34,7 +34,7 @@ export default async function BookingDetailPage({
       *,
       service:services(id, title, image_url),
       provider:provider_profiles!bookings_provider_id_fkey(
-        user_id, rating_avg,
+        user_id, slug, rating_avg,
         profile:profiles!provider_profiles_user_id_fkey(full_name, avatar_url, phone)
       ),
       request:requests(
@@ -49,7 +49,8 @@ export default async function BookingDetailPage({
 
   if (!b) notFound();
 
-  const provider = (b as { provider: { user_id: string; rating_avg: number | null; profile: { full_name: string; avatar_url: string | null; phone: string | null } | null } | null }).provider;
+  const provider = (b as { provider: { user_id: string; slug: string | null; rating_avg: number | null; profile: { full_name: string; avatar_url: string | null; phone: string | null } | null } | null }).provider;
+  const providerHref = provider ? `/providers/${provider.slug ?? provider.user_id}` : null;
   const service = (b as { service: { title: string; image_url: string | null } | null }).service;
   const request = (b as { request: { id: string; is_bundle: boolean; bundle_item_count: number | null; pickup: { formatted: string } | null } | null }).request;
   const pickup = request?.pickup;
@@ -142,7 +143,7 @@ export default async function BookingDetailPage({
           {provider && (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
               {provider.profile?.avatar_url ? (
-                <Link href={`/providers/${provider.user_id}`}>
+                <Link href={providerHref!}>
                   <img src={provider.profile.avatar_url} className="w-12 h-12 rounded-full" alt="" />
                 </Link>
               ) : (
@@ -151,7 +152,7 @@ export default async function BookingDetailPage({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <Link href={`/providers/${provider.user_id}`} className="text-sm font-bold text-slate-900 truncate hover:underline">
+                <Link href={providerHref!} className="text-sm font-bold text-slate-900 truncate hover:underline">
                   {provider.profile?.full_name}
                 </Link>
                 {provider.rating_avg && (

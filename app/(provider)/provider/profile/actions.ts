@@ -2,8 +2,39 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { validateSlug } from "@/lib/slug";
 
 type State = { error?: string; success?: string } | undefined;
+
+// Helper picks a custom slug for their public profile URL. RLS lets them
+// update their own row; the unique partial index on (slug) where slug is
+// not null catches collisions cleanly with a Postgres 23505 we surface
+// back as a friendly "already taken" message.
+export async function setProviderSlugAction(
+  _prev: State,
+  formData: FormData,
+): Promise<State> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not logged in." };
+
+  const raw = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const err = validateSlug(raw);
+  if (err) return { error: err };
+
+  const { error } = await supabase
+    .from("provider_profiles")
+    .update({ slug: raw })
+    .eq("user_id", user.id);
+  if (error) {
+    if (error.code === "23505") return { error: "That slug is already taken." };
+    return { error: error.message };
+  }
+
+  revalidatePath("/provider/profile");
+  revalidatePath(`/providers/${raw}`);
+  return { success: `Your profile URL is now /providers/${raw}.` };
+}
 
 export async function updateProviderProfileAction(
   _prev: State,

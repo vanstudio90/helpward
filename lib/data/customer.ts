@@ -161,6 +161,7 @@ export async function listSavedProviderIds(): Promise<string[]> {
 
 export type SavedProvider = {
   user_id: string;
+  slug: string | null;
   profile: { full_name: string; avatar_url: string | null };
   status: string;
   rating_avg: number | null;
@@ -175,7 +176,7 @@ export async function listSavedProviders(): Promise<SavedProvider[]> {
   const { data, error } = await supabase
     .from("provider_profiles")
     .select(`
-      user_id, status, rating_avg, rating_count, tasks_completed,
+      user_id, slug, status, rating_avg, rating_count, tasks_completed,
       profile:profiles!provider_profiles_user_id_fkey(full_name, avatar_url)
     `)
     .in("user_id", ids);

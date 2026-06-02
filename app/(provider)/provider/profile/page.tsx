@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { listServices } from "@/lib/data/services";
 import { ProfileForm, ServicesForm, ProviderAvatarUpload } from "./forms";
+import { SlugForm } from "./slug-form";
 
 export default async function ProviderProfilePage() {
   const supabase = await createSupabaseServerClient();
@@ -30,6 +31,8 @@ export default async function ProviderProfilePage() {
           avatarUrl={profile?.avatar_url ?? null}
           fullName={profile?.full_name ?? ""}
         />
+
+        <SlugForm initial={pp?.slug ?? null} />
 
         <ProfileForm initial={{
           bio: pp?.bio ?? "",
