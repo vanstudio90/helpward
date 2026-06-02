@@ -50,7 +50,10 @@ export function NotificationBell({
       });
   };
 
-  // Load list when opening
+  // Load list when opening. We deliberately DON'T auto-mark-everything-read
+  // here anymore — per-item dismiss exists, and bulk auto-mark on glance
+  // was burying real unread items the user wanted to come back to. The
+  // explicit "Mark all read" button in the header handles the bulk case.
   useEffect(() => {
     if (!open) return;
     const supabase = createSupabaseBrowserClient();
@@ -65,17 +68,53 @@ export function NotificationBell({
           return;
         }
         if (data) setItems(data);
-        // Mark unread as read — best-effort; only flip badge if write succeeds
-        supabase
-          .from("notifications")
-          .update({ read_at: new Date().toISOString() })
-          .is("read_at", null)
-          .then(({ error: updErr }) => {
-            if (updErr) console.error("notifications mark-read:", updErr.message);
-            else setCount(0);
-          });
       });
   }, [open]);
+
+  // Bulk "Mark all read" — flips read_at on every unread row for this user.
+  // RLS scopes the update; client trusts the badge count of the resulting
+  // local state instead of re-fetching.
+  const markAllRead = () => {
+    const prev = items;
+    const now = new Date().toISOString();
+    setItems((arr) => arr.map((x) => x.read_at ? x : { ...x, read_at: now }));
+    setCount(0);
+    const supabase = createSupabaseBrowserClient();
+    supabase
+      .from("notifications")
+      .update({ read_at: now })
+      .is("read_at", null)
+      .then(({ error }) => {
+        if (error) {
+          console.error("notifications mark-all-read:", error.message);
+          setItems(prev);
+          setCount(prev.filter((x) => !x.read_at).length);
+        }
+      });
+  };
+
+  // Bulk "Clear all" — deletes every notification for this user. Aggressive
+  // by design (no per-row confirm) because per-item dismiss already exists
+  // for cherry-picking and this button is for the inbox-zero use case.
+  const clearAll = () => {
+    if (items.length === 0) return;
+    const prev = items;
+    const prevCount = count;
+    setItems([]);
+    setCount(0);
+    const supabase = createSupabaseBrowserClient();
+    supabase
+      .from("notifications")
+      .delete()
+      .in("id", prev.map((x) => x.id))
+      .then(({ error }) => {
+        if (error) {
+          console.error("notifications clear-all:", error.message);
+          setItems(prev);
+          setCount(prevCount);
+        }
+      });
+  };
 
   return (
     <div className="relative">
@@ -96,9 +135,31 @@ export function NotificationBell({
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 z-40 overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-              <div className="text-sm font-bold text-slate-900">Notifications</div>
-              <div className="text-[11px] text-slate-500">{items.length} most recent</div>
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2">
+              <div className="text-sm font-bold text-slate-900 shrink-0">Notifications</div>
+              {items.length > 0 ? (
+                <div className="flex items-center gap-2 text-[11px] font-semibold">
+                  {count > 0 && (
+                    <button
+                      type="button"
+                      onClick={markAllRead}
+                      className="text-brand-700 hover:text-brand-800"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                  <span className="text-slate-300" aria-hidden>·</span>
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    className="text-rose-600 hover:text-rose-700"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              ) : (
+                <div className="text-[11px] text-slate-500">—</div>
+              )}
             </div>
             <ul className="max-h-96 overflow-y-auto">
               {items.length === 0 && (
