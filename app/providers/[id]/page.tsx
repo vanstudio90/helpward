@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -8,6 +9,60 @@ import { getProviderAvailability, computeAvailabilityStatus } from "@/lib/data/a
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 import { isUuid } from "@/lib/slug";
 import { redirect } from "next/navigation";
+
+// Per-helper metadata for shareable previews. iMessage/Twitter/Slack all
+// pull these tags when an inbound link is unfurled, so a profile shared
+// over DM gets the helper's name + rating + role-specific OG image instead
+// of the generic Helpward card. Uses the same UUID-or-slug resolver as
+// the page itself.
+export async function generateMetadata({
+  params,
+}: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id: raw } = await params;
+  const supabase = await createSupabaseServerClient();
+  const isUuidParam = isUuid(raw);
+  const { data: pp } = await supabase
+    .from("provider_profiles")
+    .select(`
+      user_id, slug, status, rating_avg, rating_count, tasks_completed, bio,
+      profile:profiles!provider_profiles_user_id_fkey(full_name, country)
+    `)
+    .eq(isUuidParam ? "user_id" : "slug", raw)
+    .maybeSingle();
+
+  if (!pp || pp.status !== "approved") {
+    // Don't leak whether an unapproved/missing helper exists. Falling back
+    // to generic Helpward metadata is fine for a 404 path.
+    return { title: "Helper — Helpward", robots: { index: false, follow: true } };
+  }
+  const prof = (pp as { profile: { full_name: string; country: string } | null }).profile;
+  const name = prof?.full_name ?? "Verified helper";
+  const ratingFragment = pp.rating_avg
+    ? `★ ${pp.rating_avg} (${pp.rating_count} reviews) · `
+    : "";
+  const countryLabel = prof?.country === "CA" ? "Canada" : "United States";
+  const description = pp.bio?.trim()
+    || `${ratingFragment}${pp.tasks_completed ?? 0} tasks completed. Background-checked, insured, ready to help across ${countryLabel}.`;
+
+  const canonical = `/providers/${pp.slug ?? pp.user_id}`;
+  return {
+    title: `${name} — Verified helper on Helpward`,
+    description: description.slice(0, 200),
+    alternates: { canonical },
+    openGraph: {
+      type: "profile",
+      title: `${name} on Helpward`,
+      description: description.slice(0, 200),
+      url: canonical,
+      siteName: "Helpward",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${name} on Helpward`,
+      description: description.slice(0, 200),
+    },
+  };
+}
 
 export const dynamic = "force-dynamic";
 
