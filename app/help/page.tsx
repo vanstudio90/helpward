@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { MarketingShell } from "@/components/MarketingShell";
 import { MessageSquare, Mail, Shield, BookOpen, ArrowRight } from "lucide-react";
 import { HELP_CATEGORIES, HELP_ARTICLES, getArticlesByCategory } from "@/lib/help-articles";
+import { HelpSearchShell } from "./search-shell";
 
 export const metadata: Metadata = {
   title: "Help Center — Helpward",
@@ -20,6 +21,9 @@ export default function Help() {
         Most questions have a quick answer below. If you don&apos;t find what you need, our team
         is on email 24/7.
       </p>
+
+      <HelpSearchShell articles={HELP_ARTICLES} categories={HELP_CATEGORIES}>
+        <>
 
       <h2>Featured articles</h2>
       <ul className="not-prose grid sm:grid-cols-3 gap-3 my-4">
@@ -71,6 +75,9 @@ export default function Help() {
           );
         })}
       </div>
+
+        </>
+      </HelpSearchShell>
 
       <h2>Talk to a human</h2>
       <ul className="not-prose grid sm:grid-cols-2 gap-3 my-4">
