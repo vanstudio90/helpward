@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck, Star, MapPin, Clock, ArrowRight, GalleryHorizontal } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
-import { AvailabilityBadge, AvailabilityTable } from "./availability";
+import { AvailabilityBadge, AvailabilityTable, NextSevenDaysStrip } from "./availability";
 import { getProviderAvailability, computeAvailabilityStatus } from "@/lib/data/availability";
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 import { isUuid } from "@/lib/slug";
@@ -222,6 +222,13 @@ export default async function PublicProviderProfile({
             <Stat icon={<Clock className="w-4 h-4" />} value={pp.response_time_sec ? `${Math.round(pp.response_time_sec / 60)} min` : "—"} label="Response" />
             <Stat value={String(pp.tasks_completed)} label="Tasks done" />
             <Stat value={(pp.languages ?? []).join(", ") || "—"} label="Languages" />
+          </div>
+          <div className="max-w-md mx-auto">
+            <NextSevenDaysStrip
+              rules={availability.rules}
+              overrides={availability.overrides}
+              vacation={availability.vacation}
+            />
           </div>
         </div>
 

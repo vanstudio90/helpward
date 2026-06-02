@@ -3,6 +3,49 @@ import {
   getProviderAvailability, computeAvailabilityStatus,
   type AvailabilityStatus, type WeeklyRule, type DateOverride,
 } from "@/lib/data/availability";
+import { nextSevenDaysSummary, type DaySummary } from "@/lib/availability-pure";
+import { cn } from "@/lib/cn";
+
+const DOW_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// 7-column strip: today + next 6 days, each cell shows either the earliest
+// start time (green) or "Off" (slate). Today gets a brand-tinted ring.
+// More scannable than the full weekly table for customers deciding "can
+// they help me tomorrow?" without scrolling.
+export function NextSevenDaysStrip({
+  rules, overrides, vacation,
+}: { rules: WeeklyRule[]; overrides: DateOverride[]; vacation: { on: boolean; returnsOn: string | null } }) {
+  const days = nextSevenDaysSummary(rules, overrides, vacation);
+  // If literally every day is "off" with reason "no-shifts" we hide the
+  // strip — same posture as AvailabilityTable: don't show an empty grid
+  // when the helper just hasn't set hours yet.
+  if (days.every((d) => !d.available && d.reason === "no-shifts")) return null;
+
+  return (
+    <div className="mt-4 grid grid-cols-7 gap-1.5">
+      {days.map((d: DaySummary) => (
+        <div
+          key={d.iso}
+          className={cn(
+            "rounded-lg border px-1 py-2 text-center",
+            d.available ? "bg-emerald-50 border-emerald-100" : "bg-slate-50 border-slate-100",
+            d.isToday && (d.available ? "ring-2 ring-emerald-400" : "ring-2 ring-slate-300"),
+          )}
+        >
+          <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+            {d.isToday ? "Today" : DOW_SHORT[d.dow]}
+          </div>
+          <div className={cn(
+            "text-xs font-bold mt-0.5",
+            d.available ? "text-emerald-700" : "text-slate-400",
+          )}>
+            {d.available ? d.earliestStart : d.reason === "vacation" ? "Away" : "Off"}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const WEEKDAYS = [
   { id: 0, short: "Sun" }, { id: 1, short: "Mon" }, { id: 2, short: "Tue" },

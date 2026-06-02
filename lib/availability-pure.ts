@@ -87,6 +87,79 @@ function humanTime(hm: string): string {
   return m === 0 ? `${h12}${am ? "am" : "pm"}` : `${h12}:${pad(m)}${am ? "am" : "pm"}`;
 }
 
+// 7-day quick summary for the helper public profile strip. Resolves each
+// of today + next 6 days against weekly rules + overrides + vacation. Only
+// surfaces "available" with the earliest shift start time or "off"; the
+// full schedule lives in the AvailabilityTable below.
+export type DaySummary = {
+  iso: string;        // YYYY-MM-DD
+  dow: number;        // 0..6 (Sun..Sat)
+  isToday: boolean;
+  available: boolean;
+  earliestStart: string | null; // "9am" / "9:30am" / null when off
+  reason: "vacation" | "override-off" | "no-shifts" | "open" | "none";
+};
+
+export function nextSevenDaysSummary(
+  rules: WeeklyRule[],
+  overrides: DateOverride[],
+  vacation: { on: boolean; returnsOn: string | null },
+  now: Date = new Date(),
+): DaySummary[] {
+  const out: DaySummary[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+    const dow = d.getDay();
+    const isToday = i === 0;
+
+    // Vacation mode wins everything until returnsOn passes.
+    if (vacation.on && (!vacation.returnsOn || iso < vacation.returnsOn)) {
+      out.push({ iso, dow, isToday, available: false, earliestStart: null, reason: "vacation" });
+      continue;
+    }
+
+    const override = overrides.find((o) => o.date === iso);
+    if (override?.is_unavailable) {
+      out.push({ iso, dow, isToday, available: false, earliestStart: null, reason: "override-off" });
+      continue;
+    }
+
+    // Override with explicit start/end times REPLACES the weekly rule for
+    // the day — same semantics as computeAvailabilityStatus.
+    const shifts = override && override.start_time && override.end_time
+      ? [{ start: override.start_time.slice(0, 5), end: override.end_time.slice(0, 5) }]
+      : rules.filter((r) => r.weekday === dow).map((r) => ({
+          start: r.start_time.slice(0, 5), end: r.end_time.slice(0, 5),
+        }));
+
+    if (shifts.length === 0) {
+      out.push({ iso, dow, isToday, available: false, earliestStart: null, reason: "no-shifts" });
+      continue;
+    }
+    const earliest = shifts.map((s) => s.start).sort()[0];
+    out.push({
+      iso, dow, isToday,
+      available: true,
+      earliestStart: humanTimeShort(earliest),
+      reason: shifts.some(() => override) ? "open" : "open",
+    });
+  }
+  return out;
+}
+
+// Tighter version of humanTime — drops minutes when they're :00 and uses
+// 1-letter am/pm so it fits in a narrow column. "9a" / "5:30p".
+function humanTimeShort(hm: string): string {
+  const [h, m] = hm.split(":").map(Number);
+  const am = h < 12;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const suf = am ? "a" : "p";
+  return m === 0 ? `${h12}${suf}` : `${h12}:${pad(m)}${suf}`;
+}
+
 export function totalWeeklyHours(rules: WeeklyRule[]): number {
   let total = 0;
   for (const r of rules) {
