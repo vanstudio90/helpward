@@ -3,19 +3,47 @@ import Link from "next/link";
 import {
   AlertCircle, CheckCircle2, ArrowRight, DollarSign, Calendar, Star,
 } from "lucide-react";
+import { HelperNextStepsWidget } from "./next-steps";
 
 export default async function ProviderDashboardPage() {
   const supabase = await createSupabaseServerClient();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .single();
-  const { data: pp } = await supabase
-    .from("provider_profiles")
-    .select("*")
-    .single();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const [{ data: profile }, { data: pp }] = await Promise.all([
+    supabase.from("profiles").select("full_name, avatar_url").single(),
+    supabase.from("provider_profiles").select("*").single(),
+  ]);
 
   const needsOnboarding = !pp?.id_verified_at || !pp?.stripe_connect_account_id;
+
+  // Only fetch the next-steps inputs once we know the helper is past the
+  // onboarding wall — pre-onboarding the only valid next step is "finish
+  // onboarding" which the banner above already handles.
+  let nextSteps: React.ReactNode = null;
+  if (user && !needsOnboarding && pp?.status === "approved") {
+    const [
+      { count: serviceCount },
+      { count: weeklyRuleCount },
+      { count: completionPhotoCount },
+      { count: featuredPortfolioCount },
+    ] = await Promise.all([
+      supabase.from("provider_services").select("service_id", { count: "exact", head: true }).eq("provider_id", user.id),
+      supabase.from("provider_availability_rules").select("id", { count: "exact", head: true }).eq("provider_id", user.id),
+      supabase.from("booking_completion_photos").select("id", { count: "exact", head: true }).eq("uploaded_by_user_id", user.id),
+      supabase.from("booking_completion_photos").select("id", { count: "exact", head: true }).eq("uploaded_by_user_id", user.id).eq("is_portfolio", true),
+    ]);
+    nextSteps = (
+      <HelperNextStepsWidget
+        hasAvatar={!!profile?.avatar_url}
+        hasBio={!!(pp?.bio && pp.bio.trim().length > 0)}
+        serviceCount={serviceCount ?? 0}
+        weeklyRuleCount={weeklyRuleCount ?? 0}
+        completionPhotoCount={completionPhotoCount ?? 0}
+        featuredPortfolioCount={featuredPortfolioCount ?? 0}
+        slug={pp?.slug ?? null}
+      />
+    );
+  }
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-5xl mx-auto">
@@ -60,9 +88,7 @@ export default async function ProviderDashboardPage() {
         <StatCard icon={<Star className="w-5 h-5 text-amber-500" />} tint="bg-amber-50" label="Rating" value={pp?.rating_avg ? String(pp.rating_avg) : "—"} />
       </div>
 
-      <p className="mt-8 text-xs text-slate-400 text-center">
-        More provider tools are rolling out as Phase 2 of the build ships.
-      </p>
+      {nextSteps}
     </div>
   );
 }
