@@ -69,22 +69,30 @@ export type BookingWithProvider = Booking & {
   service: { id: string; title: string; image_url: string | null };
   provider: {
     user_id: string;
+    slug: string | null;
     profile: { full_name: string; avatar_url: string | null };
     rating_avg: number | null;
   } | null;
+  // Reviews join returns an array — empty = unrated, non-empty = rated.
+  // Used by the bookings list to flag completed-without-review rows.
+  review: { id: string }[];
 };
 
 export async function listMyBookings(opts?: { status?: BookingStatus; limit?: number }) {
   const supabase = await createSupabaseServerClient();
+  // review:reviews(id) is an array join; treated as "empty array = unrated"
+  // in the view so it can flag completed-without-review bookings for the
+  // rating prompt without a separate round-trip.
   let q = supabase
     .from("bookings")
     .select(`
       *,
       service:services(id, title, image_url),
       provider:provider_profiles!bookings_provider_id_fkey(
-        user_id, rating_avg,
+        user_id, slug, rating_avg,
         profile:profiles!provider_profiles_user_id_fkey(full_name, avatar_url)
-      )
+      ),
+      review:reviews(id)
     `)
     .order("created_at", { ascending: false });
   if (opts?.status) q = q.eq("status", opts.status);

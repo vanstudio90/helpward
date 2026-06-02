@@ -53,6 +53,14 @@ export function BookingsView({
   );
 
   const activeSeries = allSeries.filter((s) => s.status === "active" || s.status === "paused");
+
+  // Unrated-completed bookings — drives the prompt banner + per-row CTA.
+  // Computed off allBookings (not the search-filtered slice) so the banner
+  // count is always accurate regardless of the current query.
+  const unrated = allBookings
+    .filter((b) => b.status === "completed" && (b.review?.length ?? 0) === 0)
+    .sort((a, b) => (a.completed_at ?? "").localeCompare(b.completed_at ?? ""));
+  const oldestUnratedId = unrated[0]?.id ?? null;
   const counts = {
     upcoming: bookings.filter((b) => b.status === "scheduled").length,
     pending: requests.filter((r) => r.status === "matching" || r.status === "draft").length,
@@ -112,6 +120,30 @@ export function BookingsView({
           </button>
         </div>
       </div>
+
+      {unrated.length > 0 && (
+        <Link
+          href={`/bookings/${oldestUnratedId}/rate`}
+          className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-3 sm:p-4 hover:from-amber-100 hover:to-orange-100 transition"
+        >
+          <span className="w-10 h-10 rounded-xl bg-white inline-flex items-center justify-center shrink-0">
+            <Star className="w-5 h-5 fill-amber-400 text-amber-500" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold text-amber-900">
+              {unrated.length === 1
+                ? "Rate your last completed task"
+                : `${unrated.length} completed tasks waiting for your review`}
+            </div>
+            <div className="text-[11px] text-amber-800/80 mt-0.5 leading-snug">
+              Your rating shapes who other customers see — and helps your helper get more bookings.
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-900 shrink-0">
+            Rate now <ChevronRight className="w-4 h-4" />
+          </span>
+        </Link>
+      )}
 
       <div className="border-b border-slate-200 flex gap-5 sm:gap-6 overflow-x-auto scrollbar-none">
         {TABS.map((t) => (
@@ -174,15 +206,23 @@ export function BookingsView({
 }
 
 function BookingRow({ booking }: { booking: BookingWithProvider }) {
+  const needsRating = booking.status === "completed" && (booking.review?.length ?? 0) === 0;
   return (
     <Link href={`/bookings/${booking.id}`} className="p-4 flex items-start gap-3 hover:bg-slate-50">
       <ServiceIcon name="spark" size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="text-sm font-bold text-slate-900 truncate">{booking.service.title}</div>
-          <span className={cn("shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold", STATUS_TONE[booking.status])}>
-            {booking.status === "in_progress" ? "In Progress" : booking.status[0].toUpperCase() + booking.status.slice(1)}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {needsRating && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900">
+                <Star className="w-2.5 h-2.5 fill-current" /> Rate
+              </span>
+            )}
+            <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold", STATUS_TONE[booking.status])}>
+              {booking.status === "in_progress" ? "In Progress" : booking.status[0].toUpperCase() + booking.status.slice(1)}
+            </span>
+          </div>
         </div>
         <div className="text-xs text-slate-500 mt-0.5 truncate">
           {booking.scheduled_for ? new Date(booking.scheduled_for).toLocaleString() : new Date(booking.created_at).toLocaleString()}
