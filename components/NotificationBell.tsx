@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 
@@ -80,21 +81,96 @@ export function NotificationBell({
               {items.length === 0 && (
                 <li className="px-4 py-8 text-center text-sm text-slate-500">You're all caught up.</li>
               )}
-              {items.map((n) => (
-                <li key={n.id} className={cn(
-                  "px-4 py-3 border-b border-slate-100 last:border-b-0",
-                  !n.read_at && "bg-brand-50/30"
-                )}>
-                  <div className="text-sm font-semibold text-slate-900">{labelFor(n.type)}</div>
-                  <div className="text-xs text-slate-500 mt-0.5">{new Date(n.created_at).toLocaleString()}</div>
-                </li>
-              ))}
+              {items.map((n) => {
+                const href = hrefFor(n.type, n.payload);
+                const body = (
+                  <>
+                    <div className="text-sm font-semibold text-slate-900">{labelFor(n.type)}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{new Date(n.created_at).toLocaleString()}</div>
+                  </>
+                );
+                return (
+                  <li key={n.id} className={cn(
+                    "border-b border-slate-100 last:border-b-0",
+                    !n.read_at && "bg-brand-50/30"
+                  )}>
+                    {href ? (
+                      <Link
+                        href={href}
+                        onClick={() => setOpen(false)}
+                        className="block px-4 py-3 hover:bg-slate-50 transition"
+                      >
+                        {body}
+                      </Link>
+                    ) : (
+                      <div className="px-4 py-3">{body}</div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </>
       )}
     </div>
   );
+}
+
+// Map a notification type + payload to the page that's most useful to open.
+// Returns null when there's no good destination (some notifications are
+// pure FYI, e.g. provider_rejected — sending the helper somewhere isn't
+// the right move). Keeps the bell from getting actively annoying.
+function hrefFor(type: string, payload: Record<string, unknown>): string | null {
+  const bookingId = typeof payload.booking_id === "string" ? payload.booking_id : null;
+  const requestId = typeof payload.request_id === "string" ? payload.request_id : null;
+
+  switch (type) {
+    // Helper-side: new offer lands them on their inbox where the full
+    // offer card with accept/decline lives.
+    case "new_request_offered":
+      return "/provider/inbox";
+
+    // Customer-side: booking lifecycle events all jump to that booking's
+    // detail page — that's where they can message, dispute, cancel, etc.
+    case "booking_accepted":
+    case "booking_cancelled":
+    case "booking_auto_cancelled":
+    case "booking_no_show":
+    case "booking_auto_completed":
+    case "task_started":
+    case "task_completed":
+    case "portfolio_photo_featured":
+      return bookingId ? `/bookings/${bookingId}` : "/bookings";
+
+    case "dispute_opened":
+      return bookingId ? `/bookings/${bookingId}/dispute` : "/bookings";
+
+    case "request_expired":
+      // Land them on /new-request so they can re-submit, not on the dead
+      // expired-request detail page. Drop the request_id since it's no
+      // longer actionable.
+      return "/new-request";
+
+    case "provider_approved":
+      return "/provider/dashboard";
+
+    case "data_export_ready":
+      // /settings/data auto-surfaces the most recent ready archive with a
+      // download CTA — no need to point at a specific export id.
+      return "/settings/data";
+
+    // No-href types: provider_rejected (the helper doesn't need a deep
+    // link to bad news; their profile sub-page handles re-applying).
+    case "provider_rejected":
+      return null;
+
+    default:
+      // Unknown types fall back to a sensible default based on what's in
+      // the payload, or null if we can't infer anything.
+      if (bookingId) return `/bookings/${bookingId}`;
+      if (requestId) return "/bookings";
+      return null;
+  }
 }
 
 function labelFor(type: string) {
