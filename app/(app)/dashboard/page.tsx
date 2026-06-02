@@ -8,8 +8,11 @@ import { ServiceIcon } from "@/components/ServiceIcon";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import {
   getMe, getDashboardStats, getActiveBooking, listMyBookings,
+  listSavedProviderIds,
 } from "@/lib/data/customer";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { NextStepsWidget } from "./next-steps";
 
 export default async function DashboardPage() {
   const me = await getMe();
@@ -17,6 +20,26 @@ export default async function DashboardPage() {
   const inProgress = await getActiveBooking();
   const upcoming = await listMyBookings({ status: "scheduled", limit: 2 });
   const recent = await listMyBookings({ limit: 4 });
+
+  // Next-steps inputs. Saved-address + favorite-helper counts are head-only
+  // count queries so we pay almost nothing for them; unrated detection reuses
+  // the recent[] list we already loaded for the "Recent" rail.
+  const supabase = await createSupabaseServerClient();
+  const [{ count: savedAddressCount }, savedHelperIds] = await Promise.all([
+    supabase.from("saved_addresses").select("id", { count: "exact", head: true }),
+    listSavedProviderIds(),
+  ]);
+  const completedBookings = recent.filter((b) => b.status === "completed");
+  const unrated = completedBookings
+    .filter((b) => (b.review?.length ?? 0) === 0)
+    .sort((a, b) => (a.completed_at ?? "").localeCompare(b.completed_at ?? ""));
+  const nextStepsInput = {
+    hasCompletedBooking: stats.completed_month > 0 || completedBookings.length > 0,
+    unratedCount: unrated.length,
+    oldestUnratedBookingId: unrated[0]?.id ?? null,
+    savedAddressCount: savedAddressCount ?? 0,
+    favoriteHelperCount: savedHelperIds.length,
+  };
 
   const firstName = me?.profile.full_name?.split(" ")[0] || "there";
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
@@ -55,6 +78,8 @@ export default async function DashboardPage() {
         <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />} tint="bg-emerald-50" label="Completed" value={String(stats.completed_month)} cta="This month" />
         <StatCard icon={<DollarSign className="w-5 h-5 text-orange-600" />} tint="bg-orange-50" label="Total Spent" value={`$${(stats.total_spent_month_cents / 100).toFixed(stats.total_spent_month_cents % 100 ? 2 : 0)}`} cta="This month" />
       </div>
+
+      <NextStepsWidget {...nextStepsInput} />
 
       {/* MOBILE: Quick Request first */}
       <section className="lg:hidden mb-5">
