@@ -1,9 +1,12 @@
 import { listSavedProviders } from "@/lib/data/customer";
+import { getBatchAvailabilityStatus } from "@/lib/data/availability";
 import Link from "next/link";
 import { Heart, Sparkles, MessageSquare, Phone, ShieldCheck } from "lucide-react";
+import { AvailabilityBadge } from "@/app/providers/[id]/availability";
 
 export default async function SavedProvidersPage() {
   const providers = await listSavedProviders();
+  const availability = await getBatchAvailabilityStatus(providers.map((p) => p.user_id));
 
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
@@ -29,40 +32,35 @@ export default async function SavedProvidersPage() {
         <ul className="space-y-3">
           {providers.map((p) => (
             <li key={p.user_id} className="rounded-2xl bg-white border border-slate-100 p-4 flex items-center gap-4">
-              {p.profile.avatar_url ? (
-                <img src={p.profile.avatar_url} className="w-12 h-12 rounded-full" alt="" />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold">
-                  {p.profile.full_name?.[0] ?? "?"}
-                </div>
-              )}
+              <Link href={`/providers/${p.slug ?? p.user_id}`} className="shrink-0">
+                {p.profile.avatar_url ? (
+                  <img src={p.profile.avatar_url} className="w-12 h-12 rounded-full" alt="" />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold">
+                    {p.profile.full_name?.[0] ?? "?"}
+                  </div>
+                )}
+              </Link>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-slate-900 truncate flex items-center gap-1">
+                <Link href={`/providers/${p.slug ?? p.user_id}`} className="text-sm font-bold text-slate-900 truncate flex items-center gap-1 hover:underline">
                   {p.profile.full_name}
                   {p.status === "approved" && <ShieldCheck className="w-3.5 h-3.5 text-brand-600" />}
-                </div>
+                </Link>
                 <div className="text-xs text-slate-500">
                   {p.rating_avg ? `★ ${p.rating_avg} (${p.rating_count} reviews)` : "New provider"} · {p.tasks_completed} tasks
                 </div>
+                {availability.get(p.user_id) && (
+                  <div className="mt-1.5">
+                    <AvailabilityBadge status={availability.get(p.user_id)!} />
+                  </div>
+                )}
               </div>
-              <button
-                type="button"
-                disabled
-                title="Direct messaging from saved list ships soon — message via your active booking for now"
-                aria-label={`Message ${p.profile.full_name}`}
-                className="p-2 rounded-lg border border-brand-200 text-brand-700 cursor-not-allowed opacity-60"
+              <Link
+                href={`/new-request?preferred_helper=${p.user_id}`}
+                className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-gradient-to-r from-brand-600 to-violet-600 text-white text-xs font-bold shrink-0"
               >
-                <MessageSquare className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                disabled
-                title="In-app calling ships with Twilio integration"
-                aria-label={`Call ${p.profile.full_name}`}
-                className="p-2 rounded-lg border border-brand-200 text-brand-700 cursor-not-allowed opacity-60"
-              >
-                <Phone className="w-4 h-4" />
-              </button>
+                Book again
+              </Link>
             </li>
           ))}
         </ul>

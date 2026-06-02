@@ -43,6 +43,65 @@ export async function getMyAvailability(): Promise<{ rules: WeeklyRule[]; overri
   };
 }
 
+// Batched public read — same data as getProviderAvailability but for N
+// helpers in 3 queries (rules .in(), overrides .in(), profile .in()) instead
+// of N×3. Used by helper-list surfaces (/favorites, /saved-providers) to
+// render an Available-now badge inline without blowing up the request count.
+// Returns a Map keyed by user_id.
+export async function getBatchAvailabilityStatus(
+  providerIds: string[],
+): Promise<Map<string, import("@/lib/availability-pure").AvailabilityStatus>> {
+  const out = new Map<string, import("@/lib/availability-pure").AvailabilityStatus>();
+  if (providerIds.length === 0) return out;
+  const supabase = createSupabaseServiceClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const [{ data: allRules }, { data: allOverrides }, { data: allProfiles }] = await Promise.all([
+    supabase
+      .from("provider_availability_rules")
+      .select("provider_id, id, weekday, start_time, end_time")
+      .in("provider_id", providerIds),
+    supabase
+      .from("provider_availability_overrides")
+      .select("provider_id, id, date, is_unavailable, start_time, end_time, label")
+      .in("provider_id", providerIds)
+      .gte("date", today),
+    supabase
+      .from("provider_profiles")
+      .select("user_id, vacation_mode, vacation_returns_on")
+      .in("user_id", providerIds),
+  ]);
+
+  const rulesByProvider = new Map<string, WeeklyRule[]>();
+  for (const r of allRules ?? []) {
+    const list = rulesByProvider.get(r.provider_id) ?? [];
+    list.push({ id: r.id, weekday: r.weekday, start_time: r.start_time, end_time: r.end_time } as WeeklyRule);
+    rulesByProvider.set(r.provider_id, list);
+  }
+  const overridesByProvider = new Map<string, DateOverride[]>();
+  for (const o of allOverrides ?? []) {
+    const list = overridesByProvider.get(o.provider_id) ?? [];
+    list.push({
+      id: o.id, date: o.date, is_unavailable: o.is_unavailable,
+      start_time: o.start_time, end_time: o.end_time, label: o.label,
+    } as DateOverride);
+    overridesByProvider.set(o.provider_id, list);
+  }
+  const vacByUser = new Map<string, { on: boolean; returnsOn: string | null }>();
+  for (const p of allProfiles ?? []) {
+    vacByUser.set(p.user_id, { on: p.vacation_mode ?? false, returnsOn: p.vacation_returns_on ?? null });
+  }
+
+  for (const id of providerIds) {
+    const status = computeAvailabilityStatus(
+      rulesByProvider.get(id) ?? [],
+      overridesByProvider.get(id) ?? [],
+      vacByUser.get(id) ?? { on: false, returnsOn: null },
+    );
+    out.set(id, status);
+  }
+  return out;
+}
+
 // Public read — service-role so we bypass the unauthenticated visitor's
 // missing RLS context. Policy already restricts to approved providers.
 export async function getProviderAvailability(providerId: string): Promise<{

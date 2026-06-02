@@ -1,8 +1,10 @@
 import { listFavoritesByKind, listSavedProviders, listMyAddresses } from "@/lib/data/customer";
 import { listServices } from "@/lib/data/services";
+import { getBatchAvailabilityStatus } from "@/lib/data/availability";
 import Link from "next/link";
 import { Heart, Plus, Sparkles, ArrowRight, ExternalLink } from "lucide-react";
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
+import { AvailabilityBadge } from "@/app/providers/[id]/availability";
 
 export default async function FavoritesPage() {
   const [providers, addresses, serviceFavs, allServices] = await Promise.all([
@@ -13,6 +15,9 @@ export default async function FavoritesPage() {
   ]);
   const favServiceIds = new Set(serviceFavs.map((f) => f.target_id));
   const favServices = allServices.filter((s) => favServiceIds.has(s.id));
+  // Batched availability lookup — one fetch for all saved helpers instead
+  // of N × 3 queries from per-card render calls.
+  const availability = await getBatchAvailabilityStatus(providers.map((p) => p.user_id));
 
   const total = providers.length + addresses.length + favServices.length;
 
@@ -65,6 +70,11 @@ export default async function FavoritesPage() {
                         size="sm"
                       />
                     </div>
+                    {availability.get(p.user_id) && (
+                      <div className="mt-3">
+                        <AvailabilityBadge status={availability.get(p.user_id)!} />
+                      </div>
+                    )}
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <Link
                         href={`/new-request?preferred_helper=${p.user_id}`}
