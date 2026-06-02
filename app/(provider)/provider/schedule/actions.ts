@@ -61,6 +61,21 @@ export async function saveWeeklyRulesAction(
   return { success: `Schedule saved — ${rules.length} shift${rules.length === 1 ? "" : "s"} per week.` };
 }
 
+// Match the schedule UI's 365-day forward planning window. Past that we're
+// in territory where the helper's life will have changed (job, move, etc.)
+// and the override would be useless data noise.
+const MAX_OVERRIDE_DAYS_OUT = 365;
+
+function plusDays(yyyyMmDd: string, days: number): string {
+  const d = new Date(yyyyMmDd + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function maxFutureDate(): string {
+  return plusDays(new Date().toISOString().slice(0, 10), MAX_OVERRIDE_DAYS_OUT);
+}
+
 // Add a one-off override (vacation day, extra shift, etc.). Validates the
 // date is today or future, and rejects extra-shift overrides without times.
 export async function addOverrideAction(
@@ -77,6 +92,7 @@ export async function addOverrideAction(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "Invalid date." };
   const today = new Date().toISOString().slice(0, 10);
   if (date < today) return { error: "Pick today or a future date." };
+  if (date > maxFutureDate()) return { error: `Pick a date within ${MAX_OVERRIDE_DAYS_OUT} days.` };
   if (label && label.length > 80) return { error: "Label is too long (max 80 chars)." };
 
   if (!isUnavailable) {
@@ -107,6 +123,80 @@ export async function addOverrideAction(
   revalidatePath("/provider/schedule");
   revalidatePath(`/providers/${user.id}`);
   return { success: isUnavailable ? "Time-off added." : "Extra shift added." };
+}
+
+// Block out a contiguous range of days off in one go — "off all of next week"
+// shouldn't be 7 separate Add clicks. Only supports time-off (not extra
+// shifts) because that's the workflow that actually involves ranges. We
+// insert one row per day; the unique partial index naturally dedupes against
+// any existing time-off rows for the same dates so re-running the action is
+// safe and idempotent. Conflicting rows are silently skipped (returned in
+// `skipped` so the UI can mention them).
+export async function addOverrideRangeAction(
+  startDate: string,
+  endDate: string,
+  label: string | null,
+): Promise<{ error?: string; success?: string; added?: number; skipped?: number }> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not logged in." };
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return { error: "Invalid date." };
+  }
+  if (endDate < startDate) return { error: "End date must be on or after start date." };
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (startDate < today) return { error: "Start date must be today or later." };
+  const max = maxFutureDate();
+  if (endDate > max) return { error: `End date must be within ${MAX_OVERRIDE_DAYS_OUT} days.` };
+  if (label && label.length > 80) return { error: "Label is too long (max 80 chars)." };
+
+  // Enumerate the date list. Cap at 90 days even though MAX is 365 — a
+  // single contiguous-block-of-90-days is genuinely an unusual ask; longer
+  // is almost always "I'm leaving" and should use vacation mode instead.
+  const dates: string[] = [];
+  let cursor = startDate;
+  while (cursor <= endDate) {
+    dates.push(cursor);
+    if (dates.length > 90) return { error: "Pick a range of 90 days or less. Use vacation mode for longer." };
+    cursor = plusDays(cursor, 1);
+  }
+
+  const rows = dates.map((d) => ({
+    provider_id: user.id,
+    date: d,
+    is_unavailable: true,
+    start_time: null,
+    end_time: null,
+    label: label ?? null,
+  }));
+
+  // No upsert: we want to preserve any existing row (which might have a
+  // different label the helper already cared about). Insert one row at a
+  // time so the 23505 from one day doesn't fail the whole batch.
+  let added = 0;
+  let skipped = 0;
+  for (const row of rows) {
+    const { error } = await supabase
+      .from("provider_availability_overrides")
+      .insert(row);
+    if (error) {
+      if (error.code === "23505") { skipped += 1; continue; }
+      return { error: error.message, added, skipped };
+    }
+    added += 1;
+  }
+
+  revalidatePath("/provider/schedule");
+  revalidatePath(`/providers/${user.id}`);
+  return {
+    success: skipped > 0
+      ? `Added ${added} day${added === 1 ? "" : "s"} off (${skipped} already had time-off).`
+      : `Added ${added} day${added === 1 ? "" : "s"} off.`,
+    added,
+    skipped,
+  };
 }
 
 export async function removeOverrideAction(overrideId: string): Promise<State> {

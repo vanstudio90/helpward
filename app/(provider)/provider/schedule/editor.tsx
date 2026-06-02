@@ -6,8 +6,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
-  saveWeeklyRulesAction, addOverrideAction, removeOverrideAction,
-  setVacationModeAction, type WeeklyRulePayload,
+  saveWeeklyRulesAction, addOverrideAction, addOverrideRangeAction,
+  removeOverrideAction, setVacationModeAction, type WeeklyRulePayload,
 } from "./actions";
 import type { WeeklyRule, DateOverride } from "@/lib/availability-pure";
 import { totalWeeklyHours } from "@/lib/availability-pure";
@@ -194,6 +194,24 @@ function byWeekdayThenTime(a: EditorRule, b: EditorRule): number {
   return a.start_time.localeCompare(b.start_time);
 }
 
+// Local-date arithmetic for the override range. UTC math + ISO slice keeps
+// us off the DST cliffs that bite anyone using new Date().setDate().
+function addDaysISO(iso: string, days: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function mergeAndSort(existing: DateOverride[], incoming: DateOverride[]): DateOverride[] {
+  // Don't re-add a row for a date that already has time-off — the server
+  // dedupes via the unique partial index, so this just keeps the UI honest.
+  const haveOffDate = new Set(
+    existing.filter((o) => o.is_unavailable).map((o) => o.date),
+  );
+  const fresh = incoming.filter((o) => !haveOffDate.has(o.date));
+  return [...existing, ...fresh].sort((a, b) => a.date.localeCompare(b.date));
+}
+
 function ShiftRow({
   rule, onChange, onRemove,
 }: { rule: EditorRule; onChange: (patch: Partial<EditorRule>) => void; onRemove: () => void }) {
@@ -297,16 +315,54 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
   const [overrides, setOverrides] = useState<DateOverride[]>(initial);
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [kind, setKind] = useState<"off" | "extra">("off");
+  // "off" = single time-off day, "off-range" = contiguous block of days off,
+  // "extra" = extra-shift on a single date. Three modes keep the form
+  // compact while covering the workflows that actually happen.
+  const [kind, setKind] = useState<"off" | "off-range" | "extra">("off");
+  const today = new Date().toISOString().slice(0, 10);
+  const maxDate = addDaysISO(today, 365);
+  const [date, setDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
   const [label, setLabel] = useState("");
   const [state, setState] = useState<{ error?: string; success?: string } | undefined>();
+  const [showPast, setShowPast] = useState(false);
+
+  const extraInvalid = kind === "extra" && endTime <= startTime;
+  const rangeInvalid = kind === "off-range" && endDate < date;
 
   const add = () => {
+    if (extraInvalid || rangeInvalid) {
+      setState({ error: extraInvalid ? "End must be after start." : "End date must be on or after start date." });
+      return;
+    }
     setState(undefined);
     start(async () => {
+      if (kind === "off-range") {
+        const r = await addOverrideRangeAction(date, endDate, label.trim() || null);
+        if (r?.error) { setState({ error: r.error }); return; }
+        // Optimistically add every day in the range — refetch on next nav.
+        const newRows: DateOverride[] = [];
+        let cursor = date;
+        while (cursor <= endDate) {
+          newRows.push({
+            id: crypto.randomUUID(),
+            date: cursor,
+            is_unavailable: true,
+            start_time: null,
+            end_time: null,
+            label: label.trim() || null,
+          });
+          cursor = addDaysISO(cursor, 1);
+        }
+        setOverrides((prev) => mergeAndSort(prev, newRows));
+        setOpen(false);
+        setLabel("");
+        setState({ success: r.success });
+        return;
+      }
+
       const r = await addOverrideAction(
         date,
         kind === "off",
@@ -344,6 +400,9 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
     });
   };
 
+  const visible = showPast ? overrides : overrides.filter((o) => o.date >= today);
+  const pastCount = overrides.length - visible.length;
+
   return (
     <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
@@ -367,45 +426,84 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
 
       {open && (
         <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Type</span>
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value as "off" | "off-range" | "extra")}
+              className="mt-1 w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+            >
+              <option value="off">Time off — single day</option>
+              <option value="off-range">Time off — date range</option>
+              <option value="extra">Extra shift</option>
+            </select>
+          </label>
+
+          <div className={cn("grid gap-2", kind === "off-range" ? "grid-cols-2" : "grid-cols-1")}>
             <label className="block">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Date</span>
+              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                {kind === "off-range" ? "Start" : "Date"}
+              </span>
               <input
                 type="date"
                 value={date}
-                min={new Date().toISOString().slice(0, 10)}
-                onChange={(e) => setDate(e.target.value)}
+                min={today}
+                max={maxDate}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  // Keep end >= start when in range mode
+                  if (kind === "off-range" && endDate < e.target.value) setEndDate(e.target.value);
+                }}
                 className="mt-1 w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
               />
             </label>
-            <label className="block">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Type</span>
-              <select
-                value={kind}
-                onChange={(e) => setKind(e.target.value as "off" | "extra")}
-                className="mt-1 w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
-              >
-                <option value="off">Time off</option>
-                <option value="extra">Extra shift</option>
-              </select>
-            </label>
+            {kind === "off-range" && (
+              <label className="block">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">End (inclusive)</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={date}
+                  max={maxDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className={cn(
+                    "mt-1 w-full px-2 py-1.5 rounded-lg bg-white border text-sm focus:outline-none focus:ring-2",
+                    rangeInvalid
+                      ? "border-rose-300 focus:ring-rose-200"
+                      : "border-slate-200 focus:ring-brand-200",
+                  )}
+                />
+              </label>
+            )}
           </div>
+
           {kind === "extra" && (
-            <div className="flex items-center gap-2">
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-28 px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-sm"
-              />
-              <span className="text-xs text-slate-400">to</span>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-28 px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-sm"
-              />
-            </div>
+            <>
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className={cn(
+                    "w-28 px-2 py-1.5 rounded-lg bg-white border text-sm",
+                    extraInvalid ? "border-rose-300" : "border-slate-200",
+                  )}
+                />
+                <span className="text-xs text-slate-400">to</span>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className={cn(
+                    "w-28 px-2 py-1.5 rounded-lg bg-white border text-sm",
+                    extraInvalid ? "border-rose-300" : "border-slate-200",
+                  )}
+                />
+              </div>
+              {extraInvalid && (
+                <div className="text-[11px] text-rose-700">End time must be after start time.</div>
+              )}
+            </>
           )}
           <label className="block">
             <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Label (optional)</span>
@@ -413,7 +511,11 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               maxLength={80}
-              placeholder={kind === "off" ? "Vacation, sick day, family event…" : "Extra weekend shift…"}
+              placeholder={
+                kind === "extra" ? "Extra weekend shift…"
+                : kind === "off-range" ? "Vacation, conference, family trip…"
+                : "Vacation, sick day, family event…"
+              }
               className="mt-1 w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
             />
           </label>
@@ -422,10 +524,10 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
             <button
               type="button"
               onClick={add}
-              disabled={pending}
+              disabled={pending || extraInvalid || rangeInvalid}
               className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold disabled:opacity-50"
             >
-              {pending ? "Adding…" : "Add"}
+              {pending ? "Adding…" : kind === "off-range" ? "Add date range" : "Add"}
             </button>
             <button
               type="button"
@@ -438,11 +540,26 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
         </div>
       )}
 
-      {overrides.length === 0 ? (
-        <p className="text-xs text-slate-400 text-center py-4">No upcoming overrides.</p>
+      {overrides.length > 0 && pastCount > 0 && (
+        <div className="mb-2 flex items-center justify-end">
+          <button
+            type="button"
+            onClick={() => setShowPast((v) => !v)}
+            className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+          >
+            {showPast
+              ? `Hide past (${pastCount})`
+              : `Show past (${pastCount})`}
+          </button>
+        </div>
+      )}
+      {visible.length === 0 ? (
+        <p className="text-xs text-slate-400 text-center py-4">
+          {overrides.length === 0 ? "No upcoming overrides." : "No upcoming overrides — past ones hidden."}
+        </p>
       ) : (
         <ul className="divide-y divide-slate-100">
-          {overrides.map((o) => {
+          {visible.map((o) => {
             const niceDate = new Date(o.date + "T00:00:00").toLocaleDateString(undefined, {
               weekday: "short", month: "short", day: "numeric",
             });
