@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
@@ -26,6 +26,29 @@ export function NotificationBell({
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [userId]);
+
+  // Per-item dismiss: optimistic remove from local list, then RLS-scoped
+  // delete from the table. If the delete fails (network, RLS regression)
+  // we revert so the user can retry. Decrement unread badge only when the
+  // dismissed item was actually unread.
+  const dismiss = (id: string) => {
+    const prev = items;
+    const wasUnread = items.find((x) => x.id === id)?.read_at == null;
+    setItems((arr) => arr.filter((x) => x.id !== id));
+    if (wasUnread) setCount((c) => Math.max(0, c - 1));
+    const supabase = createSupabaseBrowserClient();
+    supabase
+      .from("notifications")
+      .delete()
+      .eq("id", id)
+      .then(({ error }) => {
+        if (error) {
+          console.error("notifications delete:", error.message);
+          setItems(prev);
+          if (wasUnread) setCount((c) => c + 1);
+        }
+      });
+  };
 
   // Load list when opening
   useEffect(() => {
@@ -91,20 +114,32 @@ export function NotificationBell({
                 );
                 return (
                   <li key={n.id} className={cn(
-                    "border-b border-slate-100 last:border-b-0",
+                    "relative group border-b border-slate-100 last:border-b-0",
                     !n.read_at && "bg-brand-50/30"
                   )}>
                     {href ? (
                       <Link
                         href={href}
                         onClick={() => setOpen(false)}
-                        className="block px-4 py-3 hover:bg-slate-50 transition"
+                        className="block px-4 py-3 pr-10 hover:bg-slate-50 transition"
                       >
                         {body}
                       </Link>
                     ) : (
-                      <div className="px-4 py-3">{body}</div>
+                      <div className="px-4 py-3 pr-10">{body}</div>
                     )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dismiss(n.id);
+                      }}
+                      aria-label="Dismiss notification"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </li>
                 );
               })}
