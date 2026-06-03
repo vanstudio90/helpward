@@ -5,6 +5,24 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 // already restricts to provider_id = auth.uid() so no service-role needed.
 // Returns null when there's no signed-in helper (caller decides what to do).
 
+// Render an instant in the helper's stored timezone, returning the local
+// hour (0..23). Uses Intl.DateTimeFormat — no Temporal API yet on edge.
+function hourInTimezone(d: Date, timezone: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour: "2-digit",
+      hour12: false,
+    }).formatToParts(d);
+    const h = parts.find((p) => p.type === "hour")?.value ?? "0";
+    // Intl can emit "24" for midnight in some locales; normalise.
+    const n = Number(h);
+    return Number.isFinite(n) ? n % 24 : 0;
+  } catch {
+    return d.getUTCHours();
+  }
+}
+
 export type HelperAnalytics = {
   kpis: {
     lifetimeEarningsCents: number;
@@ -26,12 +44,23 @@ export type HelperAnalytics = {
     payoutCents: number;
   }[];
   hourHistogram: { hour: number; count: number }[]; // 0..23
+  timezone: string; // the tz used to bucket the histogram
 };
 
 export async function getHelperAnalytics(): Promise<HelperAnalytics | null> {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
+
+  // Pull the helper's stored timezone so the offer-hour histogram is rendered
+  // in their actual local time. Falls back to UTC for legacy rows that
+  // predate the 0023 backfill.
+  const { data: ppMeta } = await supabase
+    .from("provider_profiles")
+    .select("timezone")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const timezone = ppMeta?.timezone || "UTC";
 
   const now = new Date();
   const since30d = new Date(now);
@@ -146,14 +175,14 @@ export async function getHelperAnalytics(): Promise<HelperAnalytics | null> {
     .slice(0, 5);
 
   // Hour-of-day histogram on OFFER timestamps — answers "when do I actually
-  // get offers, so I know when to be online". Uses match_attempts.notified_at
-  // in browser local timezone via toLocaleString trick (server time is UTC
-  // but helpers care about their local hours).
+  // get offers, so I know when to be online". We bucket in the helper's
+  // stored timezone via Intl.DateTimeFormat instead of the server's UTC,
+  // so a PT helper sees their actual local hours not UTC-shifted ones.
   const hourCounts = new Array(24).fill(0) as number[];
   for (const a of attempts ?? []) {
     if (!a.notified_at) continue;
     const d = new Date(a.notified_at);
-    hourCounts[d.getHours()] += 1;
+    hourCounts[hourInTimezone(d, timezone)] += 1;
   }
   const hourHistogram = hourCounts.map((count, hour) => ({ hour, count }));
 
@@ -170,6 +199,7 @@ export async function getHelperAnalytics(): Promise<HelperAnalytics | null> {
     weeklyBookings,
     topServices,
     hourHistogram,
+    timezone,
   };
 }
 

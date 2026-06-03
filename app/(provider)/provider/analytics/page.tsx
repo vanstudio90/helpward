@@ -166,7 +166,9 @@ export default async function HelperAnalyticsPage() {
           <h2 className="text-sm font-bold text-slate-900 inline-flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-600" /> When offers come in
           </h2>
-          <span className="text-[10px] font-semibold text-slate-400 uppercase">UTC</span>
+          <span className="text-[10px] font-semibold text-slate-400 uppercase" title={a.timezone}>
+            {a.timezone === "UTC" ? "UTC" : `${a.timezone.split("/").slice(-1)[0].replace(/_/g, " ")} time`}
+          </span>
         </div>
         {peakHour.count === 0 ? (
           <p className="text-xs text-slate-500 italic py-2">
@@ -193,7 +195,7 @@ export default async function HelperAnalyticsPage() {
               ))}
             </div>
             <p className="text-[11px] text-slate-500 mt-2 leading-snug">
-              Peak offer hour: <strong>{peakHour.hour}:00 UTC</strong> ({peakHour.count} offer{peakHour.count === 1 ? "" : "s"} in the last 12 weeks). Aligning your schedule to overlap these hours raises your offer flow.
+              Peak offer hour: <strong>{peakHour.hour}:00 {a.timezone === "UTC" ? "UTC" : "local"}</strong> ({peakHour.count} offer{peakHour.count === 1 ? "" : "s"} in the last 12 weeks). Aligning your schedule to overlap these hours raises your offer flow.
             </p>
           </>
         )}

@@ -10,6 +10,40 @@ type State = { error?: string; success?: string } | undefined;
 // update their own row; the unique partial index on (slug) where slug is
 // not null catches collisions cleanly with a Postgres 23505 we surface
 // back as a friendly "already taken" message.
+// Update the helpers stored timezone (used by analytics + future schedule
+// surfaces). Validates against Intl.supportedValuesOf("timeZone") so we
+// dont store junk like "PST" or arbitrary user input.
+export async function setProviderTimezoneAction(
+  timezone: string,
+): Promise<State> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not logged in." };
+
+  if (typeof timezone !== "string" || timezone.length === 0 || timezone.length > 60) {
+    return { error: "Invalid timezone." };
+  }
+  // Verify the tz is one Intl actually recognizes — same posture as the
+  // browser's Intl.DateTimeFormat would reject. List is large (~400) but
+  // includes() is plenty fast for a one-shot validation.
+  try {
+    const supported = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.("timeZone");
+    if (supported && !supported.includes(timezone)) {
+      return { error: "Unrecognized timezone." };
+    }
+  } catch { /* runtime too old for supportedValuesOf — accept and let DB store it */ }
+
+  const { error } = await supabase
+    .from("provider_profiles")
+    .update({ timezone })
+    .eq("user_id", user.id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/provider/profile");
+  revalidatePath("/provider/analytics");
+  return { success: `Timezone set to ${timezone}.` };
+}
+
 export async function setProviderSlugAction(
   _prev: State,
   formData: FormData,
