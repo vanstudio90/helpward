@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { isAuthorizedCron } from "@/lib/cron-auth";
+import { sendPushToUser } from "@/lib/push";
 
 // Vercel Cron pings this every 15 minutes (see vercel.json).
 // Sends T-30 reminders to BOTH parties on any scheduled booking whose
@@ -87,6 +88,24 @@ export async function GET(req: NextRequest) {
         .eq("id", b.id);
       continue;
     }
+
+    // Fan out push to both parties on top of the in-app notification.
+    // sendPushToUser is a no-op when ONESIGNAL_APP_ID isn't set, so this
+    // is safe to call unconditionally during the pre-key window.
+    // Failures here are non-fatal — bell + email digest still cover.
+    await Promise.allSettled([
+      sendPushToUser(b.customer_id, {
+        title: "Your task starts soon",
+        body: `${payload.service_title} is coming up in ~30 minutes`,
+        url: `https://helpward.com/bookings/${b.id}`,
+      }),
+      sendPushToUser(b.provider_id, {
+        title: "You have a task starting soon",
+        body: `${payload.service_title} is coming up in ~30 minutes`,
+        url: "https://helpward.com/provider/active",
+      }),
+    ]);
+
     reminded += 1;
   }
 

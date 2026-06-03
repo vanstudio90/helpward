@@ -6,6 +6,7 @@ import { SettingsForm } from "./form";
 import { NotificationPrefs } from "./preferences";
 import { SavedAddressesManager, type SavedAddress } from "./addresses/manager";
 import { CustomerLifetimeCard } from "./lifetime-card";
+import { PushToggle } from "./push-toggle";
 import { Shield, Lock, Smartphone, Download, Trash2, LogOut, Headphones, ChevronRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
@@ -51,6 +52,8 @@ export default async function SettingsPage() {
         }} />
 
         <SavedAddressesManager initial={savedAddrsInitial} />
+
+        <PushToggle appId={process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID ?? null} />
 
         <NotificationPrefs initial={prefsInitial} />
 
