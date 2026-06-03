@@ -1,9 +1,11 @@
 import { getMe } from "@/lib/data/customer";
+import { getCustomerLifetimeStats } from "@/lib/data/customer-lifetime";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import { SettingsForm } from "./form";
 import { NotificationPrefs } from "./preferences";
 import { SavedAddressesManager, type SavedAddress } from "./addresses/manager";
+import { CustomerLifetimeCard } from "./lifetime-card";
 import { Shield, Lock, Smartphone, Download, Trash2, LogOut, Headphones, ChevronRight, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
@@ -26,6 +28,10 @@ export default async function SettingsPage() {
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: false });
   const savedAddrsInitial = (savedAddrs as SavedAddress[] | null) ?? [];
+
+  // Lifetime stats — null when no signed-in user; the card self-hides when
+  // there are zero completed bookings so first-time users don't see "$0 spent".
+  const lifetime = await getCustomerLifetimeStats();
 
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-3xl mx-auto pb-12">
@@ -60,6 +66,8 @@ export default async function SettingsPage() {
           <Row label="Default Currency" value={me.profile.default_currency} />
           <Row label="Time Zone" value={me.profile.default_timezone} />
         </Card>
+
+        {lifetime && <CustomerLifetimeCard stats={lifetime} />}
 
         <Card>
           <div className="flex items-center gap-2 mb-3">
