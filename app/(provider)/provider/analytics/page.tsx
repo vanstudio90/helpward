@@ -1,5 +1,6 @@
 import {
   BarChart3, DollarSign, CheckCircle2, Star, TrendingUp, Users, ZapOff, Clock,
+  Download,
 } from "lucide-react";
 import { getHelperAnalytics } from "@/lib/data/helper-analytics";
 import { Sparkline } from "@/components/charts/Sparkline";
@@ -34,12 +35,25 @@ export default async function HelperAnalyticsPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-5xl mx-auto pb-12">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 inline-flex items-center gap-2">
-        <BarChart3 className="w-6 h-6 text-brand-600" /> Analytics
-      </h1>
-      <p className="text-sm text-slate-500 mt-1 mb-6">
-        How your work has been going over the last 12 weeks. Numbers update on every page load.
-      </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 inline-flex items-center gap-2">
+            <BarChart3 className="w-6 h-6 text-brand-600" /> Analytics
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            How your work has been going over the last 12 weeks. Numbers update on every page load.
+          </p>
+        </div>
+        <a
+          href="/api/provider/export/bookings?days=90"
+          download
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          title="Download the last 90 days of bookings as CSV — accountant-ready"
+        >
+          <Download className="w-3.5 h-3.5" /> Export 90-day CSV
+        </a>
+      </div>
+      <div className="mb-6" />
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

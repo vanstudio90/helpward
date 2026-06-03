@@ -120,12 +120,24 @@ export default async function ProviderEarningsPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-5xl mx-auto pb-12">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 inline-flex items-center gap-2">
-        <DollarSign className="w-6 h-6 text-emerald-600" /> Earnings
-      </h1>
-      <p className="text-sm text-slate-500 mt-1 mb-5">
-        You keep 80% of base + distance fees. Tips go 100% to you. Payouts land every Tuesday for the previous Mon–Sun.
-      </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-5">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 inline-flex items-center gap-2">
+            <DollarSign className="w-6 h-6 text-emerald-600" /> Earnings
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            You keep 80% of base + distance fees. Tips go 100% to you. Payouts land every Tuesday for the previous Mon–Sun.
+          </p>
+        </div>
+        <a
+          href="/api/provider/export/bookings?days=365"
+          download
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          title="Download the last 365 days of bookings as CSV — tax-season ready"
+        >
+          <Download className="w-3.5 h-3.5" /> Export year CSV
+        </a>
+      </div>
 
       {/* Summary strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
