@@ -5,10 +5,12 @@ import { logoutAction } from "@/app/(auth)/auth/actions";
 import {
   LayoutDashboard, Users, ShieldCheck, Calendar, AlertOctagon,
   CreditCard, RefreshCw, Sparkles, FileText, LogOut, MessageSquare, Shield,
+  Inbox,
 } from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/inbox", label: "Inbox", icon: Inbox },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/providers", label: "Provider queue", icon: ShieldCheck },
   { href: "/admin/bookings", label: "Bookings", icon: Calendar },
