@@ -13,6 +13,7 @@ import {
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextStepsWidget } from "./next-steps";
+import { OnboardingTour } from "./onboarding-tour";
 
 export default async function DashboardPage() {
   const me = await getMe();
@@ -23,12 +24,15 @@ export default async function DashboardPage() {
 
   // Next-steps inputs. Saved-address + favorite-helper counts are head-only
   // count queries so we pay almost nothing for them; unrated detection reuses
-  // the recent[] list we already loaded for the "Recent" rail.
+  // the recent[] list we already loaded for the "Recent" rail. Also pull
+  // profiles.onboarded_at to decide whether to mount the welcome tour.
   const supabase = await createSupabaseServerClient();
-  const [{ count: savedAddressCount }, savedHelperIds] = await Promise.all([
+  const [{ count: savedAddressCount }, savedHelperIds, { data: meRow }] = await Promise.all([
     supabase.from("saved_addresses").select("id", { count: "exact", head: true }),
     listSavedProviderIds(),
+    supabase.from("profiles").select("onboarded_at").maybeSingle(),
   ]);
+  const showOnboardingTour = !meRow?.onboarded_at;
   const completedBookings = recent.filter((b) => b.status === "completed");
   const unrated = completedBookings
     .filter((b) => (b.review?.length ?? 0) === 0)
@@ -46,6 +50,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
+      <OnboardingTour open={showOnboardingTour} />
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4 lg:mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{greeting}, {firstName}! 👋</h1>
