@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 
 type State = { error?: string } | undefined;
 
@@ -45,6 +45,20 @@ export async function submitReviewAction(
     });
 
   if (error) return { error: error.message };
+
+  // Notify the helper. Service role because notifications has no broad
+  // insert RLS (same pattern as the matching engine + cron handlers).
+  // Best-effort: a failed notification doesnt roll back the review.
+  try {
+    const admin = createSupabaseServiceClient();
+    await admin.from("notifications").insert({
+      user_id: booking.provider_id,
+      type: "review_received",
+      payload: { booking_id: bookingId, rating, has_comment: !!comment },
+    });
+  } catch (e) {
+    console.error("review_received notify failed:", e);
+  }
 
   revalidatePath("/bookings");
   revalidatePath("/dashboard");

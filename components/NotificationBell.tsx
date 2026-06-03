@@ -226,6 +226,20 @@ function hrefFor(type: string, payload: Record<string, unknown>): string | null 
     case "new_request_offered":
       return "/provider/inbox";
 
+    // Helper-side: their active-task screen is the right landing for both
+    // reminders (about to start) and no-show notices (about what just
+    // happened). Reviews live on the dedicated /provider/reviews page.
+    case "helper_booking_reminder":
+    case "booking_no_show":
+      return "/provider/active";
+    case "review_received":
+      return "/provider/reviews";
+
+    // Customer-side: T-30 reminder lands on the booking detail page where
+    // they can message the helper or open dispute if something's off.
+    case "booking_reminder":
+      return bookingId ? `/bookings/${bookingId}` : "/bookings";
+
     // Customer-side: booking lifecycle events all jump to that booking's
     // detail page — that's where they can message, dispute, cancel, etc.
     case "booking_accepted":
@@ -285,6 +299,10 @@ function labelFor(type: string) {
     case "provider_rejected": return "Your provider application was reviewed";
     case "data_export_ready": return "Your data export is ready to download";
     case "portfolio_photo_featured": return "Your helper featured a photo from your booking";
+    case "review_received": return "You received a new review";
+    case "booking_reminder": return "Your task starts soon";
+    case "helper_booking_reminder": return "You have a task starting soon";
+    case "booking_no_show": return "Booking auto-cancelled — you didn't arrive";
     default: return type.replace(/_/g, " ");
   }
 }
