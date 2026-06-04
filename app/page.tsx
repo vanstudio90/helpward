@@ -13,6 +13,7 @@ import { listServices, listCategories } from "@/lib/data/services";
 import { CITIES, SAMPLE_RECENT_TASKS, MARKETPLACE_METRICS, categoryImage } from "@/lib/marketing";
 import { getVisitor } from "@/lib/geo";
 import { getBookingCountsByService } from "@/lib/data/service-stats";
+import { MobileStickyCTA, HeroSentinel } from "@/components/MobileStickyCTA";
 
 // Homepage reads Vercel edge geo headers per request so the hero / activity
 // section can address the visitor's city by name. Forces dynamic rendering;
@@ -134,6 +135,7 @@ export default async function LandingPage() {
     <div className="min-h-screen bg-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(HOMEPAGE_LD) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_LD) }} />
+      <MobileStickyCTA heroSentinelId="hero-end-sentinel" />
       <LandingHeader />
       <main>
 
@@ -209,6 +211,8 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      <HeroSentinel id="hero-end-sentinel" />
 
       {/* STATS STRIP */}
       <section className="bg-white border-t border-slate-100">
