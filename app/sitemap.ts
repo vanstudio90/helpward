@@ -110,12 +110,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  const versusRoutes: MetadataRoute.Sitemap = COMPETITORS.map((c) => ({
-    url: `${BASE}/vs/${c.slug}`,
-    lastModified: now,
-    changeFrequency: "monthly",
-    priority: 0.7,
-  }));
+  const versusRoutes: MetadataRoute.Sitemap = [
+    { url: `${BASE}/vs`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    ...COMPETITORS.map((c) => ({
+      url: `${BASE}/vs/${c.slug}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+  ];
 
   return [
     ...staticRoutes, ...cityRoutes, ...serviceRoutes, ...cityServiceRoutes,
