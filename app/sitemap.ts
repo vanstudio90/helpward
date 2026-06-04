@@ -6,6 +6,7 @@ import { HELP_ARTICLES } from "@/lib/help-articles";
 import { SAFETY_PAGES } from "./safety/_safety-shell";
 import { JOBS } from "@/lib/careers";
 import { BLOG_POSTS } from "@/lib/blog-posts";
+import { COMPETITORS } from "@/lib/competitors";
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com";
 
@@ -109,8 +110,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
+  const versusRoutes: MetadataRoute.Sitemap = COMPETITORS.map((c) => ({
+    url: `${BASE}/vs/${c.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly",
+    priority: 0.7,
+  }));
+
   return [
     ...staticRoutes, ...cityRoutes, ...serviceRoutes, ...cityServiceRoutes,
     ...helpRoutes, ...safetyRoutes, ...careerRoutes, ...blogRoutes, ...providerRoutes,
+    ...versusRoutes,
   ];
 }
