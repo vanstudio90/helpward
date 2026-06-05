@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Search, SlidersHorizontal, Plus, Star, ChevronRight, MapPin, Calendar,
-  ChevronDown, ArrowLeft, Bell, Sparkles, Clock, X, Repeat,
+  ChevronDown, ArrowLeft, Bell, Sparkles, Clock, X, Repeat, Download,
 } from "lucide-react";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import type { BookingWithProvider } from "@/lib/data/customer";
@@ -104,6 +104,14 @@ export function BookingsView({
             <button disabled title="Date-range picker ships soon" aria-label="Date range" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm cursor-not-allowed opacity-70">
               <Calendar className="w-4 h-4 text-slate-500" /> All Time <ChevronDown className="w-3 h-3 text-slate-400" />
             </button>
+            <a
+              href="/api/customer/export/bookings?days=365"
+              download
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              title="Download the last 365 days of your bookings as CSV"
+            >
+              <Download className="w-4 h-4 text-slate-500" /> Export CSV
+            </a>
           </div>
         </div>
 
