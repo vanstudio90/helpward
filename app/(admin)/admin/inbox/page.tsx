@@ -5,6 +5,7 @@ import {
   ArrowRight, CheckCircle2, AlertTriangle,
 } from "lucide-react";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { AdminInboxRealtimeRefresh } from "./realtime-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +130,7 @@ export default async function AdminInboxPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto pb-12">
+      <AdminInboxRealtimeRefresh />
       <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 inline-flex items-center gap-2">
         <Inbox className="w-6 h-6 text-brand-600" /> Operator inbox
       </h1>
