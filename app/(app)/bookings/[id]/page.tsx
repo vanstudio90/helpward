@@ -13,6 +13,9 @@ import { TipCard } from "./tip-card";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 import { PortfolioRevokeButton, PortfolioBadge } from "./portfolio-revoke";
+import { BookingDetailRealtimeRefresh } from "./realtime-refresh";
+
+export const dynamic = "force-dynamic";
 
 const STATUS_TONE: Record<string, string> = {
   scheduled: "bg-brand-50 text-brand-700",
@@ -119,6 +122,7 @@ export default async function BookingDetailPage({
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-8 max-w-3xl mx-auto pb-12">
+      <BookingDetailRealtimeRefresh bookingId={b.id} />
       <Link href="/bookings" className="inline-flex items-center gap-1 text-sm text-slate-500 mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to bookings
       </Link>
