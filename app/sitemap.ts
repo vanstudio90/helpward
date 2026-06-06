@@ -113,6 +113,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const versusRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE}/vs`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/vs/why`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE}/vs/trust`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     ...COMPETITORS.map((c) => ({
       url: `${BASE}/vs/${c.slug}`,
       lastModified: now,
