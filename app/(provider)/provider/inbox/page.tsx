@@ -2,9 +2,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Inbox, Check, X, MapPin, Clock, DollarSign, Heart } from "lucide-react";
 import { InboxRow } from "./row";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { ProviderInboxRealtimeRefresh } from "./realtime-refresh";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProviderInboxPage() {
   const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
 
   // match_attempts where the current provider was offered and hasn't responded.
   // We also pull the customer's full_name (and avatar) when the attempt is
@@ -32,6 +37,7 @@ export default async function ProviderInboxPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto">
+      <ProviderInboxRealtimeRefresh userId={user.id} />
       <div className="flex items-center gap-3 mb-1">
         <Inbox className="w-6 h-6 text-brand-600" />
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Inbox</h1>
