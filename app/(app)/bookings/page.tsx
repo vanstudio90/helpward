@@ -2,6 +2,9 @@ import { listMyBookings } from "@/lib/data/customer";
 import { listMyRequests } from "@/lib/data/requests";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { BookingsView } from "./view";
+import { CustomerBookingsListRealtimeRefresh } from "./realtime-refresh";
+
+export const dynamic = "force-dynamic";
 
 export type SeriesRow = {
   id: string;
@@ -20,6 +23,7 @@ export type SeriesRow = {
 
 export default async function BookingsPage() {
   const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
   const seriesPromise = supabase
     .from("booking_series")
     .select(`
@@ -37,10 +41,13 @@ export default async function BookingsPage() {
     seriesPromise,
   ]);
   return (
-    <BookingsView
-      bookings={bookings}
-      requests={requests}
-      series={(series ?? []) as unknown as SeriesRow[]}
-    />
+    <>
+      {user && <CustomerBookingsListRealtimeRefresh userId={user.id} />}
+      <BookingsView
+        bookings={bookings}
+        requests={requests}
+        series={(series ?? []) as unknown as SeriesRow[]}
+      />
+    </>
   );
 }
