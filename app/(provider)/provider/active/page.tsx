@@ -5,6 +5,9 @@ import { OnlineToggle, BookingActions } from "./client";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { BundleChecklist, type BundleChecklistItem } from "./bundle-checklist";
 import { CompletionPhotos, type CompletionPhoto } from "./completion-photos";
+import { ProviderActiveRealtimeRefresh } from "./realtime-refresh";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProviderActivePage() {
   const supabase = await createSupabaseServerClient();
@@ -82,6 +85,7 @@ export default async function ProviderActivePage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto">
+      <ProviderActiveRealtimeRefresh userId={user.id} />
       <div className="flex items-center justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2">
