@@ -66,9 +66,9 @@ export default function VersusIndexPage() {
         does all of those AND lets one helper bundle up to 5 stops across categories in a single trip.
         Below is a fair, feature-by-feature look at how we line up against the apps you probably
         already have on your phone. For the long-form arguments, read{" "}
-        <Link href="/vs/why" className="font-semibold text-brand-700 hover:underline">why we built Helpward</Link>{" "}
-        and{" "}
-        <Link href="/vs/trust" className="font-semibold text-brand-700 hover:underline">how the trust layers work</Link>.
+        <Link href="/vs/why" className="font-semibold text-brand-700 hover:underline">why we built Helpward</Link>,{" "}
+        <Link href="/vs/trust" className="font-semibold text-brand-700 hover:underline">how the trust layers work</Link>, and{" "}
+        <Link href="/vs/pricing" className="font-semibold text-brand-700 hover:underline">our pricing</Link>.
       </p>
 
       <div className="not-prose space-y-8 mt-6">
