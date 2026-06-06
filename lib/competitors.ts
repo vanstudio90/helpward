@@ -523,6 +523,175 @@ export const COMPETITORS: Competitor[] = [
     ],
     cta: "Pick Care.com when you're hiring a long-term nanny, senior caregiver, or recurring housekeeper you've personally interviewed. Pick Helpward for the in-between one-offs — the grocery run when the nanny's sick, the prescription pickup, the chair assembly.",
   },
+  {
+    slug: "thumbtack",
+    brandName: "Thumbtack",
+    categoryLine: "Bid-based marketplace where licensed pros send custom quotes for project work.",
+    trafficContext: "Thumbtack is the right call when the task is a project — a plumber, an electrician, a wedding photographer — and you want competing quotes before you hire. Helpward is the right call when you want a verified helper en route within minutes, not a 3-day quote-and-vet cycle.",
+    matrix: [
+      {
+        feature: "Time from request to helper en route",
+        helpward: "Minutes — first verified helper to accept becomes yours",
+        competitor: "Hours to days — pros send custom quotes, you choose",
+        notes: "Different model on purpose. Thumbtack's quote-and-vet flow is what makes it the right pick for projects with real budget variance.",
+      },
+      {
+        feature: "Licensed trade professionals (plumber / electrician / HVAC)",
+        helpward: "Limited",
+        competitor: "Yes",
+        notes: "Pick Thumbtack when the task legally needs a licensed pro.",
+      },
+      {
+        feature: "Fixed transparent pricing before booking",
+        helpward: "Yes — service price set at booking, total visible upfront",
+        competitor: "No — every job is a custom quote",
+      },
+      {
+        feature: "Background-checked workers",
+        helpward: "Required for every helper",
+        competitor: "Limited",
+        notes: "Thumbtack runs background checks on pros who opt in via Top Pro tier; Helpward requires checks for every helper.",
+      },
+      {
+        feature: "Real-time GPS tracking",
+        helpward: "Yes — live map from accept to complete",
+        competitor: "Not advertised",
+      },
+      {
+        feature: "Multi-task bundles in one trip",
+        helpward: "Up to 5 stops across categories, one helper, one service fee",
+        competitor: "Not advertised",
+      },
+      {
+        feature: "Recurring weekly / biweekly / monthly bookings",
+        helpward: "Native recurring series for any service",
+        competitor: "Limited",
+      },
+      {
+        feature: "Photo proof of completion",
+        helpward: "Up to 3 photos per booking; customer can revoke from portfolio",
+        competitor: "Not advertised",
+      },
+    ],
+    cta: "Pick Thumbtack when you want competing quotes from licensed pros for a project with real budget variance. Pick Helpward when you want a verified helper en route in minutes for a task with predictable scope.",
+  },
+  {
+    slug: "angi",
+    brandName: "Angi",
+    categoryLine: "Vetted-pro directory + project marketplace formerly known as Angie's List.",
+    trafficContext: "Angi is the right call when you're researching a contractor for a serious home project — roof, kitchen reno, deck — and you want long-form reviews from prior customers. Helpward is the right call when the task is small, time-sensitive, or part of a stack of other errands.",
+    matrix: [
+      {
+        feature: "Long-form customer reviews of pros before you hire",
+        helpward: "Yes — every helper has rating + reviews + portfolio gallery on a public profile",
+        competitor: "Yes",
+        notes: "Parity — both surface reviews, though Angi's review depth is famously their headline feature.",
+      },
+      {
+        feature: "Time from request to helper en route",
+        helpward: "Minutes — first verified helper to accept becomes yours",
+        competitor: "Hours to days — research, quote, schedule",
+      },
+      {
+        feature: "Major home renovation contractors (kitchen / roof / deck)",
+        helpward: "Limited",
+        competitor: "Yes",
+        notes: "Angi is built around researching big-ticket contractors; Helpward is built around small predictable tasks.",
+      },
+      {
+        feature: "Real-time GPS tracking",
+        helpward: "Yes — live map from accept to complete",
+        competitor: "Not advertised",
+      },
+      {
+        feature: "Fixed transparent pricing before booking",
+        helpward: "Yes — service price set at booking, total visible upfront",
+        competitor: "Limited",
+        notes: "Angi has some fixed-price service categories but most work is quoted.",
+      },
+      {
+        feature: "Multi-task bundles in one trip",
+        helpward: "Up to 5 stops across categories, one helper, one service fee",
+        competitor: "Not advertised",
+      },
+      {
+        feature: "Background-checked workers",
+        helpward: "Required for every helper",
+        competitor: "Yes",
+        notes: "Parity — Angi runs background checks on listed pros.",
+      },
+      {
+        feature: "Photo proof of completion",
+        helpward: "Up to 3 photos per booking; customer can revoke from portfolio",
+        competitor: "Not advertised",
+      },
+    ],
+    cta: "Pick Angi when you're researching a $5K+ contractor and want long-form reviews. Pick Helpward when the task is a sub-$200 errand or quick fix you want done today.",
+  },
+  {
+    slug: "handy",
+    brandName: "Handy",
+    categoryLine: "Same-day cleaning + handyman marketplace with flat, fixed pricing.",
+    trafficContext: "Handy is the closest direct competitor to Helpward for cleaning + handyman tasks. The differences are smaller and centred on category breadth + multi-task bundling.",
+    matrix: [
+      {
+        feature: "Time from request to helper en route",
+        helpward: "Minutes — first verified helper to accept becomes yours",
+        competitor: "Same-day for most categories",
+        notes: "Parity-ish — both ship fast matching for the cleaning/handyman vertical.",
+      },
+      {
+        feature: "Category breadth",
+        helpward: "Errands, deliveries, home help, transportation, presence, business",
+        competitor: "Cleaning + handyman + furniture assembly + a few adjacent categories",
+      },
+      {
+        feature: "Fixed transparent pricing before booking",
+        helpward: "Yes — service price set at booking, total visible upfront",
+        competitor: "Yes",
+        notes: "Parity — Handy's flat-pricing model is their headline feature.",
+      },
+      {
+        feature: "Background-checked workers",
+        helpward: "Required for every helper",
+        competitor: "Yes",
+        notes: "Parity.",
+      },
+      {
+        feature: "Insurance on every booking",
+        helpward: "Included on every booking",
+        competitor: "Yes",
+        notes: "Parity.",
+      },
+      {
+        feature: "Real-time GPS tracking",
+        helpward: "Yes — live map from accept to complete",
+        competitor: "Not advertised",
+      },
+      {
+        feature: "Multi-task bundles across categories",
+        helpward: "Up to 5 stops across categories, one helper, one service fee",
+        competitor: "Not advertised",
+      },
+      {
+        feature: "Recurring weekly / biweekly / monthly bookings",
+        helpward: "Native recurring series with pause / skip-next / cadence editing",
+        competitor: "Yes",
+        notes: "Both ship recurring cleaning; only Helpward extends recurring to errands + presence visits.",
+      },
+      {
+        feature: "Save favorite helper + re-book first",
+        helpward: "Star helper → next request routes to them first for 2 minutes",
+        competitor: "Limited",
+      },
+      {
+        feature: "Photo proof of completion",
+        helpward: "Up to 3 photos per booking; customer can revoke from portfolio",
+        competitor: "Not advertised",
+      },
+    ],
+    cta: "Pick Handy when you only ever need cleaning or handyman work and flat pricing is the dealbreaker. Pick Helpward when you also want errands, presence visits, or multi-category trips from one verified helper.",
+  },
 ];
 
 export function getCompetitor(slug: string): Competitor | null {

@@ -16,7 +16,10 @@ export const metadata: Metadata = {
 // on facts about competitors, not opinions about grouping them.
 const VERTICAL: Record<string, { label: string; icon: typeof Wrench }> = {
   taskrabbit: { label: "Handyman + errands",   icon: Wrench },
+  handy:      { label: "Handyman + errands",   icon: Wrench },
   "care-com": { label: "Home + caregivers",    icon: Wrench },
+  thumbtack:  { label: "Pro contractors",      icon: Wrench },
+  angi:       { label: "Pro contractors",      icon: Wrench },
   instacart:  { label: "Grocery delivery",     icon: ShoppingCart },
   doordash:   { label: "Restaurant delivery",  icon: Soup },
   "uber-eats": { label: "Restaurant delivery", icon: Soup },
