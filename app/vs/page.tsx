@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, Scale, ShoppingCart, Truck, Wrench, Soup } from "lucide-react";
+import { ArrowRight, Scale, ShoppingCart, Truck, Wrench, Soup, PawPrint } from "lucide-react";
 import { MarketingShell } from "@/components/MarketingShell";
 import { COMPETITORS } from "@/lib/competitors";
 
 export const metadata: Metadata = {
-  title: "Helpward comparisons — vs TaskRabbit, Instacart, DoorDash, Dolly, Uber Eats",
+  title: "Helpward comparisons — vs TaskRabbit, Instacart, DoorDash, Dolly, Bellhop, Rover, Wag, Care.com",
   description: "Honest side-by-side comparisons. Real-time GPS, photo proof, multi-task bundles, recurring bookings, favorite-helper routing — see how Helpward stacks against the apps you already use.",
   alternates: { canonical: "/vs" },
 };
@@ -15,11 +15,15 @@ export const metadata: Metadata = {
 // adding a `vertical` field to lib/competitors so the catalog stays focused
 // on facts about competitors, not opinions about grouping them.
 const VERTICAL: Record<string, { label: string; icon: typeof Wrench }> = {
-  taskrabbit: { label: "Handyman + errands", icon: Wrench },
-  instacart:  { label: "Grocery delivery",   icon: ShoppingCart },
-  doordash:   { label: "Restaurant delivery", icon: Soup },
+  taskrabbit: { label: "Handyman + errands",   icon: Wrench },
+  "care-com": { label: "Home + caregivers",    icon: Wrench },
+  instacart:  { label: "Grocery delivery",     icon: ShoppingCart },
+  doordash:   { label: "Restaurant delivery",  icon: Soup },
   "uber-eats": { label: "Restaurant delivery", icon: Soup },
-  dolly:      { label: "Moving + heavy haul", icon: Truck },
+  dolly:      { label: "Moving + heavy haul",  icon: Truck },
+  bellhop:    { label: "Moving + heavy haul",  icon: Truck },
+  rover:      { label: "Pet care",             icon: PawPrint },
+  wag:        { label: "Pet care",             icon: PawPrint },
 };
 
 export default function VersusIndexPage() {
