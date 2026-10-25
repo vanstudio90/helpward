@@ -286,6 +286,7 @@ export type ResolvedAddress = {
 
 export type ResolveFailure =
   | { ok: false; reason: "geocoding_unavailable" }
+  | { ok: false; reason: "storage_not_permitted" }
   | { ok: false; reason: "not_found" }
   | { ok: false; reason: "incomplete" }
   | { ok: false; reason: "ambiguous" };
@@ -294,6 +295,8 @@ export type ResolveResult = { ok: true; address: ResolvedAddress } | ResolveFail
 
 export const RESOLVE_FAILURE_MESSAGE: Record<ResolveFailure["reason"], string> = {
   geocoding_unavailable:
+    "We can't verify addresses right now. Please try again in a few minutes.",
+  storage_not_permitted:
     "We can't verify addresses right now. Please try again in a few minutes.",
   not_found:
     "We couldn't find that address. Please check it and try again, or use \u201cUse my current location\u201d.",
@@ -372,6 +375,12 @@ function toResolved(g: GeocodeResult): ResolveResult {
 /** Forward-geocode typed address text. Never falls back to a placeholder. */
 export async function resolveAddressStrict(rawText: string): Promise<ResolveResult> {
   if (!isGeocodingEnabled()) return { ok: false, reason: "geocoding_unavailable" };
+  // A ResolvedAddress is an attestation that gets written to the database.
+  // Temporary geocoding results may not be retained, so under
+  // MAPBOX_PERMANENT=false we refuse rather than mint one. The raw
+  // geocodeAddress/reverseGeocode helpers stay available for probes that
+  // do not persist anything.
+  if (!isStoragePermitted()) return { ok: false, reason: "storage_not_permitted" };
   const g = await geocodeAddress(rawText);
   if (!g) return { ok: false, reason: "not_found" };
   return toResolved(g);
@@ -390,6 +399,7 @@ export async function resolveCoordsStrict(lat: number, lng: number): Promise<Res
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { ok: false, reason: "not_found" };
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return { ok: false, reason: "not_found" };
   if (!isGeocodingEnabled()) return { ok: false, reason: "geocoding_unavailable" };
+  if (!isStoragePermitted()) return { ok: false, reason: "storage_not_permitted" };
   const r = await reverseGeocode(lat, lng);
   if (!r) return { ok: false, reason: "not_found" };
   // Keep the caller's exact coordinates; take only the descriptive fields

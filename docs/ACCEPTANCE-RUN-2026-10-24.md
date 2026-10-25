@@ -297,7 +297,7 @@ regional journeys ran and the financial journey is blocked.
 
 ### What this run does establish
 
-* 74 automated tests execute and pass, covering the two-stage service-area check and its fail-closed behaviour, the municipality allowlist, the ambiguity gate, placeholder detection, and the full pricing split including exhaustive rounding reconciliation.
+* 89 automated tests execute and pass, covering the two-stage service-area check and its fail-closed behaviour, the municipality allowlist, the ambiguity gate, placeholder detection, and the full pricing split including exhaustive rounding reconciliation.
 * The two crashes found in review are covered by tests that were **proven to fail** when the bugs were reintroduced.
 * Route status codes, sitemap, internal links and fabricated-content removal are verified against a real production build with zero server errors.
 * One new defect (no ambiguity rejection at request time) and one new deployment hazard (the migration deadlock) were found *by* running this plan, and both are fixed.
@@ -359,3 +359,31 @@ Migration apply order is now `0029, 0030, 0031, 0033, 0034, 0036, 0037, 0038`
 and R09 are SQL and RLS changes whose behaviour can only be proven in the
 isolated environment, under real customer, provider, admin and service-role
 JWTs. They remain unverified claims until then.
+
+
+---
+
+## Independent delta review, 2026-10-25 (`09fb7ca`) — six findings addressed
+
+Verdict was **changes requested**: five P1 and one P2. All verified against
+the source; none disputed. Two were reproduced with the reviewer's probes.
+
+| # | Finding | Fix |
+|---|---|---|
+| D01 | Bundle stops still inserted through the authenticated client, which 0036's trigger rejects — the normal bundle path would fail outright, and 0036 would also break the *old* release's bundle path | Stops and the parent request are now written with the service client. `0036` reclassified **DEPLOY-COUPLED**, not pre-deploy safe. |
+| D02 | Only price was frozen: `rbi_write_own` is FOR ALL so stops could be DELETEd, `request_id` was unfrozen so stops could be reparented, and `req_update` let the customer edit `requests.bundle_item_count` to agree with a shortened bundle | Immutable quote identity. `seal_bundle_quote()` records a fingerprint of the stop set at creation; `accept_request` recomputes it and refuses if anything changed. DELETE and reparenting are server-only; parent quote fields are trigger-protected. The count comparison is gone — it was never independent. |
+| D03 | Backfill still verified results the app resolver rejects, and writes `geocode_verified = true` as the trusted service role | One shared classifier in `scripts/lib/geocode-classify.mjs`, used by the backfill and asserted against `isAmbiguous()` case-for-case by 15 new parity tests. Missing metadata is reconfirmation, never verification. |
+| D04 | `0004` granted `authenticated` EXECUTE on `broadcast_request`; revoking PUBLIC does not remove it and `CREATE OR REPLACE` preserves it | Explicit `REVOKE … FROM public, anon, authenticated` on all nine privileged functions, re-asserted in `0038` after the replace. SQL section 8 asserts `has_function_privilege` for all three roles. |
+| D05 | The checked-in runbook applied `0031` *after* `0036`, restoring the unhardened `accept_request` | `0031` and its down-script **deleted**. There is now exactly one `accept_request` definition, at the end of `0036`. One authoritative forward sequence published. |
+| D06 | `MAPBOX_PERMANENT=false` still produced `verified:true` for database inserts | Both strict resolvers refuse with `storage_not_permitted`. Raw `geocodeAddress`/`reverseGeocode` remain for non-persisting probes. Verified: the guard now refuses before any outgoing request. |
+
+Tests grew from 74 to **89**, all passing, and were confirmed to fail when
+the D03 and D06 defects are reintroduced.
+
+**Authoritative apply order** — pre-deploy: `0029, 0030, 0033, 0034, 0037`;
+then boundaries, then backfill, then **deploy**, then `0036, 0038`. Nothing
+is reapplied afterwards.
+
+**Still not executed against a database.** D01, D02, D04 and the SQL
+assertions for them are claims until the isolated rehearsal runs them under
+real customer, provider, admin and service-role JWTs.

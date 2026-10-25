@@ -2,7 +2,8 @@
 -- release, never before.
 --
 -- DEPENDS ON 0033 (is_point_serviceable), 0034 (record_dispatch_refusal)
--- and 0037 (boundary_enforcement_mode). Must be applied after all three.
+-- and 0037 (boundary_enforcement_mode). Apply after all three, and after
+-- 0036 so this file's grants are the final word on dispatch privileges.
 --
 -- NOT BACKWARD COMPATIBLE. broadcast_request below refuses to dispatch a
 -- request whose pickup address is not geocode_verified. The previous
@@ -82,7 +83,7 @@ language sql immutable as $$
      and abs(st_y(p_point::geometry) -   49.2827)  < 0.000001;
 $$;
 
-revoke execute on function public.is_placeholder_point(geography) from public;
+revoke execute on function public.is_placeholder_point(geography) from public, anon;
 grant execute on function public.is_placeholder_point(geography) to authenticated, service_role;
 
 create or replace function public.broadcast_request(
@@ -197,5 +198,8 @@ begin
 end;
 $$;
 
-revoke execute on function public.broadcast_request(uuid, int) from public;
+-- CREATE OR REPLACE preserves existing ACLs, so the historical
+-- `grant ... to authenticated` from 0004 would survive unless revoked
+-- explicitly here as well as in 0036 (review finding D04).
+revoke execute on function public.broadcast_request(uuid, int) from public, anon, authenticated;
 grant execute on function public.broadcast_request(uuid, int) to service_role;

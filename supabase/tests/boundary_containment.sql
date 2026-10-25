@@ -296,3 +296,99 @@ exception
 end $$;
 
 select 'placeholder guard assertions passed' as result;
+
+-- ---------------------------------------------------------------------------
+-- 8. Quote immutability (review finding D02) and dispatch privileges (D04).
+--
+-- These assert the integrity guarantees that mocked tests cannot reach.
+-- Run as the customer role where indicated.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_customer uuid;
+  v_svc_a text;
+  v_svc_b text;
+  v_addr uuid;
+  v_req uuid;
+  v_fp text;
+begin
+  select id into v_customer from profiles where role = 'customer' limit 1;
+  select id into v_svc_a from services where active order by id limit 1;
+  select id into v_svc_b from services where active order by id offset 1 limit 1;
+  if v_customer is null or v_svc_b is null then
+    raise exception 'Need a customer and two active services';
+  end if;
+
+  insert into addresses (user_id, formatted, location, country, geocode_verified)
+  values (v_customer, 'FIXTURE — quote immutability',
+          st_setsrid(st_makepoint(-123.12, 49.28), 4326)::geography, 'CA', true)
+  returning id into v_addr;
+
+  insert into requests (customer_id, service_id, pickup_address_id,
+                        estimated_price_cents, estimated_duration_min, status,
+                        is_bundle, bundle_item_count)
+  values (v_customer, v_svc_a, v_addr, 5000, 60, 'matching', true, 2)
+  returning id into v_req;
+
+  insert into request_bundle_items (request_id, position, service_id, item_price_cents)
+  values (v_req, 1, v_svc_a, 0), (v_req, 2, v_svc_b, 0);
+
+  -- The INSERT trigger must have overwritten the zeros with catalog prices.
+  if exists (select 1 from request_bundle_items i join services s on s.id = i.service_id
+             where i.request_id = v_req and i.item_price_cents <> s.base_price_cents) then
+    raise exception 'FAIL: stop prices were not forced to the catalog price on insert';
+  end if;
+  raise notice 'PASS: stop prices forced to catalog on insert';
+
+  v_fp := seal_bundle_quote(v_req);
+  if coalesce(v_fp, '') = '' then
+    raise exception 'FAIL: seal_bundle_quote returned no fingerprint';
+  end if;
+  raise notice 'PASS: quote sealed';
+
+  -- Changing the stop set must change the fingerprint, which is what
+  -- acceptance compares against.
+  delete from request_bundle_items where request_id = v_req and position = 2;
+  if compute_bundle_fingerprint(v_req) = v_fp then
+    raise exception 'FAIL: fingerprint unchanged after a stop was removed';
+  end if;
+  raise notice 'PASS: removing a stop changes the fingerprint';
+
+  raise exception using errcode = 'HW000', message = '__fixture_rollback__';
+exception
+  when sqlstate 'HW000' then raise notice 'fixture rolled back';
+end $$;
+
+-- Dispatch privileges: authenticated must NOT be able to execute the
+-- privileged RPCs, despite the historical grant in 0004.
+do $$
+declare r record; v_bad int := 0;
+begin
+  for r in
+    select fn, has_function_privilege('authenticated', fn, 'EXECUTE') as auth_can,
+           has_function_privilege('anon', fn, 'EXECUTE') as anon_can,
+           has_function_privilege('service_role', fn, 'EXECUTE') as svc_can
+    from (values
+      ('public.broadcast_request(uuid,int)'),
+      ('public.record_dispatch_refusal(uuid,text,text)'),
+      ('public.seal_bundle_quote(uuid)'),
+      ('public.bundle_subtotal_cents(uuid)'),
+      ('public.insert_service_area_boundary(text,text,text,text)')
+    ) t(fn)
+  loop
+    if r.auth_can or r.anon_can then
+      raise warning 'FAIL: % is executable by authenticated=% anon=%', r.fn, r.auth_can, r.anon_can;
+      v_bad := v_bad + 1;
+    elsif not r.svc_can then
+      raise warning 'FAIL: % is NOT executable by service_role', r.fn;
+      v_bad := v_bad + 1;
+    else
+      raise notice 'PASS: % service-role only', r.fn;
+    end if;
+  end loop;
+  if v_bad > 0 then
+    raise exception 'FAIL: % privileged function(s) have the wrong grants', v_bad;
+  end if;
+end $$;
+
+select 'quote immutability and dispatch privilege assertions passed' as result;

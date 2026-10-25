@@ -40,55 +40,9 @@ import readline from "node:readline";
 const LEDGER = process.env.BACKFILL_LEDGER ?? "backfill-addresses.jsonl";
 const PLACEHOLDER = { lng: -123.1207, lat: 49.2827 };
 
-// ---------------------------------------------------------------------------
-// Launch service areas — kept in sync with lib/service-areas.ts by hand.
-// This script is intentionally dependency-free so it can run against
-// production without a build step.
-// ---------------------------------------------------------------------------
-const STATUS_WORDS = new Set([
-  "city", "district", "township", "municipality", "town", "village",
-  "borough", "of", "the", "corporation",
-]);
-
-function normalizeMunicipality(input) {
-  return String(input ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w && !STATUS_WORDS.has(w))
-    .join(" ");
-}
-
-const SERVICE_AREAS = [
-  {
-    id: "lower-mainland-bc", country: "CA", regions: ["British Columbia", "BC"],
-    municipalities: [
-      "Vancouver", "Burnaby", "Richmond", "New Westminster", "Surrey", "Delta",
-      "White Rock", "Coquitlam", "Port Coquitlam", "Port Moody", "Pitt Meadows",
-      "Maple Ridge", "North Vancouver", "West Vancouver", "Langley",
-    ],
-  },
-  { id: "los-angeles-ca", country: "US", regions: ["California", "CA"], municipalities: ["Los Angeles"] },
-  { id: "san-diego-ca",   country: "US", regions: ["California", "CA"], municipalities: ["San Diego"] },
-];
-
-const AREA_INDEX = new Map();
-for (const a of SERVICE_AREAS) {
-  for (const m of a.municipalities) AREA_INDEX.set(`${a.country}|${normalizeMunicipality(m)}`, a);
-}
-
-function resolveArea({ country, region, place }) {
-  if (!place || !country) return null;
-  const area = AREA_INDEX.get(`${String(country).toUpperCase()}|${normalizeMunicipality(place)}`);
-  if (!area) return null;
-  if (region) {
-    const r = normalizeMunicipality(region);
-    if (!area.regions.some((x) => normalizeMunicipality(x) === r)) return null;
-  }
-  return area;
-}
+import {
+  classify, resolveArea, normalizeMunicipality, SERVICE_AREAS,
+} from "./lib/geocode-classify.mjs";
 
 // ---------------------------------------------------------------------------
 // env + args
@@ -233,42 +187,15 @@ async function geocode(text) {
     region: ctx.region?.name ?? null,
     place: ctx.place?.name ?? null,
     postal: ctx.postcode?.name ?? null,
-    // Mapbox match_code tells us how much of the query actually matched.
-    matchCode: f.properties?.match_code ?? null,
+    // Only address-type features carry match_code, which is why
+    // feature_type has to be read too.
+    featureType: f.properties?.feature_type ?? null,
+    confidence: (f.properties?.match_code?.confidence ?? "").toLowerCase() || null,
+    addressNumberMatch: f.properties?.match_code?.address_number ?? null,
     // More than one candidate means the query was ambiguous.
     candidateCount: features.length,
     secondChoice: features[1]?.properties?.full_address ?? null,
   };
-}
-
-// A result is only auto-accepted when it is unambiguous AND the street-level
-// components matched. Anything softer goes to the customer to reconfirm —
-// silently "correcting" someone's home address is worse than asking.
-function classify(g) {
-  if (g.error) return { outcome: "failed", note: g.error };
-  if (!g.place) return { outcome: "needs_reconfirm", note: "no municipality returned" };
-
-  const mc = g.matchCode ?? {};
-  const weak = [];
-  if (mc.confidence && mc.confidence !== "exact" && mc.confidence !== "high") {
-    weak.push(`confidence=${mc.confidence}`);
-  }
-  if (mc.address_number === "not_applicable" || mc.address_number === "unmatched") {
-    weak.push("no street number matched");
-  }
-  if (g.candidateCount > 1) weak.push("multiple candidates");
-
-  const area = resolveArea({ country: g.country, region: g.region, place: g.place });
-  if (!area) {
-    return {
-      outcome: "out_of_area",
-      note: `${g.place}, ${g.region ?? "?"}, ${g.country || "?"} is outside every launch area`,
-    };
-  }
-  if (weak.length > 0) {
-    return { outcome: "needs_reconfirm", note: `ambiguous: ${weak.join("; ")}` };
-  }
-  return { outcome: "verified", note: `matched ${area.id}` };
 }
 
 // ---------------------------------------------------------------------------

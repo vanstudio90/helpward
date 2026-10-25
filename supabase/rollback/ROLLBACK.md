@@ -5,31 +5,39 @@ reaches production. A forward order that works is not sufficient evidence.
 
 ## Migration classes
 
-| Migration | Class | Apply before the app deploy? | Safe to leave in place on app rollback? |
-|---|---|---|---|
-| `0029_address_verification` | additive columns | **Yes** | Yes — old code ignores them |
-| `0030_matching_columns` | additive column + index + `max_location_age()` | **Yes** — required *by* the new code | Yes |
-| `0031_payout_split` | function, no new column dependency | Yes | Yes — old code calls it unchanged; only amounts differ |
-| `0033_service_area_boundaries` | new tables + functions | **Yes** | Yes — unused by old code |
-| `0036_attestation_integrity` | triggers + column privileges + grant hygiene | **Yes** | Yes — old code never set the attestation columns anyway |
-| `0037_boundary_enforcement_mode` | new table + functions | **Yes** | Yes — unused by old code |
-| `0034_dispatch_refusals` | new table + functions | **Yes** | Yes — unused by old code |
-| `0038_matching_functions` | functions, **NOT backward compatible** | **No** — apply with or after the deploy | **Yes, intentionally** — see below |
+Two classes only. Getting this wrong is how the previous draft managed to
+publish a sequence that reapplied `0031` *after* `0036` and silently
+restored the unhardened `accept_request` (review finding D05). There is now
+exactly one definition of that function, at the end of `0036`, and `0031`
+has been removed.
 
-## Forward sequence
+| Migration | Class | Why |
+|---|---|---|
+| `0029_address_verification` | **Pre-deploy safe** | additive columns; old code ignores them |
+| `0030_matching_columns` | **Pre-deploy safe** | additive column + index; required *by* the new code |
+| `0033_service_area_boundaries` | **Pre-deploy safe** | new tables/functions, unused by old code |
+| `0034_dispatch_refusals` | **Pre-deploy safe** | new table/functions, unused by old code |
+| `0037_boundary_enforcement_mode` | **Pre-deploy safe** | new table/functions, unused by old code |
+| `0036_attestation_integrity` | **DEPLOY-COUPLED** | its `request_bundle_items` trigger rejects every non-service INSERT, which is exactly how the *previous* application writes bundle stops. Applying it before the cutover breaks bundle creation on the running release. It also hardens `accept_request` to require a sealed quote fingerprint that only the new code produces. |
+| `0038_matching_functions` | **DEPLOY-COUPLED** | `broadcast_request` refuses unverified addresses, which old code cannot produce |
 
-1. `0029`, `0030`, `0033`, `0034`, `0036`, `0037` — additive or integrity-only. `0036` revokes client write access to the attestation columns, which old code never used.
-2. Load official boundary polygons (`scripts/load-boundaries.mjs`) and mark a
-   dataset active. **Until this is done `is_point_serviceable()` returns
-   `no_dataset` and nothing is dispatchable** — fail-closed by design.
-3. Run the address backfill (`scripts/backfill-addresses.mjs --dry-run`, review
-   the ledger, then `--apply`).
-4. Deploy the application release.
-5. `0031`, then `0038`.
-6. Verify: `node scripts/verify-migration-state.mjs`.
+## Authoritative forward sequence
 
-Step 2 and 3 can run before or after step 4; both are safe in either order.
-Step 5 must not precede step 4.
+Run exactly this. Do not reapply anything afterwards.
+
+1. `0029`, `0030`, `0033`, `0034`, `0037` — pre-deploy safe, no behaviour change.
+2. Load official boundary polygons (`scripts/load-boundaries.mjs`), verify
+   the probes, then `--activate`.
+3. Run the address backfill: `--dry-run`, review the ledger, then `--apply`.
+4. **Deploy the application release.**
+5. `0036`, then `0038`.
+6. Verify: `node scripts/verify-migration-state.mjs`, then confirm the final
+   `accept_request` definition is the hardened one (it must contain
+   `compute_bundle_fingerprint`) and that
+   `has_function_privilege('authenticated', 'public.broadcast_request(uuid,int)', 'EXECUTE')`
+   is **false**.
+
+Steps 2 and 3 may run before or after step 4. Step 5 must not precede it.
 
 ## Rollback
 
@@ -110,14 +118,14 @@ schema and behaviour probes.
 
 | # | Step | Expected |
 |---|---|---|
-| R1 | Apply `0029`,`0030`,`0033`,`0034` against a copy of production data | succeed; old app unaffected |
+| R1 | Apply `0029`,`0030`,`0033`,`0034`,`0037` against a copy of production data | succeed; old app unaffected, including bundle creation |
 | R2 | Probe schema | new columns/tables/functions present |
 | R3 | Submit a request on the **old** app build | still dispatches (0035 not yet applied) |
 | R4 | Load boundaries, mark active | `is_point_serviceable` on a known in-city point → `serviceable` |
 | R5 | Known unincorporated point | → `outside_boundary` |
 | R6 | Deactivate dataset, re-probe | → `no_dataset`, and nothing dispatchable |
 | R7 | Run backfill `--dry-run` then `--apply` | ledger classifies; ambiguous/failed/out-of-area stay unverified |
-| R8 | Deploy new app, apply `0031`,`0038` | succeed |
+| R8 | Deploy new app, then apply `0036`,`0038` | succeed; final accept_request contains compute_bundle_fingerprint |
 | R9 | Submit a request at a verified in-boundary address | dispatches; no `dispatch_refusals` row |
 | R10 | Submit at an unremediated legacy address | refused; `address_unverified` row; admin notified |
 | R11 | **Roll the app back** to the previous build | requests refused, `address_unverified` rows accumulate, admins notified within one request |

@@ -145,7 +145,7 @@ export async function createRequestAction(
     // routes on the parent's service_id, so the bundle gets dispatched to
     // helpers who offer that category. Cross-category bundles in v2.
     const primaryServiceId = bundleItems[0].serviceId;
-    const { data: parentRequest, error: parentErr } = await supabase
+    const { data: parentRequest, error: parentErr } = await createSupabaseServiceClient()
       .from("requests")
       .insert({
         customer_id: user.id,
@@ -176,11 +176,26 @@ export async function createRequestAction(
       notes: it.notes || null,
       item_price_cents: lookup.get(it.serviceId)?.base_price_cents ?? 0,
     }));
-    const { error: itemsErr } = await supabase.from("request_bundle_items").insert(itemRows);
+    // Service client: bundle stops are a server-authored quote. Migration
+    // 0036 rejects every non-service INSERT on request_bundle_items and
+    // overwrites the price from the catalog, so writing these through the
+    // caller's client would fail outright.
+    const admin = createSupabaseServiceClient();
+    const { error: itemsErr } = await admin.from("request_bundle_items").insert(itemRows);
     if (itemsErr) {
-      // Don't leave the parent as a half-built bundle. Mark it expired.
-      await supabase.from("requests").update({ status: "cancelled" }).eq("id", parentRequest.id);
+      // Don't leave the parent as a half-built bundle. Mark it cancelled.
+      await admin.from("requests").update({ status: "cancelled" }).eq("id", parentRequest.id);
       return { error: "Couldn't save bundle stops: " + itemsErr.message };
+    }
+
+    // Freeze the quote the customer was shown. accept_request recomputes
+    // this fingerprint and refuses if the bundle changed after offering.
+    const { error: fpErr } = await admin.rpc("seal_bundle_quote", {
+      p_request_id: parentRequest.id,
+    });
+    if (fpErr) {
+      await admin.from("requests").update({ status: "cancelled" }).eq("id", parentRequest.id);
+      return { error: "Couldn't finalise the bundle quote: " + fpErr.message };
     }
 
     // Broadcast just like a one-shot request.

@@ -312,10 +312,14 @@ begin
     if v_subtotal <= 0 then
       raise exception 'Bundle has no priced stops';
     end if;
-    -- Stop count must still match what the customer was quoted.
-    if (select count(*) from request_bundle_items where request_id = p_request_id)
-       <> coalesce(v_request.bundle_item_count, 0) then
-      raise exception 'Bundle stop count changed since the request was created';
+    -- The sealed quote must still describe this bundle. bundle_item_count
+    -- alone was not an independent check: it is a parent column the
+    -- customer could edit to agree with a shortened stop set.
+    if coalesce(v_request.quote_fingerprint, '') = '' then
+      raise exception 'Bundle was never sealed with a quote fingerprint';
+    end if;
+    if compute_bundle_fingerprint(p_request_id) <> v_request.quote_fingerprint then
+      raise exception 'Bundle changed after it was quoted and offered — refusing to accept';
     end if;
   else
     if v_service.id is null or not v_service.active then
@@ -360,3 +364,163 @@ $$;
 
 revoke execute on function public.accept_request(uuid, uuid) from public;
 grant execute on function public.accept_request(uuid, uuid) to authenticated, service_role;
+
+-- =========================================================================
+-- D02 — the whole quote structure is immutable once offered, not just price
+-- =========================================================================
+--
+-- Freezing item_price_cents was not enough. rbi_write_own (0015) is FOR
+-- ALL, so a customer could DELETE a stop; the UPDATE trigger did not freeze
+-- request_id, so a stop could be reparented; and req_update (0002) let the
+-- customer edit requests.bundle_item_count, so the acceptance count check
+-- could be made to agree with a shortened bundle. A three-stop offer could
+-- become a two-stop booking after the helper accepted what they saw.
+--
+-- The fix is an immutable quote identity. seal_bundle_quote() records a
+-- fingerprint of the stop set at creation; acceptance recomputes it and
+-- refuses if anything about the quote changed.
+
+alter table requests
+  add column if not exists quote_fingerprint text;
+
+comment on column requests.quote_fingerprint is
+  'Hash of the bundle stop set (service ids, prices, positions) at the moment the request was created. accept_request recomputes it and refuses if the bundle changed after the offer went out.';
+
+create or replace function public.compute_bundle_fingerprint(p_request_id uuid)
+returns text
+language sql stable security definer set search_path = public as $$
+  select encode(digest(coalesce(string_agg(
+           i.position || ':' || i.service_id || ':' || i.item_price_cents, '|'
+           order by i.position, i.service_id), ''), 'sha256'), 'hex')
+  from request_bundle_items i
+  where i.request_id = p_request_id;
+$$;
+
+create or replace function public.seal_bundle_quote(p_request_id uuid)
+returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  v_fp text;
+  v_count int;
+begin
+  if coalesce(current_setting('request.jwt.claims', true), '') <> ''
+     and jwt_role() <> 'service_role' then
+    raise exception 'seal_bundle_quote: service role only';
+  end if;
+
+  select count(*) into v_count from request_bundle_items where request_id = p_request_id;
+  if v_count < 2 then
+    raise exception 'cannot seal a bundle with % stop(s)', v_count;
+  end if;
+
+  v_fp := compute_bundle_fingerprint(p_request_id);
+  update requests
+     set quote_fingerprint = v_fp, bundle_item_count = v_count
+   where id = p_request_id;
+  return v_fp;
+end;
+$$;
+
+-- Deletion and reparenting are server-only, matching INSERT.
+create or replace function public.enforce_bundle_item_quote()
+returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  v_is_service boolean := coalesce(current_setting('request.jwt.claims', true), '') = ''
+                          or jwt_role() = 'service_role';
+  v_catalog_price int;
+begin
+  if v_is_service then
+    if tg_op = 'INSERT' then
+      select base_price_cents into v_catalog_price
+        from services where id = new.service_id and active;
+      if v_catalog_price is null then
+        raise exception 'bundle stop references an inactive or unknown service: %', new.service_id;
+      end if;
+      new.item_price_cents := v_catalog_price;
+    end if;
+    return case when tg_op = 'DELETE' then old else new end;
+  end if;
+
+  if tg_op = 'INSERT' then
+    raise exception 'bundle stops are created by the server, not directly';
+  end if;
+  if tg_op = 'DELETE' then
+    raise exception 'bundle stops cannot be removed after the quote is created';
+  end if;
+
+  -- request_id included: a stop may not be reparented onto another request.
+  if new.item_price_cents is distinct from old.item_price_cents
+     or new.service_id  is distinct from old.service_id
+     or new.position    is distinct from old.position
+     or new.request_id  is distinct from old.request_id then
+    raise exception 'bundle stop price, service, position and parent are fixed at request creation';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_bundle_item_quote on request_bundle_items;
+create trigger trg_bundle_item_quote
+  before insert or update or delete on request_bundle_items
+  for each row execute function public.enforce_bundle_item_quote();
+
+-- Parent quote fields are server-owned too, so the count cannot be edited
+-- to agree with a tampered stop set.
+create or replace function public.enforce_request_quote()
+returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  v_is_service boolean := coalesce(current_setting('request.jwt.claims', true), '') = ''
+                          or jwt_role() = 'service_role' or is_admin();
+begin
+  if v_is_service then return new; end if;
+
+  if new.is_bundle          is distinct from old.is_bundle
+     or new.bundle_item_count  is distinct from old.bundle_item_count
+     or new.quote_fingerprint  is distinct from old.quote_fingerprint
+     or new.service_id         is distinct from old.service_id
+     or new.estimated_price_cents is distinct from old.estimated_price_cents
+     or new.pickup_address_id  is distinct from old.pickup_address_id then
+    raise exception 'request quote fields are server-controlled';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_request_quote on requests;
+create trigger trg_request_quote
+  before update on requests
+  for each row execute function public.enforce_request_quote();
+
+revoke execute on function public.compute_bundle_fingerprint(uuid) from public;
+revoke execute on function public.seal_bundle_quote(uuid) from public;
+revoke execute on function public.enforce_request_quote() from public;
+grant execute on function public.compute_bundle_fingerprint(uuid) to service_role;
+grant execute on function public.seal_bundle_quote(uuid) to service_role;
+
+-- =========================================================================
+-- D04 — revoke the HISTORICAL direct grants, not just PUBLIC
+-- =========================================================================
+--
+-- 0004 granted authenticated EXECUTE on broadcast_request explicitly.
+-- Revoking PUBLIC leaves that grant in place, and CREATE OR REPLACE in 0038
+-- preserves it, so ordinary signed-in users would retain access to a
+-- privileged dispatch RPC that performs no caller-ownership check.
+revoke execute on function public.broadcast_request(uuid, int) from public, anon, authenticated;
+revoke execute on function public.record_dispatch_refusal(uuid, text, text) from public, anon, authenticated;
+revoke execute on function public.insert_service_area_boundary(text, text, text, text) from public, anon, authenticated;
+revoke execute on function public.bundle_subtotal_cents(uuid) from public, anon, authenticated;
+revoke execute on function public.compute_bundle_fingerprint(uuid) from public, anon, authenticated;
+revoke execute on function public.seal_bundle_quote(uuid) from public, anon, authenticated;
+revoke execute on function public.enforce_address_attestation() from public, anon, authenticated;
+revoke execute on function public.enforce_bundle_item_quote() from public, anon, authenticated;
+revoke execute on function public.enforce_request_quote() from public, anon, authenticated;
+
+grant execute on function public.broadcast_request(uuid, int) to service_role;
+grant execute on function public.record_dispatch_refusal(uuid, text, text) to service_role;
+grant execute on function public.insert_service_area_boundary(text, text, text, text) to service_role;
+grant execute on function public.bundle_subtotal_cents(uuid) to service_role;
+grant execute on function public.compute_bundle_fingerprint(uuid) to service_role;
+grant execute on function public.seal_bundle_quote(uuid) to service_role;
