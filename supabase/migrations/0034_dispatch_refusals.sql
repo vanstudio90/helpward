@@ -20,6 +20,7 @@ create table if not exists dispatch_refusals (
   -- Machine-readable so an alert can group on it.
   reason      text not null check (reason in (
     'address_unverified',      -- pickup address never passed geocode verification
+    'address_placeholder',     -- coordinates are the known legacy placeholder point
     'boundary_no_dataset',     -- no active official boundary set loaded
     'boundary_outside',        -- pin is outside every active boundary
     'no_pickup_location',      -- request has no usable address row

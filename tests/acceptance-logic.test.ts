@@ -194,3 +194,43 @@ describe("plan 4.5 — currency is derived per customer, not per price", () => {
     assert.deepEqual(ca, us);
   });
 });
+
+// ---------------------------------------------------------------------------
+// The placeholder coordinate is NOT caught by geography
+//
+// This encodes the reasoning behind the independent, non-overridable
+// placeholder guard in migration 0035. The legacy fallback coordinate is
+// downtown Vancouver — inside an approved launch municipality — so neither
+// the preliminary municipality check nor polygon containment can reject it.
+// Only an explicit identity check on the coordinate can.
+// ---------------------------------------------------------------------------
+describe("placeholder coordinates defeat every geographic check", () => {
+  test("the placeholder's own municipality passes the preliminary check", () => {
+    // Reverse-geocoding (-123.1207, 49.2827) yields Vancouver, BC, which is
+    // an approved launch municipality. So stage 1 says yes.
+    assert.equal(
+      isServiceable({ place: "Vancouver", region: "British Columbia", country: "CA" }),
+      true,
+      "stage 1 cannot reject the placeholder — it is a real Vancouver coordinate",
+    );
+  });
+
+  test("the placeholder is inside the City of Vancouver, so containment says yes too", () => {
+    // Vancouver city limits, approximately. The point sits well inside, not
+    // near an edge, so this is not a boundary-precision question: polygon
+    // containment genuinely returns serviceable.
+    const [lng, lat] = [-123.1207, 49.2827];
+    assert.ok(lng > -123.225 && lng < -123.023, "longitude is within Vancouver");
+    assert.ok(lat > 49.198 && lat < 49.317, "latitude is within Vancouver");
+  });
+
+  test("therefore detection must be an explicit coordinate identity check", () => {
+    // Which is exactly what isPlaceholderPoint / is_placeholder_point do,
+    // and why that guard is independent of geocode_verified and not
+    // relaxable by the emergency boundary override.
+    assert.equal(isPlaceholderPoint(-123.1207, 49.2827), true);
+    // A genuine address a few hundred metres away must NOT be caught.
+    assert.equal(isPlaceholderPoint(-123.1297, 49.2190), false);
+    assert.equal(isPlaceholderPoint(-123.1208, 49.2827), false, "tolerance must be tight");
+  });
+});

@@ -57,6 +57,31 @@ $$;
 
 grant execute on function public.find_nearby_providers(text, geography, int, int) to authenticated, service_role;
 
+-- ---------------------------------------------------------------------------
+-- is_placeholder_point — the legacy "downtown Vancouver" fallback coordinate.
+--
+-- This exists because boundary containment CANNOT protect against it. The
+-- placeholder is (-123.1207, 49.2827), which is inside the City of Vancouver
+-- — an approved launch municipality. So all 53 legacy rows carrying it would
+-- pass is_point_serviceable() as 'serviceable'. Geography is the wrong tool
+-- for detecting a coordinate that is geographically plausible but factually
+-- wrong about where the customer lives.
+--
+-- Checked UNCONDITIONALLY on every dispatch, independent of
+-- geocode_verified, so that a buggy backfill which wrongly marked a
+-- placeholder row verified still cannot send a helper to it. No override
+-- relaxes this.
+-- ---------------------------------------------------------------------------
+create or replace function public.is_placeholder_point(p_point geography)
+returns boolean
+language sql immutable as $$
+  select p_point is not null
+     and abs(st_x(p_point::geometry) - (-123.1207)) < 0.000001
+     and abs(st_y(p_point::geometry) -   49.2827)  < 0.000001;
+$$;
+
+grant execute on function public.is_placeholder_point(geography) to authenticated, service_role;
+
 create or replace function public.broadcast_request(
   p_request_id uuid,
   p_radius_km int default 20
@@ -99,6 +124,18 @@ begin
     perform record_dispatch_refusal(
       p_request_id, 'address_unverified',
       'addresses.geocode_verified is false — written by a release that predates geocode verification, or never remediated by the address backfill'
+    );
+    return 0;
+  end if;
+
+  -- Unconditional, and not overridable. The placeholder sits inside the
+  -- City of Vancouver, so the boundary check below would pass it. This is
+  -- the only thing standing between a legacy row and a helper being sent to
+  -- an address nobody lives at.
+  if is_placeholder_point(v_request.pickup_loc) then
+    perform record_dispatch_refusal(
+      p_request_id, 'address_placeholder',
+      'pickup coordinates are the legacy downtown-Vancouver placeholder; the address was never really geocoded'
     );
     return 0;
   end if;

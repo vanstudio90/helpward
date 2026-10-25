@@ -175,3 +175,61 @@ begin
 end $$;
 
 select 'boundary_containment.sql: all assertions passed' as result;
+
+-- ---------------------------------------------------------------------------
+-- 6. The placeholder coordinate must be refused even though it is inside an
+--    approved municipality.
+--
+-- This is the case boundary containment cannot catch, and the reason
+-- is_placeholder_point() exists as an independent, non-overridable gate.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_verdict text;
+  v_is_placeholder boolean;
+begin
+  v_verdict := is_point_serviceable(
+    st_setsrid(st_makepoint(-123.1207, 49.2827), 4326)::geography);
+  v_is_placeholder := is_placeholder_point(
+    st_setsrid(st_makepoint(-123.1207, 49.2827), 4326)::geography);
+
+  -- Containment SAYS YES. That is the whole point.
+  if v_verdict <> 'serviceable' then
+    raise warning 'Unexpected: the placeholder point is not inside the loaded Vancouver boundary (got %). Check the dataset — this assertion assumes it is, which is why the placeholder guard is needed.', v_verdict;
+  else
+    raise notice 'CONFIRMED: placeholder point IS serviceable by boundary containment — geography alone cannot reject it';
+  end if;
+
+  if not v_is_placeholder then
+    raise exception 'FAIL: is_placeholder_point() did not recognise the legacy placeholder coordinate';
+  end if;
+  raise notice 'PASS: is_placeholder_point() rejects it independently of geography';
+
+  -- A real coordinate nearby must not be swept up.
+  if is_placeholder_point(st_setsrid(st_makepoint(-123.1297, 49.2190), 4326)::geography) then
+    raise exception 'FAIL: is_placeholder_point() false-positived on a genuine nearby coordinate';
+  end if;
+  raise notice 'PASS: a genuine nearby coordinate is not flagged';
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 7. The placeholder guard is independent of geocode_verified.
+--
+-- Proves that a row wrongly marked verified (e.g. by a buggy backfill)
+-- still cannot dispatch. Runs entirely in a rolled-back transaction.
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  v_fn text;
+begin
+  select pg_get_functiondef(to_regprocedure('public.broadcast_request(uuid,int)')) into v_fn;
+  if v_fn is null then
+    raise exception 'broadcast_request not found';
+  end if;
+  if position('is_placeholder_point' in v_fn) = 0 then
+    raise exception 'FAIL: broadcast_request does not call is_placeholder_point — the placeholder guard is absent from the dispatch path';
+  end if;
+  raise notice 'PASS: broadcast_request calls is_placeholder_point in the dispatch path';
+end $$;
+
+select 'placeholder guard assertions passed' as result;

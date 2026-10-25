@@ -217,12 +217,42 @@ So an application/migration mismatch announces itself within one request
 instead of quietly halting the marketplace. **Recovery is to roll forward**,
 not to weaken the gate.
 
-`supabase/rollback/0035_down_emergency.sql` exists for exactly one case: a
-confirmed fault in the verification path itself, with no roll-forward
-available. It **refuses to run** without a recorded reason and owner, writes
-an `audit_log` entry before the gate comes down, does **not** relax the
-boundary check, and still records every unverified dispatch so the blast
-radius is measurable afterwards. Verified: the guard rejects an unset reason.
+**3. The emergency override was relaxing the wrong check — corrected.** The
+second draft relaxed `geocode_verified` while keeping boundary containment,
+reasoning that geography still bounded the damage. **It did not.** The legacy
+placeholder coordinate is `(-123.1207, 49.2827)` — downtown Vancouver, inside
+an approved launch municipality — so all 53 legacy placeholder rows pass
+`is_point_serviceable()` as `serviceable`. Boundary containment cannot reject
+a coordinate that is geographically plausible and factually wrong about where
+the customer lives, and an audit trail naming an owner and reason records
+accountability, not location correctness.
+
+The override is now `supabase/rollback/0035_emergency_relax_boundary.sql` and
+inverts the relaxation. It relaxes **boundary containment only** — the check
+that can fail spuriously (bad dataset load, dropped exclave, projection
+error). Two gates are **not overridable by anything in this codebase**:
+
+* `addresses.geocode_verified` must be true
+* `is_placeholder_point()` must be false
+
+Migration 0035 now also calls `is_placeholder_point()` **unconditionally** in
+the normal dispatch path, independent of `geocode_verified`, so a buggy
+backfill that wrongly marked a placeholder row verified still cannot send a
+helper to it. New refusal reason `address_placeholder`.
+
+There is therefore **no override that makes an application rollback dispatch
+again**, by design: a release that cannot produce verified addresses cannot
+dispatch, and recovery is to roll forward.
+
+Production availability: the override must not be applied to production until
+this condition is signed off. It refuses without a recorded reason and owner,
+refuses if 0035 is not applied, and records every boundary-relaxed dispatch.
+
+Rehearsal now covers R16–R20: under the override, an unverified address is
+still refused, a placeholder address is still refused, and a verified
+out-of-boundary address dispatches with a recorded `boundary_outside` row.
+R20 marks a placeholder row verified by hand and confirms it is still
+refused.
 
 **Bidirectional rehearsal** is specified as R1–R16 in
 `supabase/rollback/ROLLBACK.md`, including rolling the app back (R11),
@@ -267,7 +297,7 @@ regional journeys ran and the financial journey is blocked.
 
 ### What this run does establish
 
-* 62 automated tests execute and pass, covering the two-stage service-area check and its fail-closed behaviour, the municipality allowlist, the ambiguity gate, placeholder detection, and the full pricing split including exhaustive rounding reconciliation.
+* 65 automated tests execute and pass, covering the two-stage service-area check and its fail-closed behaviour, the municipality allowlist, the ambiguity gate, placeholder detection, and the full pricing split including exhaustive rounding reconciliation.
 * The two crashes found in review are covered by tests that were **proven to fail** when the bugs were reintroduced.
 * Route status codes, sitemap, internal links and fabricated-content removal are verified against a real production build with zero server errors.
 * One new defect (no ambiguity rejection at request time) and one new deployment hazard (the migration deadlock) were found *by* running this plan, and both are fixed.

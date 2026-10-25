@@ -59,11 +59,36 @@ instead of silently halting the marketplace.
    confirms the mismatch is in effect and dispatch is intentionally stopped.
 4. **Recover by rolling forward** — redeploy the verifying release — not by
    weakening the gate.
-5. Only if the verification path itself is the fault, and roll-forward is
-   unavailable, consider `0035_down_emergency.sql`. It refuses to run without
-   a recorded reason and owner, writes an `audit_log` entry before taking the
-   gate down, keeps the boundary check intact, and still records every
-   unverified dispatch so the blast radius is measurable.
+5. There is **no override that makes an application rollback dispatch
+   again**, and that is deliberate. Address verification is never relaxed, so
+   a release that cannot produce verified addresses cannot dispatch. Roll
+   forward.
+
+### The emergency override relaxes boundary containment ONLY
+
+`supabase/rollback/0035_emergency_relax_boundary.sql` exists for one fault:
+boundary containment refusing addresses that are genuinely inside a launch
+city (a bad dataset load, a dropped exclave, a projection error).
+
+It **cannot** dispatch an unverified or placeholder location. Two gates are
+not overridable by anything in this codebase:
+
+* `addresses.geocode_verified` must be true
+* `is_placeholder_point()` must be false
+
+The second matters specifically because **boundary containment cannot catch
+the placeholder**. The legacy fallback coordinate is downtown Vancouver,
+inside an approved launch municipality, so all 53 legacy rows pass
+`is_point_serviceable()` as `serviceable`. An earlier draft of the override
+relaxed verification and kept the boundary check on the reasoning that
+geography constrained the damage; it did not. Recording an owner, a reason
+and an audit event establishes accountability, not location correctness.
+
+Production availability: do not apply this file to production until that
+condition has been reviewed and signed off. It requires a deliberate psql run
+with `helpward.rollback_reason` and `helpward.rollback_owner` set, refuses
+without them, refuses if migration 0035 is not applied, and records every
+boundary-relaxed dispatch so the geographic blast radius is measurable.
 
 ### What rollback must never do
 
@@ -96,6 +121,10 @@ schema and behaviour probes.
 | R11 | **Roll the app back** to the previous build | requests refused, `address_unverified` rows accumulate, admins notified within one request |
 | R12 | `dispatch_health()` during R11 | returns `address_unverified` with `is_configuration_fault = true` |
 | R13 | Roll forward again | dispatch resumes with no further intervention |
-| R14 | Attempt `0035_down_emergency.sql` with no reason/owner set | **refuses** with a hint |
-| R15 | Same with reason + owner set | applies, writes `audit_log` row, boundary check still enforced |
-| R16 | Re-apply `0035_matching_functions.sql` | gate restored |
+| R14 | Attempt `0035_emergency_relax_boundary.sql` with no reason/owner set | **refuses** with a hint |
+| R15 | Same with reason + owner set | applies; writes `audit_log` row naming what is relaxed and what is still enforced |
+| R16 | Under the override, submit at an **unverified** address | **still refused**, `address_unverified` recorded |
+| R17 | Under the override, submit at a **placeholder** address | **still refused**, `address_placeholder` recorded — proves boundary relaxation does not open the placeholder path |
+| R18 | Under the override, submit at a verified address **outside** all boundaries | dispatches, and a `boundary_outside` row records that it was allowed through |
+| R19 | Re-apply `0035_matching_functions.sql` | boundary gate restored |
+| R20 | With 0035 applied normally, mark a placeholder row `geocode_verified = true` by hand and submit | **still refused**, `address_placeholder` — proves the guard is independent of the verification flag |
