@@ -63,27 +63,74 @@ describe("plan 2.4 — placeholder coordinates are identifiable", () => {
 });
 
 describe("plan 2.5 — ambiguous or unavailable geocoding is refused", () => {
-  const base = {
+  // A typed address that Mapbox matched exactly, as an address feature,
+  // with the street number matched and no rival candidate.
+  const forwardExact = {
     formatted: "1 Main St", lng: -123.1, lat: 49.2, country: "CA",
     region: "British Columbia", city: "Vancouver", postalCode: null,
-    confidence: "exact" as const, addressNumberMatch: "matched", candidateCount: 1,
+    confidence: "exact" as const, addressNumberMatch: "matched",
+    candidateCount: 1, origin: "forward" as const, featureType: "address",
   };
-  test("accepts an exact, single-candidate match", () => {
-    assert.equal(isAmbiguous(base), false);
+
+  test("accepts an exact, single-candidate address feature", () => {
+    assert.equal(isAmbiguous(forwardExact), false);
   });
+
   test("rejects medium and low confidence", () => {
-    assert.equal(isAmbiguous({ ...base, confidence: "medium" }), true);
-    assert.equal(isAmbiguous({ ...base, confidence: "low" }), true);
+    assert.equal(isAmbiguous({ ...forwardExact, confidence: "medium" }), true);
+    assert.equal(isAmbiguous({ ...forwardExact, confidence: "low" }), true);
   });
-  test("rejects an unmatched street number", () => {
-    assert.equal(isAmbiguous({ ...base, addressNumberMatch: "unmatched" }), true);
+
+  test("rejects an unmatched OR not_applicable street number", () => {
+    assert.equal(isAmbiguous({ ...forwardExact, addressNumberMatch: "unmatched" }), true);
+    // not_applicable was previously accepted here while the backfill
+    // flagged it. For a typed street address, no street number matched
+    // means we do not know which building.
+    assert.equal(isAmbiguous({ ...forwardExact, addressNumberMatch: "not_applicable" }), true);
   });
+
   test("rejects a second plausible candidate", () => {
-    assert.equal(isAmbiguous({ ...base, candidateCount: 2 }), true);
+    assert.equal(isAmbiguous({ ...forwardExact, candidateCount: 2 }), true);
   });
-  test("a reverse lookup carries no match score and is not treated as ambiguous", () => {
-    assert.equal(isAmbiguous({ ...base, confidence: null, addressNumberMatch: null }), false);
+
+  // Regression for R03: match_code exists only on address-type features, so
+  // a forward street/locality/POI result carries confidence === null. That
+  // used to short-circuit every check, accepting a two-candidate street as
+  // a verified dispatch address.
+  test("rejects a forward NON-address feature even with no match_code", () => {
+    for (const ft of ["street", "place", "locality", "postcode", "poi", null]) {
+      assert.equal(
+        isAmbiguous({ ...forwardExact, featureType: ft, confidence: null,
+                      addressNumberMatch: null, candidateCount: 2 }),
+        true,
+        `forward ${ft ?? "untyped"} feature must not be accepted`,
+      );
+    }
   });
+
+  test("rejects a forward address feature that somehow carries no match_code", () => {
+    assert.equal(isAmbiguous({ ...forwardExact, confidence: null }), true);
+  });
+
+  // A reverse lookup starts from coordinates the caller already holds, so
+  // there is no query that could have matched ambiguously. This is decided
+  // by `origin`, never inferred from absent metadata.
+  test("accepts a reverse lookup, which has no match score by definition", () => {
+    assert.equal(
+      isAmbiguous({ ...forwardExact, origin: "reverse", confidence: null,
+                    addressNumberMatch: null, featureType: "address" }),
+      false,
+    );
+  });
+
+  test("a reverse lookup is accepted on origin, not on missing metadata", () => {
+    // Same absent metadata, forward origin -> refused. Proves the two are
+    // distinguished explicitly.
+    const meta = { confidence: null, addressNumberMatch: null, featureType: "street" };
+    assert.equal(isAmbiguous({ ...forwardExact, ...meta, origin: "reverse" }), false);
+    assert.equal(isAmbiguous({ ...forwardExact, ...meta, origin: "forward" }), true);
+  });
+
   test("every failure reason has customer-facing copy", () => {
     for (const r of ["geocoding_unavailable", "not_found", "incomplete", "ambiguous"] as const) {
       assert.ok(RESOLVE_FAILURE_MESSAGE[r]?.length > 10, `missing message for ${r}`);

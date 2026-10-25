@@ -11,19 +11,21 @@ reaches production. A forward order that works is not sufficient evidence.
 | `0030_matching_columns` | additive column + index + `max_location_age()` | **Yes** — required *by* the new code | Yes |
 | `0031_payout_split` | function, no new column dependency | Yes | Yes — old code calls it unchanged; only amounts differ |
 | `0033_service_area_boundaries` | new tables + functions | **Yes** | Yes — unused by old code |
+| `0036_attestation_integrity` | triggers + column privileges + grant hygiene | **Yes** | Yes — old code never set the attestation columns anyway |
+| `0037_boundary_enforcement_mode` | new table + functions | **Yes** | Yes — unused by old code |
 | `0034_dispatch_refusals` | new table + functions | **Yes** | Yes — unused by old code |
-| `0035_matching_functions` | functions, **NOT backward compatible** | **No** — apply with or after the deploy | **Yes, intentionally** — see below |
+| `0038_matching_functions` | functions, **NOT backward compatible** | **No** — apply with or after the deploy | **Yes, intentionally** — see below |
 
 ## Forward sequence
 
-1. `0029`, `0030`, `0033`, `0034` — all additive. Nothing changes behaviour.
+1. `0029`, `0030`, `0033`, `0034`, `0036`, `0037` — additive or integrity-only. `0036` revokes client write access to the attestation columns, which old code never used.
 2. Load official boundary polygons (`scripts/load-boundaries.mjs`) and mark a
    dataset active. **Until this is done `is_point_serviceable()` returns
    `no_dataset` and nothing is dispatchable** — fail-closed by design.
 3. Run the address backfill (`scripts/backfill-addresses.mjs --dry-run`, review
    the ledger, then `--apply`).
 4. Deploy the application release.
-5. `0031`, then `0035`.
+5. `0031`, then `0038`.
 6. Verify: `node scripts/verify-migration-state.mjs`.
 
 Step 2 and 3 can run before or after step 4; both are safe in either order.
@@ -31,10 +33,10 @@ Step 5 must not precede step 4.
 
 ## Rollback
 
-**Rolling the application back does not require reverting `0035`, and you
+**Rolling the application back does not require reverting `0038`, and you
 should not revert it.**
 
-With `0035` applied and an older release running, the old code cannot set
+With `0038` applied and an older release running, the old code cannot set
 `addresses.geocode_verified`. Every new request is therefore refused at the
 verification gate. That is correct: a release that cannot verify an address
 must not be dispatching helpers to it.
@@ -87,7 +89,7 @@ and an audit event establishes accountability, not location correctness.
 Production availability: do not apply this file to production until that
 condition has been reviewed and signed off. It requires a deliberate psql run
 with `helpward.rollback_reason` and `helpward.rollback_owner` set, refuses
-without them, refuses if migration 0035 is not applied, and records every
+without them, refuses if migration 0038 is not applied, and records every
 boundary-relaxed dispatch so the geographic blast radius is measurable.
 
 ### What rollback must never do
@@ -115,7 +117,7 @@ schema and behaviour probes.
 | R5 | Known unincorporated point | → `outside_boundary` |
 | R6 | Deactivate dataset, re-probe | → `no_dataset`, and nothing dispatchable |
 | R7 | Run backfill `--dry-run` then `--apply` | ledger classifies; ambiguous/failed/out-of-area stay unverified |
-| R8 | Deploy new app, apply `0031`,`0035` | succeed |
+| R8 | Deploy new app, apply `0031`,`0038` | succeed |
 | R9 | Submit a request at a verified in-boundary address | dispatches; no `dispatch_refusals` row |
 | R10 | Submit at an unremediated legacy address | refused; `address_unverified` row; admin notified |
 | R11 | **Roll the app back** to the previous build | requests refused, `address_unverified` rows accumulate, admins notified within one request |
@@ -126,5 +128,6 @@ schema and behaviour probes.
 | R16 | Under the override, submit at an **unverified** address | **still refused**, `address_unverified` recorded |
 | R17 | Under the override, submit at a **placeholder** address | **still refused**, `address_placeholder` recorded — proves boundary relaxation does not open the placeholder path |
 | R18 | Under the override, submit at a verified address **outside** all boundaries | dispatches, and a `boundary_outside` row records that it was allowed through |
-| R19 | Re-apply `0035_matching_functions.sql` | boundary gate restored |
+| R19 | `select set_boundary_enforcement('enforced', …)` | boundary gate restored in BOTH layers |
+| R19b | During the override, submit through the **customer form** | succeeds — proves the override's scope covers request creation, not just broadcast (R08) |
 | R20 | With 0035 applied normally, mark a placeholder row `geocode_verified = true` by hand and submit | **still refused**, `address_placeholder` — proves the guard is independent of the verification flag |

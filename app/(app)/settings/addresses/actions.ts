@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { validateSavedAddress } from "@/lib/saved-addresses-pure";
 import { resolveDispatchableAddress } from "@/lib/dispatch-guard";
 
@@ -36,7 +36,11 @@ export async function createSavedAddressAction(formData: FormData): Promise<Stat
   const guard = await resolveDispatchableAddress({ text: formatted.trim(), client: supabase });
   if (!guard.ok) return { error: guard.error };
 
-  const { error: insErr } = await supabase
+  // Service client: geocode_verified is a server attestation that the
+  // authenticated client is forbidden from setting (migration 0036), so an
+  // insert through the ordinary client would silently store an unverified
+  // saved address.
+  const { error: insErr } = await createSupabaseServiceClient()
     .from("saved_addresses")
     .insert({
       user_id: user.id,
@@ -48,6 +52,7 @@ export async function createSavedAddressAction(formData: FormData): Promise<Stat
       region: guard.address.region,
       country: guard.address.country,
       geocode_verified: true,
+      geocoded_at: new Date().toISOString(),
       is_default: makeDefault,
     });
   if (insErr) return { error: insErr.message };

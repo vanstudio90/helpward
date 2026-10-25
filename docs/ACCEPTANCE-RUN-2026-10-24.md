@@ -186,10 +186,10 @@ satisfy. There was no safe order. It is now split by compatibility class:
 | `0033_service_area_boundaries` | new tables + functions | **Yes** |
 | `0034_dispatch_refusals` | new table + functions | **Yes** |
 | `0031_payout_split` | function, no column dependency | Yes |
-| `0035_matching_functions` | functions, **not backward compatible** | **No** |
+| `0038_matching_functions` | functions, **not backward compatible** | **No** |
 
 **Forward:** `0029`,`0030`,`0033`,`0034` → load boundaries → backfill →
-deploy → `0031` → `0035`.
+deploy → `0031` → `0038`.
 
 **2. A forward-safe order is not sufficient — and the first draft's
 down-migration was wrong.** It restored the permissive pre-0035
@@ -199,8 +199,8 @@ dispatch to the legacy placeholder coordinates. **It has been deleted.**
 
 The corrected posture: address verification is a safety requirement, not a
 feature flag. An application release that cannot produce verified addresses
-must not dispatch. So rolling back **does not revert `0035`** — and with
-`0035` in place, old code is refused. What makes that operable is that the
+must not dispatch. So rolling back **does not revert `0038`** — and with
+`0038` in place, old code is refused. What makes that operable is that the
 refusal is now **loud and actionable** rather than silent:
 
 * migration `0034` adds `dispatch_refusals`; every refusal records a row with
@@ -297,7 +297,7 @@ regional journeys ran and the financial journey is blocked.
 
 ### What this run does establish
 
-* 65 automated tests execute and pass, covering the two-stage service-area check and its fail-closed behaviour, the municipality allowlist, the ambiguity gate, placeholder detection, and the full pricing split including exhaustive rounding reconciliation.
+* 74 automated tests execute and pass, covering the two-stage service-area check and its fail-closed behaviour, the municipality allowlist, the ambiguity gate, placeholder detection, and the full pricing split including exhaustive rounding reconciliation.
 * The two crashes found in review are covered by tests that were **proven to fail** when the bugs were reintroduced.
 * Route status codes, sitemap, internal links and fabricated-content removal are verified against a real production build with zero server errors.
 * One new defect (no ambiguity rejection at request time) and one new deployment hazard (the migration deadlock) were found *by* running this plan, and both are fixed.
@@ -327,3 +327,35 @@ verified work:
 What the commit does carry as executed evidence: 62 passing automated tests
 (including regressions proven to fail when their bugs are reintroduced), a
 clean production build, and 25/25 route assertions with zero server errors.
+
+
+---
+
+## Independent source review, 2026-10-25 — all nine findings addressed
+
+An independent review of `260be25` returned **changes requested**: six P1 and
+three P2 findings. All were verified against the source and confirmed; none
+was disputed. Fixes are in the follow-up commit.
+
+| # | Finding | Verified how | Fix |
+|---|---|---|---|
+| R01 | `geocode_verified` writable by the customer it gates (`addr_self` is FOR ALL) | read `0002_rls.sql:105-109` | 0036: column privileges revoked + BEFORE triggers force the flag off for every non-service writer and clear it when the address or coordinates change. App now attests through the service client only. |
+| R02 | Bundle stop prices customer-editable before acceptance (`rbi_write_own` FOR ALL) | read `0015_bundle_items.sql:66-114` | 0036: price/service/position frozen by trigger; `bundle_subtotal_cents()` re-derives from the catalog at acceptance and raises on any disagreement; stop count re-checked. |
+| R03 | `isAmbiguous` treated absent `match_code` as "reverse lookup"; forward street results accepted | **reproduced** the reviewer's probe — returned `verified:true` | `origin` and `featureType` now carried explicitly. Forward requires an address feature, exact/high confidence, matched street number, single candidate. `not_applicable` now refused, matching the backfill. |
+| R04 | Service-role loader blocked by its own `admin only` guard | read `jwt_role()`; service role returns `service_role`, so `is_admin()` is false with claims present | 0036: allow service role, admin, or a no-JWT psql session; deny everything else explicitly. |
+| R05 | Default PUBLIC EXECUTE not revoked on SECURITY DEFINER functions | static privilege review | 0036: `REVOKE … FROM PUBLIC` on all ten, then narrow re-grants. `dispatch_health` now rejects non-admin callers in its body as well. |
+| R06 | Temporary geocoding results persisted | read both URL builders and the backfill | `permanent` sent on forward and reverse; backfill always `permanent=true` and refuses to run with `MAPBOX_PERMANENT=false`. Misleading comment corrected. |
+| R07 | Completeness check collapsed 17 jurisdictions to 15 names | **reproduced** with the reviewer's 15-feature fixture — it passed | Completeness is now per jurisdiction id, with City/District and City/Township required separately. Verified: the same fixture now fails naming both missing jurisdictions; a 17-jurisdiction file passes. |
+| R08 | Override changed `broadcast_request` only; the app guard still refused before request creation | cross-path read of `dispatch-guard.ts` | 0037 adds one shared `boundary_enforcement` setting read by **both** layers. The emergency script flips that setting rather than replacing a function body, so verification and placeholder rejection stay exactly as in normal operation. |
+| R09 | SQL tests did not demonstrate edge or dispatch behaviour | read sections 3 and 7 | Section 3 derives a paired inside/outside point from one real boundary segment and verifies both distances and containment independently. Section 7 now **executes** `broadcast_request` against a wrongly-verified placeholder row in a rolled-back transaction and asserts the refusal reason and absence of `match_attempts`. |
+
+Regression coverage grew from 65 to **74 tests**, all passing. The new tests
+were verified to fail when the R03 and R08 defects are reintroduced.
+
+Migration apply order is now `0029, 0030, 0031, 0033, 0034, 0036, 0037, 0038`
+(matching functions renumbered from 0035 because they depend on 0037).
+
+**Nothing in this round was executed against a database.** R01, R02, R04, R05
+and R09 are SQL and RLS changes whose behaviour can only be proven in the
+isolated environment, under real customer, provider, admin and service-role
+JWTs. They remain unverified claims until then.

@@ -6,7 +6,7 @@ import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/s
 import { createSeriesAction } from "@/app/(app)/bookings/series/actions";
 import { MAX_BUNDLE_ITEMS } from "@/lib/bundle-pure";
 import { quoteOneShotCents, quoteBundleCents } from "@/lib/pricing";
-import { resolveDispatchableAddress, addressInsertFields } from "@/lib/dispatch-guard";
+import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
 
 type State = { error?: string; success?: string } | undefined;
@@ -132,12 +132,11 @@ export async function createRequestAction(
       text: addressText, lat: clientLat, lng: clientLng, client: supabase,
     });
     if (!guard.ok) return { error: guard.error };
-    const { data: bundleAddress, error: bundleAddrErr } = await supabase
-      .from("addresses")
-      .insert(addressInsertFields(guard.address, user.id))
-      .select()
-      .single();
-    if (bundleAddrErr || !bundleAddress) return { error: "Couldn't save the address." };
+    // Service client: geocode_verified is a server attestation and the
+    // authenticated client is forbidden from setting it (migration 0036).
+    const bundleAddr = await insertAttestedAddress(
+      createSupabaseServiceClient(), guard.address, user.id);
+    if (!bundleAddr.ok) return { error: bundleAddr.error };
 
     const itemsSubtotal = bundleItems.reduce((s, it) => s + (lookup.get(it.serviceId)?.base_price_cents ?? 0), 0);
     const totalCents = quoteBundleCents(itemsSubtotal);
@@ -151,7 +150,7 @@ export async function createRequestAction(
       .insert({
         customer_id: user.id,
         service_id: primaryServiceId,
-        pickup_address_id: bundleAddress.id,
+        pickup_address_id: bundleAddr.id,
         scheduled_for: scheduledFor,
         notes,
         estimated_price_cents: totalCents,
@@ -209,14 +208,10 @@ export async function createRequestAction(
     text: addressText, lat: clientLat, lng: clientLng, client: supabase,
   });
   if (!guard.ok) return { error: guard.error };
-  const { data: address, error: addrErr } = await supabase
-    .from("addresses")
-    .insert(addressInsertFields(guard.address, user.id))
-    .select()
-    .single();
-  if (addrErr || !address) {
-    return { error: "Couldn't save the address: " + (addrErr?.message ?? "unknown") };
-  }
+  // Service client: see the bundle path above.
+  const addr = await insertAttestedAddress(
+    createSupabaseServiceClient(), guard.address, user.id);
+  if (!addr.ok) return { error: addr.error };
 
   // Create the request
   const { data: request, error: reqErr } = await supabase
@@ -224,7 +219,7 @@ export async function createRequestAction(
     .insert({
       customer_id: user.id,
       service_id: serviceId,
-      pickup_address_id: address.id,
+      pickup_address_id: addr.id,
       scheduled_for: scheduledFor,
       notes,
       // Includes the flat service fee so the saved estimate matches the

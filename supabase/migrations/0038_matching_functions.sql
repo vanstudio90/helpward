@@ -1,7 +1,8 @@
 -- DEPLOY-COUPLED — apply only WITH or AFTER the matching application
 -- release, never before.
 --
--- DEPENDS ON 0033 (is_point_serviceable) and 0034 (record_dispatch_refusal).
+-- DEPENDS ON 0033 (is_point_serviceable), 0034 (record_dispatch_refusal)
+-- and 0037 (boundary_enforcement_mode). Must be applied after all three.
 --
 -- NOT BACKWARD COMPATIBLE. broadcast_request below refuses to dispatch a
 -- request whose pickup address is not geocode_verified. The previous
@@ -55,6 +56,7 @@ language sql stable as $$
   limit p_limit;
 $$;
 
+revoke execute on function public.find_nearby_providers(text, geography, int, int) from public;
 grant execute on function public.find_nearby_providers(text, geography, int, int) to authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
@@ -80,6 +82,7 @@ language sql immutable as $$
      and abs(st_y(p_point::geometry) -   49.2827)  < 0.000001;
 $$;
 
+revoke execute on function public.is_placeholder_point(geography) from public;
 grant execute on function public.is_placeholder_point(geography) to authenticated, service_role;
 
 create or replace function public.broadcast_request(
@@ -143,7 +146,18 @@ begin
   -- Authoritative boundary containment. Fail-closed: with no active
   -- official boundary dataset we refuse rather than fall back to the
   -- application's preliminary municipality-name match.
+  -- Boundary containment, unless a boundary incident is declared. The
+  -- application guard reads the same setting, so the emergency scope is
+  -- identical in both layers (review finding R08).
   v_boundary := is_point_serviceable(v_request.pickup_loc);
+  if boundary_enforcement_mode() = 'relaxed' and v_boundary <> 'serviceable' then
+    perform record_dispatch_refusal(
+      p_request_id,
+      case when v_boundary = 'no_dataset' then 'boundary_no_dataset' else 'boundary_outside' end,
+      'DISPATCHED ANYWAY — boundary enforcement relaxed by declared incident; verification and placeholder checks still applied'
+    );
+    v_boundary := 'serviceable';
+  end if;
   if v_boundary = 'no_dataset' then
     perform record_dispatch_refusal(
       p_request_id, 'boundary_no_dataset',
@@ -183,4 +197,5 @@ begin
 end;
 $$;
 
-grant execute on function public.broadcast_request(uuid, int) to authenticated, service_role;
+revoke execute on function public.broadcast_request(uuid, int) from public;
+grant execute on function public.broadcast_request(uuid, int) to service_role;

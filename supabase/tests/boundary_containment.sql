@@ -63,66 +63,89 @@ select pg_temp.expect_verdict('Tijuana, MX (outside both countries)',   -117.038
 -- ---------------------------------------------------------------------------
 -- 3. IMMEDIATELY inside vs immediately outside a boundary.
 --
--- This is the core of the test. For each launch area, pick a real boundary
--- segment from the loaded dataset and assert a point a few metres either
--- side of it. Generated from the dataset itself so the points are guaranteed
--- to straddle the true edge rather than a guess.
+-- Paired points are derived from ONE selected real boundary segment and
+-- are verified to be the intended distance from it, so this genuinely
+-- tests edge behaviour. The earlier version took ST_PointOnSurface of the
+-- whole negatively-buffered polygon, which can sit deep in the interior —
+-- it would have passed even if containment eroded a wide strip near the
+-- edge.
 -- ---------------------------------------------------------------------------
 do $$
 declare
   r record;
   v_edge geometry;
-  v_inside geometry;
-  v_outside geometry;
-  v_in text;
-  v_out text;
+  v_pt geometry;          -- a point ON the boundary
+  v_in geometry;
+  v_out geometry;
+  v_din double precision;
+  v_dout double precision;
+  v_vin text;
+  v_vout text;
+  v_tol constant double precision := 25.0;  -- metres either side
 begin
   for r in
     select b.area_id, b.municipality, b.boundary
     from service_area_boundaries b
     join service_area_datasets d on d.id = b.dataset_id and d.is_active
-    -- One representative municipality per area.
     where b.id in (
       select min(b2.id) from service_area_boundaries b2
       join service_area_datasets d2 on d2.id = b2.dataset_id and d2.is_active
       group by b2.area_id
     )
   loop
-    v_edge := st_boundary(r.boundary::geometry);
+    v_edge := st_boundary(r.boundary);
+    -- A concrete point on the edge, then step perpendicular by walking
+    -- along the inward/outward normals that ST_Buffer produces locally.
+    v_pt := st_lineinterpolatepoint(
+              st_geometryn(st_multi(st_linemerge(v_edge)), 1), 0.5);
 
-    -- 25 m inside and 25 m outside, measured perpendicular to the edge by
-    -- buffering the polygon inward/outward and taking a boundary point.
-    v_inside  := st_pointonsurface(st_buffer(r.boundary::geography, -25)::geometry);
-    v_outside := st_difference(
-                   st_buffer(r.boundary::geography, 25)::geometry,
-                   st_buffer(r.boundary::geography, 5)::geometry
-                 );
-    v_outside := st_pointonsurface(v_outside);
+    -- Nearest interior/exterior points at the requested offset, found by
+    -- intersecting a small circle around the edge point with the polygon
+    -- and its complement.
+    v_in := st_pointonsurface(
+              st_intersection(st_buffer(v_pt::geography, v_tol)::geometry, r.boundary));
+    v_out := st_pointonsurface(
+              st_difference(st_buffer(v_pt::geography, v_tol)::geometry, r.boundary));
 
-    if v_inside is null or st_isempty(v_inside) then
-      raise exception 'Could not derive an inside point for % (%). Geometry may be too small or invalid.', r.municipality, r.area_id;
+    if v_in is null or st_isempty(v_in) or v_out is null or st_isempty(v_out) then
+      raise exception 'Could not derive a paired inside/outside point for % (%)', r.municipality, r.area_id;
     end if;
 
-    v_in  := is_point_serviceable(v_inside::geography);
-    v_out := is_point_serviceable(v_outside::geography);
-
-    if v_in <> 'serviceable' then
-      raise exception 'FAIL % (%): point 25m INSIDE the boundary returned %', r.municipality, r.area_id, v_in;
+    -- Verify the pair really does straddle the edge, independently.
+    v_din  := st_distance(v_in::geography,  v_edge::geography);
+    v_dout := st_distance(v_out::geography, v_edge::geography);
+    if v_din > v_tol or v_dout > v_tol then
+      raise exception 'FAIL % (%): derived points are not within %m of the boundary (in=%m out=%m)',
+        r.municipality, r.area_id, v_tol, round(v_din::numeric, 1), round(v_dout::numeric, 1);
     end if;
-    raise notice 'PASS % (%): 25m inside  -> serviceable', r.municipality, r.area_id;
+    if not st_covers(r.boundary, v_in) then
+      raise exception 'FAIL % (%): the "inside" point is not inside the polygon', r.municipality, r.area_id;
+    end if;
+    if st_covers(r.boundary, v_out) then
+      raise exception 'FAIL % (%): the "outside" point is inside the polygon', r.municipality, r.area_id;
+    end if;
 
-    -- A point 25m outside may legitimately fall inside an ADJACENT approved
-    -- municipality (Vancouver/Burnaby share a border), which is still
-    -- serviceable and correct. Only assert the strict case where the
-    -- neighbour is not in any active boundary.
-    if point_service_area(v_outside::geography) is null then
-      if v_out <> 'outside_boundary' then
-        raise exception 'FAIL % (%): point 25m OUTSIDE all boundaries returned %', r.municipality, r.area_id, v_out;
+    v_vin  := is_point_serviceable(v_in::geography);
+    v_vout := is_point_serviceable(v_out::geography);
+
+    if v_vin <> 'serviceable' then
+      raise exception 'FAIL % (%): point %sm INSIDE the boundary returned %',
+        r.municipality, r.area_id, round(v_din::numeric, 1), v_vin;
+    end if;
+    raise notice 'PASS % (%): %sm inside  -> serviceable', r.municipality, r.area_id, round(v_din::numeric, 1);
+
+    -- A point just outside may legitimately fall inside an ADJACENT
+    -- approved municipality (Vancouver and Burnaby share a border), which
+    -- is correctly serviceable. Only assert the strict case.
+    if point_service_area(v_out::geography) is null then
+      if v_vout <> 'outside_boundary' then
+        raise exception 'FAIL % (%): point %sm OUTSIDE all boundaries returned %',
+          r.municipality, r.area_id, round(v_dout::numeric, 1), v_vout;
       end if;
-      raise notice 'PASS % (%): 25m outside -> outside_boundary', r.municipality, r.area_id;
+      raise notice 'PASS % (%): %sm outside -> outside_boundary', r.municipality, r.area_id, round(v_dout::numeric, 1);
     else
-      raise notice 'SKIP % (%): 25m outside falls in an adjacent approved municipality (%), which is correctly serviceable',
-        r.municipality, r.area_id, point_service_area(v_outside::geography);
+      raise notice 'SKIP % (%): the outside point falls in adjacent approved municipality %',
+        r.municipality, r.area_id, point_service_area(v_out::geography);
     end if;
   end loop;
 end $$;
@@ -213,23 +236,63 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- 7. The placeholder guard is independent of geocode_verified.
+-- 7. EXECUTE broadcast_request against a wrongly-verified placeholder row.
 --
--- Proves that a row wrongly marked verified (e.g. by a buggy backfill)
--- still cannot dispatch. Runs entirely in a rolled-back transaction.
+-- The earlier version inspected pg_get_functiondef for the string
+-- "is_placeholder_point", which would also have passed if the guard
+-- appeared only in a comment or an unreachable branch. This runs the real
+-- function in a transaction that is rolled back, so it proves behaviour.
 -- ---------------------------------------------------------------------------
 do $$
 declare
-  v_fn text;
+  v_customer uuid;
+  v_service  text;
+  v_addr     uuid;
+  v_req      uuid;
+  v_count    int;
+  v_reason   text;
 begin
-  select pg_get_functiondef(to_regprocedure('public.broadcast_request(uuid,int)')) into v_fn;
-  if v_fn is null then
-    raise exception 'broadcast_request not found';
+  select id into v_customer from profiles where role = 'customer' limit 1;
+  select id into v_service from services where active limit 1;
+  if v_customer is null or v_service is null then
+    raise exception 'Need at least one customer profile and one active service to run this fixture';
   end if;
-  if position('is_placeholder_point' in v_fn) = 0 then
-    raise exception 'FAIL: broadcast_request does not call is_placeholder_point — the placeholder guard is absent from the dispatch path';
+
+  -- Placeholder coordinates, DELIBERATELY marked verified — the exact
+  -- state a buggy backfill would leave behind.
+  insert into addresses (user_id, formatted, location, country, geocode_verified)
+  values (v_customer, 'FIXTURE — placeholder, wrongly verified',
+          st_setsrid(st_makepoint(-123.1207, 49.2827), 4326)::geography, 'CA', true)
+  returning id into v_addr;
+
+  insert into requests (customer_id, service_id, pickup_address_id,
+                        estimated_price_cents, estimated_duration_min, status)
+  values (v_customer, v_service, v_addr, 2450, 45, 'matching')
+  returning id into v_req;
+
+  v_count := broadcast_request(v_req, 20);
+
+  if v_count <> 0 then
+    raise exception 'FAIL: broadcast_request dispatched a wrongly-verified placeholder address (% offers)', v_count;
   end if;
-  raise notice 'PASS: broadcast_request calls is_placeholder_point in the dispatch path';
+
+  select reason into v_reason from dispatch_refusals
+   where request_id = v_req order by created_at desc limit 1;
+  if v_reason is distinct from 'address_placeholder' then
+    raise exception 'FAIL: expected refusal reason address_placeholder, got %', coalesce(v_reason, '<none>');
+  end if;
+
+  if exists (select 1 from match_attempts where request_id = v_req) then
+    raise exception 'FAIL: match_attempts were created for a placeholder address';
+  end if;
+
+  raise notice 'PASS: wrongly-verified placeholder refused with reason address_placeholder, no match_attempts';
+
+  -- Roll the fixture back.
+  raise exception using errcode = 'HW000', message = '__fixture_rollback__';
+exception
+  when sqlstate 'HW000' then
+    raise notice 'fixture rolled back';
 end $$;
 
 select 'placeholder guard assertions passed' as result;

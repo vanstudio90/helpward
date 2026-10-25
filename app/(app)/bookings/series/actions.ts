@@ -8,7 +8,7 @@ import {
   type Cadence, nextOccurrenceDate, occurrenceToISOAtTimezone,
   validateSeriesPatch, patchAffectsSchedule, type SeriesPatch,
 } from "@/lib/recurrence-pure";
-import { resolveDispatchableAddress, addressInsertFields } from "@/lib/dispatch-guard";
+import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 
 type State = { error?: string; success?: string; seriesId?: string } | undefined;
 
@@ -75,19 +75,17 @@ export async function createSeriesAction(
   // out-of-area address would be re-dispatched indefinitely by the cron.
   const guard = await resolveDispatchableAddress({ text: addressText, client: supabase });
   if (!guard.ok) return { error: guard.error };
-  const { data: address, error: addrErr } = await supabase
-    .from("addresses")
-    .insert(addressInsertFields(guard.address, user.id))
-    .select()
-    .single();
-  if (addrErr || !address) return { error: addrErr?.message ?? "Couldn't save the address." };
+  // Service client: geocode_verified is a server attestation (0036).
+  const addr = await insertAttestedAddress(
+    createSupabaseServiceClient(), guard.address, user.id);
+  if (!addr.ok) return { error: addr.error };
 
   const { data: series, error: serErr } = await supabase
     .from("booking_series")
     .insert({
       customer_id: user.id,
       service_id: service.id,
-      pickup_address_id: address.id,
+      pickup_address_id: addr.id,
       cadence,
       weekday,
       day_of_month: dayOfMonth,

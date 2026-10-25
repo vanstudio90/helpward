@@ -57,7 +57,7 @@
 --          set_config('helpward.rollback_owner',  'name@helpward.com', false);
 --   \i supabase/rollback/0035_emergency_relax_boundary.sql
 --
--- REVERT: re-apply supabase/migrations/0035_matching_functions.sql.
+-- REVERT: select set_boundary_enforcement('enforced', 'incident closed', '<email>');
 -- ============================================================================
 
 do $$
@@ -76,7 +76,7 @@ do $$
 begin
   if to_regprocedure('public.is_placeholder_point(geography)') is null then
     raise exception using
-      message = 'is_placeholder_point() is missing — migration 0035 is not applied.',
+      message = 'is_placeholder_point() is missing — migration 0038 is not applied.',
       hint    = 'This override is only safe on top of the verification gates it preserves. Apply 0035 first.';
   end if;
 end $$;
@@ -96,89 +96,32 @@ values (
       'addresses.geocode_verified must be true',
       'is_placeholder_point() must be false'
     ),
-    'revert', 'apply supabase/migrations/0035_matching_functions.sql'
+    'revert', 'apply supabase/migrations/0038_matching_functions.sql'
   )
 );
 
-create or replace function public.broadcast_request(
-  p_request_id uuid,
-  p_radius_km int default 20
-) returns int
-language plpgsql security definer set search_path = public as $$
-declare
-  v_request record;
-  v_count int := 0;
-  v_boundary text;
+-- Flip the shared setting. Migration 0038's broadcast_request AND the
+-- application guard (lib/service-area-check.ts) both read it, so the
+-- exception now has one scope instead of two that disagreed. No function
+-- body is replaced here: the normal 0038 definition already honours the
+-- setting, which means verification and placeholder rejection remain
+-- exactly as they are in normal operation.
+select set_boundary_enforcement(
+  'relaxed',
+  current_setting('helpward.rollback_reason', true),
+  current_setting('helpward.rollback_owner', true)
+);
+
+-- Confirm the two gates that are NOT relaxed are still in place.
+do $$
 begin
-  if exists (select 1 from match_attempts where request_id = p_request_id) then
-    return 0;
+  if to_regprocedure('public.is_placeholder_point(geography)') is null then
+    raise exception 'is_placeholder_point() missing — refusing to relax boundaries without it';
   end if;
-
-  select r.*, a.location as pickup_loc, a.geocode_verified as pickup_verified
-  into v_request
-  from requests r
-  left join addresses a on a.id = r.pickup_address_id
-  where r.id = p_request_id;
-
-  if not found then return 0; end if;
-
-  if v_request.pickup_loc is null then
-    perform record_dispatch_refusal(p_request_id, 'no_pickup_location', null);
-    return 0;
+  if position('pickup_verified' in
+      pg_get_functiondef(to_regprocedure('public.broadcast_request(uuid,int)'))) = 0 then
+    raise exception 'broadcast_request no longer checks address verification — refusing to relax boundaries';
   end if;
-
-  -- NOT RELAXED. An unverified address is never dispatchable, under any
-  -- override. This is the gate an application rollback cannot satisfy, and
-  -- that is intentional: recover by rolling forward.
-  if coalesce(v_request.pickup_verified, false) = false then
-    perform record_dispatch_refusal(
-      p_request_id, 'address_unverified',
-      'refused under emergency boundary override: address verification is never relaxed'
-    );
-    return 0;
-  end if;
-
-  -- NOT RELAXED. The placeholder is inside an approved municipality, so the
-  -- boundary check we are about to skip would not have caught it either.
-  if is_placeholder_point(v_request.pickup_loc) then
-    perform record_dispatch_refusal(
-      p_request_id, 'address_placeholder',
-      'refused under emergency boundary override: placeholder coordinates are never dispatchable'
-    );
-    return 0;
-  end if;
-
-  -- RELAXED: boundary containment. Recorded on every occurrence so the
-  -- geographic blast radius is measurable afterwards.
-  v_boundary := is_point_serviceable(v_request.pickup_loc);
-  if v_boundary <> 'serviceable' then
-    perform record_dispatch_refusal(
-      p_request_id,
-      case when v_boundary = 'no_dataset' then 'boundary_no_dataset' else 'boundary_outside' end,
-      'DISPATCHED ANYWAY under emergency boundary override — address is verified and non-placeholder, but outside active boundaries'
-    );
-    -- fall through deliberately
-  end if;
-
-  insert into match_attempts (request_id, provider_id, distance_km, rank_score)
-  select p_request_id, p.provider_id, p.distance_km, p.rank_score
-  from find_nearby_providers(v_request.service_id, v_request.pickup_loc, p_radius_km, 5) p;
-
-  get diagnostics v_count = row_count;
-
-  if v_count = 0 then
-    perform record_dispatch_refusal(p_request_id, 'no_eligible_helper', null);
-    return 0;
-  end if;
-
-  insert into notifications (user_id, type, payload)
-  select provider_id, 'new_request_offered', jsonb_build_object(
-    'request_id', p_request_id, 'service_id', v_request.service_id
-  )
-  from match_attempts where request_id = p_request_id;
-
-  return v_count;
-end;
-$$;
-
-grant execute on function public.broadcast_request(uuid, int) to authenticated, service_role;
+  raise notice 'Boundary enforcement RELAXED. Address verification and placeholder rejection remain enforced.';
+  raise notice 'Restore with: select set_boundary_enforcement(''enforced'', ''incident closed'', ''<email>'');';
+end $$;

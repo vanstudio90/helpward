@@ -176,6 +176,12 @@ if (!MAPBOX_TOKEN) {
   console.error("Provision it in Vercel and locally, then re-run. Nothing was changed.");
   process.exit(1);
 }
+if ((process.env.MAPBOX_PERMANENT ?? "true").toLowerCase() === "false") {
+  console.error("MAPBOX_PERMANENT=false, but this script persists geocodes to the");
+  console.error("database and to its ledger. Temporary results may not be stored.");
+  console.error("Use a storage-permitted Mapbox configuration. Nothing was changed.");
+  process.exit(1);
+}
 
 // ---------------------------------------------------------------------------
 // supabase REST
@@ -203,6 +209,10 @@ async function geocode(text) {
   url.searchParams.set("country", "us,ca");
   url.searchParams.set("limit", "2");
   url.searchParams.set("access_token", MAPBOX_TOKEN);
+  // Results are written to the database AND to the ledger, so this must be
+  // a storage-permitted lookup. Temporary geocoding's terms do not allow
+  // retaining the result.
+  url.searchParams.set("permanent", "true");
 
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!res.ok) return { error: `mapbox ${res.status}` };

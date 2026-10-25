@@ -87,10 +87,45 @@ export async function checkServiceArea(
   if (verdict === "serviceable") {
     return { ok: true, area, boundaryVerdict: "serviceable" };
   }
+
+  // A declared boundary incident relaxes containment in BOTH layers, not
+  // just in broadcast_request. Without this the documented emergency
+  // procedure could not restore ordinary customer submission, because this
+  // guard runs before the request row is ever created (review finding R08).
+  //
+  // Scope is boundary containment only. Address verification and
+  // placeholder rejection are enforced elsewhere and are never relaxed —
+  // an unverified or placeholder address still cannot reach this point.
+  if (await boundaryEnforcementRelaxed(client)) {
+    console.warn(
+      `[boundary-override] allowing ${area.id} submission despite verdict "${verdict}" ` +
+      "— boundary enforcement is relaxed; verification and placeholder checks still applied",
+    );
+    return { ok: true, area, boundaryVerdict: "serviceable" };
+  }
+
   if (verdict === "outside_boundary") {
     return { ok: false, code: "outside_boundary", error: AREA_MESSAGES.outside_boundary };
   }
   // 'no_dataset' or anything unrecognised — refuse. Never degrade to the
   // preliminary check.
   return { ok: false, code: "no_dataset", error: AREA_MESSAGES.no_dataset };
+}
+
+
+/**
+ * Is a boundary incident declared? Reads the same operational_settings row
+ * that broadcast_request consults, so the two layers cannot disagree about
+ * whether an exception is in force.
+ *
+ * Fails CLOSED: any error means "enforced".
+ */
+async function boundaryEnforcementRelaxed(client: BoundaryRpcClient): Promise<boolean> {
+  try {
+    const res = await client.rpc("boundary_enforcement_mode", {});
+    if (res.error) return false;
+    return String(res.data ?? "enforced") === "relaxed";
+  } catch {
+    return false;
+  }
 }

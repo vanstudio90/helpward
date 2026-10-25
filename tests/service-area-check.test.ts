@@ -115,3 +115,72 @@ describe("fail-closed behaviour", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// R08 — the emergency boundary exception must cover request CREATION, not
+// just broadcast. Previously the override replaced broadcast_request only,
+// while this guard refused outside_boundary/no_dataset before a request row
+// was ever created — so the documented procedure could not restore ordinary
+// customer submission during a dataset incident.
+// ---------------------------------------------------------------------------
+describe("declared boundary incident", () => {
+  function clientWith(verdict: string, mode: string) {
+    return {
+      rpc: (fn: string) =>
+        Promise.resolve(
+          fn === "boundary_enforcement_mode"
+            ? { data: mode, error: null }
+            : { data: verdict, error: null },
+        ) as any,
+    };
+  }
+
+  test("outside_boundary is allowed through while enforcement is relaxed", async () => {
+    const r = await checkServiceArea(clientWith("outside_boundary", "relaxed"), VANCOUVER, POINT);
+    assert.equal(r.ok, true, "the override must cover request creation, not just dispatch");
+  });
+
+  test("no_dataset is allowed through while enforcement is relaxed", async () => {
+    const r = await checkServiceArea(clientWith("no_dataset", "relaxed"), VANCOUVER, POINT);
+    assert.equal(r.ok, true);
+  });
+
+  test("a city outside the launch list is STILL refused while relaxed", async () => {
+    // The override relaxes boundary containment, not the launch decision.
+    const r = await checkServiceArea(
+      clientWith("serviceable", "relaxed"),
+      { country: "CA", region: "British Columbia", city: "Abbotsford" }, POINT,
+    );
+    assert.equal(r.ok, false);
+    assert.equal(r.ok === false && r.code, "not_in_launch_area");
+  });
+
+  test("normal enforcement still refuses", async () => {
+    const r = await checkServiceArea(clientWith("outside_boundary", "enforced"), VANCOUVER, POINT);
+    assert.equal(r.ok, false);
+  });
+
+  test("an unreadable setting fails CLOSED to enforced", async () => {
+    const client = {
+      rpc: (fn: string) =>
+        Promise.resolve(
+          fn === "boundary_enforcement_mode"
+            ? { data: null, error: { message: "denied" } }
+            : { data: "outside_boundary", error: null },
+        ) as any,
+    };
+    const r = await checkServiceArea(client, VANCOUVER, POINT);
+    assert.equal(r.ok, false, "an error reading the mode must not relax anything");
+  });
+
+  test("a thrown setting lookup fails CLOSED to enforced", async () => {
+    const client = {
+      rpc: (fn: string) => {
+        if (fn === "boundary_enforcement_mode") throw new Error("connection reset");
+        return Promise.resolve({ data: "no_dataset", error: null }) as any;
+      },
+    };
+    const r = await checkServiceArea(client, VANCOUVER, POINT);
+    assert.equal(r.ok, false);
+  });
+});

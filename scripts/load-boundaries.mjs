@@ -30,15 +30,48 @@ import crypto from "node:crypto";
 
 // Approved municipalities per area. Mirrors lib/service-areas.ts; the loader
 // filters the source file to these and refuses on a mismatch.
+// Approved JURISDICTIONS, not display names.
+//
+// North Vancouver and Langley are each TWO separate legal municipalities
+// (City + District, City + Township). Normalisation strips the status word
+// for display and geocoder matching, which collapses 17 jurisdictions to 15
+// names — so a completeness check on normalised names passed a file that
+// was missing the District of North Vancouver and the Township of Langley
+// entirely, silently omitting supported territory.
+//
+// `match` is matched after normalisation (what the source file is likely to
+// say); `requireStatus` additionally demands that the source feature's raw
+// name carries that status word, so the two halves of each pair cannot
+// satisfy each other.
 const APPROVED = {
   "lower-mainland-bc": [
-    "Vancouver", "Burnaby", "Richmond", "New Westminster", "Surrey", "Delta",
-    "White Rock", "Coquitlam", "Port Coquitlam", "Port Moody", "Pitt Meadows",
-    "Maple Ridge", "North Vancouver", "West Vancouver", "Langley",
+    { id: "bc-vancouver",          match: "Vancouver" },
+    { id: "bc-burnaby",            match: "Burnaby" },
+    { id: "bc-richmond",           match: "Richmond" },
+    { id: "bc-new-westminster",    match: "New Westminster" },
+    { id: "bc-surrey",             match: "Surrey" },
+    { id: "bc-delta",              match: "Delta" },
+    { id: "bc-white-rock",         match: "White Rock" },
+    { id: "bc-coquitlam",          match: "Coquitlam" },
+    { id: "bc-port-coquitlam",     match: "Port Coquitlam" },
+    { id: "bc-port-moody",         match: "Port Moody" },
+    { id: "bc-pitt-meadows",       match: "Pitt Meadows" },
+    { id: "bc-maple-ridge",        match: "Maple Ridge" },
+    { id: "bc-north-vancouver-city",     match: "North Vancouver", requireStatus: "city" },
+    { id: "bc-north-vancouver-district", match: "North Vancouver", requireStatus: "district" },
+    { id: "bc-west-vancouver",     match: "West Vancouver" },
+    { id: "bc-langley-city",       match: "Langley", requireStatus: "city" },
+    { id: "bc-langley-township",   match: "Langley", requireStatus: "township" },
   ],
-  "los-angeles-ca": ["Los Angeles"],
-  "san-diego-ca": ["San Diego"],
+  "los-angeles-ca": [{ id: "ca-los-angeles", match: "Los Angeles" }],
+  "san-diego-ca":   [{ id: "ca-san-diego",   match: "San Diego" }],
 };
+
+/** Status words present in a raw source name, lowercased. */
+function statusWordsIn(raw) {
+  const words = String(raw ?? "").toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  return new Set(words.filter((w) => STATUS_WORDS.has(w)));
+}
 
 const STATUS_WORDS = new Set([
   "city", "district", "township", "municipality", "town", "village",
@@ -126,20 +159,29 @@ function pickNameProp(features) {
 }
 const prop = pickNameProp(gj.features);
 
-const wanted = new Map(APPROVED[area].map((m) => [norm(m), m]));
+const jurisdictions = APPROVED[area];
 const matched = [];
-const seen = new Map();
+const satisfied = new Set();   // jurisdiction ids covered by the file
+
 for (const f of gj.features) {
   const srcName = f.properties?.[prop];
   const key = norm(srcName);
-  if (!wanted.has(key)) continue;
+  const status = statusWordsIn(srcName);
+
+  // A feature satisfies a jurisdiction when the normalised name matches AND,
+  // for paired jurisdictions, the raw name carries the right status word.
+  const j = jurisdictions.find((x) =>
+    norm(x.match) === key &&
+    (!x.requireStatus || status.has(x.requireStatus)));
+  if (!j) continue;
+
   const g = f.geometry;
   if (!g || (g.type !== "Polygon" && g.type !== "MultiPolygon")) {
     console.warn(`  skipping ${srcName}: geometry is ${g?.type ?? "null"}`);
     continue;
   }
-  matched.push({ canonical: wanted.get(key), srcName: String(srcName), geometry: g });
-  seen.set(key, (seen.get(key) ?? 0) + 1);
+  matched.push({ canonical: j.match, jurisdictionId: j.id, srcName: String(srcName), geometry: g });
+  satisfied.add(j.id);
 }
 
 console.log(`\nFile:        ${file}`);
@@ -147,16 +189,19 @@ console.log(`sha256:      ${sha256}`);
 console.log(`Name field:  ${prop}`);
 console.log(`Features:    ${gj.features.length} in file, ${matched.length} matched for ${area}`);
 
-// Expect every approved municipality to be present. Both halves of the
-// North Vancouver and Langley pairs are separate source features, so a
-// canonical name legitimately matching twice is fine — zero matches is not.
-const missing = [...wanted.values()].filter((m) => !seen.has(norm(m)));
+// Completeness is checked per JURISDICTION id, so City of North Vancouver
+// cannot stand in for the District, nor City of Langley for the Township.
+const missing = jurisdictions.filter((j) => !satisfied.has(j.id));
 if (missing.length) {
-  console.error(`\nMISSING from the source file: ${missing.join(", ")}`);
+  console.error(`\nMISSING jurisdictions (${missing.length} of ${jurisdictions.length}):`);
+  for (const j of missing) {
+    console.error(`  ${j.id}  — expected a feature named "${j.match}"` +
+      (j.requireStatus ? ` carrying the word "${j.requireStatus}"` : ""));
+  }
   console.error("Refusing to load an incomplete boundary set.");
   process.exit(1);
 }
-for (const [k, n] of seen) if (n > 1) console.log(`  note: "${wanted.get(k)}" matched ${n} source features (expected for City+District / City+Township pairs)`);
+console.log(`Jurisdictions: ${satisfied.size}/${jurisdictions.length} satisfied`);
 
 const parts = matched.filter((m) => m.geometry.type === "MultiPolygon");
 console.log(`MultiPolygon features: ${parts.length} (city exclaves must survive the load — see docs/BOUNDARY-DATASETS.md)`);

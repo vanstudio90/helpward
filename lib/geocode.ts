@@ -25,17 +25,42 @@ export type GeocodeResult = {
   region: string | null; // state / province
   city: string | null;
   postalCode: string | null;
-  // Mapbox match_code: how much of the query actually matched. Used to
-  // reject ambiguous results before they become a dispatch address.
-  // Null for reverse lookups, which carry no match_code.
+  // Mapbox match_code: how much of the query actually matched.
+  //
+  // IMPORTANT: match_code is only present on ADDRESS-type features. A
+  // forward lookup that resolves to a street, locality or POI carries no
+  // match_code either, so a null confidence does NOT imply "this came from
+  // a reverse lookup". `origin` records that explicitly instead of being
+  // inferred — inferring it meant a forward street result with two
+  // candidates and no match_code was accepted as verified.
   confidence: "exact" | "high" | "medium" | "low" | null;
   addressNumberMatch: string | null;
   /** Number of candidates Mapbox returned for a forward lookup. */
   candidateCount: number;
+  /** Which API produced this result. Never inferred. */
+  origin: "forward" | "reverse";
+  /** Mapbox feature_type: "address", "street", "place", "postcode", … */
+  featureType: string | null;
 };
 
 export function isGeocodingEnabled(): boolean {
   return typeof process.env.MAPBOX_TOKEN === "string" && process.env.MAPBOX_TOKEN.length > 0;
+}
+
+// Mapbox result storage.
+//
+// Temporary geocoding is the default and its terms do NOT permit retaining
+// the result. We persist both the formatted address and the coordinates on
+// `addresses` / `saved_addresses`, and the backfill writes them to its
+// ledger too — so every lookup here must be a permanent (storage-permitted)
+// one, which requires an eligible Mapbox account configuration.
+//
+// MAPBOX_PERMANENT=false exists only for a non-persisting environment (an
+// offline probe, a throwaway sandbox). It must be unset or true wherever a
+// result reaches the database. isStoragePermitted() is surfaced so callers
+// and the backfill can refuse to persist when it is off.
+export function isStoragePermitted(): boolean {
+  return (process.env.MAPBOX_PERMANENT ?? "true").toLowerCase() !== "false";
 }
 
 // Mapbox geometry coordinates come back as [lng, lat]. PostGIS geography
@@ -75,9 +100,9 @@ export async function geocodeAddress(
   // 2, not 1: a second plausible candidate is itself an ambiguity signal.
   url.searchParams.set("limit", String(opts.limit ?? 2));
   url.searchParams.set("access_token", token);
-  // Mapbox documents `permanent=false` (the default) for ephemeral lookups,
-  // which is what a one-shot booking is. Permanent=true requires a
-  // higher-tier plan and a different usage agreement.
+  // Storage-permitted lookup: the result is written to `addresses`. See
+  // isStoragePermitted().
+  url.searchParams.set("permanent", String(isStoragePermitted()));
 
   let res: Response;
   try {
@@ -105,6 +130,7 @@ export async function geocodeAddress(
     properties?: {
       full_address?: string;
       name?: string;
+      feature_type?: string;
       match_code?: { confidence?: string; address_number?: string };
       context?: {
         country?: { country_code?: string; country_code_alpha_2?: string };
@@ -143,6 +169,8 @@ export async function geocodeAddress(
       ? conf : null,
     addressNumberMatch: typeof mc.address_number === "string" ? mc.address_number : null,
     candidateCount: features.length,
+    origin: "forward",
+    featureType: typeof f.properties?.feature_type === "string" ? f.properties.feature_type : null,
   };
 }
 
@@ -166,6 +194,9 @@ export async function reverseGeocode(
   url.searchParams.set("latitude", String(lat));
   url.searchParams.set("limit", "1");
   url.searchParams.set("access_token", token);
+  // Same storage requirement as the forward path — the formatted address
+  // this returns is persisted on the address row.
+  url.searchParams.set("permanent", String(isStoragePermitted()));
 
   let res: Response;
   try {
@@ -189,6 +220,7 @@ export async function reverseGeocode(
     properties?: {
       full_address?: string;
       name?: string;
+      feature_type?: string;
       context?: {
         country?: { country_code?: string; country_code_alpha_2?: string };
         region?: { name?: string };
@@ -213,11 +245,15 @@ export async function reverseGeocode(
     region: ctx.region?.name ?? null,
     city: ctx.place?.name ?? null,
     postalCode: ctx.postcode?.name ?? null,
-    // A reverse lookup starts FROM a coordinate, so there is no query to
-    // match against and no ambiguity to score.
+    // A reverse lookup starts FROM a coordinate the caller already holds
+    // (a GPS fix or a previously verified saved address), so there is no
+    // query to match against and no ambiguity to score. This is recorded
+    // via `origin`, not inferred from the absent match_code.
     confidence: null,
     addressNumberMatch: null,
     candidateCount: 1,
+    origin: "reverse",
+    featureType: typeof f.properties?.feature_type === "string" ? f.properties.feature_type : null,
   };
 }
 
@@ -267,16 +303,48 @@ export const RESOLVE_FAILURE_MESSAGE: Record<ResolveFailure["reason"], string> =
     "We found more than one place matching that address. Please add a street number, city, or postal code \u2014 or use \u201cUse my current location\u201d.",
 };
 
-// An address is only accepted when Mapbox matched it confidently. A
-// medium/low-confidence match, an unmatched street number, or a second
-// plausible candidate all mean we are guessing where to send a helper —
-// and guessing someone's address is worse than asking them to retype it.
-// Mirrors the classification the address backfill applies to legacy rows.
+// Acceptance rules for a coordinate that will be dispatched to.
+//
+// A typed address (origin "forward") must be an ADDRESS-type feature that
+// Mapbox matched confidently, with a matched street number and exactly one
+// candidate. Streets, localities, postcodes and POIs are refused: they
+// identify an area, not a doorstep, and they carry no match_code at all, so
+// there is nothing to judge their precision by.
+//
+// A reverse lookup (origin "reverse") starts from coordinates the caller
+// already holds — a GPS fix, or a saved address verified earlier — so there
+// is no query to have matched ambiguously. Those coordinates are the
+// authority and the reverse lookup only supplies a label.
+//
+// Previously this keyed off `confidence === null`, treating any result
+// without match_code as a reverse lookup. Forward street results also lack
+// match_code, so one with two candidates was accepted as verified.
+
+/** Feature types precise enough to send a helper to. */
+const DISPATCHABLE_FEATURE_TYPES = new Set(["address"]);
+
+/** Match-code confidences we accept for a typed address. */
+const ACCEPTABLE_CONFIDENCE = new Set(["exact", "high"]);
+
 export function isAmbiguous(g: GeocodeResult): boolean {
-  if (g.confidence === null) return false;            // reverse lookup: nothing to score
-  if (g.confidence === "medium" || g.confidence === "low") return true;
-  if (g.addressNumberMatch === "unmatched") return true;
+  if (g.origin === "reverse") return false;
+
+  // Forward lookups must land on an address-type feature.
+  if (!g.featureType || !DISPATCHABLE_FEATURE_TYPES.has(g.featureType)) return true;
+
+  // Checked independently of confidence: a second plausible candidate is an
+  // ambiguity signal in its own right.
   if (g.candidateCount > 1) return true;
+
+  // An address feature without a match_code is unexpected; refuse rather
+  // than assume it was good.
+  if (g.confidence === null || !ACCEPTABLE_CONFIDENCE.has(g.confidence)) return true;
+
+  // "not_applicable" is refused as well as "unmatched": for a typed street
+  // address, no street number having been matched means we do not know
+  // which building. This matches what the backfill flags.
+  if (g.addressNumberMatch !== "matched") return true;
+
   return false;
 }
 
