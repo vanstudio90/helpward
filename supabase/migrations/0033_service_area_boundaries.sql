@@ -142,6 +142,14 @@ comment on function public.is_point_serviceable(geography) is
 -- Insert helper for the loader. PostgREST cannot construct PostGIS geometry
 -- from a GeoJSON string directly, and ST_Multi normalises a single-ring
 -- Polygon so every row stores the same MultiPolygon type.
+-- Authorisation note: the loader authenticates with the service-role key,
+-- and jwt_role() returns 'service_role' for those requests — so is_admin()
+-- is false while request.jwt.claims is populated. An earlier draft raised
+-- 'admin only' here, rejecting precisely the caller the grant was for, and
+-- a later migration tried to correct it. That put the fix behind a
+-- deploy-coupled migration while the runbook loads boundaries BEFORE the
+-- cutover, so a fresh rehearsal stopped at the load step. The authorisation
+-- belongs here, in the pre-deploy-safe migration that defines the function.
 create or replace function public.insert_service_area_boundary(
   p_dataset_id text,
   p_area_id text,
@@ -149,10 +157,16 @@ create or replace function public.insert_service_area_boundary(
   p_geojson text
 ) returns void
 language plpgsql security definer set search_path = public as $$
+declare
+  v_role text := jwt_role();
+  v_no_claims boolean := coalesce(current_setting('request.jwt.claims', true), '') = '';
 begin
-  if not is_admin() and current_setting('request.jwt.claims', true) is not null then
-    raise exception 'admin only';
+  -- Allowed: the service role (the loader), an admin, or a direct psql
+  -- session with no JWT. Everyone else is denied explicitly.
+  if not (v_no_claims or v_role = 'service_role' or v_role = 'admin') then
+    raise exception 'insert_service_area_boundary: not authorised for role %', v_role;
   end if;
+
   insert into service_area_boundaries (dataset_id, area_id, municipality, boundary)
   values (
     p_dataset_id, p_area_id, p_municipality,
@@ -161,4 +175,13 @@ begin
 end;
 $$;
 
+-- Default PUBLIC EXECUTE is revoked here, not in a later migration, for the
+-- same reason: this function is callable from the moment it exists.
+revoke execute on function public.insert_service_area_boundary(text, text, text, text)
+  from public, anon, authenticated;
 grant execute on function public.insert_service_area_boundary(text, text, text, text) to service_role;
+
+revoke execute on function public.is_point_serviceable(geography) from public, anon;
+revoke execute on function public.point_service_area(geography) from public, anon;
+grant execute on function public.is_point_serviceable(geography) to authenticated, service_role;
+grant execute on function public.point_service_area(geography) to authenticated, service_role;

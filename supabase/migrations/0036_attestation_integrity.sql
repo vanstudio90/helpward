@@ -170,37 +170,14 @@ $$;
 grant execute on function public.bundle_subtotal_cents(uuid) to service_role;
 
 -- =========================================================================
--- R04 — let the service-role loader through its own guard
+-- Loader authorisation lives in 0033
 -- =========================================================================
 --
--- jwt_role() returns 'service_role' for a service-role request, so
--- is_admin() is false while request.jwt.claims is populated: the old guard
--- raised 'admin only' for exactly the caller it was granted to, making the
--- documented boundary load impossible.
-create or replace function public.insert_service_area_boundary(
-  p_dataset_id text,
-  p_area_id text,
-  p_municipality text,
-  p_geojson text
-) returns void
-language plpgsql security definer set search_path = public as $$
-declare
-  v_role text := jwt_role();
-  v_no_claims boolean := coalesce(current_setting('request.jwt.claims', true), '') = '';
-begin
-  -- Allowed: the service role (the loader), an admin, or a direct psql
-  -- session with no JWT at all. Everyone else is denied explicitly.
-  if not (v_no_claims or v_role = 'service_role' or v_role = 'admin') then
-    raise exception 'insert_service_area_boundary: not authorised for role %', v_role;
-  end if;
-
-  insert into service_area_boundaries (dataset_id, area_id, municipality, boundary)
-  values (
-    p_dataset_id, p_area_id, p_municipality,
-    st_multi(st_setsrid(st_geomfromgeojson(p_geojson), 4326))::geometry(MultiPolygon, 4326)
-  );
-end;
-$$;
+-- insert_service_area_boundary's service-role authorisation was briefly
+-- defined here. That was wrong: boundaries are loaded BEFORE the
+-- application cutover, and this migration is deploy-coupled, so the fix sat
+-- behind a step the rehearsal had not reached yet. There is now exactly one
+-- definition of that function, in 0033, which is pre-deploy safe.
 
 -- =========================================================================
 -- R05 — remove the default PUBLIC execute grant on privileged functions
@@ -213,26 +190,20 @@ $$;
 -- every admin, so an unauthenticated caller could fabricate refusals.
 revoke execute on function public.record_dispatch_refusal(uuid, text, text) from public;
 revoke execute on function public.dispatch_health(interval) from public;
-revoke execute on function public.insert_service_area_boundary(text, text, text, text) from public;
 revoke execute on function public.enforce_address_attestation() from public;
 revoke execute on function public.enforce_bundle_item_quote() from public;
 revoke execute on function public.bundle_subtotal_cents(uuid) from public;
 revoke execute on function public.broadcast_request(uuid, int) from public;
 revoke execute on function public.accept_request(uuid, uuid) from public;
-revoke execute on function public.is_point_serviceable(geography) from public;
-revoke execute on function public.point_service_area(geography) from public;
 
 -- Re-grant deliberately, narrowest first.
 grant execute on function public.record_dispatch_refusal(uuid, text, text) to service_role;
-grant execute on function public.insert_service_area_boundary(text, text, text, text) to service_role;
 grant execute on function public.bundle_subtotal_cents(uuid) to service_role;
 -- Helpers accept their own offers; the function itself checks the caller is
 -- the assigned provider.
 grant execute on function public.accept_request(uuid, uuid) to authenticated, service_role;
 grant execute on function public.broadcast_request(uuid, int) to service_role;
 -- Read-only geography checks: needed by the request form.
-grant execute on function public.is_point_serviceable(geography) to authenticated, service_role;
-grant execute on function public.point_service_area(geography) to authenticated, service_role;
 
 -- dispatch_health bypasses the admin-read policy on dispatch_refusals, so
 -- it must not be callable by ordinary users.
@@ -520,7 +491,6 @@ revoke execute on function public.enforce_request_quote() from public, anon, aut
 
 grant execute on function public.broadcast_request(uuid, int) to service_role;
 grant execute on function public.record_dispatch_refusal(uuid, text, text) to service_role;
-grant execute on function public.insert_service_area_boundary(text, text, text, text) to service_role;
 grant execute on function public.bundle_subtotal_cents(uuid) to service_role;
 grant execute on function public.compute_bundle_fingerprint(uuid) to service_role;
 grant execute on function public.seal_bundle_quote(uuid) to service_role;

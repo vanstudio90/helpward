@@ -15,7 +15,7 @@ has been removed.
 |---|---|---|
 | `0029_address_verification` | **Pre-deploy safe** | additive columns; old code ignores them |
 | `0030_matching_columns` | **Pre-deploy safe** | additive column + index; required *by* the new code |
-| `0033_service_area_boundaries` | **Pre-deploy safe** | new tables/functions, unused by old code |
+| `0033_service_area_boundaries` | **Pre-deploy safe** | new tables/functions, unused by old code. **Carries the boundary loader's service-role authorisation and grants**, because boundaries are loaded before the cutover — putting that fix in a deploy-coupled migration made the documented sequence stop at the load step. |
 | `0034_dispatch_refusals` | **Pre-deploy safe** | new table/functions, unused by old code |
 | `0037_boundary_enforcement_mode` | **Pre-deploy safe** | new table/functions, unused by old code |
 | `0036_attestation_integrity` | **DEPLOY-COUPLED** | its `request_bundle_items` trigger rejects every non-service INSERT, which is exactly how the *previous* application writes bundle stops. Applying it before the cutover breaks bundle creation on the running release. It also hardens `accept_request` to require a sealed quote fingerprint that only the new code produces. |
@@ -31,7 +31,9 @@ Run exactly this. Do not reapply anything afterwards.
 3. Run the address backfill: `--dry-run`, review the ledger, then `--apply`.
 4. **Deploy the application release.**
 5. `0036`, then `0038`.
-6. Verify: `node scripts/verify-migration-state.mjs`, then confirm the final
+6. Run the SQL suites: `supabase/tests/boundary_containment.sql` and
+   `supabase/tests/quote_integrity.sql`. Both roll back; both must pass.
+7. Verify: `node scripts/verify-migration-state.mjs`, then confirm the final
    `accept_request` definition is the hardened one (it must contain
    `compute_bundle_fingerprint`) and that
    `has_function_privilege('authenticated', 'public.broadcast_request(uuid,int)', 'EXECUTE')`
@@ -120,11 +122,15 @@ schema and behaviour probes.
 |---|---|---|
 | R1 | Apply `0029`,`0030`,`0033`,`0034`,`0037` against a copy of production data | succeed; old app unaffected, including bundle creation |
 | R2 | Probe schema | new columns/tables/functions present |
+| R2b | Run the boundary loader with **service-role REST credentials, before `0036`** | succeeds — this is the dependency that previously blocked a fresh rehearsal |
+| R2c | Call `insert_service_area_boundary` as a customer and as anon | denied |
 | R3 | Submit a request on the **old** app build | still dispatches (0035 not yet applied) |
 | R4 | Load boundaries, mark active | `is_point_serviceable` on a known in-city point → `serviceable` |
 | R5 | Known unincorporated point | → `outside_boundary` |
 | R6 | Deactivate dataset, re-probe | → `no_dataset`, and nothing dispatchable |
 | R7 | Run backfill `--dry-run` then `--apply` | ledger classifies; ambiguous/failed/out-of-area stay unverified |
+| R7b | `\i supabase/tests/quote_integrity.sql` | all assertions pass under real customer / provider / service contexts |
+| R7c | Remove a trigger branch or the fingerprint comparison, re-run R7b | **must fail** — proves the suite has teeth |
 | R8 | Deploy new app, then apply `0036`,`0038` | succeed; final accept_request contains compute_bundle_fingerprint |
 | R9 | Submit a request at a verified in-boundary address | dispatches; no `dispatch_refusals` row |
 | R10 | Submit at an unremediated legacy address | refused; `address_unverified` row; admin notified |

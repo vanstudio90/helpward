@@ -387,3 +387,29 @@ is reapplied afterwards.
 **Still not executed against a database.** D01, D02, D04 and the SQL
 assertions for them are claims until the isolated rehearsal runs them under
 real customer, provider, admin and service-role JWTs.
+
+
+---
+
+## Independent delta review, `1041873` — two findings addressed
+
+| # | Finding | Fix |
+|---|---|---|
+| E01 | The authoritative sequence loads boundaries before `0036`, but the loader's service-role authorisation lived *in* `0036`. Moving `0036` later for D01 dragged this pre-deploy dependency with it, so a fresh rehearsal would stop at the load step. | `0033` — which is pre-deploy safe and defines the function — now carries the service-role authorisation and the grant hygiene. The duplicate definition in `0036` is **removed**; there is exactly one. Runbook gains R2b/R2c: load with service-role REST credentials *before* `0036`, and confirm customer/anon are denied. |
+| E02 | `boundary_containment.sql` §8 sealed and deleted a bundle entirely in the privileged fixture context and asserted only that the hash changed — proving the hash is input-sensitive, not that a customer is refused or that acceptance rejects a tampered quote. | Replaced by `supabase/tests/quote_integrity.sql`, which uses `set local role authenticated` with `request.jwt.claims` so triggers and RLS see a real customer, and calls `accept_request` as the offered helper. |
+
+`quote_integrity.sql` covers, all inside one rolled-back transaction:
+
+1. **Nine customer-role mutations, each required to fail** — deleting a stop, rewriting a price, swapping a service, reparenting a stop, editing `bundle_item_count`, forging the fingerprint, editing the estimated price, repointing the pickup address, and self-granting `geocode_verified`.
+2. **Attestation invalidation** — a customer moving their own verified address succeeds but clears `geocode_verified` and sets `needs_reconfirmation`.
+3. **The ordinary successful two-stop path** — the offered helper accepts and the booking totals, payout and platform share reconcile.
+4. **A tampered sealed bundle refused at acceptance**, with the stop deleted *and* `bundle_item_count` adjusted to agree — so a count-based check would have passed and only the fingerprint catches it.
+5. **Dispatch privileges** — `has_function_privilege` for `authenticated`, `anon` and `service_role` across six functions.
+6. **The loader RPC** — succeeds for the service role, denied for a customer.
+
+Runbook R7b runs the suite; **R7c requires that removing a trigger branch or
+the fingerprint comparison makes it fail**, which is the check that gives it
+teeth.
+
+**Both SQL suites remain UNEXECUTED.** They are the substance of the
+isolated rehearsal, not evidence from it.
