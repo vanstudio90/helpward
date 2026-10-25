@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { listServices } from "@/lib/data/services";
 import { Check, Clock } from "lucide-react";
+import { ProviderServicesForm } from "./services-form";
 
 export default async function ProviderOnboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -11,16 +12,18 @@ export default async function ProviderOnboardPage() {
     .select("*")
     .single();
   const services = await listServices();
-  const { count: providerServiceCount } = user
+  const { data: myServiceRows } = user
     ? await supabase
         .from("provider_services")
-        .select("service_id", { count: "exact", head: true })
+        .select("service_id")
         .eq("provider_id", user.id)
-    : { count: 0 };
+    : { data: [] };
+  const selectedServiceIds = (myServiceRows ?? []).map((r) => r.service_id as string);
+  const providerServiceCount = selectedServiceIds.length;
 
   const steps = [
     { key: "profile", title: "Basic profile", done: !!pp?.bio },
-    { key: "services", title: "Pick services you offer", done: (providerServiceCount ?? 0) > 0 },
+    { key: "services", title: "Pick services you offer", done: providerServiceCount > 0 },
     { key: "id", title: "Verify your ID", done: !!pp?.id_verified_at, blocked: "Pending Stripe Identity wiring" },
     { key: "background", title: "Background check", done: !!pp?.background_verified_at, blocked: "Pending Checkr / Triton wiring" },
     { key: "payouts", title: "Connect a bank account", done: !!pp?.stripe_connect_account_id, blocked: "Pending Stripe Connect wiring" },
@@ -56,20 +59,7 @@ export default async function ProviderOnboardPage() {
         ))}
       </ol>
 
-      <div className="mt-8 rounded-2xl bg-slate-50 border border-slate-100 p-5">
-        <div className="text-sm font-bold text-slate-900 mb-3">Services you can offer ({services.length})</div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-          {services.map((s) => (
-            <label key={s.id} className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-100">
-              <input type="checkbox" className="w-4 h-4 rounded text-brand-600" />
-              <span className="truncate">{s.title}</span>
-            </label>
-          ))}
-        </div>
-        <p className="text-[11px] text-slate-500 mt-3">
-          We'll save your selection in <code>provider_services</code> on the next iteration (Phase 2.2).
-        </p>
-      </div>
+      <ProviderServicesForm services={services} initialSelected={selectedServiceIds} />
 
       <Link
         href="/provider/dashboard"

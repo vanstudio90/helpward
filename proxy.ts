@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
+import { isRetiredCityPath, retiredCityHtml } from "@/lib/retired-pages";
 
 const PUBLIC_PATHS = new Set([
   "/", "/login", "/signup", "/forgot-password", "/verify-email",
@@ -56,6 +57,19 @@ export async function proxy(request: NextRequest) {
         sameSite: "lax",
       });
     }
+  }
+
+  // Retired city pages: deliberate 410 Gone with a useful body, checked
+  // BEFORE the public-prefix allowlist (which contains "/cities/").
+  if (isRetiredCityPath(pathname)) {
+    return new NextResponse(retiredCityHtml(pathname), {
+      status: 410,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "public, max-age=3600",
+        "x-robots-tag": "noindex",
+      },
+    });
   }
 
   // Always allow static assets & API routes that opt-in to public

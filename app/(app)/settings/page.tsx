@@ -23,6 +23,13 @@ export default async function SettingsPage() {
     email_digest: false, sms_critical: true,
   };
 
+  // Real TOTP state. The overview used to hardcode "Disabled" with a
+  // disabled Enable button and the note "Supabase TOTP enrollment ships
+  // next round" — while /settings/security has had working enrollment,
+  // recovery codes and unenrolment all along (HW-17).
+  const { data: factors } = await supabase.auth.mfa.listFactors();
+  const twoFactorOn = (factors?.totp ?? []).some((f) => f.status === "verified");
+
   const { data: savedAddrs } = await supabase
     .from("saved_addresses")
     .select("id, label, formatted, is_default")
@@ -78,11 +85,23 @@ export default async function SettingsPage() {
             <h2 className="text-base font-bold text-slate-900">Security</h2>
           </div>
           <SecRow icon={<Lock className="w-4 h-4 text-slate-500" />} label="Password" sub="Change anytime" action="Change" href="/settings/security" />
-          <SecRow icon={<Shield className="w-4 h-4 text-slate-500" />} label="Two-Factor Authentication" sub="Disabled" action="Enable" disabled tooltip="Supabase TOTP enrollment ships next round" />
-          <SecRow icon={<Smartphone className="w-4 h-4 text-slate-500" />} label="Login Devices" sub="1 active session" action="View" disabled last tooltip="Per-device session tracking ships with TOTP" />
-          <p className="text-[11px] text-slate-400 mt-3">
-            More security tools roll out as the underlying auth model lands.
-          </p>
+          <SecRow
+            icon={<Shield className="w-4 h-4 text-slate-500" />}
+            label="Two-Factor Authentication"
+            sub={twoFactorOn ? "Enabled — authenticator app" : "Disabled"}
+            subTone={twoFactorOn ? "text-emerald-700" : undefined}
+            action={twoFactorOn ? "Manage" : "Enable"}
+            href="/settings/security"
+          />
+          <SecRow
+            icon={<Smartphone className="w-4 h-4 text-slate-500" />}
+            label="Login Devices"
+            sub="Per-device session management isn&rsquo;t available yet"
+            action="View"
+            disabled
+            last
+            tooltip="Per-device session management isn&rsquo;t available yet"
+          />
         </Card>
 
         <Card>

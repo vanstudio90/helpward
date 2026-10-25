@@ -1,5 +1,12 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import type { WeeklyRule, DateOverride } from "@/lib/availability-pure";
+// Imported (not just re-exported) because getBatchAvailabilityStatus CALLS
+// it. `export { computeAvailabilityStatus } from "..."` below forwards the
+// binding to importers but does NOT create a local one, so the call site
+// threw ReferenceError for any customer with at least one saved helper —
+// /favorites and /saved-providers both 500. The `providerIds.length === 0`
+// early return is the only reason this was never hit in testing.
+import { computeAvailabilityStatus } from "@/lib/availability-pure";
 
 // Re-export the pure types + functions so existing imports of
 // "@/lib/data/availability" keep working. Only server-side fetchers live in
@@ -48,12 +55,18 @@ export async function getMyAvailability(): Promise<{ rules: WeeklyRule[]; overri
 // of N×3. Used by helper-list surfaces (/favorites, /saved-providers) to
 // render an Available-now badge inline without blowing up the request count.
 // Returns a Map keyed by user_id.
+// `client` is injectable so the body can be executed in a test without a
+// database. That matters specifically here: this function threw a
+// ReferenceError for any non-empty input (see the import note above) and the
+// `providerIds.length === 0` early return meant no test or manual check ever
+// reached the broken line. A regression test now passes a fake client.
 export async function getBatchAvailabilityStatus(
   providerIds: string[],
+  client?: { from: (table: string) => any },
 ): Promise<Map<string, import("@/lib/availability-pure").AvailabilityStatus>> {
   const out = new Map<string, import("@/lib/availability-pure").AvailabilityStatus>();
   if (providerIds.length === 0) return out;
-  const supabase = createSupabaseServiceClient();
+  const supabase = client ?? createSupabaseServiceClient();
   const today = new Date().toISOString().slice(0, 10);
   const [{ data: allRules }, { data: allOverrides }, { data: allProfiles }] = await Promise.all([
     supabase

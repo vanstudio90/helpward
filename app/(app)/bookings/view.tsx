@@ -67,21 +67,41 @@ export function BookingsView({
     active: bookings.filter((b) => b.status === "in_progress").length,
     recurring: activeSeries.length,
     completed: bookings.filter((b) => b.status === "completed").length,
-    cancelled: bookings.filter((b) => b.status === "cancelled").length,
+    // Requests that were cancelled or expired before any helper accepted
+    // never become bookings, so counting bookings alone made a cancelled
+    // pending request vanish with no record anywhere (HW-08).
+    cancelled:
+      bookings.filter((b) => b.status === "cancelled").length +
+      requests.filter((r) => r.status === "cancelled" || r.status === "expired").length,
   };
 
-  const tabContent: { title: string; items: { kind: "booking" | "request"; row: BookingWithProvider | RequestRow }[] } = (() => {
+  type TabItem = { kind: "booking" | "request"; row: BookingWithProvider | RequestRow };
+  const tabContent: { title: string; items: TabItem[] } = (() => {
     switch (tab) {
       case "upcoming":
-        return { title: "UPCOMING BOOKINGS", items: bookings.filter((b) => b.status === "scheduled").map((b) => ({ kind: "booking", row: b })) };
+        return { title: "UPCOMING BOOKINGS", items: bookings.filter((b) => b.status === "scheduled").map((b): TabItem => ({ kind: "booking", row: b })) };
       case "pending":
-        return { title: "PENDING REQUESTS", items: requests.filter((r) => r.status === "matching" || r.status === "draft").map((r) => ({ kind: "request", row: r })) };
+        return { title: "PENDING REQUESTS", items: requests.filter((r) => r.status === "matching" || r.status === "draft").map((r): TabItem => ({ kind: "request", row: r })) };
       case "active":
-        return { title: "ACTIVE BOOKINGS", items: bookings.filter((b) => b.status === "in_progress").map((b) => ({ kind: "booking", row: b })) };
+        return { title: "ACTIVE BOOKINGS", items: bookings.filter((b) => b.status === "in_progress").map((b): TabItem => ({ kind: "booking", row: b })) };
       case "completed":
-        return { title: "COMPLETED BOOKINGS", items: bookings.filter((b) => b.status === "completed").map((b) => ({ kind: "booking", row: b })) };
+        return { title: "COMPLETED BOOKINGS", items: bookings.filter((b) => b.status === "completed").map((b): TabItem => ({ kind: "booking", row: b })) };
       case "cancelled":
-        return { title: "CANCELLED BOOKINGS", items: bookings.filter((b) => b.status === "cancelled").map((b) => ({ kind: "booking", row: b })) };
+        return {
+          title: "CANCELLED & EXPIRED",
+          items: [
+            ...bookings
+              .filter((b) => b.status === "cancelled")
+              .map((b): TabItem => ({ kind: "booking", row: b })),
+            ...requests
+              .filter((r) => r.status === "cancelled" || r.status === "expired")
+              .map((r): TabItem => ({ kind: "request", row: r })),
+          ],
+        };
+      // "recurring" renders its own series list further down and never
+      // reads tabContent; the branch keeps the switch exhaustive.
+      default:
+        return { title: "", items: [] };
     }
   })();
 
@@ -108,9 +128,9 @@ export function BookingsView({
               href="/api/customer/export/bookings?days=365"
               download
               className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              title="Download the last 365 days of your bookings as CSV"
+              title="Download the last 365 days of your accepted bookings as CSV. Pending requests and requests that expired or were cancelled before a helper accepted are not included."
             >
-              <Download className="w-4 h-4 text-slate-500" /> Export CSV
+              <Download className="w-4 h-4 text-slate-500" /> Export bookings CSV
             </a>
           </div>
         </div>
@@ -244,15 +264,33 @@ function BookingRow({ booking }: { booking: BookingWithProvider }) {
   );
 }
 
+// Status presentation for a request that never became a booking. The badge
+// used to be hardcoded to "Matching", so a cancelled or expired request
+// still read as live wherever it was rendered (HW-08).
+const REQUEST_STATUS_BADGE: Record<string, { label: string; className: string; pulse: boolean }> = {
+  matching: { label: "Matching", className: "bg-amber-50 text-amber-700", pulse: true },
+  draft: { label: "Draft", className: "bg-slate-100 text-slate-600", pulse: false },
+  cancelled: { label: "Cancelled", className: "bg-rose-50 text-rose-700", pulse: false },
+  expired: { label: "Expired", className: "bg-slate-100 text-slate-600", pulse: false },
+  matched: { label: "Matched", className: "bg-emerald-50 text-emerald-700", pulse: false },
+};
+
 function RequestRowView({ request }: { request: RequestRow }) {
+  const badge = REQUEST_STATUS_BADGE[request.status] ?? {
+    label: request.status, className: "bg-slate-100 text-slate-600", pulse: false,
+  };
+  const cancellable = request.status === "matching" || request.status === "draft";
   return (
     <div className="p-4 flex items-start gap-3 hover:bg-slate-50">
       <ServiceIcon name="spark" size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="text-sm font-bold text-slate-900 truncate">{request.service.title}</div>
-          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700">
-            <Clock className="w-3 h-3 animate-pulse" /> Matching
+          <span className={cn(
+            "shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
+            badge.className,
+          )}>
+            <Clock className={cn("w-3 h-3", badge.pulse && "animate-pulse")} /> {badge.label}
           </span>
         </div>
         <div className="text-xs text-slate-500 mt-0.5 truncate">{request.pickup?.formatted ?? "—"}</div>
@@ -263,17 +301,19 @@ function RequestRowView({ request }: { request: RequestRow }) {
           <div className="text-sm font-bold text-slate-900">
             Est. ${request.estimated_price_cents ? (request.estimated_price_cents / 100).toFixed(2) : "—"}
           </div>
-          <button
-            type="button"
-            onClick={async () => {
-              if (confirm("Cancel this request?")) {
-                await cancelRequestAction(request.id);
-              }
-            }}
-            className="text-xs font-semibold text-rose-600 inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-200"
-          >
-            <X className="w-3 h-3" /> Cancel
-          </button>
+          {cancellable && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (confirm("Cancel this request?")) {
+                  await cancelRequestAction(request.id);
+                }
+              }}
+              className="text-xs font-semibold text-rose-600 inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-200"
+            >
+              <X className="w-3 h-3" /> Cancel
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -327,7 +367,7 @@ function EmptyTab({ tab }: { tab: TabKey }) {
     active: { title: "Nothing in progress", sub: "Your active task will live here with real-time tracking." },
     recurring: { title: "No recurring series yet", sub: "Toggle 'Repeat this task' when you create a request to schedule it weekly, biweekly, or monthly." },
     completed: { title: "No completed bookings yet", sub: "Once a task wraps up, you can rate the provider here." },
-    cancelled: { title: "No cancelled bookings", sub: "Cancellations show up here." },
+    cancelled: { title: "Nothing cancelled", sub: "Cancelled bookings and requests that expired before a helper accepted show up here." },
   };
   const e = map[tab];
   return (

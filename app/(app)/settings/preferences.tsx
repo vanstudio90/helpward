@@ -78,7 +78,7 @@ export function NotificationPrefs({ initial }: { initial: Prefs }) {
         />
       </ul>
       <p className="text-[11px] text-slate-400 mt-3">
-        Push and SMS require linking a device/phone (Phase 4-5 wiring).
+        Push and SMS delivery aren’t switched on yet — these preferences are saved but only email is sent today.
       </p>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Search, Sparkles, Check, ArrowRight, Calendar, MapPin,
@@ -11,6 +11,10 @@ import { createRequestAction } from "./actions";
 import { RecurrencePicker } from "./recurrence-picker";
 import { BundlePicker } from "./bundle-picker";
 import { UseCurrentLocationButton } from "./use-current-location";
+import {
+  type BundleItemDraft, newDraftItem, priceBundle, validateBundle,
+} from "@/lib/bundle-pure";
+import { SERVICE_FEE_CENTS, quoteOneShotCents, dollars } from "@/lib/pricing";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 
@@ -44,6 +48,12 @@ export function NewRequestView({
     services.find((s) => s.id === initialServiceId) ?? services[0] ?? null
   );
   const [tab, setTab] = useState<string>("Popular");
+  // Bundle state lives here, not inside BundlePicker, so the request summary
+  // and the bundle panel quote the same thing (HW-07).
+  const [bundleEnabled, setBundleEnabled] = useState(false);
+  const [bundleItems, setBundleItems] = useState<BundleItemDraft[]>(() => [
+    newDraftItem(), newDraftItem(),
+  ]);
   const [scheduled, setScheduled] = useState<"asap" | "later">("asap");
   // Auto-fill the address field from the default saved address (if any) so
   // a returning customer doesn't have to retype "Home" every time. Saved
@@ -55,6 +65,31 @@ export function NewRequestView({
     defaultSavedAddr && defaultSavedAddr.lat != null && defaultSavedAddr.lng != null
       ? { lat: defaultSavedAddr.lat, lng: defaultSavedAddr.lng }
       : null
+  );
+
+  // Stop 1 of a bundle is always the service selected above. Syncing here
+  // (rather than seeding once at mount) is what makes "pick Dog Walking,
+  // then enable bundling" keep Dog Walking as stop 1 (HW-06).
+  useEffect(() => {
+    if (!selected) return;
+    setBundleItems((prev) => {
+      const first = prev[0];
+      if (first && first.serviceId === selected.id) return prev;
+      const next = [...prev];
+      next[0] = {
+        ...(first ?? newDraftItem()),
+        serviceId: selected.id,
+        serviceTitle: selected.title,
+        servicePriceCents: selected.base_price_cents,
+      };
+      return next;
+    });
+  }, [selected]);
+
+  const bundlePrice = useMemo(() => priceBundle(bundleItems), [bundleItems]);
+  const bundleError = useMemo(
+    () => (bundleEnabled ? validateBundle(bundleItems) : null),
+    [bundleEnabled, bundleItems],
   );
 
   // When the user types directly into the input we clear any cached coords
@@ -311,20 +346,27 @@ export function NewRequestView({
                 />
               </label>
 
-              <BundlePicker services={services} primaryService={selected} />
+              <BundlePicker
+                services={services}
+                enabled={bundleEnabled}
+                onEnabledChange={setBundleEnabled}
+                items={bundleItems}
+                onItemsChange={setBundleItems}
+                onPrimaryServiceChange={setSelected}
+              />
               <RecurrencePicker />
             </div>
           </div>
 
           <div className="lg:hidden mt-5 space-y-3">
-            <SummaryCard selected={selected} />
-            <ContinueButtons pending={pending} />
+            <SummaryCard selected={selected} bundle={bundleEnabled ? { items: bundleItems, price: bundlePrice } : null} />
+            <ContinueButtons pending={pending} disabledReason={bundleError} />
           </div>
         </section>
 
         <aside className="hidden lg:block space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <SummaryCard selected={selected} />
-          <ContinueButtons pending={pending} />
+          <SummaryCard selected={selected} bundle={bundleEnabled ? { items: bundleItems, price: bundlePrice } : null} />
+          <ContinueButtons pending={pending} disabledReason={bundleError} />
         </aside>
       </form>
     </div>
@@ -354,7 +396,10 @@ function Dash() {
   return <span className="flex-1 h-px border-t border-dashed border-slate-300 min-w-[8px]" />;
 }
 
-function SummaryCard({ selected }: { selected: ServiceWithCategory | null }) {
+function SummaryCard({ selected, bundle }: {
+  selected: ServiceWithCategory | null;
+  bundle: { items: BundleItemDraft[]; price: { itemsSubtotalCents: number; serviceFeeCents: number; totalCents: number } } | null;
+}) {
   if (!selected) {
     return (
       <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
@@ -364,9 +409,7 @@ function SummaryCard({ selected }: { selected: ServiceWithCategory | null }) {
     );
   }
 
-  const baseDollars = selected.base_price_cents / 100;
-  const serviceFee = 4.50;
-  const total = baseDollars + serviceFee;
+  const filledStops = bundle?.items.filter((i) => i.serviceId) ?? [];
 
   return (
     <div className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
@@ -382,24 +425,23 @@ function SummaryCard({ selected }: { selected: ServiceWithCategory | null }) {
       )}
       <div className="p-4 sm:p-5">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Request Summary</div>
-        <div className="text-base font-bold text-slate-900">{selected.title}</div>
-        <div className="text-[11px] text-slate-500 mt-0.5">{selected.category.label}</div>
-        <p className="mt-2 text-xs text-slate-600 leading-relaxed">{selected.blurb}</p>
-
-        {/* Status pills */}
-        <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-semibold">
-          <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Available Now
-          </span>
-          {selected.eta_label && (
-            <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
-              <Clock className="w-3 h-3" /> {selected.eta_label}
-            </span>
-          )}
-          <span className="inline-flex items-center gap-1 text-slate-700 bg-slate-100 px-2 py-1 rounded-full">
-            <Star className="w-3 h-3 fill-amber-500 text-amber-500" /> 4.9
-          </span>
+        <div className="text-base font-bold text-slate-900">
+          {bundle ? `${filledStops.length}-stop bundle` : selected.title}
         </div>
+        <div className="text-[11px] text-slate-500 mt-0.5">
+          {bundle ? "One helper, one trip, one service fee" : selected.category.label}
+        </div>
+        {!bundle && <p className="mt-2 text-xs text-slate-600 leading-relaxed">{selected.blurb}</p>}
+
+        {/* An "Available Now" pill and a flat 4.9 rating used to render here
+            for every service, with nothing behind either (HW-10). */}
+        {!bundle && selected.eta_label && (
+          <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-semibold">
+            <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+              <Clock className="w-3 h-3" /> Typically {selected.eta_label}
+            </span>
+          </div>
+        )}
 
         {/* What's included */}
         <div className="mt-4 border-t border-slate-100 pt-4">
@@ -419,48 +461,57 @@ function SummaryCard({ selected }: { selected: ServiceWithCategory | null }) {
           </ul>
         </div>
 
-        {/* Price estimate */}
+        {/* Price estimate — reads the same quote the bundle panel shows, so
+            the two can no longer disagree (HW-07). */}
         <div className="mt-4 border-t border-slate-100 pt-4">
           <div className="text-xs font-bold text-slate-900 mb-2">Price estimate</div>
           <dl className="text-xs space-y-1.5">
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Base fare</dt>
-              <dd className="font-semibold text-slate-900">${baseDollars.toFixed(2)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-slate-500">Service fee</dt>
-              <dd className="font-semibold text-slate-900">${serviceFee.toFixed(2)}</dd>
-            </div>
-            <div className="flex justify-between pt-1.5 border-t border-slate-100">
-              <dt className="text-sm font-bold text-slate-900">Total estimate</dt>
-              <dd className="text-sm font-bold text-brand-700">${total.toFixed(2)}</dd>
-            </div>
+            {bundle ? (
+              <>
+                {filledStops.map((it, idx) => (
+                  <div key={it.draftId} className="flex justify-between gap-2">
+                    <dt className="text-slate-500 truncate">{idx + 1}. {it.serviceTitle}</dt>
+                    <dd className="font-semibold text-slate-900 tabular-nums">${dollars(it.servicePriceCents)}</dd>
+                  </div>
+                ))}
+                {filledStops.length === 0 && (
+                  <div className="text-slate-500">Pick a service for each stop to see the total.</div>
+                )}
+                <div className="flex justify-between pt-1.5 border-t border-slate-100">
+                  <dt className="text-slate-500">Service fee (one per bundle)</dt>
+                  <dd className="font-semibold text-slate-900 tabular-nums">${dollars(bundle.price.serviceFeeCents)}</dd>
+                </div>
+                <div className="flex justify-between pt-1.5 border-t border-slate-100">
+                  <dt className="text-sm font-bold text-slate-900">Total estimate</dt>
+                  <dd className="text-sm font-bold text-brand-700 tabular-nums">${dollars(bundle.price.totalCents)}</dd>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">Base price</dt>
+                  <dd className="font-semibold text-slate-900">${dollars(selected.base_price_cents)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">Service fee</dt>
+                  <dd className="font-semibold text-slate-900">${dollars(SERVICE_FEE_CENTS)}</dd>
+                </div>
+                <div className="flex justify-between pt-1.5 border-t border-slate-100">
+                  <dt className="text-sm font-bold text-slate-900">Total estimate</dt>
+                  <dd className="text-sm font-bold text-brand-700">${dollars(quoteOneShotCents(selected.base_price_cents))}</dd>
+                </div>
+              </>
+            )}
           </dl>
           <p className="text-[10px] text-slate-400 mt-2 leading-snug">
-            Final price depends on distance, time, and any tip. You&apos;re only charged after the task is marked complete.
+            This is the amount saved with your request. A tip is optional and goes to your helper in full. You&apos;re
+            only charged after the task is marked complete.
           </p>
         </div>
 
-        {/* Service highlights — real-time provider count lands once matching has live capacity data. */}
-        <div className="mt-4 rounded-xl bg-brand-50 p-3">
-          <div className="text-[10px] font-bold text-brand-700 uppercase tracking-wide mb-2">What you can count on</div>
-          <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
-            <div>
-              <div className="font-bold text-slate-900 inline-flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live
-              </div>
-              <div className="text-slate-500 mt-0.5 leading-tight">matching</div>
-            </div>
-            <div>
-              <div className="font-bold text-slate-900">ETA</div>
-              <div className="text-slate-500 mt-0.5 leading-tight">{selected.eta_label ?? "—"}</div>
-            </div>
-            <div>
-              <div className="font-bold text-slate-900">24/7</div>
-              <div className="text-slate-500 mt-0.5 leading-tight">support</div>
-            </div>
-          </div>
-        </div>
+        {/* A three-up "Live matching / ETA / 24-7" block used to sit here.
+            It asserted live matching capacity that cannot be shown until
+            approved helpers are online (HW-10). */}
       </div>
     </div>
   );
@@ -489,16 +540,21 @@ function ScheduledPicker() {
   );
 }
 
-function ContinueButtons({ pending }: { pending: boolean }) {
+function ContinueButtons({ pending, disabledReason }: { pending: boolean; disabledReason?: string | null }) {
   return (
     <div className="space-y-2">
       <button
         type="submit"
-        disabled={pending}
-        className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 text-white font-semibold shadow-lg shadow-brand-900/10 disabled:opacity-60"
+        disabled={pending || !!disabledReason}
+        className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 text-white font-semibold shadow-lg shadow-brand-900/10 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {pending ? "Submitting…" : <>Submit request <ArrowRight className="w-4 h-4" /></>}
       </button>
+      {disabledReason && (
+        <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 leading-snug">
+          {disabledReason}
+        </p>
+      )}
     </div>
   );
 }

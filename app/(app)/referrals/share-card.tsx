@@ -25,13 +25,23 @@ export function ShareCard({
 
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [shared, setShared] = useState(false);
+  const [copyFailed, setCopyFailed] = useState<string | null>(null);
 
+  // Only reports success after the clipboard promise actually resolves. On
+  // failure (permission denied, insecure context, no Clipboard API) it used
+  // to swallow the error and show nothing at all — now the value is exposed
+  // in a selectable field so the share path still works (HW-21).
   const copy = async (text: string, which: "code" | "link") => {
     try {
+      if (typeof navigator === "undefined" || !navigator.clipboard) throw new Error("no clipboard");
       await navigator.clipboard.writeText(text);
+      setCopyFailed(null);
       setCopied(which);
       setTimeout(() => setCopied(null), 1500);
-    } catch {/* ignore */}
+    } catch {
+      setCopied(null);
+      setCopyFailed(text);
+    }
   };
 
   const nativeShare = async () => {
@@ -52,6 +62,21 @@ export function ShareCard({
   return (
     <section className="rounded-2xl bg-white border border-slate-100 p-5 sm:p-6">
       <h2 className="text-base font-bold text-slate-900 mb-4">Your code &amp; link</h2>
+
+      {copyFailed && (
+        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <p className="text-[11px] font-semibold text-amber-900">
+            Your browser blocked the clipboard. Select and copy it manually:
+          </p>
+          <input
+            readOnly
+            value={copyFailed}
+            onFocus={(e) => e.currentTarget.select()}
+            autoFocus
+            className="mt-2 w-full px-2.5 py-2 rounded-lg bg-white border border-amber-200 text-xs font-mono text-slate-900"
+          />
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-[auto_1fr] gap-3 items-stretch">
         {/* Big code chip */}

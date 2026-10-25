@@ -20,6 +20,9 @@ export type Profile = {
   default_locale: string;
   default_currency: string;
   default_timezone: string;
+  // Set by dismissOnboardingAction when the customer skips/completes the
+  // welcome tour (migration 0025). Null = tour not yet dismissed.
+  onboarded_at: string | null;
   created_at: string;
   updated_at: string;
 };

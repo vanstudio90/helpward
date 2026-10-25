@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { payoutFromEstimateCents, dollars } from "@/lib/pricing";
 import { Inbox, Check, X, MapPin, Clock, DollarSign, Heart } from "lucide-react";
 import { InboxRow } from "./row";
 import { ClientDateTime } from "@/components/ClientDateTime";
@@ -107,7 +108,7 @@ export default async function ProviderInboxPage() {
                   <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <Field icon={<MapPin className="w-3 h-3" />} label="Pickup" value={req.pickup?.formatted ?? "—"} />
                     <Field icon={<Clock className="w-3 h-3" />} label="When" value={req.scheduled_for ? <ClientDateTime iso={req.scheduled_for} /> : "ASAP"} />
-                    <Field icon={<DollarSign className="w-3 h-3" />} label="Est. payout (80%)" value={`$${(((req.estimated_price_cents ?? 0) + 450) * 0.8 / 100).toFixed(2)}`} />
+                    <Field icon={<DollarSign className="w-3 h-3" />} label="Est. payout (80%)" value={`$${dollars(payoutFromEstimateCents(req.estimated_price_cents ?? 0))}`} />
                     <Field icon={<MapPin className="w-3 h-3" />} label="Distance" value={`${row.distance_km} km`} />
                   </dl>
                   {req.notes && (
@@ -126,7 +127,7 @@ export default async function ProviderInboxPage() {
   );
 }
 
-function Field({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function Field({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
     <div>
       <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide inline-flex items-center gap-1">

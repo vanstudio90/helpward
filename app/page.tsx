@@ -10,7 +10,7 @@ import { LandingHeader } from "./_landing-header";
 import { ServicesCatalog } from "./_services-catalog";
 import { HeroSearch } from "./_hero-search";
 import { listServices, listCategories } from "@/lib/data/services";
-import { CITIES, SAMPLE_RECENT_TASKS, MARKETPLACE_METRICS, categoryImage } from "@/lib/marketing";
+import { CITIES, categoryImage } from "@/lib/marketing";
 import { getVisitor } from "@/lib/geo";
 import { getBookingCountsByService } from "@/lib/data/service-stats";
 import { MobileStickyCTA, HeroSentinel } from "@/components/MobileStickyCTA";
@@ -53,7 +53,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Where is Helpward available?",
-    a: "Helpward operates across the United States and Canada, with denser helper coverage in major metros (Vancouver, Seattle, San Francisco, Los Angeles, Austin, Chicago, New York, Toronto, Montreal). New cities are added as the verified-helper supply meets quality thresholds.",
+    a: "Helpward is live in three launch areas: Vancouver and the surrounding Lower Mainland in British Columbia, and the cities of Los Angeles and San Diego in California. The two California areas cover city limits only. If your address falls outside a launch area we tell you before you submit, rather than taking a request we cannot fill. More areas open as verified helper supply grows.",
   },
 ];
 
@@ -92,17 +92,6 @@ const HOMEPAGE_LD = {
 
 // Testimonials with task type + city + completed date for credibility.
 // Sample data clearly marked — swap when real reviews accumulate.
-const TESTIMONIALS = [
-  { quote: "Helpward saved me so much time. I needed help while traveling for work and the helper was amazing.",
-    name: "Jessica M.", where: "San Francisco, CA", img: 47, task: "Furniture assembly", ago: "2 days ago" },
-  { quote: "I needed someone to wait in line for a concert ticket. Got it done within 30 minutes!",
-    name: "Daniel K.", where: "Los Angeles, CA", img: 33, task: "Wait in line", ago: "5 days ago" },
-  { quote: "The elder-assistance service is a blessing. My mom loves her companion.",
-    name: "Linda P.", where: "Chicago, IL", img: 45, task: "Elder assistance", ago: "1 week ago" },
-  { quote: "Reliable, fast, and so easy to use. My go-to app for everything now.",
-    name: "Mark T.", where: "New York, NY", img: 12, task: "Package delivery", ago: "3 days ago" },
-];
-
 const QUICK_REQUESTS = [
   "Ride to airport", "Furniture assembly", "Package delivery", "Wait in line", "Elder companion",
 ];
@@ -147,22 +136,13 @@ export default async function LandingPage() {
             <div>
               {/* Trust pills above headline — second pill is city-aware when we
                   matched the visitor to a Helpward market via Vercel edge geo. */}
-              <div className="flex flex-wrap items-center gap-2 mb-5">
-                <span className="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full pl-1.5 pr-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
-                  <span className="flex -space-x-1.5">
-                    {[12, 33, 47, 58].map((n) => (
-                      <img key={n} src={`https://i.pravatar.cc/24?img=${n}`} alt="" loading="lazy" className="w-5 h-5 rounded-full ring-2 ring-white" />
-                    ))}
-                  </span>
-                  {MARKETPLACE_METRICS.tasksCompletedThisWeek.toLocaleString()} tasks completed this week
-                </span>
-                <span className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1 text-xs font-semibold text-emerald-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  {visitorCity
-                    ? `${MARKETPLACE_METRICS.helpersAvailableNow} helpers available in ${visitorCity.name}`
-                    : `${MARKETPLACE_METRICS.helpersAvailableNow} helpers available across ${MARKETPLACE_METRICS.citiesLive} cities`}
-                </span>
-              </div>
+              {/* Two "trust pills" used to sit here: a stack of stock
+                  pravatar faces with "2,431 tasks completed this week", and
+                  "247 helpers available across 10 cities". Both were
+                  hardcoded constants. The database has never recorded a
+                  single completed booking and has zero approved helpers, so
+                  they were not approximations — they were invented. Nothing
+                  replaces them until there are real numbers to report. */}
 
               <h1 className="text-[40px] sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.05]">
                 Get real human help{" "}
@@ -216,13 +196,16 @@ export default async function LandingPage() {
 
       {/* STATS STRIP */}
       <section className="bg-white border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10 grid grid-cols-2 md:grid-cols-5 gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10 grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { icon: Star, tint: "bg-amber-50 text-amber-600", value: "4.9 ★", label: "Average rating from 12K+ reviews" },
-            { icon: Clock, tint: "bg-brand-50 text-brand-600", value: "18 min", label: "Average arrival time" },
-            { icon: ShieldCheck, tint: "bg-emerald-50 text-emerald-600", value: "100%", label: "Background checked" },
-            { icon: DollarSign, tint: "bg-violet-50 text-violet-600", value: "$1M+", label: "Insurance coverage" },
-            { icon: Headphones, tint: "bg-rose-50 text-rose-600", value: "24/7", label: "Help when you need it" },
+            // "4.9 ★ from 12K+ reviews" and "18 min average arrival time"
+            // were removed: there are no reviews and no completed bookings to
+            // average. What remains are commitments we control, not measured
+            // statistics we cannot support.
+            { icon: ShieldCheck, tint: "bg-emerald-50 text-emerald-600", value: "Every helper", label: "ID and background checked before approval" },
+            { icon: DollarSign, tint: "bg-violet-50 text-violet-600", value: "$1M", label: "Marketplace liability cover per booking" },
+            { icon: Clock, tint: "bg-brand-50 text-brand-600", value: "No surge", label: "Flat $4.50 service fee, never multiplied" },
+            { icon: Headphones, tint: "bg-rose-50 text-rose-600", value: "Pay after", label: "You're charged once the task is complete" },
           ].map((s) => (
             <div key={s.label} className="flex items-start gap-3">
               <span className={`inline-flex w-10 h-10 rounded-full ${s.tint} items-center justify-center shrink-0`}>
@@ -357,53 +340,12 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* RECENTLY COMPLETED across cities */}
-      <section className="bg-white border-t border-slate-100 py-12 lg:py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between gap-3 mb-5">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 inline-flex items-center gap-2">
-                {visitorCity ? `Just completed near ${visitorCity.name}` : "Just completed across the network"}
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide bg-rose-50 text-rose-600 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" /> Live
-                </span>
-              </h2>
-              <p className="text-sm text-slate-500 mt-1">
-                {visitorCity
-                  ? `Real tasks finished today in ${visitorCity.name} and the surrounding ${visitorCity.metro ?? visitorCity.region} area`
-                  : `Real tasks finished today across ${MARKETPLACE_METRICS.citiesLive} Helpward cities`}
-              </p>
-            </div>
-            {visitorCity && (
-              <Link
-                href={`/cities/${visitorCity.slug}`}
-                className="hidden sm:inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap"
-              >
-                See all in {visitorCity.name} →
-              </Link>
-            )}
-          </div>
-          <div className="-mx-4 sm:mx-0">
-            <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 overflow-x-auto scrollbar-none px-4 sm:px-0 snap-x snap-mandatory">
-              {SAMPLE_RECENT_TASKS.map((t) => (
-                <div key={t.id} className="snap-start shrink-0 w-[70%] sm:w-auto rounded-2xl overflow-hidden bg-white border border-slate-100">
-                  <div className="aspect-[5/3] bg-slate-100 overflow-hidden">
-                    <img src={t.img} alt={t.title} loading="lazy" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="p-3">
-                    <div className="text-sm font-bold text-slate-900 truncate">{t.title}</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">Completed {t.ago}</div>
-                    <div className="text-[11px] text-slate-500 truncate inline-flex items-center gap-1">
-                      <MapPin className="w-2.5 h-2.5" /> {t.city}, {t.region}
-                    </div>
-                    <div className="mt-2 text-xs font-semibold text-slate-900">${t.price}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* A "Just completed near you - LIVE - Real tasks finished today"
+          carousel used to render here, driven by SAMPLE_RECENT_TASKS: a
+          hardcoded array of invented tasks, prices and cities, presented
+          with a pulsing "Live" dot. Zero bookings have ever been completed.
+          Removed rather than relabelled; a real feed can be built from
+          `bookings where status = 'completed'` once there are any. */}
 
       {/* FULL CATALOG (client component handles filter tabs) */}
       <ServicesCatalog services={services} categories={categories} bookingCounts={bookingCounts} />
@@ -428,37 +370,11 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
-      <section className="bg-white border-t border-slate-100 py-14 lg:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">What our users say</h2>
-            <p className="text-sm text-slate-500 mt-1">Real people. Real experiences.</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-            {TESTIMONIALS.map((t) => (
-              <figure key={t.name} className="rounded-2xl bg-slate-50 border border-slate-100 p-5 flex flex-col">
-                <blockquote className="text-sm text-slate-700 leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</blockquote>
-                <div className="mt-3 inline-flex self-start items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {t.task} · {t.where.split(",")[0]} · {t.ago}
-                </div>
-                <figcaption className="mt-4 flex items-center gap-3">
-                  <img src={`https://i.pravatar.cc/48?img=${t.img}`} alt="" loading="lazy" className="w-9 h-9 rounded-full" />
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-900 truncate">{t.name}</div>
-                    <div className="text-[11px] text-slate-500 truncate">{t.where}</div>
-                  </div>
-                </figcaption>
-                <div className="mt-2 flex items-center gap-0.5 text-amber-400">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className="w-3 h-3 fill-current" />
-                  ))}
-                </div>
-              </figure>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Four customer testimonials used to render here with invented
+          quotes, invented names, stock pravatar faces and cities we do not
+          serve, for a marketplace that has never completed a task.
+          Fabricated reviews are the highest-risk content on the site, so
+          they are gone until real ones exist. */}
 
       {/* FAQ + SUPPORT */}
       <section id="faq" className="bg-slate-50 border-t border-slate-100 py-14 lg:py-20">

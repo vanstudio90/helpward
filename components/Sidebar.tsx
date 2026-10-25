@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { logoutAction } from "@/app/(auth)/auth/actions";
+import { REFERRAL_REWARD_DOLLARS } from "@/lib/referrals-pure";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -18,9 +19,9 @@ const nav = [
   { href: "/saved-providers", label: "Saved Providers", icon: Heart },
   { href: "/payments", label: "Payments", icon: CreditCard },
   { href: "/favorites", label: "Favorites", icon: Star },
-  { href: "/business", label: "Business Tools", icon: Briefcase, tag: "New" },
+  { href: "/business", label: "Business Tools", icon: Briefcase, tag: "Soon" },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/referrals", label: "Refer a friend", icon: Gift, tag: "$10" },
+  { href: "/referrals", label: "Refer a friend", icon: Gift, tag: `$${REFERRAL_REWARD_DOLLARS}` },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -70,12 +71,18 @@ export function Sidebar({
             <Gift className="w-4 h-4 text-brand-600" />
             <span className="text-sm font-semibold text-slate-900">Refer & Earn</span>
           </div>
+          {/* Was "$20 in credits" next to a "$10" nav badge and a $10
+              referrals page, over a DEFAULT_REWARD_CENTS of 1000 (HW-15).
+              The button also had no handler at all (HW-13). */}
           <p className="text-xs text-slate-500 leading-relaxed">
-            Invite friends and earn $20 in credits.
+            Invite a friend — you each get ${REFERRAL_REWARD_DOLLARS} in credits.
           </p>
-          <button className="mt-3 w-full text-xs font-semibold text-brand-700 bg-white border border-brand-200 rounded-lg py-2 hover:bg-brand-50 transition">
+          <Link
+            href="/referrals"
+            className="mt-3 block w-full text-center text-xs font-semibold text-brand-700 bg-white border border-brand-200 rounded-lg py-2 hover:bg-brand-50 transition"
+          >
             Invite Now
-          </button>
+          </Link>
         </div>
 
         {user && (

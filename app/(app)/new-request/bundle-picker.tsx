@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import {
   Layers, Plus, X, GripVertical, Info, AlertCircle,
 } from "lucide-react";
@@ -11,47 +11,59 @@ import {
 } from "@/lib/bundle-pure";
 import type { ServiceWithCategory } from "@/lib/data/services";
 
-// Self-contained bundle picker. When "Bundle multiple tasks" is on, the
-// new-request form serialises the item list into a hidden `bundle_items`
-// JSON field and sets `is_bundle=1`. The server action branches on this.
+// Bundle picker. When "Bundle multiple tasks" is on, the new-request form
+// serialises the item list into a hidden `bundle_items` JSON field and sets
+// `is_bundle=1`. The server action branches on this.
 //
-// Service-id selection inside each row is decoupled from the parent
-// new-request form's primary service selector — we don't try to keep them
-// in sync. The bundle owns its own item list.
+// This component is CONTROLLED by the new-request view. It used to own its
+// own `enabled` + `items` state, with the first row seeded from
+// primaryService in a useState initialiser that only ran at mount — so
+// picking a service and then enabling bundling left stop 1 on whatever
+// service happened to be selected when the page loaded (HW-06). The summary
+// panel also had no idea a bundle existed and kept quoting the single
+// service (HW-07). Both panels now read the same lifted state.
 
 export function BundlePicker({
-  services, primaryService,
+  services, enabled, onEnabledChange, items, onItemsChange, onPrimaryServiceChange,
 }: {
   services: ServiceWithCategory[];
-  primaryService: ServiceWithCategory | null;
+  enabled: boolean;
+  onEnabledChange: (v: boolean) => void;
+  items: BundleItemDraft[];
+  onItemsChange: (updater: (prev: BundleItemDraft[]) => BundleItemDraft[]) => void;
+  onPrimaryServiceChange: (service: ServiceWithCategory) => void;
 }) {
-  const [enabled, setEnabled] = useState(false);
-  // Seed with two rows so the user immediately sees the "two stops" shape.
-  // Pre-fill the first row with the primary service they already picked.
-  const [items, setItems] = useState<BundleItemDraft[]>(() => [
-    newDraftItem(primaryService ? {
-      serviceId: primaryService.id,
-      serviceTitle: primaryService.title,
-      servicePriceCents: primaryService.base_price_cents,
-    } : {}),
-    newDraftItem(),
-  ]);
-
   const updateItem = (id: string, patch: Partial<BundleItemDraft>) => {
-    setItems((prev) => prev.map((it) => (it.draftId === id ? { ...it, ...patch } : it)));
+    onItemsChange((prev) => prev.map((it) => (it.draftId === id ? { ...it, ...patch } : it)));
   };
 
   const addItem = () => {
     if (items.length >= MAX_BUNDLE_ITEMS) return;
-    setItems((prev) => [...prev, newDraftItem()]);
+    onItemsChange((prev) => (prev.length >= MAX_BUNDLE_ITEMS ? prev : [...prev, newDraftItem()]));
   };
 
   const removeItem = (id: string) => {
-    setItems((prev) => (prev.length <= 2 ? prev : prev.filter((it) => it.draftId !== id)));
+    if (items.length <= 2) return;
+    // Removing stop 1 promotes stop 2. Because stop 1 mirrors the request's
+    // primary service, the promoted stop must become the primary too —
+    // otherwise the sync effect in the parent immediately overwrites it
+    // back to the old selection and the removal silently eats a stop.
+    if (items[0]?.draftId === id) {
+      const promoted = items[1];
+      const svc = services.find((x) => x.id === promoted?.serviceId);
+      if (svc) onPrimaryServiceChange(svc);
+    }
+    onItemsChange((prev) => (prev.length <= 2 ? prev : prev.filter((it) => it.draftId !== id)));
   };
 
   const pickService = (id: string, serviceId: string) => {
     const svc = services.find((s) => s.id === serviceId);
+    // Stop 1 IS the request's primary service — changing it here retargets
+    // the whole request so the summary card and the bundle agree.
+    if (svc && items[0]?.draftId === id) {
+      onPrimaryServiceChange(svc);
+      return;
+    }
     updateItem(id, {
       serviceId,
       serviceTitle: svc?.title ?? "",
@@ -77,7 +89,7 @@ export function BundlePicker({
         <input
           type="checkbox"
           checked={enabled}
-          onChange={(e) => setEnabled(e.target.checked)}
+          onChange={(e) => onEnabledChange(e.target.checked)}
           className="w-4 h-4 rounded text-brand-600"
         />
         <span className="inline-flex items-center gap-2 text-sm font-bold text-slate-900">
@@ -120,7 +132,9 @@ export function BundlePicker({
                       value={it.notes}
                       onChange={(e) => updateItem(it.draftId, { notes: e.target.value })}
                       maxLength={500}
-                      placeholder={`Stop ${idx + 1} notes (address, specific store, items…)`}
+                      placeholder={idx === 0
+                        ? "Stop 1 notes (address, specific store, items…)"
+                        : `Stop ${idx + 1} notes (address, specific store, items…)`}
                       className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400"
                     />
                   </div>

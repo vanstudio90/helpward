@@ -3,6 +3,7 @@ import { listServices } from "@/lib/data/services";
 import { getBatchAvailabilityStatus } from "@/lib/data/availability";
 import Link from "next/link";
 import { Heart, Plus, Sparkles, ArrowRight, ExternalLink } from "lucide-react";
+import { UnfavoriteServiceButton } from "./unfavorite-button";
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 import { AvailabilityBadge } from "@/app/providers/[id]/availability";
 
@@ -98,11 +99,29 @@ export default async function FavoritesPage() {
           {favServices.length > 0 && (
             <Section title={`Services (${favServices.length})`}>
               <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {/* These were static text — a saved service had no way to be
+                    booked, opened or removed from the one page dedicated to
+                    saved things (HW-14). */}
                 {favServices.map((s) => (
-                  <li key={s.id} className="rounded-2xl bg-white border border-slate-100 p-4">
+                  <li key={s.id} className="rounded-2xl bg-white border border-slate-100 p-4 flex flex-col">
                     <div className="text-sm font-bold text-slate-900">{s.title}</div>
                     <div className="text-xs text-slate-500 mt-1 line-clamp-2">{s.blurb}</div>
                     <div className="text-xs font-semibold text-brand-700 mt-3">From ${(s.base_price_cents / 100).toFixed(0)}</div>
+                    <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
+                      <Link
+                        href={`/new-request?service=${s.id}`}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-white bg-brand-600 hover:bg-brand-700 px-2.5 py-1.5 rounded-lg"
+                      >
+                        Request this <ArrowRight className="w-3 h-3" />
+                      </Link>
+                      <Link
+                        href={`/services/${s.id}`}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-50"
+                      >
+                        Details <ExternalLink className="w-3 h-3" />
+                      </Link>
+                      <UnfavoriteServiceButton serviceId={s.id} title={s.title} />
+                    </div>
                   </li>
                 ))}
               </ul>

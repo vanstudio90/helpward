@@ -87,8 +87,8 @@ export default async function ReferralsPage() {
         <h2 className="text-base font-bold text-slate-900 mb-4">How it works</h2>
         <ol className="space-y-3 text-sm text-slate-700">
           <Step n={1} title="Share your code or link" sub="Send it via text, email, or any channel you'd like." />
-          <Step n={2} title="They sign up with your code" sub={`Your friend gets ${rewardLabel} off their first booking the moment they sign up.`} />
-          <Step n={3} title="They complete their first task" sub={`You earn ${rewardLabel} in credit. Spend it on your next Helpward booking.`} />
+          <Step n={2} title="They sign up with your code" sub="Their referral is recorded as pending against your code." />
+          <Step n={3} title="They complete their first task" sub={`That's when the referral qualifies — you each get ${rewardLabel} in credit toward a future booking.`} />
         </ol>
         <p className="mt-4 text-[11px] text-slate-500 leading-relaxed">
           Credit applies automatically at checkout once payment processing is live. Read the{" "}

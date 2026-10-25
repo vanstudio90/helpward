@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // The test runner is plain node with native type stripping, which
+    // requires explicit .ts specifiers. The app build never sees this file.
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts"],
+  "exclude": []
+}

@@ -7,7 +7,8 @@ import { ClientDateTime } from "@/components/ClientDateTime";
 
 // Provider earnings — pulls real completed bookings and aggregates by week.
 // Stripe payout state (arrival_date, status) lights up once Stripe Connect is
-// wired; until then we show the figures we already know (helper's 80% cut +
+// wired; until then we show the figures we already know (helper's 80% of
+// the service subtotal +
 // tips) and label payout columns as "Pending Stripe Connect."
 
 type CompletedRow = {
@@ -27,7 +28,7 @@ type WeekBucket = {
   key: string;           // ISO Monday of the week, used for ordering
   label: string;         // "May 26 – Jun 1, 2026"
   count: number;
-  basePayoutCents: number; // helper's 80% of base + distance
+  basePayoutCents: number; // helper's 80% of the service subtotal
   tipsCents: number;
   totalCents: number;     // sum for the week
   expectedArrival: string; // "Tuesday Jun 2" — for the row directly after the week ends
@@ -88,9 +89,10 @@ export default async function ProviderEarningsPage() {
     const key = bucketKey(d);
     const monday = mondayOf(d);
     const tip = r.tip_cents ?? 0;
-    // Helper keeps 80% of base + distance (Helpward's 20% covers insurance,
-    // verification, support) PLUS 100% of any tip. payout_cents is the
-    // precomputed sum the booking row stores at completion time.
+    // Helper keeps 80% of the service subtotal PLUS 100% of any tip. The
+    // $4.50 service fee is entirely Helpward's and is not commissionable —
+    // see lib/pricing.ts. payout_cents is the sum accept_request stores on
+    // the booking row at acceptance time (migration 0031).
     const payout = r.payout_cents ?? 0;
     const existing = buckets.get(key) ?? {
       key,
@@ -126,7 +128,9 @@ export default async function ProviderEarningsPage() {
             <DollarSign className="w-6 h-6 text-emerald-600" /> Earnings
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            You keep 80% of base + distance fees. Tips go 100% to you. Payouts land every Tuesday for the previous Mon–Sun.
+            You keep 80% of the service price, plus 100% of any tip. The flat
+            $4.50 service fee customers pay goes to Helpward and is never taken
+            out of your share. Payout scheduling is not live yet.
           </p>
         </div>
         <a

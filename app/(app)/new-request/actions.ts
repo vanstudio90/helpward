@@ -4,10 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { createSeriesAction } from "@/app/(app)/bookings/series/actions";
-import {
-  MAX_BUNDLE_ITEMS, BUNDLE_SERVICE_FEE_CENTS,
-} from "@/lib/bundle-pure";
-import { resolveAddressForInsert, resolveAddressFromCoords } from "@/lib/geocode";
+import { MAX_BUNDLE_ITEMS } from "@/lib/bundle-pure";
+import { quoteOneShotCents, quoteBundleCents } from "@/lib/pricing";
+import { resolveDispatchableAddress, addressInsertFields } from "@/lib/dispatch-guard";
+import { broadcastRequestBestEffort } from "@/lib/broadcast";
 
 type State = { error?: string; success?: string } | undefined;
 
@@ -37,8 +37,10 @@ function parseBundleItems(formData: FormData): BundleItemInput[] | null {
 }
 
 /* Create a request from the New Request form.
-   For now (Phase 3 not done), we mark it 'matching' and the matching engine
-   will pick it up in a later phase. */
+   Marks the request 'matching' and calls broadcast_request, which offers it
+   to approved + online providers within the radius who list this service in
+   provider_services. If no provider qualifies, the request stays in
+   'matching' until the expire-stale-requests cron retires it. */
 export async function createRequestAction(
   _prev: State,
   formData: FormData
@@ -79,15 +81,13 @@ export async function createRequestAction(
   }
 
   // Client-supplied coords come from the saved-address chips or the Use my
-  // current location button. When present, we trust them and skip the
-  // forward-geocode round-trip — saved-address coords were verified at save
-  // time, browser GPS coords are inherently authoritative.
+  // current location button. They are trusted as coordinates, but the guard
+  // still reverse-geocodes them to learn the municipality for the
+  // service-area check.
   const latRaw = String(formData.get("address_lat") ?? "");
   const lngRaw = String(formData.get("address_lng") ?? "");
   const clientLat = latRaw ? Number(latRaw) : null;
   const clientLng = lngRaw ? Number(lngRaw) : null;
-  const haveClientCoords = clientLat != null && clientLng != null
-    && Number.isFinite(clientLat) && Number.isFinite(clientLng);
 
   // Preferred helper — from the favorite-helper "Book again" flow.
   // Validate it's a real approved provider before persisting; if not, fall
@@ -125,27 +125,22 @@ export async function createRequestAction(
       if (!s || !s.active) return { error: `One of the stops references an unavailable service.` };
     }
 
-    // Resolve address coords: trust client-supplied lat/lng when present
-    // (saved-address chip or use-current-location), forward-geocode the
-    // typed text otherwise. Either way falls back to the placeholder if
-    // Mapbox is unavailable.
-    const resolved = haveClientCoords
-      ? await resolveAddressFromCoords(addressText, clientLat!, clientLng!)
-      : await resolveAddressForInsert(addressText);
+    // Geocode + service-area gate. Refuses rather than falling back to a
+    // placeholder point, so a bundle can never be dispatched to an address
+    // we could not verify or do not serve.
+    const guard = await resolveDispatchableAddress({
+      text: addressText, lat: clientLat, lng: clientLng, client: supabase,
+    });
+    if (!guard.ok) return { error: guard.error };
     const { data: bundleAddress, error: bundleAddrErr } = await supabase
       .from("addresses")
-      .insert({
-        user_id: user.id,
-        formatted: resolved.formatted,
-        location: resolved.location as unknown as string,
-        country: resolved.country,
-      })
+      .insert(addressInsertFields(guard.address, user.id))
       .select()
       .single();
     if (bundleAddrErr || !bundleAddress) return { error: "Couldn't save the address." };
 
     const itemsSubtotal = bundleItems.reduce((s, it) => s + (lookup.get(it.serviceId)?.base_price_cents ?? 0), 0);
-    const totalCents = itemsSubtotal + BUNDLE_SERVICE_FEE_CENTS;
+    const totalCents = quoteBundleCents(itemsSubtotal);
 
     // Parent service_id = the first item's service. The matching engine
     // routes on the parent's service_id, so the bundle gets dispatched to
@@ -190,12 +185,7 @@ export async function createRequestAction(
     }
 
     // Broadcast just like a one-shot request.
-    try {
-      const admin = createSupabaseServiceClient();
-      await admin.rpc("broadcast_request", { p_request_id: parentRequest.id, p_radius_km: 20 });
-    } catch (e) {
-      console.error("broadcast_request failed for bundle:", e);
-    }
+    await broadcastRequestBestEffort(createSupabaseServiceClient(), parentRequest.id, { label: "bundle" });
 
     revalidatePath("/dashboard", "page");
     revalidatePath("/bookings", "page");
@@ -212,22 +202,16 @@ export async function createRequestAction(
     return { error: "That service isn't available right now." };
   }
 
-  // Resolve address coords: trust client-supplied lat/lng when present
-  // (saved-address chip or use-current-location button), forward-geocode
-  // the typed text otherwise. Either path falls back to the placeholder
-  // if Mapbox is unavailable. find_nearby_providers reads the resulting
-  // POINT for proximity matching.
-  const resolved = haveClientCoords
-    ? await resolveAddressFromCoords(addressText, clientLat!, clientLng!)
-    : await resolveAddressForInsert(addressText);
+  // Geocode + service-area gate. find_nearby_providers reads the resulting
+  // POINT for proximity matching, so it must be a real coordinate — there
+  // is no placeholder fallback any more.
+  const guard = await resolveDispatchableAddress({
+    text: addressText, lat: clientLat, lng: clientLng, client: supabase,
+  });
+  if (!guard.ok) return { error: guard.error };
   const { data: address, error: addrErr } = await supabase
     .from("addresses")
-    .insert({
-      user_id: user.id,
-      formatted: resolved.formatted,
-      location: resolved.location as unknown as string,
-      country: resolved.country,
-    })
+    .insert(addressInsertFields(guard.address, user.id))
     .select()
     .single();
   if (addrErr || !address) {
@@ -243,7 +227,9 @@ export async function createRequestAction(
       pickup_address_id: address.id,
       scheduled_for: scheduledFor,
       notes,
-      estimated_price_cents: service.base_price_cents,
+      // Includes the flat service fee so the saved estimate matches the
+      // quote the customer was shown pre-submit (HW-03).
+      estimated_price_cents: quoteOneShotCents(service.base_price_cents),
       estimated_duration_min: 45,
       status: "matching",
       preferred_helper_id: preferredHelperId,
@@ -256,14 +242,10 @@ export async function createRequestAction(
   }
 
   // Broadcast to nearby providers — runs as service role so it can insert
-  // match_attempts + notifications on behalf of providers.
-  try {
-    const admin = createSupabaseServiceClient();
-    await admin.rpc("broadcast_request", { p_request_id: request.id, p_radius_km: 20 });
-  } catch (e) {
-    console.error("broadcast_request failed:", e);
-    // Non-fatal — request is created, admin can manually re-broadcast
-  }
+  // match_attempts + notifications on behalf of providers. Non-fatal: the
+  // request exists, an admin can re-broadcast, and the expire-stale cron
+  // retires it if no helper ever sees it.
+  await broadcastRequestBestEffort(createSupabaseServiceClient(), request.id, { label: "one-shot" });
 
   revalidatePath("/dashboard", "page");
   revalidatePath("/bookings", "page");

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { validateSavedAddress } from "@/lib/saved-addresses-pure";
-import { geocodeAddress, isGeocodingEnabled } from "@/lib/geocode";
+import { resolveDispatchableAddress } from "@/lib/dispatch-guard";
 
 type State = { error?: string; success?: string } | undefined;
 
@@ -29,31 +29,25 @@ export async function createSavedAddressAction(formData: FormData): Promise<Stat
       .eq("is_default", true);
   }
 
-  // Geocode if we can — saved_addresses.lat + lng are nullable so a
-  // pre-token environment still inserts the row, just without coords.
-  // We pre-compute once at save time rather than every request submit so
-  // the booking-creation path stays fast for the common "pick a saved
-  // address" flow.
-  let lat: number | null = null;
-  let lng: number | null = null;
-  let canonical = formatted.trim();
-  if (isGeocodingEnabled()) {
-    const g = await geocodeAddress(canonical);
-    if (g) {
-      lat = g.lat;
-      lng = g.lng;
-      canonical = g.formatted;
-    }
-  }
+  // Verify at save time, and refuse anything we can't geocode or don't
+  // serve. This used to geocode best-effort and save the raw text on
+  // failure, which is how free text like "QA TEST — DO NOT DISPATCH" became
+  // a saved address that then filled and submitted a real request.
+  const guard = await resolveDispatchableAddress({ text: formatted.trim(), client: supabase });
+  if (!guard.ok) return { error: guard.error };
 
   const { error: insErr } = await supabase
     .from("saved_addresses")
     .insert({
       user_id: user.id,
       label: label.trim(),
-      formatted: canonical,
-      lat,
-      lng,
+      formatted: guard.address.formatted,
+      lat: guard.address.lat,
+      lng: guard.address.lng,
+      city: guard.address.city,
+      region: guard.address.region,
+      country: guard.address.country,
+      geocode_verified: true,
       is_default: makeDefault,
     });
   if (insErr) return { error: insErr.message };

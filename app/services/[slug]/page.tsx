@@ -175,7 +175,7 @@ export default async function ServiceDetailPage({
               <strong className="text-slate-700">{service.title} on Helpward</strong> is an on-demand{" "}
               {service.category?.label.toLowerCase()} service that connects you with a verified, background-checked
               human in your city. Pricing starts at ${baseDollars.toFixed(0)}, a flat $4.50 service fee applies, and
-              you only pay once the helper marks the task complete. Service is available across {CITIES.length} cities
+              you only pay once the helper marks the task complete. Service is available in our launch areas
               in the U.S. and Canada.
             </p>
           </div>
@@ -240,7 +240,7 @@ export default async function ServiceDetailPage({
         {/* Where it's available */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <h2 className="text-2xl font-bold text-slate-900">Where {service.title.toLowerCase()} is available</h2>
-          <p className="text-sm text-slate-600 mt-1">{service.title} on Helpward is live in {CITIES.length} cities across the U.S. and Canada.</p>
+          <p className="text-sm text-slate-600 mt-1">Where {service.title} is available today. The two California areas cover city limits only.</p>
           <ul className="mt-4 flex flex-wrap gap-2">
             {CITIES.map((c) => (
               <li key={c.slug}>

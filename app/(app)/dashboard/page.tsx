@@ -27,12 +27,19 @@ export default async function DashboardPage() {
   // the recent[] list we already loaded for the "Recent" rail. Also pull
   // profiles.onboarded_at to decide whether to mount the welcome tour.
   const supabase = await createSupabaseServerClient();
-  const [{ count: savedAddressCount }, savedHelperIds, { data: meRow }] = await Promise.all([
+  const [{ count: savedAddressCount }, savedHelperIds] = await Promise.all([
     supabase.from("saved_addresses").select("id", { count: "exact", head: true }),
     listSavedProviderIds(),
-    supabase.from("profiles").select("onboarded_at").maybeSingle(),
   ]);
-  const showOnboardingTour = !meRow?.onboarded_at;
+  // Read onboarded_at off the profile getMe() already loaded (it filters by
+  // id). The previous standalone `.from("profiles").select("onboarded_at")
+  // .maybeSingle()` had no id filter — and profiles_read (migration 0002)
+  // also exposes every provider row to any authed user, so it matched
+  // 1 + <provider count> rows, errored, and yielded null. That made the
+  // welcome tour reappear on every visit no matter how often it was
+  // dismissed, even though dismissOnboardingAction wrote onboarded_at
+  // correctly (HW-19).
+  const showOnboardingTour = !!me && !me.profile.onboarded_at;
   const completedBookings = recent.filter((b) => b.status === "completed");
   const unrated = completedBookings
     .filter((b) => (b.review?.length ?? 0) === 0)
@@ -167,9 +174,9 @@ export default async function DashboardPage() {
             <Headphones className="absolute right-3 top-1/2 -translate-y-1/2 w-20 h-20 text-slate-700/40" />
             <h3 className="text-sm font-bold">Need help?</h3>
             <p className="text-xs text-slate-300 mt-1">Our support team is available 24/7.</p>
-            <button className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-white text-xs font-semibold border border-white/15">
+            <Link href="/help" className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 text-white text-xs font-semibold border border-white/15 hover:bg-white/15">
               <MessageSquare className="w-3.5 h-3.5" /> Contact Support
-            </button>
+            </Link>
           </section>
         </div>
       </div>
@@ -293,11 +300,11 @@ function QuickRequestCard() {
     <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
       <h3 className="text-base font-bold text-slate-900 mb-3 sm:mb-4">Quick Request</h3>
       <div className="grid grid-cols-3 sm:grid-cols-6 lg:grid-cols-3 gap-2 sm:gap-3">
-        <Quick icon={<Car className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Ride / Driver" />
-        <Quick icon={<ShoppingBag className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Errand" />
-        <Quick icon={<Home className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Home Help" />
-        <Quick icon={<Box className="w-5 h-5 text-orange-500" />} tint="bg-orange-50" label="Move / Lift" />
-        <Quick icon={<User className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Wait in Line" />
+        <Quick icon={<Car className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Ride / Driver" service="designated-driver" />
+        <Quick icon={<ShoppingBag className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Errand" service="errand-runner" />
+        <Quick icon={<Home className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Home Help" service="maid-service" />
+        <Quick icon={<Box className="w-5 h-5 text-orange-500" />} tint="bg-orange-50" label="Move / Lift" service="moving-help" />
+        <Quick icon={<User className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Wait in Line" service="wait-in-line" />
         <Quick icon={<MoreHorizontal className="w-5 h-5 text-slate-500" />} tint="bg-slate-100" label="More" />
       </div>
     </div>
@@ -322,9 +329,16 @@ function StatCard({
   return href ? <Link href={href} className="block">{inner}</Link> : inner;
 }
 
-function Quick({ icon, tint, label }: { icon: React.ReactNode; tint: string; label: string }) {
+// `service` is a services.id (the catalog uses the slug as its primary key),
+// forwarded as ?service= — the same handoff the public service pages use.
+// Without it every tile opened the form with the first service preselected,
+// so "Move / Lift" produced a Designated Driver request (HW-12).
+function Quick({ icon, tint, label, service }: { icon: React.ReactNode; tint: string; label: string; service?: string }) {
   return (
-    <Link href="/new-request" className="flex flex-col items-center gap-1.5 p-1 rounded-xl hover:bg-slate-50">
+    <Link
+      href={service ? `/new-request?service=${service}` : "/new-request"}
+      className="flex flex-col items-center gap-1.5 p-1 rounded-xl hover:bg-slate-50"
+    >
       <span className={`inline-flex w-10 h-10 sm:w-11 sm:h-11 ${tint} rounded-xl items-center justify-center shrink-0`}>{icon}</span>
       <span className="text-[10px] sm:text-[11px] text-center font-medium text-slate-700 leading-tight">{label}</span>
     </Link>

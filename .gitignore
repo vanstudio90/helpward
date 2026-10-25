@@ -8,3 +8,9 @@ out
 .turbo
 next-env.d.ts
 tsconfig.tsbuildinfo
+# Address backfill ledger — contains customer addresses, must not be committed
+backfill-addresses.jsonl
+
+# Boundary source files are large and licence-bound; load them from the
+# publisher and record provenance in service_area_datasets instead.
+/data/

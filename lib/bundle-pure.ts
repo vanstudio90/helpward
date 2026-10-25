@@ -1,3 +1,5 @@
+import { SERVICE_FEE_CENTS, quoteBundleCents } from "./pricing";
+
 // Pure helpers for multi-task bundles — safe to import from client. Only
 // price math + validation; server-side fetchers live in the action.
 
@@ -28,7 +30,9 @@ export function newDraftItem(seed: Partial<BundleItemDraft> = {}): BundleItemDra
 // Bundle pricing — sum the items, charge ONE flat service fee. The helper
 // does N tasks in one trip; the platform fee covers the dispatch + insurance
 // for the whole engagement, not per stop.
-export const BUNDLE_SERVICE_FEE_CENTS = 450; // $4.50 — same as the one-shot fee
+// Re-exported from lib/pricing so the bundle panel, the request summary,
+// the server action and the catalog all quote one number.
+export { SERVICE_FEE_CENTS as BUNDLE_SERVICE_FEE_CENTS } from "./pricing";
 
 export type BundlePriceBreakdown = {
   itemsSubtotalCents: number;
@@ -40,8 +44,8 @@ export function priceBundle(items: BundleItemDraft[]): BundlePriceBreakdown {
   const itemsSubtotalCents = items.reduce((s, i) => s + (i.servicePriceCents || 0), 0);
   return {
     itemsSubtotalCents,
-    serviceFeeCents: BUNDLE_SERVICE_FEE_CENTS,
-    totalCents: itemsSubtotalCents + BUNDLE_SERVICE_FEE_CENTS,
+    serviceFeeCents: SERVICE_FEE_CENTS,
+    totalCents: quoteBundleCents(itemsSubtotalCents),
   };
 }
 

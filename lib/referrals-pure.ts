@@ -48,3 +48,8 @@ export type ReferralStats = {
 
 // Default rewards (mirror migration default). Used by the UI copy.
 export const DEFAULT_REWARD_CENTS = 1000; // $10
+
+// Whole-dollar form for copy. Every surface that names the reward reads
+// this — the sidebar and mobile drawer used to hardcode "$20" while the
+// nav badge and the referrals page said "$10" (HW-15).
+export const REFERRAL_REWARD_DOLLARS = DEFAULT_REWARD_CENTS / 100;

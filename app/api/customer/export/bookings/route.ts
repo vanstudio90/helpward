@@ -10,6 +10,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 // customer_id = auth.uid() so the route is safe behind the regular
 // cookie-bound SSR client — no service-role, no admin gate.
 //
+// SCOPE: accepted bookings only. A request that is still matching, or that
+// expired or was cancelled before any helper accepted it, never becomes a
+// bookings row and so never appears here — an account with only pending
+// requests downloads a headers-only file. That is intended (the export is a
+// record of engagements, not of attempts), but it was unexplained anywhere
+// in the UI (HW-20); the Bookings page now says so on the button.
+//
 // Query params:
 //   ?days=<int 1..730> (default 365)  — customers usually want tax-year
 //   ?status=<status>                — optional single-status filter

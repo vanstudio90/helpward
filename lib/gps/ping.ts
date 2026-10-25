@@ -65,6 +65,17 @@ export function startGpsPings(opts: GpsOptions = {}): () => void {
         );
       if (upErr) onError?.(new Error("Location upsert failed: " + upErr.message));
 
+      // ALSO mirror onto provider_profiles. find_nearby_providers reads
+      // provider_profiles.current_location — not provider_locations — so
+      // without this the matching engine never saw a real GPS fix and ran
+      // entirely on the placeholder point seeded when a helper went online.
+      // location_updated_at drives the freshness rule in migration 0030.
+      const { error: profErr } = await supabase
+        .from("provider_profiles")
+        .update({ current_location: point, location_updated_at: new Date().toISOString() })
+        .eq("user_id", user.id);
+      if (profErr) onError?.(new Error("Location sync failed: " + profErr.message));
+
       // Also append to booking_location_pings if there's an in-progress booking
       const { data: active } = await supabase
         .from("bookings")

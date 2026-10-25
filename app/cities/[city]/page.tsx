@@ -16,14 +16,14 @@ export const dynamic = "force-static";
 export const revalidate = 3600;
 
 export async function generateStaticParams() {
-  return CITIES.map((c) => ({ slug: c.slug }));
+  return CITIES.map((c) => ({ city: c.slug }));
 }
 
 export async function generateMetadata({
   params,
-}: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params;
-  const city = getCity(slug);
+}: { params: Promise<{ city: string }> }): Promise<Metadata> {
+  const { city: citySlug } = await params;
+  const city = getCity(citySlug);
   if (!city) return { title: "City not found — Helpward" };
   const title = `On-demand help in ${city.name}, ${city.region} | Helpward`;
   const description = `Book verified, background-checked helpers in ${city.name} for rides, errands, home help, deliveries, and more. Pricing upfront, payment after completion, $1M insurance per booking.`;
@@ -36,9 +36,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function CityPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const city = getCity(slug);
+export default async function CityPage({ params }: { params: Promise<{ city: string }> }) {
+  const { city: citySlug } = await params;
+  const city = getCity(citySlug);
   if (!city) notFound();
 
   const [services, categories] = await Promise.all([listServicesPublic(), listCategoriesPublic()]);

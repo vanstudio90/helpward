@@ -1,12 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { quoteOneShotCents } from "@/lib/pricing";
+import { broadcastRequestBestEffort } from "@/lib/broadcast";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import {
   type Cadence, nextOccurrenceDate, occurrenceToISOAtTimezone,
   validateSeriesPatch, patchAffectsSchedule, type SeriesPatch,
 } from "@/lib/recurrence-pure";
-import { resolveAddressForInsert } from "@/lib/geocode";
+import { resolveDispatchableAddress, addressInsertFields } from "@/lib/dispatch-guard";
 
 type State = { error?: string; success?: string; seriesId?: string } | undefined;
 
@@ -67,19 +69,15 @@ export async function createSeriesAction(
     .maybeSingle();
   if (!service) return { error: "Service isn't available." };
 
-  // Geocode address — Mapbox v6 forward when MAPBOX_TOKEN is set, graceful
-  // placeholder otherwise. Series materialisation pulls this row's
-  // pickup_address_id into every occurrence, so a real lat/lng here flows
-  // through to every future booking.
-  const resolved = await resolveAddressForInsert(addressText);
+  // Same geocode + service-area gate as the one-shot flow. This matters
+  // more here than anywhere else: series materialisation reuses this row's
+  // pickup_address_id for EVERY future occurrence, so an unverified or
+  // out-of-area address would be re-dispatched indefinitely by the cron.
+  const guard = await resolveDispatchableAddress({ text: addressText, client: supabase });
+  if (!guard.ok) return { error: guard.error };
   const { data: address, error: addrErr } = await supabase
     .from("addresses")
-    .insert({
-      user_id: user.id,
-      formatted: resolved.formatted,
-      location: resolved.location as unknown as string,
-      country: resolved.country,
-    })
+    .insert(addressInsertFields(guard.address, user.id))
     .select()
     .single();
   if (addrErr || !address) return { error: addrErr?.message ?? "Couldn't save the address." };
@@ -95,7 +93,7 @@ export async function createSeriesAction(
       day_of_month: dayOfMonth,
       time_of_day: `${timeOfDay}:00`,
       timezone,
-      estimated_price_cents: service.base_price_cents,
+      estimated_price_cents: quoteOneShotCents(service.base_price_cents),
       estimated_duration_min: 45,
       notes,
       start_date: startDate,
@@ -409,10 +407,11 @@ export async function materialiseNextOccurrence(seriesId: string): Promise<strin
     })
     .eq("id", series.id);
 
-  // Best-effort broadcast — same as the one-shot new-request flow.
-  await admin.rpc("broadcast_request", { p_request_id: req.id, p_radius_km: 20 }).catch((e) => {
-    console.error("broadcast_request from series failed:", e);
-  });
+  // Shared with the one-shot flow. Uses try/catch internally, NOT .catch():
+  // a Postgrest builder is a thenable implementing then() only, so calling
+  // .catch() on it threw a TypeError and took down every
+  // materialize-series-occurrences cron run.
+  await broadcastRequestBestEffort(admin, req.id, { label: "series" });
 
   return req.id;
 }

@@ -6,30 +6,48 @@ import { useState } from "react";
 import {
   LayoutDashboard, Plus, Calendar, MessageCircle, Menu, X, User2,
   Grid3x3, Heart, CreditCard, Star, Briefcase, BarChart3, Settings, Gift,
-  MessageSquare, LogOut,
+  MessageSquare, LogOut, type LucideIcon,
 } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import { NotificationBell } from "@/components/NotificationBell";
 import { cn } from "@/lib/cn";
+import { REFERRAL_REWARD_DOLLARS } from "@/lib/referrals-pure";
 
-const primary = [
+// `badge` stays in the type so a real unread count can be dropped in once
+// it is derived per-account, but no item carries one today (HW-18).
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  primary?: boolean;
+  badge?: number;
+  tag?: string;
+};
+
+const primary: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/bookings", label: "My Tasks", icon: Calendar },
   { href: "/new-request", label: "", icon: Plus, primary: true },
-  { href: "/messages", label: "Messages", icon: MessageCircle, badge: 3 },
+  // No hardcoded badge: this used to be `badge: 3` on both the bottom bar
+  // and the drawer, so an account with zero conversations still advertised
+  // 3 unread messages (HW-18). Real unread counts need a per-account query.
+  { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/settings", label: "Profile", icon: User2 },
 ];
 
-const drawer = [
+const drawer: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/new-request", label: "New Request", icon: Plus },
   { href: "/services", label: "All Services", icon: Grid3x3 },
-  { href: "/messages", label: "Messages", icon: MessageCircle, badge: 3 },
+  // No hardcoded badge: this used to be `badge: 3` on both the bottom bar
+  // and the drawer, so an account with zero conversations still advertised
+  // 3 unread messages (HW-18). Real unread counts need a per-account query.
+  { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/bookings", label: "Bookings", icon: Calendar },
   { href: "/saved-providers", label: "Saved Providers", icon: Heart },
   { href: "/payments", label: "Payments", icon: CreditCard },
   { href: "/favorites", label: "Favorites", icon: Star },
-  { href: "/business", label: "Business Tools", icon: Briefcase, tag: "New" },
+  { href: "/business", label: "Business Tools", icon: Briefcase, tag: "Soon" },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -183,7 +201,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
               <Gift className="w-4 h-4 text-brand-600" />
               <span className="text-sm font-semibold text-slate-900">Refer & Earn</span>
             </div>
-            <p className="text-xs text-slate-500">Invite friends and earn $20 in credits.</p>
+            <p className="text-xs text-slate-500">Invite a friend — you each get ${REFERRAL_REWARD_DOLLARS} in credits.</p>
           </div>
           <form action={logoutAction}>
             <button

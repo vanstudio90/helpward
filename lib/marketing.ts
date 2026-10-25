@@ -12,29 +12,35 @@ export type City = {
   metro?: string; // for SEO copy
 };
 
-// 10 cities seed list — the metros where we have helper supply density.
-// Order = display order in footer + sitemap + /cities index.
+// LAUNCH CITIES — the only markets we claim or serve.
+//
+// Narrowed from a 10-city seed list on 2026-10-24. Every other city was a
+// claim with no helper supply behind it. The retired slugs below are served
+// as HTTP 410 Gone (see proxy.ts) rather than redirected: sending someone
+// searching for "Austin" to Los Angeles is an irrelevant redirect that
+// Google treats as a soft 404, and it misleads the visitor.
+//
+// `metro` describes the SERVICE AREA in customer-facing copy and must match
+// lib/service-areas.ts. Los Angeles and San Diego are CITY LIMITS ONLY — do
+// not widen this copy to county- or metro-wide without widening the actual
+// service area first.
 export const CITIES: City[] = [
-  { slug: "vancouver", name: "Vancouver", region: "BC", country: "CA", metro: "Greater Vancouver",
+  { slug: "vancouver", name: "Vancouver", region: "BC", country: "CA", metro: "Vancouver and the surrounding Lower Mainland",
     hero: "https://images.unsplash.com/photo-1559511260-66a654ae982a?auto=format&fit=crop&w=1200&q=70" },
-  { slug: "toronto", name: "Toronto", region: "ON", country: "CA", metro: "Greater Toronto Area",
-    hero: "https://images.unsplash.com/photo-1517090504586-fde19ea6066f?auto=format&fit=crop&w=1200&q=70" },
-  { slug: "montreal", name: "Montreal", region: "QC", country: "CA", metro: "Greater Montreal",
-    hero: "https://images.unsplash.com/photo-1519178614-68673b201f36?auto=format&fit=crop&w=1200&q=70" },
-  { slug: "seattle", name: "Seattle", region: "WA", country: "US", metro: "Seattle metro",
-    hero: "https://images.unsplash.com/photo-1502175353174-a7a1d2b8a2b3?auto=format&fit=crop&w=1200&q=70" },
-  { slug: "san-francisco", name: "San Francisco", region: "CA", country: "US", metro: "Bay Area",
-    hero: "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=1200&q=70" },
-  { slug: "los-angeles", name: "Los Angeles", region: "CA", country: "US", metro: "Greater LA",
+  { slug: "los-angeles", name: "Los Angeles", region: "CA", country: "US", metro: "the City of Los Angeles",
     hero: "https://images.unsplash.com/photo-1444723121867-7a241cacace9?auto=format&fit=crop&w=1200&q=70" },
-  { slug: "austin", name: "Austin", region: "TX", country: "US", metro: "Austin metro",
-    hero: "https://images.unsplash.com/photo-1531218150217-54595bc2b934?auto=format&fit=crop&w=1200&q=70" },
-  { slug: "chicago", name: "Chicago", region: "IL", country: "US", metro: "Chicagoland",
-    hero: "https://images.unsplash.com/photo-1494522855154-9297ac14b55f?auto=format&fit=crop&w=1200&q=70" },
-  { slug: "new-york", name: "New York", region: "NY", country: "US", metro: "NYC metro",
-    hero: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=1200&q=70" },
-  { slug: "miami", name: "Miami", region: "FL", country: "US", metro: "Greater Miami",
-    hero: "https://images.unsplash.com/photo-1535498730771-e735b998cd64?auto=format&fit=crop&w=1200&q=70" },
+  // No hero photo yet — `hero` is optional and the city page falls back to
+  // its gradient. Better an honest gradient than a guessed image URL.
+  { slug: "san-diego", name: "San Diego", region: "CA", country: "US", metro: "the City of San Diego" },
+];
+
+// Slugs we previously published pages for. Kept so proxy.ts can return a
+// deliberate 410 with a "not currently served" explanation instead of a
+// bare 404, and so we never silently re-use one of these slugs for a
+// different market later.
+export const RETIRED_CITY_SLUGS: string[] = [
+  "toronto", "montreal", "seattle", "san-francisco",
+  "austin", "chicago", "new-york", "miami",
 ];
 
 export function getCity(slug: string): City | null {

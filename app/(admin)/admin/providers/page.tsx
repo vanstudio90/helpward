@@ -62,7 +62,7 @@ export default async function AdminProvidersPage() {
 
       <p className="mt-8 text-xs text-slate-400 text-center">
         Approving here sets status='approved' so the provider can go online and start
-        accepting matches. Stripe Identity + Checkr webhook integration lands in Phase 4.
+        accepting matches. Stripe Identity + Checkr are not connected, so approvals here are manual and unverified.
       </p>
     </div>
   );
