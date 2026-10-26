@@ -2,7 +2,12 @@ node_modules
 .next
 out
 .vercel
-.env*.local
+# Every env file except the committed template. The old pattern was
+# ".env*.local", which did NOT cover .env.rehearsal and would have
+# committed a service-role key.
+.env
+.env.*
+!.env.example
 .DS_Store
 *.log
 .turbo

@@ -83,11 +83,20 @@ const norm = (v) => String(v ?? "")
   .filter((w) => w && !STATUS_WORDS.has(w)).join(" ");
 
 function loadEnvLocal() {
-  const f = path.resolve(".env.local");
-  if (!fs.existsSync(f)) return;
-  for (const line of fs.readFileSync(f, "utf8").split("\n")) {
-    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line);
-    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+  // .env.rehearsal first, so the isolated project always wins over
+  // production whenever both files exist on this machine.
+  for (const name of [".env.rehearsal", ".env.local"]) {
+    const f = path.resolve(name);
+    if (!fs.existsSync(f)) continue;
+    for (const line of fs.readFileSync(f, "utf8").split("\n")) {
+      const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line);
+      if (!m) continue;
+      const key = m[1];
+      // Trailing newlines and quotes in sibling env files have caused fake
+      // 403s before; strip both.
+      const val = m[2].trim().replace(/^["']|["']$/g, "");
+      if (!(key in process.env)) process.env[key] = val;
+    }
   }
 }
 loadEnvLocal();

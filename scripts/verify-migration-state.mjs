@@ -17,13 +17,17 @@ import fs from "node:fs";
 import path from "node:path";
 
 function loadEnvLocal() {
-  const f = path.resolve(".env.local");
-  if (!fs.existsSync(f)) return;
+  // .env.rehearsal first so the isolated project wins over production
+  // whenever both exist on this machine.
+  for (const name of [".env.rehearsal", ".env.local"]) {
+  const f = path.resolve(name);
+  if (!fs.existsSync(f)) continue;
   for (const line of fs.readFileSync(f, "utf8").split("\n")) {
     const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line);
     if (m && !(m[1] in process.env)) {
       process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
     }
+  }
   }
 }
 loadEnvLocal();
