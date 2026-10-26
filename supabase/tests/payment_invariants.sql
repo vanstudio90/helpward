@@ -105,6 +105,9 @@ begin
   values (v_customer, v_svc, v_addr, 5450, 60, 'matching')
   returning id into v_req;
 
+  -- accept_request refuses an unsealed request as of 0054, exactly as
+  -- the application now seals one before broadcasting.
+  perform seal_request_quote(v_req);
   insert into match_attempts (request_id, provider_id, distance_km, rank_score)
   values (v_req, v_helper, 1.0, 1.0);
 
@@ -303,6 +306,9 @@ begin
                         estimated_price_cents, estimated_duration_min, status)
   values (r.customer, r.svc, v_addr, 5450, 60, 'matching')
   returning id into v_req3;
+  -- accept_request refuses an unsealed request as of 0054, exactly as
+  -- the application now seals one before broadcasting.
+  perform seal_request_quote(v_req3);
   insert into match_attempts (request_id, provider_id, distance_km, rank_score)
   values (v_req3, r.helper, 1.0, 1.0);
 
@@ -351,6 +357,9 @@ begin
   insert into requests (customer_id, service_id, pickup_address_id,
                         estimated_price_cents, estimated_duration_min, status)
   values (r.customer, r.svc, v_addr, 2450, 60, 'matching') returning id into v_req;
+  -- accept_request refuses an unsealed request as of 0054, exactly as
+  -- the application now seals one before broadcasting.
+  perform seal_request_quote(v_req);
   insert into match_attempts (request_id, provider_id, distance_km, rank_score)
   values (v_req, r.helper, 1.0, 1.0);
 
@@ -391,6 +400,9 @@ begin
   insert into requests (customer_id, service_id, pickup_address_id,
                         estimated_price_cents, estimated_duration_min, status)
   values (r.customer, r.svc, v_addr, 2450, 60, 'matching') returning id into v_req;
+  -- accept_request refuses an unsealed request as of 0054, exactly as
+  -- the application now seals one before broadcasting.
+  perform seal_request_quote(v_req);
   insert into match_attempts (request_id, provider_id, distance_km, rank_score)
   values (v_req, r.helper, 1.0, 1.0);
 
