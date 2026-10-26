@@ -69,7 +69,8 @@ describe("plan 2.5 — ambiguous or unavailable geocoding is refused", () => {
     formatted: "1 Main St", lng: -123.1, lat: 49.2, country: "CA",
     region: "British Columbia", city: "Vancouver", postalCode: null,
     confidence: "exact" as const, addressNumberMatch: "matched",
-    candidateCount: 1, origin: "forward" as const, featureType: "address",
+    candidateCount: 1, hasRivalCandidate: false,
+    origin: "forward" as const, featureType: "address",
   };
 
   test("accepts an exact, single-candidate address feature", () => {
@@ -89,8 +90,19 @@ describe("plan 2.5 — ambiguous or unavailable geocoding is refused", () => {
     assert.equal(isAmbiguous({ ...forwardExact, addressNumberMatch: "not_applicable" }), true);
   });
 
-  test("rejects a second plausible candidate", () => {
-    assert.equal(isAmbiguous({ ...forwardExact, candidateCount: 2 }), true);
+  test("rejects a genuine rival — a second address matched just as well", () => {
+    assert.equal(isAmbiguous({ ...forwardExact, hasRivalCandidate: true }), true);
+  });
+
+  test("does NOT reject on candidate count alone", () => {
+    // Mapbox appends broader fallbacks to every query: an unambiguous
+    // street address comes back with its own city as a second "candidate".
+    // Treating that as ambiguity refused every real address tested against
+    // the live API.
+    assert.equal(
+      isAmbiguous({ ...forwardExact, candidateCount: 2, hasRivalCandidate: false }),
+      false,
+    );
   });
 
   // Regression for R03: match_code exists only on address-type features, so
@@ -101,7 +113,7 @@ describe("plan 2.5 — ambiguous or unavailable geocoding is refused", () => {
     for (const ft of ["street", "place", "locality", "postcode", "poi", null]) {
       assert.equal(
         isAmbiguous({ ...forwardExact, featureType: ft, confidence: null,
-                      addressNumberMatch: null, candidateCount: 2 }),
+                      addressNumberMatch: null, hasRivalCandidate: true }),
         true,
         `forward ${ft ?? "untyped"} feature must not be accepted`,
       );

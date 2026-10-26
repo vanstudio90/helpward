@@ -194,6 +194,10 @@ async function geocode(text) {
     addressNumberMatch: f.properties?.match_code?.address_number ?? null,
     // More than one candidate means the query was ambiguous.
     candidateCount: features.length,
+    hasRivalCandidate:
+      features[1]?.properties?.feature_type === "address" &&
+      ["exact", "high"].includes(
+        (features[1]?.properties?.match_code?.confidence ?? "").toLowerCase()),
     secondChoice: features[1]?.properties?.full_address ?? null,
   };
 }

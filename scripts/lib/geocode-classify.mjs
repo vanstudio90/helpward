@@ -73,7 +73,10 @@ export function weaknesses(g) {
   if (!g.featureType || !DISPATCHABLE_FEATURE_TYPES.has(g.featureType)) {
     weak.push(`feature_type=${g.featureType ?? "none"} (only an address feature is precise enough)`);
   }
-  if ((g.candidateCount ?? 1) > 1) weak.push("multiple candidates");
+  // Not candidate COUNT: Mapbox appends broader fallbacks to every query,
+  // so an unambiguous street address returns its own city as a second
+  // "candidate". Only a second confidently-matched ADDRESS is a rival.
+  if (g.hasRivalCandidate) weak.push("a second address matched just as well");
   if (!g.confidence || !ACCEPTABLE_CONFIDENCE.has(g.confidence)) {
     weak.push(`confidence=${g.confidence ?? "absent"}`);
   }

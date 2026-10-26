@@ -20,7 +20,7 @@ function g(over: Record<string, unknown> = {}) {
   return {
     ...VANCOUVER,
     featureType: "address", confidence: "exact",
-    addressNumberMatch: "matched", candidateCount: 1,
+    addressNumberMatch: "matched", candidateCount: 1, hasRivalCandidate: false,
     ...over,
   };
 }
@@ -31,7 +31,8 @@ function r(over: Record<string, unknown> = {}) {
     formatted: "1 Main St", lng: -123.1, lat: 49.2,
     country: "CA", region: "British Columbia", city: "Vancouver", postalCode: null,
     featureType: "address", confidence: "exact" as const,
-    addressNumberMatch: "matched", candidateCount: 1, origin: "forward" as const,
+    addressNumberMatch: "matched", candidateCount: 1, hasRivalCandidate: false,
+    origin: "forward" as const,
     ...over,
   };
 }
@@ -41,7 +42,8 @@ const CASES: Array<[string, Record<string, unknown>, boolean]> = [
   ["street feature, no match_code",       { featureType: "street", confidence: null, addressNumberMatch: null }, false],
   ["place feature",                       { featureType: "place" },                         false],
   ["no feature type",                     { featureType: null },                            false],
-  ["two candidates",                      { candidateCount: 2 },                            false],
+  ["a rival address",                     { hasRivalCandidate: true },                      false],
+  ["a harmless broader fallback",         { candidateCount: 2 },                            true],
   ["medium confidence",                   { confidence: "medium" },                         false],
   ["low confidence",                      { confidence: "low" },                            false],
   ["absent confidence",                   { confidence: null },                             false],
@@ -82,7 +84,10 @@ describe("backfill classifier matches the application resolver", () => {
   });
 
   test("weaknesses() names every reason it refuses for", () => {
-    const w = weaknesses(g({ featureType: "street", confidence: "low", addressNumberMatch: "unmatched", candidateCount: 3 }));
+    const w = weaknesses(g({
+      featureType: "street", confidence: "low",
+      addressNumberMatch: "unmatched", hasRivalCandidate: true,
+    }));
     assert.equal(w.length, 4, "each independent failure must be reported");
   });
 });

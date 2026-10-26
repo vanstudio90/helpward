@@ -37,6 +37,16 @@ export type GeocodeResult = {
   addressNumberMatch: string | null;
   /** Number of candidates Mapbox returned for a forward lookup. */
   candidateCount: number;
+  /**
+   * True when a SECOND candidate is a genuine rival — another address-type
+   * feature Mapbox also matched confidently.
+   *
+   * Candidate COUNT is not an ambiguity signal: Mapbox always appends
+   * broader fallbacks, so a perfectly unambiguous street address comes back
+   * with the containing city as a second "candidate". Treating that as
+   * ambiguity rejected every real address we tried.
+   */
+  hasRivalCandidate: boolean;
   /** Which API produced this result. Never inferred. */
   origin: "forward" | "reverse";
   /** Mapbox feature_type: "address", "street", "place", "postcode", … */
@@ -157,6 +167,19 @@ export async function geocodeAddress(
   const mc = f.properties?.match_code ?? {};
   const conf = typeof mc.confidence === "string" ? mc.confidence.toLowerCase() : null;
 
+  // A rival is a second ADDRESS-type feature Mapbox also matched
+  // confidently. A `place`/`street`/`postcode` fallback is not a rival —
+  // it is Mapbox widening the net, which it does on every query.
+  const second = features[1] as {
+    properties?: { feature_type?: string; match_code?: { confidence?: string } };
+  } | undefined;
+  const secondConf = typeof second?.properties?.match_code?.confidence === "string"
+    ? second.properties.match_code.confidence.toLowerCase()
+    : null;
+  const hasRivalCandidate =
+    second?.properties?.feature_type === "address" &&
+    (secondConf === "exact" || secondConf === "high");
+
   return {
     formatted: f.properties?.full_address ?? f.properties?.name ?? cleaned,
     lng,
@@ -169,6 +192,7 @@ export async function geocodeAddress(
       ? conf : null,
     addressNumberMatch: typeof mc.address_number === "string" ? mc.address_number : null,
     candidateCount: features.length,
+    hasRivalCandidate,
     origin: "forward",
     featureType: typeof f.properties?.feature_type === "string" ? f.properties.feature_type : null,
   };
@@ -252,6 +276,7 @@ export async function reverseGeocode(
     confidence: null,
     addressNumberMatch: null,
     candidateCount: 1,
+    hasRivalCandidate: false,
     origin: "reverse",
     featureType: typeof f.properties?.feature_type === "string" ? f.properties.feature_type : null,
   };
@@ -335,9 +360,11 @@ export function isAmbiguous(g: GeocodeResult): boolean {
   // Forward lookups must land on an address-type feature.
   if (!g.featureType || !DISPATCHABLE_FEATURE_TYPES.has(g.featureType)) return true;
 
-  // Checked independently of confidence: a second plausible candidate is an
-  // ambiguity signal in its own right.
-  if (g.candidateCount > 1) return true;
+  // A genuine rival — a second address Mapbox also matched confidently —
+  // is an ambiguity signal in its own right, checked independently of this
+  // result's own confidence. Mere candidate COUNT is not: see
+  // hasRivalCandidate.
+  if (g.hasRivalCandidate) return true;
 
   // An address feature without a match_code is unexpected; refuse rather
   // than assume it was good.
