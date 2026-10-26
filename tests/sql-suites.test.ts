@@ -8,7 +8,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 const SUITES = [
   "supabase/tests/quote_integrity.sql",
@@ -157,5 +157,88 @@ describe("SQL suites are internally consistent", () => {
     // And the suite must check its own restoration at the end.
     assert.match(sql, /a real guard definition was not restored/,
       "the suite must assert its own restoration");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Static checks on error handling at write boundaries.
+//
+// Static, not behavioural: they assert the shape of the code, not that it
+// behaves correctly at runtime. They exist because a live audit found an
+// action that rendered an error page AFTER committing a row — the customer
+// was told it failed while the work existed, so a retry duplicated it.
+// ---------------------------------------------------------------------------
+describe("best-effort work is actually guarded", () => {
+  test("series creation tolerates a materialisation failure", () => {
+    const src = readFileSync(
+      new URL("../app/(app)/bookings/series/actions.ts", import.meta.url), "utf8",
+    );
+    // The call must sit inside a try, and the action must still return the
+    // committed series id. An unguarded await propagates into Next's error
+    // boundary with the series already written.
+    const guarded =
+      /try\s*\{[^}]*await\s+materialiseNextOccurrence\(series\.id\)/s.test(src);
+    assert.ok(guarded, "materialiseNextOccurrence(series.id) must be inside a try block");
+    assert.match(
+      src, /seriesId:\s*series\.id/,
+      "the committed series id must be returned so the caller can redirect to real state",
+    );
+  });
+
+  test("broadcast is best-effort at every call site", () => {
+    for (const f of [
+      "app/(app)/new-request/actions.ts",
+      "app/(app)/bookings/series/actions.ts",
+    ]) {
+      const src = readFileSync(new URL(`../${f}`, import.meta.url), "utf8");
+      // Must go through the shared helper, which try/catches internally.
+      // A direct .catch() on a Postgrest builder throws: builders implement
+      // then() only.
+      assert.doesNotMatch(
+        src, /\.rpc\((["'])broadcast_request\1[\s\S]{0,200}?\.catch\(/,
+        `${f}: .catch() on a Postgrest builder throws — use broadcastRequestBestEffort`,
+      );
+    }
+  });
+
+  test("the app calls no RPC that only a deploy-coupled migration provides", () => {
+    // The deploy order applies restrictive migrations AFTER the app, so an
+    // RPC the app calls must already exist at that moment — either from the
+    // long-applied baseline (0001-0028) or from this release's pre-deploy
+    // set. If it is provided ONLY by a deploy-coupled migration, the app
+    // calls a missing function in the window between deploy and migrate.
+    // That is exactly the hole that would have broken every bundle
+    // submission.
+    const DEPLOY_COUPLED = ["0036", "0038"];
+    const appSrc = [
+      "app/(app)/new-request/actions.ts",
+      "app/(app)/bookings/series/actions.ts",
+      "lib/service-area-check.ts",
+    ].map((f) => readFileSync(new URL(`../${f}`, import.meta.url), "utf8")).join("\n");
+
+    const called = new Set(
+      [...appSrc.matchAll(/\.rpc\(\s*["'](\w+)["']/g)].map((m) => m[1]),
+    );
+    // broadcast_request is best-effort: the request already exists and the
+    // shared helper swallows its absence, so it may come from 0038.
+    called.delete("broadcast_request");
+
+    const migrations = readdirSync(new URL("../supabase/migrations", import.meta.url))
+      .filter((m) => m.endsWith(".sql"));
+
+    for (const fn of called) {
+      const providers = migrations.filter((m) =>
+        readFileSync(new URL(`../supabase/migrations/${m}`, import.meta.url), "utf8")
+          .includes(`create or replace function public.${fn}`),
+      );
+      assert.ok(providers.length > 0, `${fn} is called but no migration defines it`);
+      const onlyDeployCoupled = providers.every((m) =>
+        DEPLOY_COUPLED.some((d) => m.startsWith(d)),
+      );
+      assert.ok(
+        !onlyDeployCoupled,
+        `${fn} is provided only by ${providers.join(", ")}, which is applied AFTER the deploy — the app would call a missing function in that window`,
+      );
+    }
   });
 });

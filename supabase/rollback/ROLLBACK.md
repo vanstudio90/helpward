@@ -17,6 +17,7 @@ has been removed.
 | `0030_matching_columns` | **Pre-deploy safe** | additive column + index; required *by* the new code |
 | `0033_service_area_boundaries` | **Pre-deploy safe** | new tables/functions, unused by old code. **Carries the boundary loader's service-role authorisation and grants**, because boundaries are loaded before the cutover — putting that fix in a deploy-coupled migration made the documented sequence stop at the load step. |
 | `0034_dispatch_refusals` | **Pre-deploy safe** | new table/functions, unused by old code |
+| `0035_quote_identity` | **Pre-deploy safe** | `requests.quote_fingerprint`, `compute_bundle_fingerprint()`, `seal_bundle_quote()`. Additive and unused by old code — but the NEW app calls `seal_bundle_quote()` the moment it deploys, so this must land first. Split out of `0036` for exactly that reason. |
 | `0037_boundary_enforcement_mode` | **Pre-deploy safe** | new table/functions, unused by old code |
 | `0036_attestation_integrity` | **DEPLOY-COUPLED** | its `request_bundle_items` trigger rejects every non-service INSERT, which is exactly how the *previous* application writes bundle stops. Applying it before the cutover breaks bundle creation on the running release. It also hardens `accept_request` to require a sealed quote fingerprint that only the new code produces. |
 | `0038_matching_functions` | **DEPLOY-COUPLED** | `broadcast_request` refuses unverified addresses, which old code cannot produce |
@@ -25,7 +26,7 @@ has been removed.
 
 Run exactly this. Do not reapply anything afterwards.
 
-1. `0029`, `0030`, `0033`, `0034`, `0037` — pre-deploy safe, no behaviour change.
+1. `0029`, `0030`, `0033`, `0034`, `0035`, `0037` — pre-deploy safe, no behaviour change. Every function the new release calls lives in these; nothing here constrains the old release.
 2. Load official boundary polygons (`scripts/load-boundaries.mjs`), verify
    the probes, then `--activate`.
 3. Run the address backfill: `--dry-run`, review the ledger, then `--apply`.
@@ -127,7 +128,7 @@ schema and behaviour probes.
 
 | # | Step | Expected |
 |---|---|---|
-| R1 | Apply `0029`,`0030`,`0033`,`0034`,`0037` against a copy of production data | succeed; old app unaffected, including bundle creation |
+| R1 | Apply `0029`,`0030`,`0033`,`0034`,`0035`,`0037` against a copy of production data | succeed; old app unaffected, including bundle creation |
 | R2 | Probe schema | new columns/tables/functions present |
 | R2b | Run the boundary loader with **service-role REST credentials, before `0036`** | succeeds — this is the dependency that previously blocked a fresh rehearsal |
 | R2c | Call `insert_service_area_boundary` as a customer and as anon | denied |
@@ -137,6 +138,7 @@ schema and behaviour probes.
 | R6 | Deactivate dataset, re-probe | → `no_dataset`, and nothing dispatchable |
 | R7 | Run backfill `--dry-run` then `--apply` | ledger classifies; ambiguous/failed/out-of-area stay unverified |
 | R8 | Deploy new app, then apply `0036`,`0038` | succeed; final accept_request contains compute_bundle_fingerprint |
+| R8a | Immediately after R8, submit a two-stop bundle through the customer form | succeeds — proves no window exists where the app calls `seal_bundle_quote()` before `0035` provides it |
 | R8b | `\i supabase/tests/quote_integrity.sql` | all assertions pass under real customer / provider / service contexts. **Must run after R8**: the suite needs `quote_fingerprint`, `seal_bundle_quote()`, the attestation and quote triggers, and the hardened `accept_request`, all of which arrive with `0036`/`0038`. |
 | R8c | §7 negative controls, automated within R8b | each guard is disabled in turn and its assertion must FAIL; anything blocked for an unrelated reason reports `FAIL negative control …` rather than passing |
 | R8d | §7 closing check | reports all real guard definitions restored — the controls must not leave a weakened function behind |

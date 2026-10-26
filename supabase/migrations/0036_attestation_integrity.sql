@@ -337,60 +337,14 @@ revoke execute on function public.accept_request(uuid, uuid) from public;
 grant execute on function public.accept_request(uuid, uuid) to authenticated, service_role;
 
 -- =========================================================================
--- D02 — the whole quote structure is immutable once offered, not just price
+-- D02 — quote structure immutability (restrictive half)
 -- =========================================================================
 --
--- Freezing item_price_cents was not enough. rbi_write_own (0015) is FOR
--- ALL, so a customer could DELETE a stop; the UPDATE trigger did not freeze
--- request_id, so a stop could be reparented; and req_update (0002) let the
--- customer edit requests.bundle_item_count, so the acceptance count check
--- could be made to agree with a shortened bundle. A three-stop offer could
--- become a two-stop booking after the helper accepted what they saw.
---
--- The fix is an immutable quote identity. seal_bundle_quote() records a
--- fingerprint of the stop set at creation; acceptance recomputes it and
--- refuses if anything about the quote changed.
-
-alter table requests
-  add column if not exists quote_fingerprint text;
-
-comment on column requests.quote_fingerprint is
-  'Hash of the bundle stop set (service ids, prices, positions) at the moment the request was created. accept_request recomputes it and refuses if the bundle changed after the offer went out.';
-
-create or replace function public.compute_bundle_fingerprint(p_request_id uuid)
-returns text
-language sql stable security definer set search_path = public as $$
-  select encode(digest(coalesce(string_agg(
-           i.position || ':' || i.service_id || ':' || i.item_price_cents, '|'
-           order by i.position, i.service_id), ''), 'sha256'), 'hex')
-  from request_bundle_items i
-  where i.request_id = p_request_id;
-$$;
-
-create or replace function public.seal_bundle_quote(p_request_id uuid)
-returns text
-language plpgsql security definer set search_path = public as $$
-declare
-  v_fp text;
-  v_count int;
-begin
-  if coalesce(current_setting('request.jwt.claims', true), '') <> ''
-     and jwt_role() <> 'service_role' then
-    raise exception 'seal_bundle_quote: service role only';
-  end if;
-
-  select count(*) into v_count from request_bundle_items where request_id = p_request_id;
-  if v_count < 2 then
-    raise exception 'cannot seal a bundle with % stop(s)', v_count;
-  end if;
-
-  v_fp := compute_bundle_fingerprint(p_request_id);
-  update requests
-     set quote_fingerprint = v_fp, bundle_item_count = v_count
-   where id = p_request_id;
-  return v_fp;
-end;
-$$;
+-- The additive half — requests.quote_fingerprint,
+-- compute_bundle_fingerprint() and seal_bundle_quote() — moved to
+-- 0035_quote_identity.sql so the new application can seal a quote from the
+-- moment it deploys. What remains here is restrictive and therefore
+-- deploy-coupled: it rejects writes the previous release makes.
 
 -- Deletion and reparenting are server-only, matching INSERT.
 create or replace function public.enforce_bundle_item_quote()
@@ -465,11 +419,7 @@ create trigger trg_request_quote
   before update on requests
   for each row execute function public.enforce_request_quote();
 
-revoke execute on function public.compute_bundle_fingerprint(uuid) from public;
-revoke execute on function public.seal_bundle_quote(uuid) from public;
 revoke execute on function public.enforce_request_quote() from public;
-grant execute on function public.compute_bundle_fingerprint(uuid) to service_role;
-grant execute on function public.seal_bundle_quote(uuid) to service_role;
 
 -- =========================================================================
 -- D04 — revoke the HISTORICAL direct grants, not just PUBLIC
@@ -483,8 +433,6 @@ revoke execute on function public.broadcast_request(uuid, int) from public, anon
 revoke execute on function public.record_dispatch_refusal(uuid, text, text) from public, anon, authenticated;
 revoke execute on function public.insert_service_area_boundary(text, text, text, text) from public, anon, authenticated;
 revoke execute on function public.bundle_subtotal_cents(uuid) from public, anon, authenticated;
-revoke execute on function public.compute_bundle_fingerprint(uuid) from public, anon, authenticated;
-revoke execute on function public.seal_bundle_quote(uuid) from public, anon, authenticated;
 revoke execute on function public.enforce_address_attestation() from public, anon, authenticated;
 revoke execute on function public.enforce_bundle_item_quote() from public, anon, authenticated;
 revoke execute on function public.enforce_request_quote() from public, anon, authenticated;
@@ -492,5 +440,3 @@ revoke execute on function public.enforce_request_quote() from public, anon, aut
 grant execute on function public.broadcast_request(uuid, int) to service_role;
 grant execute on function public.record_dispatch_refusal(uuid, text, text) to service_role;
 grant execute on function public.bundle_subtotal_cents(uuid) to service_role;
-grant execute on function public.compute_bundle_fingerprint(uuid) to service_role;
-grant execute on function public.seal_bundle_quote(uuid) to service_role;

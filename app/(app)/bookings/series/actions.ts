@@ -103,12 +103,33 @@ export async function createSeriesAction(
     .single();
   if (serErr || !series) return { error: serErr?.message ?? "Couldn't create the series." };
 
-  // Materialise the first occurrence immediately. If it fails we keep the
-  // series — the cron will pick it up.
-  await materialiseNextOccurrence(series.id);
+  // Materialise the first occurrence immediately. The comment here used to
+  // say "if it fails we keep the series — the cron will pick it up", but the
+  // call was unguarded, so a throw propagated out of the action and Next
+  // rendered its error boundary AFTER the series row had already committed.
+  // A live audit hit exactly that: an error page with a digest, while
+  // Bookings contained a healthy series and a pending occurrence. The
+  // customer is told it failed and a retry duplicates the series.
+  //
+  // The throw itself was the `.catch()`-on-a-Postgrest-builder TypeError
+  // fixed earlier, but the structural fault is this await: materialisation
+  // is genuinely best-effort, so it must be treated that way.
+  let occurrenceWarning: string | null = null;
+  try {
+    await materialiseNextOccurrence(series.id);
+  } catch (e) {
+    console.error("materialiseNextOccurrence failed for series", series.id, e);
+    occurrenceWarning =
+      " The first booking will be scheduled shortly.";
+  }
 
   revalidatePath("/bookings");
-  return { success: "Recurring series created.", seriesId: series.id };
+  // Always report the committed series. The caller redirects to it, so the
+  // customer lands on real state instead of an error page.
+  return {
+    success: "Recurring series created." + (occurrenceWarning ?? ""),
+    seriesId: series.id,
+  };
 }
 
 // Pause / resume / cancel — single-state mutations with audit log entries
