@@ -120,8 +120,19 @@ ok("capturing less than the hold is allowed", partial.status === "succeeded" && 
 // --- 6. The destination charge is refused until onboarding completes ------
 const acct = env.STRIPE_TEST_CONNECT_ACCOUNT;
 if (acct) {
+  // Measured as a DELTA, not an absolute: this script is re-runnable, and
+  // the helper's balance accumulates every run.
+  const balanceOf = async () => {
+    const b = await api("balance", null, { "Stripe-Account": acct });
+    return [...(b.pending ?? []), ...(b.available ?? [])].reduce((n, x) => n + x.amount, 0);
+  };
+  const balanceBefore = await balanceOf();
+
   const dest = await api("payment_intents", {
     amount: String(TOTAL), currency: "usd", capture_method: "manual",
+    confirm: "true", payment_method: "pm_card_visa",
+    "automatic_payment_methods[enabled]": "true",
+    "automatic_payment_methods[allow_redirects]": "never",
     application_fee_amount: String(PLATFORM),
     "transfer_data[destination]": acct,
     description: "Helpward verify: destination charge",
@@ -132,11 +143,48 @@ if (acct) {
     console.log("\n  \x1b[33mBLOCKED\x1b[0m destination split unproven: the connected account has not");
     console.log("          finished Stripe-hosted onboarding. Walk it once, then re-run.");
   } else {
-    ok("destination charge accepted", dest.status === "requires_capture", `status=${dest.status}`);
-    ok("Helpward's fee is withheld exactly", dest.application_fee_amount === PLATFORM);
-    const willTransfer = dest.amount - dest.application_fee_amount;
-    ok(`the helper receives exactly their payout (${PAYOUT}c)`, willTransfer === PAYOUT, `would transfer ${willTransfer}`);
-    await api(`payment_intents/${dest.id}/cancel`, {});
+    ok("destination charge holds against the customer's card",
+       dest.status === "requires_capture", `status=${dest.status}`);
+    ok("Helpward's fee is withheld exactly", dest.application_fee_amount === PLATFORM,
+       `fee=${dest.application_fee_amount}`);
+
+    // The real proof: capture, then read what actually moved. Up to here
+    // the numbers are only what we ASKED Stripe to do.
+    const settled = await api(`payment_intents/${dest.id}/capture`, {
+      amount_to_capture: String(TOTAL),
+    });
+    ok("the destination charge captures", settled.status === "succeeded", `status=${settled.status}`);
+
+    const charge = await api(`charges/${settled.latest_charge}`);
+    ok("a transfer to the helper was created", !!charge.transfer, `transfer=${charge.transfer}`);
+
+    if (charge.transfer) {
+      const transfer = await api(`transfers/${charge.transfer}`);
+      // transfer.amount on a destination charge is GROSS — the full amount
+      // charged. The application fee is deducted on the connected
+      // account's side, so the transfer reads 5450 while the helper nets
+      // 4000. Asserting transfer.amount === payout looks right and is
+      // wrong; the helper's balance below is the number that matters.
+      ok("the transfer carries the gross charge",
+         transfer.amount === TOTAL, `transferred ${transfer.amount}`);
+      ok("gross transfer minus Helpward's fee is the helper's payout",
+         transfer.amount - PLATFORM === PAYOUT, `${transfer.amount} - ${PLATFORM}`);
+      ok("the transfer is addressed to the helper's account",
+         transfer.destination === acct, `dest=${transfer.destination}`);
+    }
+
+    const fee = charge.application_fee ? await api(`application_fees/${charge.application_fee}`) : null;
+    ok(`Helpward keeps exactly its cut (${PLATFORM}c)`,
+       fee?.amount === PLATFORM, `kept ${fee?.amount}`);
+
+    // And the two sides still add up to what the customer actually paid.
+    const moved = (fee?.amount ?? 0) + PAYOUT;
+    ok("helper payout + Helpward's cut equals the amount charged",
+       moved === charge.amount_captured, `${moved} vs ${charge.amount_captured}`);
+
+    const gained = (await balanceOf()) - balanceBefore;
+    ok(`the helper's balance gains exactly their payout (${PAYOUT}c)`,
+       gained === PAYOUT, `gained ${gained}`);
   }
 } else {
   console.log("\n  \x1b[36mSKIP\x1b[0m  destination split: set STRIPE_TEST_CONNECT_ACCOUNT in .env.rehearsal");

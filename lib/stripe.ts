@@ -58,10 +58,34 @@ export function stripeIsLive(): boolean {
    1099 handling) and no Stripe-hosted dashboard. Helpward renders earnings
    itself at /provider/earnings, which it already did.
 
-   Verified against the sandbox on 2026-10-26: this exact object creates an
-   account, account_links issues a working onboarding URL, and a
-   destination charge is accepted once the account's transfers capability
-   goes active.
+   UPDATE, later the same day: completing the Connect platform profile in
+   the dashboard changed what the API allows. `type: "express"` now creates
+   successfully, with controller.losses.payments = "application" — meaning
+   HELPWARD would carry chargeback liability on helper transactions, and
+   helpers would get a Stripe-hosted Express dashboard.
+
+   We are deliberately staying with managed risk:
+
+     - The platform profile the owner filled in says refunds and chargeback
+       liability sits with STRIPE. Express contradicts that.
+     - A new marketplace with no fraud history is the worst place to absorb
+       chargebacks. A helper who takes a disputed job cannot leave Helpward
+       with a negative balance under this shape.
+     - The Express dashboard's value is helper self-service, and the two
+       things helpers actually need are covered without it: earnings are
+       rendered at /provider/earnings, and bank details are changed by
+       re-issuing an account_onboarding link, which
+       startPayoutSetupAction() already does. (account_update links are
+       rejected for this shape — account_onboarding IS the update path.)
+
+   Revisit only as a deliberate decision: switching shape changes who pays
+   for fraud, and existing connected accounts keep the controller they were
+   created with, so a switch splits the estate in two.
+
+   Verified against the sandbox on 2026-10-26, 19/19 in
+   scripts/verify-payments.mjs: a $50 job holds $54.50 on the customer's
+   card, captures, transfers, and leaves exactly $40.00 on the helper's
+   balance and $14.50 with Helpward.
    ------------------------------------------------------------------------- */
 export const CONNECTED_ACCOUNT_CONTROLLER = {
   losses: { payments: "stripe" },
