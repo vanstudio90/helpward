@@ -6,6 +6,7 @@ import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/s
 import { createSeriesAction } from "@/app/(app)/bookings/series/actions";
 import { MAX_BUNDLE_ITEMS } from "@/lib/bundle-pure";
 import { quoteOneShotCents, quoteBundleCents } from "@/lib/pricing";
+import { collectSubmitted, type SubmittedValues } from "@/lib/request-form";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
 import { reviewResolution } from "@/lib/address-confirmation";
@@ -70,6 +71,8 @@ type State = {
   success?: string;
   /** The address needs the customer's eyes before we can dispatch to it. */
   addressPrompt?: AddressPrompt;
+  /** Present on every non-success result. See SubmittedValues. */
+  submitted?: SubmittedValues;
 } | undefined;
 
 type BundleItemInput = {
@@ -102,7 +105,24 @@ function parseBundleItems(formData: FormData): BundleItemInput[] | null {
    to approved + online providers within the radius who list this service in
    provider_services. If no provider qualifies, the request stays in
    'matching' until the expire-stale-requests cron retires it. */
+/**
+ * Public entry point. Attaches the submitted values to every result that
+ * is not a success, so the form can be refilled.
+ *
+ * A wrapper rather than a line at each `return`: this action has more than
+ * a dozen failure exits, and the one that mattered — the address prompt —
+ * is exactly the kind that gets missed.
+ */
 export async function createRequestAction(
+  prev: State,
+  formData: FormData,
+): Promise<State> {
+  const result = await createRequestActionInner(prev, formData);
+  if (!result || result.success) return result;
+  return { ...result, submitted: collectSubmitted(formData) };
+}
+
+async function createRequestActionInner(
   _prev: State,
   formData: FormData
 ): Promise<State> {
@@ -204,7 +224,14 @@ export async function createRequestAction(
       text: addressText, lat: clientLat, lng: clientLng, client: supabase,
       userId: user.id, confirmationToken: addressConfirmation,
     });
-    if (!guard.ok) return { error: guard.error };
+    if (!guard.ok) {
+      // Bundles get the confirmation UI too. This used to return only
+      // guard.error, so a multi-stop request whose address merely needed
+      // confirming was refused outright with no way to confirm it.
+      return "candidates" in guard
+        ? { addressPrompt: toAddressPrompt(guard) }
+        : { error: guard.error };
+    }
     // Service client: geocode_verified is a server attestation and the
     // authenticated client is forbidden from setting it (migration 0036).
     const bundleAddr = await insertAttestedAddress(

@@ -419,9 +419,11 @@ export function NewRequestView({
                     Schedule
                   </button>
                 </div>
-                {scheduled === "later" && (
-                  <ScheduledPicker />
-                )}
+                {/* Not keyed on the echo: ScheduledPicker holds its value
+                    in React state and is never remounted, so the chosen
+                    time already survives. Remounting it to "restore" would
+                    have cleared the one scheduling field that was fine. */}
+                {scheduled === "later" && <ScheduledPicker />}
               </fieldset>
 
               <label className="block">
@@ -429,7 +431,12 @@ export function NewRequestView({
                 <textarea
                   name="notes"
                   rows={3}
-                  defaultValue={initialQuery ?? ""}
+                  // Keyed on the echo so React remounts the textarea with
+                  // the refilled value. React 19 resets an uncontrolled
+                  // form once its action resolves, so without this the
+                  // notes vanish the moment an address needs confirming.
+                  key={`notes-${state?.submitted ? "restored" : "fresh"}`}
+                  defaultValue={state?.submitted?.notes ?? initialQuery ?? ""}
                   placeholder="Any special instructions..."
                   className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
                 />
@@ -440,9 +447,13 @@ export function NewRequestView({
                   a dog's details onto a TV mount. */}
               {selected && intakeFor(selected.id) && (
                 <IntakeFields
-                  key={selected.id}
+                  // Keyed on the service so switching services clears the
+                  // answers, and on the echo so a refill remounts with the
+                  // restored values rather than the reset ones.
+                  key={`${selected.id}-${state?.submitted ? "restored" : "fresh"}`}
                   spec={intakeFor(selected.id)!}
                   serviceTitle={selected.title}
+                  values={state?.submitted?.intake}
                 />
               )}
 

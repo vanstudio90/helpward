@@ -55,6 +55,30 @@ function fromStripeError(err: unknown): PaymentFailure {
   return fail("stripe_error", "Payment failed. Please try again.");
 }
 
+/**
+ * The Stripe customer id for a Helpward account.
+ *
+ * It lives on customer_profiles, NOT on profiles. Four functions here
+ * originally read `profiles.stripe_customer_id`, a column that does not
+ * exist — PostgREST returns an error for the whole select, so every one of
+ * them failed at runtime with "no payment method". Types did not catch it
+ * because the Supabase client returns `any` for an unmodelled select.
+ */
+async function readStripeCustomerId(userId: string): Promise<string | null> {
+  const { data } = await createSupabaseServiceClient()
+    .from("customer_profiles")
+    .select("stripe_customer_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data?.stripe_customer_id as string | null) ?? null;
+}
+
+/** Email lives in auth.users, not in any public table. */
+async function readAuthEmail(userId: string): Promise<string | undefined> {
+  const { data } = await createSupabaseServiceClient().auth.admin.getUserById(userId);
+  return data?.user?.email ?? undefined;
+}
+
 /* =========================================================================
    Helper onboarding
    ========================================================================= */
@@ -88,13 +112,13 @@ export async function startHelperOnboarding(
     if (!accountId) {
       const { data: person } = await admin
         .from("profiles")
-        .select("email, country")
+        .select("country")
         .eq("id", providerId)
         .single();
 
       const account = await stripe.accounts.create({
         country: person?.country === "CA" ? "CA" : "US",
-        email: person?.email ?? undefined,
+        email: await readAuthEmail(providerId),
         controller: CONNECTED_ACCOUNT_CONTROLLER,
         capabilities: CONNECTED_ACCOUNT_CAPABILITIES,
         business_profile: {
@@ -179,24 +203,27 @@ export async function ensureStripeCustomer(userId: string): Promise<PaymentResul
   const stripe = getStripe();
   const admin = createSupabaseServiceClient();
 
+  const existing = await readStripeCustomerId(userId);
+  if (existing) return { ok: true, customerId: existing };
+
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, email, full_name, stripe_customer_id")
+    .select("id, full_name")
     .eq("id", userId)
     .single();
   if (!profile) return fail("no_profile", "Account not found.");
-  if (profile.stripe_customer_id) return { ok: true, customerId: profile.stripe_customer_id };
 
   try {
     const customer = await stripe.customers.create({
-      email: profile.email ?? undefined,
+      email: await readAuthEmail(userId),
       name: profile.full_name ?? undefined,
       metadata: { helpward_user_id: userId },
     });
+    // Upsert: a customer who has never had one has no customer_profiles
+    // row yet, and an UPDATE would silently affect zero rows.
     const { error } = await admin
-      .from("profiles")
-      .update({ stripe_customer_id: customer.id })
-      .eq("id", userId);
+      .from("customer_profiles")
+      .upsert({ user_id: userId, stripe_customer_id: customer.id }, { onConflict: "user_id" });
     if (error) {
       console.error("could not persist stripe customer", customer.id, error);
       return fail("persist_failed", "Could not set up payment. Please try again.");
@@ -273,7 +300,13 @@ async function loadBooking(bookingId: string) {
  */
 export async function authorizeBookingPayment(
   bookingId: string,
-): Promise<PaymentResult<{ paymentIntentId: string; requiresAction: boolean }>> {
+): Promise<PaymentResult<{
+  paymentIntentId: string;
+  /** The bank wants the customer present. Nothing is held until they are. */
+  requiresAction: boolean;
+  /** Only set when requiresAction — what Stripe.js needs to run the challenge. */
+  clientSecret?: string | null;
+}>> {
   if (!stripeConfigured()) return fail("not_configured", "Payments are not available yet.");
   const stripe = getStripe();
   const admin = createSupabaseServiceClient();
@@ -282,8 +315,30 @@ export async function authorizeBookingPayment(
   if (!booking) return fail("no_booking", "Booking not found.");
 
   // Idempotent: a retried acceptance must not place a second hold.
+  //
+  // The intent's CURRENT status is checked rather than assumed. An intent
+  // id on the booking previously counted as success, so a booking whose
+  // authorization had been cancelled, had expired, or was still waiting on
+  // a 3DS challenge reported "already authorized" and went ahead unpaid.
   if (booking.stripe_payment_intent_id) {
-    return { ok: true, paymentIntentId: booking.stripe_payment_intent_id, requiresAction: false };
+    try {
+      const existing = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id);
+      if (existing.status === "requires_capture" || existing.status === "succeeded") {
+        return { ok: true, paymentIntentId: existing.id, requiresAction: false };
+      }
+      if (existing.status === "requires_action") {
+        return {
+          ok: true, paymentIntentId: existing.id,
+          requiresAction: true, clientSecret: existing.client_secret,
+        };
+      }
+      // canceled / requires_payment_method — the hold is gone. Fall
+      // through and place a new one.
+      console.warn("stale payment intent on booking", bookingId, existing.status);
+    } catch (err) {
+      console.error("could not read existing intent", booking.stripe_payment_intent_id, err);
+      return fail("intent_unreadable", "Could not check the payment on this booking.");
+    }
   }
 
   const { data: helper } = await admin
@@ -301,12 +356,8 @@ export async function authorizeBookingPayment(
     );
   }
 
-  const { data: customer } = await admin
-    .from("profiles")
-    .select("stripe_customer_id")
-    .eq("id", booking.customer_id)
-    .single();
-  if (!customer?.stripe_customer_id) {
+  const customerId = await readStripeCustomerId(booking.customer_id);
+  if (!customerId) {
     return fail("no_payment_method", "Add a payment method before booking.");
   }
 
@@ -326,7 +377,7 @@ export async function authorizeBookingPayment(
       {
         amount: booking.total_cents,
         currency: booking.currency.toLowerCase(),
-        customer: customer.stripe_customer_id,
+        customer: customerId,
         payment_method: card.stripe_payment_method_id,
         // Hold now, settle at completion.
         capture_method: "manual",
@@ -344,24 +395,42 @@ export async function authorizeBookingPayment(
           helpward_provider_id: booking.provider_id,
         },
       },
-      // Survives a retried server action without double-authorizing.
-      { idempotencyKey: `hw-auth-${booking.id}` },
+      // Survives a retried server action without double-authorizing. The
+      // amount is in the key so a re-quoted booking cannot silently reuse
+      // a hold for a different total.
+      { idempotencyKey: `hw-auth-${booking.id}-${booking.total_cents}` },
     );
 
-    await admin
+    const held = intent.status === "requires_capture";
+    const { error: writeError } = await admin
       .from("bookings")
       .update({
         stripe_payment_intent_id: intent.id,
-        payment_status: intent.status === "requires_capture" ? "authorized" : "pending",
-        authorized_at: intent.status === "requires_capture" ? new Date().toISOString() : null,
-        payment_error: null,
+        payment_status: held ? "authorized" : "pending",
+        authorized_at: held ? new Date().toISOString() : null,
+        payment_error: intent.status === "requires_action"
+          ? "Waiting for the customer to confirm this payment with their bank."
+          : null,
       })
       .eq("id", booking.id);
+
+    // A hold exists at Stripe that we failed to record. Left unsaid, the
+    // next acceptance attempt places a SECOND hold on the customer's card.
+    if (writeError) {
+      console.error("AUTHORIZED BUT NOT RECORDED", {
+        bookingId: booking.id, intent: intent.id, error: writeError,
+      });
+      return fail(
+        "persist_failed",
+        "The payment was authorized but could not be recorded. Support has been notified.",
+      );
+    }
 
     return {
       ok: true,
       paymentIntentId: intent.id,
       requiresAction: intent.status === "requires_action",
+      clientSecret: intent.status === "requires_action" ? intent.client_secret : null,
     };
   } catch (err) {
     const problem = fromStripeError(err);
@@ -370,6 +439,48 @@ export async function authorizeBookingPayment(
       .update({ payment_status: "failed", payment_error: problem.message })
       .eq("id", booking.id);
     return problem;
+  }
+}
+
+/**
+ * Re-read an intent that needed a bank challenge and record the outcome.
+ *
+ * Called when the customer returns from authenticating. The status is read
+ * from Stripe, never taken from the browser: the page that calls this can
+ * only say "I finished", not "it worked".
+ */
+export async function confirmPendingAuthorization(
+  bookingId: string,
+): Promise<PaymentResult<{ authorized: boolean }>> {
+  if (!stripeConfigured()) return fail("not_configured", "Payments are not available yet.");
+  const admin = createSupabaseServiceClient();
+
+  const booking = await loadBooking(bookingId);
+  if (!booking) return fail("no_booking", "Booking not found.");
+  if (!booking.stripe_payment_intent_id) return fail("not_authorized", "Nothing to confirm.");
+  if (booking.payment_status === "authorized" || booking.payment_status === "captured") {
+    return { ok: true, authorized: true };
+  }
+
+  try {
+    const intent = await getStripe().paymentIntents.retrieve(booking.stripe_payment_intent_id);
+    const held = intent.status === "requires_capture" || intent.status === "succeeded";
+
+    await admin
+      .from("bookings")
+      .update({
+        payment_status: held ? "authorized" : "pending",
+        authorized_at: held ? new Date().toISOString() : null,
+        payment_error: held
+          ? null
+          : intent.last_payment_error?.message
+            ?? "This payment still needs to be confirmed with your bank.",
+      })
+      .eq("id", booking.id);
+
+    return { ok: true, authorized: held };
+  } catch (err) {
+    return fromStripeError(err);
   }
 }
 
@@ -492,11 +603,7 @@ export async function chargeTip(
     .select("stripe_connect_account_id")
     .eq("user_id", booking.provider_id)
     .single();
-  const { data: customer } = await admin
-    .from("profiles")
-    .select("stripe_customer_id")
-    .eq("id", booking.customer_id)
-    .single();
+  const tipCustomerId = await readStripeCustomerId(booking.customer_id);
   const { data: card } = await admin
     .from("payment_methods")
     .select("stripe_payment_method_id")
@@ -506,7 +613,7 @@ export async function chargeTip(
     .maybeSingle();
 
   if (!helper?.stripe_connect_account_id) return fail("helper_not_payable", "Helper cannot receive payouts.");
-  if (!customer?.stripe_customer_id || !card?.stripe_payment_method_id) {
+  if (!tipCustomerId || !card?.stripe_payment_method_id) {
     return fail("no_payment_method", "No saved card to charge the tip to.");
   }
 
@@ -515,7 +622,7 @@ export async function chargeTip(
       {
         amount: tipCents,
         currency: booking.currency.toLowerCase(),
-        customer: customer.stripe_customer_id,
+        customer: tipCustomerId,
         payment_method: card.stripe_payment_method_id,
         confirm: true,
         off_session: true,
@@ -564,12 +671,8 @@ export async function saveCardFromSetupIntent(
   const stripe = getStripe();
   const admin = createSupabaseServiceClient();
 
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("stripe_customer_id")
-    .eq("id", userId)
-    .single();
-  if (!profile?.stripe_customer_id) {
+  const savedForCustomer = await readStripeCustomerId(userId);
+  if (!savedForCustomer) {
     return fail("no_customer", "That card could not be saved. Please try again.");
   }
 
@@ -580,7 +683,7 @@ export async function saveCardFromSetupIntent(
 
     // Ownership, not just validity. Without this check any customer could
     // post another customer's SetupIntent id and attach their card.
-    if (intent.customer !== profile.stripe_customer_id) {
+    if (intent.customer !== savedForCustomer) {
       console.error("setup intent/customer mismatch", { setupIntentId, userId });
       return fail("not_yours", "That card could not be saved. Please try again.");
     }
@@ -698,4 +801,108 @@ export async function hasUsableCard(userId: string): Promise<boolean> {
     .select("id", { count: "exact", head: true })
     .eq("customer_id", userId);
   return (count ?? 0) > 0;
+}
+
+/* =========================================================================
+   Refunds
+   ========================================================================= */
+
+/**
+ * Refund a captured booking, taking the helper's share back with it.
+ *
+ * `reverse_transfer` is the whole point. A destination charge belongs to
+ * the PLATFORM — Helpward is the merchant of record and the money has
+ * already been transferred onward — so a plain refund comes entirely out
+ * of Helpward's balance and the helper keeps their 80% of a job the
+ * customer is no longer paying for.
+ *
+ * Measured in the sandbox: refunding $10.00 of a $54.50 job plainly left
+ * the helper's balance untouched; with reverse_transfer it fell by $7.34,
+ * exactly their share, and Helpward paid only its own $2.66.
+ *
+ * This is also why controller.losses.payments = "stripe" does NOT mean
+ * Helpward is insulated from chargebacks. That setting governs the
+ * connected account's balance. Disputes on destination charges hit the
+ * platform, and they arrive without a reverse_transfer option — the
+ * transfer must be reversed separately, which is what a dispute handler
+ * has to do.
+ */
+export async function refundBooking(
+  bookingId: string,
+  opts: {
+    /** Partial refund in cents. Omit to refund the full captured amount. */
+    amountCents?: number;
+    /**
+     * Leave the helper paid and absorb the refund entirely. Only correct
+     * when the helper did the work and the refund is a goodwill gesture.
+     * Defaults to false, so the money comes back proportionally.
+     */
+    absorbHelperShare?: boolean;
+    reason?: "duplicate" | "fraudulent" | "requested_by_customer";
+  } = {},
+): Promise<PaymentResult<{ refundedCents: number; helperShareReversed: boolean }>> {
+  if (!stripeConfigured()) return fail("not_configured", "Refunds are not available yet.");
+  const stripe = getStripe();
+  const admin = createSupabaseServiceClient();
+
+  const booking = await loadBooking(bookingId);
+  if (!booking) return fail("no_booking", "Booking not found.");
+  if (!booking.stripe_payment_intent_id) {
+    return fail("nothing_to_refund", "This booking was never charged.");
+  }
+  if (booking.payment_status !== "captured") {
+    return fail(
+      "not_captured",
+      "This booking has not been charged — cancel it to release the hold instead.",
+    );
+  }
+
+  const amount = opts.amountCents ?? booking.total_cents;
+  if (amount <= 0 || amount > booking.total_cents) {
+    return fail("bad_amount", "Refund amount is outside what was charged.");
+  }
+
+  const reverse = !opts.absorbHelperShare;
+
+  try {
+    const refund = await stripe.refunds.create(
+      {
+        payment_intent: booking.stripe_payment_intent_id,
+        amount,
+        // Reversing the transfer pulls the helper's proportional share
+        // back; refunding the application fee gives up Helpward's share of
+        // the same proportion. Together they unwind the split cleanly.
+        reverse_transfer: reverse,
+        refund_application_fee: reverse,
+        ...(opts.reason ? { reason: opts.reason } : {}),
+        metadata: { helpward_booking_id: booking.id },
+      },
+      { idempotencyKey: `hw-refund-${booking.id}-${amount}-${reverse ? "rev" : "abs"}` },
+    );
+
+    const full = amount === booking.total_cents;
+    const { error } = await admin
+      .from("bookings")
+      .update({
+        payment_status: full ? "refunded" : "partial_refund",
+        payment_error: null,
+      })
+      .eq("id", booking.id);
+    if (error) {
+      // Money has moved. This must not read as a failed refund that
+      // someone might retry.
+      console.error("REFUND ISSUED BUT NOT RECORDED", { bookingId, refund: refund.id, error });
+    }
+
+    await admin.from("refunds").insert({
+      booking_id: booking.id,
+      stripe_refund_id: refund.id,
+      amount_cents: amount,
+      reason: opts.reason ?? "requested_by_customer",
+    });
+
+    return { ok: true, refundedCents: amount, helperShareReversed: reverse };
+  } catch (err) {
+    return fromStripeError(err);
+  }
 }

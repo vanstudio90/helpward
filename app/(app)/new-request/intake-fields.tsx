@@ -26,8 +26,15 @@ function Label({ field }: { field: IntakeField }) {
   );
 }
 
-function Field({ field }: { field: IntakeField }) {
+function Field({ field, value }: { field: IntakeField; value?: string | string[] }) {
   const name = `intake_${field.key}`;
+  // Restored answers from a submit that came back needing attention. React
+  // 19 resets an uncontrolled form once its action resolves, so without
+  // these the customer's brief is wiped the moment the address needs
+  // confirming — and the resubmit then fails required-field validation on
+  // fields they had already filled in.
+  const single = Array.isArray(value) ? value[0] ?? "" : value ?? "";
+  const many = Array.isArray(value) ? value : value ? [value] : [];
 
   if (field.type === "checkboxes") {
     return (
@@ -39,7 +46,11 @@ function Field({ field }: { field: IntakeField }) {
               key={o.value}
               className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white border border-slate-200 text-xs cursor-pointer hover:border-brand-300"
             >
-              <input type="checkbox" name={name} value={o.value} className="w-3.5 h-3.5 rounded accent-brand-600" />
+              <input
+                type="checkbox" name={name} value={o.value}
+                defaultChecked={many.includes(o.value)}
+                className="w-3.5 h-3.5 rounded accent-brand-600"
+              />
               <span className="truncate">{o.label}</span>
             </label>
           ))}
@@ -52,7 +63,7 @@ function Field({ field }: { field: IntakeField }) {
     return (
       <label className="block">
         <Label field={field} />
-        <select name={name} required={field.required} defaultValue="" className={`${INPUT} mt-1.5`}>
+        <select name={name} required={field.required} defaultValue={single} className={`${INPUT} mt-1.5`}>
           <option value="" disabled>
             Choose…
           </option>
@@ -72,6 +83,7 @@ function Field({ field }: { field: IntakeField }) {
           name={name} required={field.required} rows={3}
           maxLength={field.maxLength ?? 500}
           placeholder={field.placeholder}
+          defaultValue={single}
           className={`${INPUT} mt-1.5`}
         />
       </label>
@@ -86,6 +98,7 @@ function Field({ field }: { field: IntakeField }) {
           <input
             type="number" name={name} required={field.required}
             min={field.min} max={field.max}
+            defaultValue={single}
             className={`${INPUT} max-w-[9rem]`}
           />
           {field.unit && <span className="text-xs text-slate-500">{field.unit}</span>}
@@ -108,6 +121,7 @@ function Field({ field }: { field: IntakeField }) {
           type="text" name={name} required={field.required}
           maxLength={field.maxLength ?? 200}
           placeholder={field.placeholder}
+          defaultValue={single}
           className={`${INPUT} ${field.type === "destination" ? "pl-10" : ""}`}
         />
       </span>
@@ -115,7 +129,14 @@ function Field({ field }: { field: IntakeField }) {
   );
 }
 
-export function IntakeFields({ spec, serviceTitle }: { spec: ServiceIntake; serviceTitle: string }) {
+export function IntakeFields({
+  spec, serviceTitle, values,
+}: {
+  spec: ServiceIntake;
+  serviceTitle: string;
+  /** Answers echoed back by a failed submit, keyed without the `intake_` prefix. */
+  values?: Record<string, string | string[]>;
+}) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-4">
       <div>
@@ -123,7 +144,7 @@ export function IntakeFields({ spec, serviceTitle }: { spec: ServiceIntake; serv
         {spec.intro && <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{spec.intro}</p>}
       </div>
       {spec.fields.map((f) => (
-        <Field key={f.key} field={f} />
+        <Field key={f.key} field={f} value={values?.[f.key]} />
       ))}
     </div>
   );

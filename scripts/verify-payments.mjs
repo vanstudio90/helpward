@@ -185,6 +185,37 @@ if (acct) {
     const gained = (await balanceOf()) - balanceBefore;
     ok(`the helper's balance gains exactly their payout (${PAYOUT}c)`,
        gained === PAYOUT, `gained ${gained}`);
+
+    // ---------------------------------------------------------------
+    // Who pays for a refund
+    // ---------------------------------------------------------------
+    // A destination charge belongs to the PLATFORM. A plain refund comes
+    // entirely out of Helpward's balance and the helper keeps their 80%
+    // of a job the customer is no longer paying for. This is also why
+    // controller.losses.payments = "stripe" does not insulate Helpward
+    // from chargebacks: that setting governs the CONNECTED account's
+    // balance, and these charges are not on it.
+    const REFUND = 1000;
+    const beforePlain = await balanceOf();
+    await api("refunds", {
+      payment_intent: settled.id, amount: String(REFUND),
+    });
+    const afterPlain = await balanceOf();
+    ok("a plain refund takes NOTHING from the helper — Helpward absorbs it",
+       afterPlain === beforePlain, `helper balance moved by ${afterPlain - beforePlain}`);
+
+    const beforeReversed = await balanceOf();
+    await api("refunds", {
+      payment_intent: settled.id, amount: String(REFUND),
+      reverse_transfer: "true", refund_application_fee: "true",
+    });
+    const reclaimed = beforeReversed - (await balanceOf());
+    // The helper's proportional share of the refunded amount.
+    const expected = Math.round(REFUND * (PAYOUT / TOTAL));
+    ok(`reverse_transfer reclaims the helper's share (${expected}c of ${REFUND}c)`,
+       Math.abs(reclaimed - expected) <= 1, `reclaimed ${reclaimed}, expected ~${expected}`);
+    ok("Helpward therefore pays only its own share of a reversed refund",
+       reclaimed > 0 && reclaimed < REFUND, `helper paid ${reclaimed} of ${REFUND}`);
   }
 } else {
   console.log("\n  \x1b[36mSKIP\x1b[0m  destination split: set STRIPE_TEST_CONNECT_ACCOUNT in .env.rehearsal");

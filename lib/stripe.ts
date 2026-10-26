@@ -60,27 +60,43 @@ export function stripeIsLive(): boolean {
 
    UPDATE, later the same day: completing the Connect platform profile in
    the dashboard changed what the API allows. `type: "express"` now creates
-   successfully, with controller.losses.payments = "application" — meaning
-   HELPWARD would carry chargeback liability on helper transactions, and
+   successfully, with controller.losses.payments = "application", and
    helpers would get a Stripe-hosted Express dashboard.
 
-   We are deliberately staying with managed risk:
+   We stay with managed risk — but NOT for the reason first written here.
 
-     - The platform profile the owner filled in says refunds and chargeback
-       liability sits with STRIPE. Express contradicts that.
-     - A new marketplace with no fraud history is the worst place to absorb
-       chargebacks. A helper who takes a disputed job cannot leave Helpward
-       with a negative balance under this shape.
-     - The Express dashboard's value is helper self-service, and the two
-       things helpers actually need are covered without it: earnings are
-       rendered at /provider/earnings, and bank details are changed by
-       re-issuing an account_onboarding link, which
-       startPayoutSetupAction() already does. (account_update links are
-       rejected for this shape — account_onboarding IS the update path.)
+   CORRECTION. The original note claimed this configuration means "a helper
+   who takes a disputed job cannot leave Helpward with a negative balance".
+   That is wrong, and it is the kind of wrong that would have justified
+   skipping real dispute controls.
 
-   Revisit only as a deliberate decision: switching shape changes who pays
-   for fraud, and existing connected accounts keep the controller they were
-   created with, so a switch splits the estate in two.
+   controller.losses.payments governs the CONNECTED ACCOUNT's balance —
+   who covers it when charges created ON that account go bad. Helpward
+   does not create charges on helper accounts. It creates DESTINATION
+   charges on the platform and transfers a share onward, so the charge
+   belongs to Helpward: a dispute or refund lands on Helpward's balance
+   regardless of this setting. Helpward has full chargeback exposure.
+
+   Measured in the sandbox on 2026-10-26, refunding $10 of a $54.50 job:
+
+     plain refund                  helper balance unchanged — Helpward
+                                   absorbed all 1000c, the helper's share
+                                   of it included
+     reverse_transfer=true         helper balance fell by 734c, exactly
+       + refund_application_fee    their 4000/5450 share; Helpward paid
+                                   only its own 266c
+
+   So the protection that matters is in how refunds are ISSUED, not in the
+   controller: see refundBooking() in lib/payments.ts, which reverses the
+   transfer by default. The reason to keep this configuration is simply
+   that it is what the platform profile declares and what existing
+   connected accounts were created with — switching splits the estate in
+   two, since an account keeps its controller for life.
+
+   Helpers keep self-service without the Express dashboard: earnings
+   render at /provider/earnings, and bank details are changed by
+   re-issuing an account_onboarding link, which startPayoutSetupAction()
+   already does (account_update links are rejected for this shape).
 
    Verified against the sandbox on 2026-10-26, 19/19 in
    scripts/verify-payments.mjs: a $50 job holds $54.50 on the customer's

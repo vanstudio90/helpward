@@ -13,6 +13,10 @@
     "db:deploy-coupled": "node scripts/migrate.mjs --deploy-coupled",
     "db:verify": "node scripts/verify-migration-state.mjs",
     "sql:quote": "node scripts/run-sql-suite.mjs supabase/tests/quote_integrity.sql",
+    "sql:payments": "node scripts/run-sql-suite.mjs supabase/tests/payment_invariants.sql",
+    "verify:payments": "node scripts/verify-payments.mjs",
+    "verify:wiring": "node --experimental-strip-types --import ./tests/register.mjs scripts/verify-payment-wiring.mjs",
+    "verify:webhooks": "node scripts/verify-webhooks.mjs",
     "sql:boundary": "node scripts/run-sql-suite.mjs supabase/tests/boundary_containment.sql",
     "boundaries:load": "node scripts/load-boundaries.mjs",
     "addresses:backfill": "node scripts/backfill-addresses.mjs"
