@@ -11,6 +11,7 @@ import { createRequestAction } from "./actions";
 import { RecurrencePicker } from "./recurrence-picker";
 import { BundlePicker } from "./bundle-picker";
 import { UseCurrentLocationButton } from "./use-current-location";
+import { MissingFieldsNotice, friendlyLabel, type MissingField } from "./missing-fields";
 import { AddressConfirm } from "./address-confirm";
 import { IntakeFields } from "./intake-fields";
 import { intakeFor } from "@/lib/service-intake";
@@ -80,6 +81,57 @@ export function NewRequestView({
   // so this value cannot grant a verified address on its own.
   const [addressConfirmation, setAddressConfirmation] = useState("");
   const formRef = useRef<HTMLFormElement | null>(null);
+  // What the customer still has to fill in. Empty until they actually try
+  // to submit — telling someone what they have not done yet, before they
+  // have had a chance to do it, is nagging rather than help.
+  const [missing, setMissing] = useState<MissingField[]>([]);
+
+  // Everything the customer still has to fill in, in page order.
+  //
+  // The browser's own validation stops at the FIRST empty field and says
+  // so in a native bubble, which on this page can sit behind an autofill
+  // dropdown and never mentions the other four things also missing.
+  const findMissing = (form: HTMLFormElement): MissingField[] => {
+    const found: MissingField[] = [];
+    const seen = new Set<string>();
+
+    // A service is not a form control, so it needs saying here. It used to
+    // disable the submit button with a small hint underneath, which on a
+    // phone sits below the fold — so the button just looked broken.
+    if (!selected) {
+      found.push({ name: "service_id", label: "Choose what you need help with" });
+    }
+    if (bundleError) {
+      found.push({ name: "bundle_items", label: bundleError });
+    }
+
+    for (const el of Array.from(form.elements)) {
+      if (!(el instanceof HTMLInputElement
+            || el instanceof HTMLSelectElement
+            || el instanceof HTMLTextAreaElement)) continue;
+      if (el.type === "hidden" || el.disabled || !el.willValidate) continue;
+      if (el.checkValidity()) continue;
+      if (seen.has(el.name)) continue;   // a group shares one name
+      seen.add(el.name);
+      found.push({ name: el.name, label: friendlyLabel(el) });
+    }
+
+    // Required checkbox groups. HTML cannot express "at least one of
+    // these", so these were declared required in the spec, enforced by
+    // the server, and entirely unchecked in the browser — the customer
+    // only found out after submitting.
+    for (const group of Array.from(
+      form.querySelectorAll<HTMLFieldSetElement>("fieldset[data-required-group]"),
+    )) {
+      if (group.querySelector("input:checked")) continue;
+      const first = group.querySelector<HTMLInputElement>("input[type=checkbox]");
+      if (!first || seen.has(first.name)) continue;
+      seen.add(first.name);
+      found.push({ name: first.name, label: group.dataset.friendly ?? friendlyLabel(first) });
+    }
+
+    return found;
+  };
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     defaultSavedAddr && defaultSavedAddr.lat != null && defaultSavedAddr.lng != null
       ? { lat: defaultSavedAddr.lat, lng: defaultSavedAddr.lng }
@@ -188,9 +240,48 @@ export function NewRequestView({
         </div>
       )}
 
+      <MissingFieldsNotice
+        missing={missing}
+        onJump={(name) => {
+          const el = formRef.current?.elements.namedItem(name);
+          const field = el instanceof RadioNodeList ? el[0] : el;
+          if (field instanceof HTMLElement) {
+            field.scrollIntoView({ behavior: "smooth", block: "center" });
+            field.focus({ preventScroll: true });
+          }
+        }}
+      />
+
       <form
         ref={formRef}
         action={formAction}
+        // The browser's own validation stops at the FIRST empty field and
+        // says so in a native bubble — which on this page can be hidden
+        // behind an autofill dropdown, and which never mentions the other
+        // four things also missing. We check it ourselves instead, and the
+        // `required` attributes stay as the backstop if JS never runs.
+        noValidate
+        // Once the notice is up, keep it honest as they fill things in:
+        // an item that stays listed after it has been answered reads as
+        // the form not noticing. Does nothing until they have actually
+        // tried to submit.
+        onInput={(e) => {
+          if (missing.length === 0) return;
+          setMissing(findMissing(e.currentTarget));
+        }}
+        onChange={(e) => {
+          if (missing.length === 0) return;
+          setMissing(findMissing(e.currentTarget));
+        }}
+        onSubmit={(e) => {
+          const found = findMissing(e.currentTarget);
+          if (found.length > 0) {
+            e.preventDefault();
+            setMissing(found);
+            return;
+          }
+          setMissing([]);
+        }}
         className="grid lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px] gap-6"
       >
         <input type="hidden" name="address_confirmation" value={addressConfirmation} />
@@ -337,6 +428,7 @@ export function NewRequestView({
                     type="text"
                     name="address"
                     required
+                    data-friendly="The address your helper is coming to"
                     value={address}
                     onChange={(e) => onAddressChange(e.target.value)}
                     placeholder="123 Main St, Vancouver, BC"
@@ -654,9 +746,14 @@ function ScheduledPicker() {
 function ContinueButtons({ pending, disabledReason }: { pending: boolean; disabledReason?: string | null }) {
   return (
     <div className="space-y-2">
+      {/* Only disabled while a submit is in flight. A button disabled for
+          an unmet requirement is a dead end: the hint explaining it sits
+          below the fold on a phone, so the control just looks broken.
+          Pressing it now says what is missing, at the top, with a link to
+          each field. */}
       <button
         type="submit"
-        disabled={pending || !!disabledReason}
+        disabled={pending}
         className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 text-white font-semibold shadow-lg shadow-brand-900/10 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {pending ? "Submitting…" : <>Submit request <ArrowRight className="w-4 h-4" /></>}

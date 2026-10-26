@@ -38,7 +38,15 @@ function Field({ field, value }: { field: IntakeField; value?: string | string[]
 
   if (field.type === "checkboxes") {
     return (
-      <fieldset>
+      // data-required-group is read by the form's submit check. HTML has
+      // no native "at least one of these", so a required checkbox group
+      // was declared required in the spec, enforced by the server, and
+      // completely unenforced in the browser — the customer only found
+      // out after submitting.
+      <fieldset
+        data-required-group={field.required ? "true" : undefined}
+        data-friendly={field.label}
+      >
         <legend><Label field={field} /></legend>
         <div className="mt-1.5 grid grid-cols-2 gap-1.5">
           {(field.options ?? []).map((o) => (
