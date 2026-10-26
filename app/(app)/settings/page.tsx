@@ -51,7 +51,7 @@ export default async function SettingsPage() {
       <div className="space-y-5">
         <SettingsForm initial={{
           full_name: me.profile.full_name,
-          phone: me.profile.phone ?? "",
+          phone: me.contact?.phone ?? "",
           country: me.profile.country,
           email: "",
           avatar_url: me.profile.avatar_url,

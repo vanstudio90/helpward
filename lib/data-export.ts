@@ -39,12 +39,19 @@ export async function buildAndUploadArchive(
   // role so we get the full set the user is entitled to. We don't filter
   // out anything beyond what the catalogue notes (no internal scoring).
   const [
-    profileR, customerR, providerR, addressesR, savedAddressesR,
+    // contactR sits SECOND, matching the order of the promises below.
+    // Adding a promise without adding its binding here silently shifts
+    // every variable after it by one — the export would have come back
+    // with contacts in the customer field and audit data in conversations.
+    profileR, contactR, customerR, providerR, addressesR, savedAddressesR,
     requestsR, bookingsR, reviewsGivenR, reviewsReceivedR,
     favoritesR, prefsR, notificationsR, auditR,
     conversationsR,
   ] = await Promise.all([
     admin.from("profiles").select("*").eq("id", userId).maybeSingle(),
+    // phone moved out of profiles in 0050; a GDPR export that silently
+    // stopped including it would be an incomplete export.
+    admin.from("profile_contacts").select("*").eq("user_id", userId).maybeSingle(),
     admin.from("customers").select("*").eq("user_id", userId).maybeSingle(),
     admin.from("provider_profiles").select("*").eq("user_id", userId).maybeSingle(),
     admin.from("addresses").select("*").eq("user_id", userId),
@@ -79,6 +86,10 @@ export async function buildAndUploadArchive(
     export_request_id: requestId,
     user_id: userId,
     profile: profileR.data ?? null,
+    // Exported separately because it lives in its own table (0050), not
+    // because it is separate data as far as the person asking is
+    // concerned. Omitting it would make the export incomplete.
+    contact: contactR.data ?? null,
     customer: customerR.data ?? null,
     provider_profile: providerR.data ?? null,
     addresses: addressesR.data ?? [],

@@ -64,7 +64,7 @@ export default async function BookingDetailPage({
       service:services(id, title, image_url),
       provider:provider_profiles!bookings_provider_id_fkey(
         user_id, slug, rating_avg,
-        profile:profiles!provider_profiles_user_id_fkey(full_name, avatar_url, phone)
+        profile:profiles!provider_profiles_user_id_fkey(full_name, avatar_url)
       ),
       request:requests(
         id, is_bundle, bundle_item_count,
@@ -78,7 +78,21 @@ export default async function BookingDetailPage({
 
   if (!b) notFound();
 
-  const provider = (b as { provider: { user_id: string; slug: string | null; rating_avg: number | null; profile: { full_name: string; avatar_url: string | null; phone: string | null } | null } | null }).provider;
+  const provider = (b as { provider: { user_id: string; slug: string | null; rating_avg: number | null; profile: { full_name: string; avatar_url: string | null } | null } | null }).provider;
+
+  // The helper's number lives in profile_contacts, whose policy releases
+  // it only while a booking between these two is actually happening
+  // (migration 0050). Nothing comes back once the job is done, which is
+  // the point — it used to sit on the profiles row, readable by every
+  // authenticated user forever.
+  const { data: helperContact } = provider?.user_id
+    ? await supabase
+        .from("profile_contacts")
+        .select("phone")
+        .eq("user_id", provider.user_id)
+        .maybeSingle()
+    : { data: null };
+  const helperPhone = (helperContact?.phone as string | null) ?? null;
   const providerHref = provider ? `/providers/${provider.slug ?? provider.user_id}` : null;
   const service = (b as { service: { id: string; title: string; image_url: string | null } | null }).service;
   // The brief the customer gave when booking, carried onto the booking at
@@ -203,9 +217,13 @@ export default async function BookingDetailPage({
                   <MessageSquare className="w-4 h-4" />
                 </Link>
               )}
-              <a href={`tel:${provider.profile?.phone ?? ""}`} aria-label="Call" className="p-2 rounded-lg border border-brand-200 text-brand-700">
-                <Phone className="w-4 h-4" />
+              {/* Only rendered when there IS a number to call. A tel:
+                  link with an empty href looks live and does nothing. */}
+              {helperPhone && (
+              <a href={`tel:${helperPhone}`} aria-label={`Call ${provider.profile?.full_name ?? "your helper"}`} className="p-2 rounded-lg border border-brand-200 text-brand-700">
+                <Phone className="w-4 h-4" aria-hidden="true" />
               </a>
+              )}
               <FavoriteHelperButton
                 helperId={provider.user_id}
                 initialSaved={helperIsFavorited}

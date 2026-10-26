@@ -16,7 +16,7 @@ export default async function ProviderConversationPage({
     .from("conversations")
     .select(`
       *,
-      customer:profiles!conversations_customer_id_fkey(full_name, avatar_url, phone),
+      customer:profiles!conversations_customer_id_fkey(full_name, avatar_url),
       booking:bookings(id, service:services(title), status)
     `)
     .eq("id", id)
@@ -30,7 +30,7 @@ export default async function ProviderConversationPage({
     .eq("conversation_id", id)
     .order("created_at", { ascending: true });
 
-  const customer = (convo as { customer: { full_name: string; avatar_url: string | null; phone: string | null } | null }).customer;
+  const customer = (convo as { customer: { full_name: string; avatar_url: string | null } | null }).customer;
   const booking = (convo as { booking: { id: string; service: { title: string } | null; status: string } | null }).booking;
 
   return (

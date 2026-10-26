@@ -6,18 +6,30 @@ import type {
 
 /* All queries scoped via RLS — only the caller's own rows come back. */
 
-export async function getMe(): Promise<{ profile: Profile; customer: CustomerProfile | null } | null> {
+/** The caller's own contact row. Separate from `profile` — see 0050. */
+export type MyContact = { phone: string | null; phone_verified: boolean };
+
+export async function getMe(): Promise<{
+  profile: Profile;
+  customer: CustomerProfile | null;
+  contact: MyContact | null;
+} | null> {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [{ data: profile }, { data: customer }] = await Promise.all([
+  // phone lives in profile_contacts, not on profiles: profiles_read
+  // exposes every helper's row to every authenticated user, and RLS is
+  // row-level, so a number on that row is a number everyone can read.
+  // See migration 0050.
+  const [{ data: profile }, { data: customer }, { data: contact }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("customer_profiles").select("*").eq("user_id", user.id).maybeSingle(),
+    supabase.from("profile_contacts").select("phone, phone_verified").eq("user_id", user.id).maybeSingle(),
   ]);
 
   if (!profile) return null;
-  return { profile, customer: customer ?? null };
+  return { profile, customer: customer ?? null, contact: contact ?? null };
 }
 
 export type DashboardStats = {

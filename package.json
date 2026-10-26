@@ -15,6 +15,7 @@
     "sql:quote": "node scripts/run-sql-suite.mjs supabase/tests/quote_integrity.sql",
     "sql:payments": "node scripts/run-sql-suite.mjs supabase/tests/payment_invariants.sql",
     "sql:visibility": "node scripts/run-sql-suite.mjs supabase/tests/participant_visibility.sql",
+    "sql:contacts": "node scripts/run-sql-suite.mjs supabase/tests/contact_visibility.sql",
     "verify:refunds": "node --experimental-strip-types --import ./tests/register.mjs scripts/verify-refunds.mjs",
     "verify:payments": "node scripts/verify-payments.mjs",
     "verify:wiring": "node --experimental-strip-types --import ./tests/register.mjs scripts/verify-payment-wiring.mjs",

@@ -99,10 +99,23 @@ export async function updateProfileAction(
 
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name, phone, country, default_currency, updated_at: new Date().toISOString() })
+    .update({ full_name, country, default_currency, updated_at: new Date().toISOString() })
     .eq("id", user.id);
 
   if (error) return { error: error.message };
+
+  // The number is a separate row with its own policy (0050): on profiles
+  // it was readable by every authenticated user, because profiles_read
+  // exposes any helper row and RLS cannot hide one column of it.
+  //
+  // Upsert, not update: someone who has never given a number has no row.
+  const { error: contactError } = await supabase
+    .from("profile_contacts")
+    .upsert(
+      { user_id: user.id, phone, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" },
+    );
+  if (contactError) return { error: contactError.message };
 
   revalidatePath("/", "layout");
   return { success: "Profile updated." };

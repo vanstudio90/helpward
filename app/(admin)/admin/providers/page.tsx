@@ -1,14 +1,32 @@
+import { one } from "@/lib/supabase/relation";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { ShieldCheck, Clock } from "lucide-react";
 import { approveProviderAction, rejectProviderAction } from "./actions";
+
+type AdminProfile = {
+  full_name: string; country: string; avatar_url: string | null; created_at: string;
+};
 
 export default async function AdminProvidersPage() {
   const supabase = createSupabaseServiceClient();
   const { data: pending } = await supabase
     .from("provider_profiles")
-    .select("*, profile:profiles!provider_profiles_user_id_fkey(full_name, phone, country, avatar_url, created_at)")
+    .select("*, profile:profiles!provider_profiles_user_id_fkey(full_name, country, avatar_url, created_at)")
     .eq("status", "pending")
     .order("created_at", { ascending: true });
+
+  // phone moved to profile_contacts in 0050. Fetched separately rather
+  // than embedded: an embed with the wrong constraint name does not fail
+  // loudly, it makes the whole select return an error shape. This page
+  // runs as the service role, so policy does not apply.
+  const { data: contacts } = await supabase
+    .from("profile_contacts")
+    .select("user_id, phone")
+    .in("user_id", (pending ?? []).map((p) => p.user_id));
+  const phoneByUser = new Map(
+    ((contacts ?? []) as Array<{ user_id: string; phone: string | null }>)
+      .map((c) => [c.user_id, c.phone] as const),
+  );
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto">
@@ -19,7 +37,8 @@ export default async function AdminProvidersPage() {
 
       <ul className="mt-6 space-y-3">
         {(pending ?? []).map((p) => {
-          const prof = (p as { profile: { full_name: string; phone: string | null; country: string; avatar_url: string | null; created_at: string } | null }).profile;
+          const prof = one((p as { profile?: AdminProfile | AdminProfile[] | null }).profile);
+          const phone = phoneByUser.get(p.user_id) ?? null;
           return (
             <li key={p.user_id} className="rounded-2xl bg-white border border-slate-100 p-4 flex items-start gap-4">
               {prof?.avatar_url ? (
@@ -31,7 +50,7 @@ export default async function AdminProvidersPage() {
               )}
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-slate-900">{prof?.full_name ?? "Unnamed"}</div>
-                <div className="text-xs text-slate-500">{prof?.phone ?? "no phone"} · {prof?.country}</div>
+                <div className="text-xs text-slate-500">{phone ?? "no phone"} · {prof?.country}</div>
                 <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
                   <Badge ok={!!p.id_verified_at} label="ID verified" />
                   <Badge ok={!!p.background_verified_at} label="Background checked" />

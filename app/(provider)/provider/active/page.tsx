@@ -17,10 +17,11 @@ type ActiveBookingRow = {
   total_cents: number; payout_cents: number; currency: string; request_id: string;
   intake: Record<string, string | string[]> | null;
   payment_status: string;
+  customer_id: string;
   service?: { id: string; title: string; image_url: string | null }
           | Array<{ id: string; title: string; image_url: string | null }> | null;
-  customer?: { full_name: string; avatar_url: string | null; phone: string | null }
-           | Array<{ full_name: string; avatar_url: string | null; phone: string | null }> | null;
+  customer?: { full_name: string; avatar_url: string | null }
+           | Array<{ full_name: string; avatar_url: string | null }> | null;
   pickup_addr?: { id: string; is_bundle: boolean | null; notes: string | null;
                   pickup: { formatted: string } | { formatted: string }[] | null }
               | Array<{ id: string; is_bundle: boolean | null; notes: string | null;
@@ -43,9 +44,9 @@ export default async function ProviderActivePage() {
     .from("bookings")
     .select(`
       id, status, scheduled_for, started_at, total_cents, payout_cents, currency, request_id,
-      intake, payment_status,
+      intake, payment_status, customer_id,
       service:services(id, title, image_url),
-      customer:profiles!bookings_customer_id_fkey(full_name, avatar_url, phone),
+      customer:profiles!bookings_customer_id_fkey(full_name, avatar_url),
       pickup_addr:requests!bookings_request_id_fkey(
         id, is_bundle, notes,
         pickup:addresses!requests_pickup_address_id_fkey(formatted)
@@ -77,6 +78,19 @@ export default async function ProviderActivePage() {
     ? describeIntake(booking.service?.id ?? "", booking.intake)
     : [];
   const customerNotes = booking ? one(bookingRow!.pickup_addr)?.notes ?? null : null;
+
+  // The customer's number, released by profile_contacts' policy only
+  // while this booking is live (migration 0050). It used to ride on the
+  // profiles row, where profiles_read made it permanent and public to
+  // every authenticated user.
+  const { data: customerContact } = booking
+    ? await supabase
+        .from("profile_contacts")
+        .select("phone")
+        .eq("user_id", bookingRow!.customer_id ?? "")
+        .maybeSingle()
+    : { data: null };
+  const customerPhone = (customerContact?.phone as string | null) ?? null;
 
   // If the booking's parent request is a bundle, pull the child stops so the
   // helper sees a tap-to-advance checklist for each task in the trip.
@@ -184,11 +198,21 @@ export default async function ProviderActivePage() {
               )}
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-slate-900 truncate">{booking.customer?.full_name ?? "Customer"}</div>
-                <div className="text-xs text-slate-500">Customer · {booking.customer?.phone ?? "no phone"}</div>
+                <div className="text-xs text-slate-500">
+                  Customer{customerPhone ? ` · ${customerPhone}` : ""}
+                </div>
               </div>
-              <button aria-label="Call" className="p-2 rounded-lg border border-brand-200 text-brand-700">
-                <Phone className="w-4 h-4" />
-              </button>
+              {/* Was a <button> that did nothing at all. Now a real
+                  tel: link, and only when there is a number to dial. */}
+              {customerPhone && (
+                <a
+                  href={`tel:${customerPhone}`}
+                  aria-label={`Call ${booking.customer?.full_name ?? "the customer"}`}
+                  className="p-2 rounded-lg border border-brand-200 text-brand-700"
+                >
+                  <Phone className="w-4 h-4" aria-hidden="true" />
+                </a>
+              )}
               <a href="/provider/messages" aria-label="Message" className="p-2 rounded-lg border border-brand-200 text-brand-700">
                 <MessageSquare className="w-4 h-4" />
               </a>
