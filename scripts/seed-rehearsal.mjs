@@ -55,7 +55,6 @@ if (URL_.includes(PRODUCTION_REF) || DB.includes(PRODUCTION_REF)) {
 
 const REGIONS = [
   { key: "vancouver",   label: "Vancouver, BC",   lng: -123.1207, lat: 49.2827 },
-  { key: "los-angeles", label: "Los Angeles, CA", lng: -118.2437, lat: 34.0522 },
   { key: "san-diego",   label: "San Diego, CA",   lng: -117.1611, lat: 32.7157 },
 ];
 

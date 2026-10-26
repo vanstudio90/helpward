@@ -15,8 +15,14 @@ export async function cancelRequestAction(requestId: string) {
 
 // Add (or update) a tip on a completed booking. 100% of the tip flows to the
 // helper — Helpward takes no cut. Capped at $500 to prevent fat-finger zeroes.
-// Customer-only; helpers cannot tip themselves and admins go through the
-// refund flow if they need to adjust.
+//
+// The tip is the one amount that moves payout_cents after acceptance, so it
+// is applied by set_booking_tip() rather than written here. This action
+// used to UPDATE tip_cents, total_cents and payout_cents directly: the
+// arithmetic was correct, but `authenticated` held table-level UPDATE on
+// bookings, so any customer could PostgREST their own booking and set
+// payout_cents to whatever they liked. 0040 revoked that grant, and the
+// function re-derives both totals from the booking's priced components.
 export async function setTipAction(bookingId: string, tipDollars: number) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -25,28 +31,11 @@ export async function setTipAction(bookingId: string, tipDollars: number) {
   if (!Number.isFinite(tipDollars) || tipDollars < 0) return { error: "Tip must be a positive number." };
   if (tipDollars > 500) return { error: "Tip is capped at $500. Email billing@helpward.com to send more." };
 
-  // RLS enforces customer-only update via the policy; we also pre-check here
-  // so the user gets a useful error instead of a silent no-op row count.
-  const { data: booking } = await supabase
-    .from("bookings")
-    .select("customer_id, status, tip_cents, base_price_cents, service_fee_cents, distance_cents, payout_cents")
-    .eq("id", bookingId)
-    .single();
-  if (!booking) return { error: "Booking not found." };
-  if (booking.customer_id !== user.id) return { error: "Only the customer can add a tip." };
-  if (booking.status !== "completed") return { error: "You can only tip a completed booking." };
-
   const tipCents = Math.round(tipDollars * 100);
-  // Tip is added to total (customer pays it) and to payout (helper receives 100%).
-  const newTotal =
-    (booking.base_price_cents ?? 0) + (booking.service_fee_cents ?? 0) +
-    (booking.distance_cents ?? 0) + tipCents;
-  const newPayout = (booking.payout_cents ?? 0) - (booking.tip_cents ?? 0) + tipCents;
-
-  const { error } = await supabase
-    .from("bookings")
-    .update({ tip_cents: tipCents, total_cents: newTotal, payout_cents: newPayout })
-    .eq("id", bookingId);
+  const { error } = await supabase.rpc("set_booking_tip", {
+    p_booking_id: bookingId,
+    p_tip_cents: tipCents,
+  });
   if (error) return { error: error.message };
 
   revalidatePath(`/bookings/${bookingId}`);

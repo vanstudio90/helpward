@@ -53,7 +53,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Where is Helpward available?",
-    a: "Helpward is live in three launch areas: Vancouver and the surrounding Lower Mainland in British Columbia, and the cities of Los Angeles and San Diego in California. The two California areas cover city limits only. If your address falls outside a launch area we tell you before you submit, rather than taking a request we cannot fill. More areas open as verified helper supply grows.",
+    a: "Helpward is live in two launch areas: Vancouver and the surrounding Lower Mainland in British Columbia, and the city of San Diego in California. San Diego covers city limits only. If your address falls outside a launch area we tell you before you submit, rather than taking a request we cannot fill. More areas open as verified helper supply grows.",
   },
 ];
 

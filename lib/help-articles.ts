@@ -66,7 +66,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     ],
     faqs: [
       { q: "Is Helpward a delivery service?", a: "Helpward includes delivery as one of many categories. We also offer transportation, errands, home tasks, presence visits, and business services — anything a verified human can do." },
-      { q: "Is Helpward available in my city?", a: "Helpward operates across the U.S. and Canada with denser supply in Vancouver, Toronto, Montreal, Seattle, San Francisco, Los Angeles, Austin, Chicago, New York, and Miami. We add cities as helper-supply density meets quality thresholds." },
+      { q: "Is Helpward available in my city?", a: "Helpward currently serves two areas: Vancouver and the surrounding Lower Mainland in British Columbia, and the City of San Diego in California. Anywhere else, the request form will tell you before you submit rather than accepting a job we cannot fill. We add cities as verified helper supply allows." },
     ],
     updatedAt: "2026-05-28",
   },

@@ -199,7 +199,6 @@ export const JOBS: JobPosting[] = [
     team: "Community",
     employmentType: "FULL_TIME",
     locations: [
-      { city: "Los Angeles", region: "CA", country: "US", remote: false },
       { city: "New York", region: "NY", country: "US", remote: false },
     ],
     remoteOk: false,

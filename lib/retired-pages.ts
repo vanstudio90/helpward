@@ -1,8 +1,8 @@
 // HTTP 410 Gone for city pages we retired when launch scope narrowed to
-// Vancouver / Lower Mainland, Los Angeles and San Diego.
+// Vancouver / Lower Mainland and San Diego.
 //
 // Why 410 and not a redirect: sending someone searching for "Austin" to
-// Los Angeles is an irrelevant redirect. Google treats those as soft 404s,
+// San Diego is an irrelevant redirect. Google treats those as soft 404s,
 // and it misleads a visitor who asked a specific question. 410 states
 // plainly that the page is gone and is not coming back, while the body
 // still helps the visitor by listing where we do operate.

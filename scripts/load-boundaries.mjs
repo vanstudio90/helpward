@@ -63,7 +63,6 @@ const APPROVED = {
     { id: "bc-langley-city",       match: "Langley", requireStatus: "city" },
     { id: "bc-langley-township",   match: "Langley", requireStatus: "township" },
   ],
-  "los-angeles-ca": [{ id: "ca-los-angeles", match: "Los Angeles" }],
   "san-diego-ca":   [{ id: "ca-san-diego",   match: "San Diego" }],
 };
 

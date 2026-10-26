@@ -60,7 +60,6 @@ end $$;
 --    Replace coordinates with addresses verified against the loaded dataset.
 -- ---------------------------------------------------------------------------
 select pg_temp.expect_verdict('downtown Vancouver, BC',    -123.1207, 49.2827, 'serviceable');
-select pg_temp.expect_verdict('downtown Los Angeles, CA',  -118.2437, 34.0522, 'serviceable');
 select pg_temp.expect_verdict('downtown San Diego, CA',    -117.1611, 32.7157, 'serviceable');
 
 -- ---------------------------------------------------------------------------
@@ -68,6 +67,11 @@ select pg_temp.expect_verdict('downtown San Diego, CA',    -117.1611, 32.7157, '
 -- ---------------------------------------------------------------------------
 select pg_temp.expect_verdict('Abbotsford, BC (excluded municipality)', -122.3045, 49.0504, 'outside_boundary');
 select pg_temp.expect_verdict('Santa Monica, CA (adjacent city)',       -118.4912, 34.0195, 'outside_boundary');
+-- Los Angeles was a launch city until 2026-10-26. Its polygon is deleted by
+-- migration 0042, so downtown LA must now refuse. This assertion fails if
+-- the boundary is ever reloaded without the TypeScript scope being widened
+-- to match.
+select pg_temp.expect_verdict('downtown Los Angeles, CA (retired area)',  -118.2437, 34.0522, 'outside_boundary');
 select pg_temp.expect_verdict('Tijuana, MX (outside both countries)',   -117.0382, 32.5149, 'outside_boundary');
 
 -- ---------------------------------------------------------------------------
@@ -173,11 +177,11 @@ begin
     select b.municipality, st_numgeometries(b.boundary) as parts
     from service_area_boundaries b
     join service_area_datasets d on d.id = b.dataset_id and d.is_active
-    where b.municipality in ('Los Angeles', 'San Diego')
+    where b.municipality in ('San Diego')
   loop
     raise notice 'INFO % has % polygon part(s)', r.municipality, r.parts;
     if r.parts < 2 then
-      raise warning 'REVIEW: % loaded as a single polygon. Both cities have non-contiguous territory — confirm the source file was not simplified to its largest ring.', r.municipality;
+      raise warning 'REVIEW: % loaded as a single polygon. San Diego has non-contiguous territory — confirm the source file was not simplified to its largest ring.', r.municipality;
     end if;
   end loop;
 end $$;

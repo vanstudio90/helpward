@@ -37,7 +37,6 @@ export const SERVICE_AREAS = [
       "Maple Ridge", "North Vancouver", "West Vancouver", "Langley",
     ],
   },
-  { id: "los-angeles-ca", country: "US", regions: ["California", "CA"], municipalities: ["Los Angeles"] },
   { id: "san-diego-ca",   country: "US", regions: ["California", "CA"], municipalities: ["San Diego"] },
 ];
 

@@ -84,21 +84,19 @@ export const SERVICE_AREAS: ServiceArea[] = [
     ],
   },
   {
-    id: "los-angeles-ca",
-    label: "Los Angeles, CA",
-    country: "US",
-    regions: ["California", "CA"],
-    // CITY LIMITS ONLY — we do not advertise or accept county-wide or
-    // metro-wide coverage. Neighbouring incorporated cities (Santa Monica,
-    // Burbank, West Hollywood, Inglewood…) are deliberately excluded.
-    municipalities: ["Los Angeles"],
-  },
-  {
     id: "san-diego-ca",
     label: "San Diego, CA",
     country: "US",
     regions: ["California", "CA"],
-    // CITY LIMITS ONLY — see the Los Angeles note above.
+    // CITY LIMITS ONLY — we do not advertise or accept county-wide or
+    // metro-wide coverage. Neighbouring incorporated cities (Chula Vista,
+    // National City, La Mesa, Coronado, El Cajon…) are deliberately
+    // excluded, as is unincorporated San Diego County.
+    //
+    // Los Angeles was in this list until 2026-10-26 and was dropped from
+    // the launch by owner decision. Adding a city back is a deliberate act:
+    // it needs helper supply in that city first, or the dispatcher will
+    // accept bookings it cannot fill.
     municipalities: ["San Diego"],
   },
 ];
@@ -153,5 +151,5 @@ export function describeCoverage(): string[] {
 /** The message shown when an address falls outside every launch area. */
 export const OUT_OF_AREA_MESSAGE =
   "Helpward isn't serving that address yet. We're currently live in " +
-  "Vancouver and the surrounding Lower Mainland, plus the cities of " +
-  "Los Angeles and San Diego.";
+  "Vancouver and the surrounding Lower Mainland, plus the city of " +
+  "San Diego.";

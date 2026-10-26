@@ -17,18 +17,16 @@ export type City = {
 // Narrowed from a 10-city seed list on 2026-10-24. Every other city was a
 // claim with no helper supply behind it. The retired slugs below are served
 // as HTTP 410 Gone (see proxy.ts) rather than redirected: sending someone
-// searching for "Austin" to Los Angeles is an irrelevant redirect that
+// searching for "Austin" to San Diego is an irrelevant redirect that
 // Google treats as a soft 404, and it misleads the visitor.
 //
 // `metro` describes the SERVICE AREA in customer-facing copy and must match
-// lib/service-areas.ts. Los Angeles and San Diego are CITY LIMITS ONLY — do
-// not widen this copy to county- or metro-wide without widening the actual
-// service area first.
+// lib/service-areas.ts. San Diego is CITY LIMITS ONLY — do not widen this
+// copy to county- or metro-wide without widening the actual service area
+// first. Los Angeles was dropped on 2026-10-26 and is now a retired slug.
 export const CITIES: City[] = [
   { slug: "vancouver", name: "Vancouver", region: "BC", country: "CA", metro: "Vancouver and the surrounding Lower Mainland",
     hero: "https://images.unsplash.com/photo-1559511260-66a654ae982a?auto=format&fit=crop&w=1200&q=70" },
-  { slug: "los-angeles", name: "Los Angeles", region: "CA", country: "US", metro: "the City of Los Angeles",
-    hero: "https://images.unsplash.com/photo-1444723121867-7a241cacace9?auto=format&fit=crop&w=1200&q=70" },
   // No hero photo yet — `hero` is optional and the city page falls back to
   // its gradient. Better an honest gradient than a guessed image URL.
   { slug: "san-diego", name: "San Diego", region: "CA", country: "US", metro: "the City of San Diego" },
@@ -41,29 +39,23 @@ export const CITIES: City[] = [
 export const RETIRED_CITY_SLUGS: string[] = [
   "toronto", "montreal", "seattle", "san-francisco",
   "austin", "chicago", "new-york", "miami",
+  // Dropped from the launch by owner decision on 2026-10-26, after its
+  // page had been published. It is retired rather than deleted so the
+  // existing URL returns a deliberate 410 with an explanation.
+  "los-angeles",
 ];
 
 export function getCity(slug: string): City | null {
   return CITIES.find((c) => c.slug === slug) ?? null;
 }
 
-// Sample recent tasks for the homepage carousel. Replace with a real query
-// (`select bookings where status='completed' order by completed_at desc limit 8`)
-// once the platform has volume.
-export const SAMPLE_RECENT_TASKS = [
-  { id: "rt1", title: "Errand Runner", ago: "10 min ago", city: "San Francisco", region: "CA", price: 20,
-    img: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=70" },
-  { id: "rt2", title: "Furniture Assembly", ago: "25 min ago", city: "Los Angeles", region: "CA", price: 35,
-    img: "https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?auto=format&fit=crop&w=600&q=70" },
-  { id: "rt3", title: "Ride to Airport", ago: "35 min ago", city: "Vancouver", region: "BC", price: 40,
-    img: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=600&q=70" },
-  { id: "rt4", title: "Package Delivery", ago: "45 min ago", city: "Austin", region: "TX", price: 12,
-    img: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=70" },
-  { id: "rt5", title: "Wait in Line", ago: "1 hr ago", city: "New York", region: "NY", price: 25,
-    img: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=600&q=70" },
-  { id: "rt6", title: "Elder Companion", ago: "1 hr ago", city: "Chicago", region: "IL", price: 30,
-    img: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=600&q=70" },
-];
+// The fabricated "recent tasks" carousel that used to live here was
+// removed from the homepage: it presented six invented jobs, in six cities
+// Helpward does not serve, as real recent activity. There is no honest
+// placeholder for "what customers are booking right now" before launch, so
+// the section is gone rather than faked. When there is real volume, query
+// it: select from bookings where status = 'completed' order by completed_at
+// desc limit 8.
 
 // Marketplace-metric copy. Numbers are platform-launch placeholders — replace
 // with live aggregates once we have at least one week of real bookings.

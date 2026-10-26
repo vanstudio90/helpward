@@ -25,9 +25,17 @@ describe("plan 2.1 — California rejections named in the plan", () => {
       assert.equal(isServiceable({ place: city, region: "California", country: "US" }), false);
     });
   }
-  test("accepts the two California launch cities", () => {
-    assert.equal(isServiceable({ place: "Los Angeles", region: "California", country: "US" }), true);
+  test("accepts San Diego, the only California launch city", () => {
     assert.equal(isServiceable({ place: "San Diego", region: "California", country: "US" }), true);
+  });
+
+  // Los Angeles was a launch city until 2026-10-26, when the owner narrowed
+  // California to San Diego alone. It is asserted explicitly rather than
+  // simply deleted: a reinstated LA entry anywhere in the service-area
+  // chain — the TS list, the boundary loader, the SQL polygons — has to
+  // fail here, not reach a customer.
+  test("Los Angeles is out of scope", () => {
+    assert.equal(isServiceable({ place: "Los Angeles", region: "California", country: "US" }), false);
   });
 });
 

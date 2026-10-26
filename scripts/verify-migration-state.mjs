@@ -96,7 +96,7 @@ if (!ds) {
     console.log(`  ${d.is_active ? "ACTIVE  " : "inactive"} ${d.area_id.padEnd(20)} ${d.source_name} v${d.source_version} (${d.feature_count} features, retrieved ${String(d.source_retrieved_at).slice(0, 10)})`);
   }
   const areas = new Set(ds.filter((d) => d.is_active).map((d) => d.area_id));
-  for (const a of ["lower-mainland-bc", "los-angeles-ca", "san-diego-ca"]) {
+  for (const a of ["lower-mainland-bc", "san-diego-ca"]) {
     line(`active boundaries for ${a}`, areas.has(a));
   }
 }
@@ -104,7 +104,6 @@ if (!ds) {
 console.log("\nBOUNDARY PROBE (is_point_serviceable)");
 const probes = [
   ["downtown Vancouver (legacy placeholder point)", "POINT(-123.1207 49.2827)"],
-  ["downtown Los Angeles",                          "POINT(-118.2437 34.0522)"],
   ["downtown San Diego",                            "POINT(-117.1611 32.7157)"],
   ["Abbotsford BC (outside launch area)",           "POINT(-122.3045 49.0504)"],
 ];

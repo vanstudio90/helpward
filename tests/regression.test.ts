@@ -145,10 +145,10 @@ describe("service areas", () => {
     assert.equal(isServiceable({ place: "Delta", region: "Utah", country: "US" }), false);
   });
 
-  test("California launches are city limits only", () => {
-    assert.equal(isServiceable({ place: "Los Angeles", region: "California", country: "US" }), true);
+  test("California is San Diego city limits only", () => {
     assert.equal(isServiceable({ place: "San Diego", region: "California", country: "US" }), true);
-    for (const m of ["Santa Monica", "Burbank", "West Hollywood", "Chula Vista", "Pasadena", "Inglewood"]) {
+    // Los Angeles was dropped from the launch on 2026-10-26.
+    for (const m of ["Los Angeles", "Santa Monica", "Burbank", "West Hollywood", "Chula Vista", "Pasadena", "Inglewood"]) {
       assert.equal(
         isServiceable({ place: m, region: "California", country: "US" }), false,
         `${m} is outside city limits and must be rejected`,
@@ -227,8 +227,14 @@ describe("retired city paths", () => {
 
   test("launch cities are untouched", () => {
     assert.equal(isRetiredCityPath("/cities/vancouver"), false);
-    assert.equal(isRetiredCityPath("/cities/los-angeles/moving-help"), false);
     assert.equal(isRetiredCityPath("/cities/san-diego"), false);
+  });
+
+  // Its page was published before the city was dropped, so the URL has to
+  // return a deliberate 410 rather than a bare 404.
+  test("Los Angeles is retired, not merely absent", () => {
+    assert.equal(isRetiredCityPath("/cities/los-angeles"), true);
+    assert.equal(isRetiredCityPath("/cities/los-angeles/moving-help"), true);
   });
 
   test("unknown slugs fall through to a normal 404, not a 410", () => {

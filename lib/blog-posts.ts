@@ -76,7 +76,7 @@ export const BLOG_POSTS: BlogPost[] = [
         "We're also not trying to dispatch as much as possible. The matching engine doesn't push helpers tasks they don't want. The schedule editor exists so helpers can say when they're available — and have customers see it on their public profile. We'd rather have 500 helpers who love being on the platform than 5,000 who feel coerced by it." },
       { type: "h2", text: "What's next" },
       { type: "p", text:
-        "Helpward is live in 10 metros: Vancouver, Toronto, Montreal, Seattle, San Francisco, Los Angeles, Austin, Chicago, New York, and Miami. We add cities as the verified-helper supply meets a quality threshold — typically when we can hold response time under 20 minutes during peak hours. We expect 5 more cities live by end of 2026." },
+        "Helpward is live in two areas: Vancouver and the surrounding Lower Mainland in British Columbia, and the City of San Diego in California. We add a city only once there is verified helper supply to serve it, so the list grows slowly and on purpose. If your address is outside a service area, the request form says so before you submit." },
       { type: "p", text:
         "If you want to read the operational craft in more detail, the safety microsite at /safety is where we go deep. If you want to help build it, we're hiring across operations, trust & safety, engineering, design, and community at /careers. If you have feedback — even harsh feedback — hello@helpward.com reads everything." },
     ],

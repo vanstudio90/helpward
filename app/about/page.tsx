@@ -101,10 +101,10 @@ export default function About() {
 
         <h2>Where we operate</h2>
         <p>
-          Helpward is live in <strong>Vancouver, Toronto, Montreal</strong> (Canada) and{" "}
-          <strong>Seattle, San Francisco, Los Angeles, Austin, Chicago, New York, and Miami</strong> (United
-          States). We support USD and CAD natively with per-province / per-state tax handling and helper payouts
-          via Stripe Connect. New cities are added as the verified-helper supply meets quality thresholds.
+          Helpward is live in <strong>Vancouver and the surrounding Lower Mainland</strong> in British
+          Columbia, and in <strong>the City of San Diego</strong> in California. San Diego is city limits only
+          — neighbouring incorporated cities are not covered. We support CAD and USD, and helper payouts run
+          through Stripe Connect. New cities open only once there is verified helper supply to serve them.
         </p>
 
         <h2>How we make money</h2>
