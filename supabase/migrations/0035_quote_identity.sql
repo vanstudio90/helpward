@@ -36,9 +36,18 @@ comment on column requests.quote_fingerprint is
 create or replace function public.compute_bundle_fingerprint(p_request_id uuid)
 returns text
 language sql stable security definer set search_path = public as $$
-  select encode(digest(coalesce(string_agg(
+  -- Core sha256(bytea), not pgcrypto's digest().
+  --
+  -- On Supabase pgcrypto is installed into the `extensions` schema, and
+  -- this function pins `search_path = public` (as every SECURITY DEFINER
+  -- function here does, to stop search_path games). digest() is therefore
+  -- invisible and the migration failed with
+  -- "function digest(text, unknown) does not exist" the first time it was
+  -- applied to a real database. sha256() is built into Postgres 11+, needs
+  -- no extension, and cannot be shadowed.
+  select encode(sha256(convert_to(coalesce(string_agg(
            i.position || ':' || i.service_id || ':' || i.item_price_cents, '|'
-           order by i.position, i.service_id), ''), 'sha256'), 'hex')
+           order by i.position, i.service_id), ''), 'UTF8')), 'hex')
   from request_bundle_items i
   where i.request_id = p_request_id;
 $$;
