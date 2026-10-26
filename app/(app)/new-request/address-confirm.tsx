@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MapPin, AlertTriangle, Check } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -103,6 +103,24 @@ export function AddressConfirm({
     mode === "needs_confirmation" ? candidates[0]?.token ?? null : null,
   );
 
+  const panel = useRef<HTMLElement | null>(null);
+
+  // Bring it into view and announce it.
+  //
+  // The submit button sits at the BOTTOM of a long form and this panel
+  // appears near the top, so a customer who pressed Submit was left
+  // looking at an unchanged button while the thing that needed their
+  // attention sat off-screen above them. It read as the form doing
+  // nothing.
+  useEffect(() => {
+    panel.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Focus the heading rather than a control: a screen reader should
+    // hear what is being asked before it hears the first option, and
+    // moving focus onto a radio would preselect by implication.
+    const heading = panel.current?.querySelector<HTMLElement>("[data-confirm-heading]");
+    heading?.focus({ preventScroll: true });
+  }, []);
+
   const significant = changes.filter((c) => c.significant);
   const emphasise = significant
     .filter((c) => c.kind === "directional" && c.to !== "(none)")
@@ -112,14 +130,22 @@ export function AddressConfirm({
 
   return (
     <section
-      className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4"
+      ref={panel}
+      role="alert"
+      aria-live="assertive"
+      className="mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 shadow-sm"
       aria-labelledby="addr-confirm-heading"
     >
       <div className="flex items-start gap-2">
         <AlertTriangle className="w-4 h-4 text-amber-700 mt-0.5 shrink-0" aria-hidden="true" />
         <div className="min-w-0">
-          <h3 id="addr-confirm-heading" className="text-sm font-bold text-amber-950">
-            {multiple ? "Which address did you mean?" : "Please check this address"}
+          <h3
+            id="addr-confirm-heading"
+            data-confirm-heading
+            tabIndex={-1}
+            className="text-sm font-bold text-amber-950 outline-none"
+          >
+            One more step: {multiple ? "which address did you mean?" : "confirm your address"}
           </h3>
           <p className="text-xs text-amber-900/90 mt-0.5">
             {message ??

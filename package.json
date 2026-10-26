@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "verify": "node scripts/verify-all.mjs",
     "test": "node --test --experimental-strip-types --import ./tests/register.mjs tests/*.test.ts",
     "db:status": "node scripts/migrate.mjs --status",
     "db:pre-deploy": "node scripts/migrate.mjs --pre-deploy",

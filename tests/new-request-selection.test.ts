@@ -127,10 +127,17 @@ describe("pickInitialSelected (what the view actually starts with)", () => {
     assert.equal(startFor("dog-walking", null)?.id, "dog-walking");
   });
 
-  test("a blank arrival still gets a sensible default", () => {
-    // Deliberately different from an unresolved search: nobody asked a
-    // question here, so answering with a popular service is fine.
-    assert.equal(startFor(null, null)?.id, "designated-driver");
+  test("a blank arrival selects NOTHING", () => {
+    // It used to answer with services[0], so every visitor arrived with
+    // Designated Driver chosen, a price quoted and the form asking about
+    // their car. Someone who wanted a dog walk had to notice they were
+    // booking a driver and undo it; anyone who did not notice submitted
+    // the wrong service.
+    assert.equal(startFor(null, null), null);
+  });
+
+  test("an unresolved search also selects nothing", () => {
+    assert.equal(pickInitialSelected(SERVICES, null, true), null);
   });
 
   test("an empty catalog yields null rather than throwing", () => {

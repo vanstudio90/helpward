@@ -3,6 +3,8 @@ import { CheckCircle2, Clock, Search, Sparkles, XCircle, AlertCircle } from "luc
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { LiveRequestStatus, type LiveStage } from "./live-status";
+import { formatMoney } from "@/lib/money";
 
 export default async function RequestSubmittedPage({
   params,
@@ -16,6 +18,28 @@ export default async function RequestSubmittedPage({
     .single();
 
   if (!request) notFound();
+
+  // What is ACTUALLY happening, including the booking a helper may have
+  // created since this page was first opened.
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, status, payment_status, stripe_payment_intent_id, currency, total_cents, provider_id")
+    .eq("request_id", id)
+    .maybeSingle();
+
+  const { data: helper } = booking?.provider_id
+    ? await supabase.from("profiles").select("full_name").eq("id", booking.provider_id).maybeSingle()
+    : { data: null };
+
+  const stage: LiveStage =
+    request.status === "cancelled" ? "cancelled"
+    : !booking ? "matching"
+    : booking.status === "completed" ? "completed"
+    : booking.status === "in_progress" ? "in_progress"
+    : booking.payment_status === "pending" && booking.stripe_payment_intent_id ? "confirm_card"
+    : booking.payment_status === "failed" ? "confirm_card"
+    : booking.payment_status === "authorized" || booking.payment_status === "captured" ? "ready"
+    : "matched";
 
   const copy = describeStatus(request.status as string);
 
@@ -34,7 +58,14 @@ export default async function RequestSubmittedPage({
           <Row label="Service" value={request.service?.title ?? "—"} />
           <Row label="Address" value={request.pickup?.formatted ?? "—"} />
           <Row label="When" value={request.scheduled_for ? <ClientDateTime iso={request.scheduled_for} /> : "ASAP"} />
-          <Row label="Estimated price" value={request.estimated_price_cents ? `$${(request.estimated_price_cents / 100).toFixed(2)}` : "—"} />
+          <Row
+            label={booking ? "Total" : "Estimated total"}
+            value={
+              request.estimated_price_cents
+                ? `${formatMoney(booking?.total_cents ?? request.estimated_price_cents, booking?.currency ?? "USD")} before an optional tip`
+                : "—"
+            }
+          />
           <Row label="Status" value={
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${copy.badgeClass}`}>
               {copy.badgeIcon} {copy.badgeLabel}
@@ -53,12 +84,30 @@ export default async function RequestSubmittedPage({
         </div>
       </div>
 
-      <div className="mt-6 flex gap-3">
-        <Link href="/dashboard" className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 text-white text-sm font-semibold">
-          Back to dashboard
-        </Link>
-        <Link href="/new-request" className="flex-1 inline-flex items-center justify-center gap-2 py-3 rounded-xl border border-brand-200 text-brand-700 text-sm font-semibold">
-          Another request
+      {/* Replaces a pair of links that led AWAY from the thing the
+          customer was waiting on. The screen now tracks the request and
+          says what to do next, on the page they are already watching. */}
+      <div className="mt-6">
+        <LiveRequestStatus
+          requestId={id}
+          initialStage={stage}
+          initialBookingId={booking?.id ?? null}
+          initialHelperName={(helper?.full_name as string | null) ?? null}
+          // Derived, not stored: there is no expires_at column. The
+          // expire-stale-requests cron retires anything left in
+          // 'matching' for 30 minutes, so that is the honest number —
+          // and it is given as the cron's rule, not as a promise.
+          expiresAt={
+            request.created_at
+              ? new Date(new Date(request.created_at as string).getTime() + 30 * 60_000).toISOString()
+              : null
+          }
+        />
+      </div>
+
+      <div className="mt-4 text-center">
+        <Link href="/new-request" className="text-xs font-semibold text-slate-500 underline underline-offset-2">
+          Book something else
         </Link>
       </div>
     </div>

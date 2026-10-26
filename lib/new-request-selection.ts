@@ -90,6 +90,17 @@ export function pickInitialSelected<T extends SelectableService>(
 ): T | null {
   const explicit = services.find((s) => s.id === initialServiceId);
   if (explicit) return explicit;
-  if (unresolvedQuery) return null;
-  return services[0] ?? null;
+
+  // Nothing is selected unless the customer selected it.
+  //
+  // This used to fall back to services[0], so every visitor arrived with
+  // Designated Driver already chosen, a price already quoted and a form
+  // already asking about their car. Someone who wanted a dog walk had to
+  // notice they were booking a driver and undo it — and anyone who did
+  // not notice submitted the wrong service.
+  //
+  // `unresolvedQuery` is now redundant here and kept only so the
+  // signature does not change under its callers.
+  void unresolvedQuery;
+  return null;
 }

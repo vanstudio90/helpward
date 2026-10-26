@@ -13,6 +13,7 @@ import { BundlePicker } from "./bundle-picker";
 import { UseCurrentLocationButton } from "./use-current-location";
 import { MissingFieldsNotice, friendlyLabel, type MissingField } from "./missing-fields";
 import { priceService, type PricingRule } from "@/lib/service-pricing";
+import { formatMoney, unitFor } from "@/lib/money";
 import { AddressConfirm } from "./address-confirm";
 import { IntakeFields } from "./intake-fields";
 import { intakeFor } from "@/lib/service-intake";
@@ -40,7 +41,7 @@ export type PreferredHelper = {
 };
 
 export function NewRequestView({
-  services, pricingRules, categories, initialServiceId, initialQuery, queryUnresolved = false,
+  services, pricingRules, defaultCurrency, categories, initialServiceId, initialQuery, queryUnresolved = false,
   savedAddresses = [], preferredHelper = null,
 }: {
   services: ServiceWithCategory[];
@@ -51,6 +52,15 @@ export function NewRequestView({
   initialQuery?: string | null;
   /** Per-service pricing rules, for the live quote. Keyed by service id. */
   pricingRules: Record<string, PricingRule>;
+  /**
+   * What to quote in before an address is known.
+   *
+   * The booking's real currency is set at acceptance from the PICKUP
+   * ADDRESS (migration 0052) — where the work happens, not where the
+   * customer's account is registered. Until they type one, their own
+   * country is the best guess available.
+   */
+  defaultCurrency: "USD" | "CAD";
   savedAddresses?: SavedAddressOption[];
   preferredHelper?: PreferredHelper | null;
 }) {
@@ -88,6 +98,18 @@ export function NewRequestView({
   // to submit — telling someone what they have not done yet, before they
   // have had a chance to do it, is nagging rather than help.
   const [missing, setMissing] = useState<MissingField[]>([]);
+  // Switches the moment the address resolves to the other country, so a
+  // customer booking in Vancouver is quoted CAD before they submit.
+  // Which step the customer is on, derived rather than stored: a stored
+  // step and a real selection drift apart, and the stepper then lies.
+  //
+  //   1  no service chosen
+  //   2  service chosen, address not yet given
+  //   3  both, so what is left is to check the total and send it
+  const step: 1 | 2 | 3 = !selected ? 1 : address.trim().length === 0 ? 2 : 3;
+
+  const currency: "USD" | "CAD" =
+    /\b(BC|British Columbia|Canada)\b/i.test(address) ? "CAD" : defaultCurrency;
   // The answers that set the price, mirrored out of the (uncontrolled)
   // intake inputs so the quote can move as the customer fills them in.
   const [pricedAnswers, setPricedAnswers] = useState<Record<string, string>>({});
@@ -226,15 +248,33 @@ export function NewRequestView({
         <Link href="/dashboard" aria-label="Back" className="p-2 -ml-2 rounded-lg hover:bg-slate-100">
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">New Request</h1>
+        {/* The title names what is being booked once a service is
+            chosen — "New Request" told the customer nothing about which
+            of 27 services the form in front of them was for. */}
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+          {selected ? `Book ${selected.title}` : "Book a service"}
+        </h1>
+        {selected && (
+          <button
+            type="button"
+            onClick={() => { setSelected(null); setPricedAnswers({}); }}
+            className="text-xs font-semibold text-brand-700 underline underline-offset-2"
+          >
+            Change service
+          </button>
+        )}
       </div>
 
+      {/* The stepper now tracks where the customer actually is.
+          It used to render 1-of-3 permanently, with all three steps on
+          one long screen and step 1 "active" even after a service had
+          been chosen — a progress indicator that never progressed. */}
       <div className="mb-5 lg:mb-6 flex items-center gap-1.5 sm:gap-3">
-        <StepDot n={1} label="Choose Service" active={true} done={false} />
+        <StepDot n={1} label="Choose service" active={step === 1} done={step > 1} />
         <Dash />
-        <StepDot n={2} label="Provide Details" active={false} done={false} />
+        <StepDot n={2} label="Details" active={step === 2} done={step > 2} />
         <Dash />
-        <StepDot n={3} label="Review & Confirm" active={false} done={false} />
+        <StepDot n={3} label="Review & request" active={step === 3} done={false} />
       </div>
 
       {state?.error && !state?.addressPrompt && (
@@ -355,7 +395,12 @@ export function NewRequestView({
             </div>
           )}
 
-          <div className="mt-5 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          {/* Two columns, not four.
+              At 1280px the left navigation and the sticky summary panel
+              left roughly 150px per card, so names and prices truncated
+              and nothing was readable. A third column only appears when
+              there is genuinely room for it. */}
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
             {filtered.map((s) => {
               const isSel = s.id === selected?.id;
               return (
@@ -386,11 +431,25 @@ export function NewRequestView({
                     )}
                   </div>
                   <div className="p-3 sm:p-4">
-                    <div className="text-sm font-bold text-slate-900 truncate">{s.title}</div>
-                    <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-1">{s.blurb}</div>
-                    <div className="mt-2 sm:mt-3 flex items-center justify-between gap-2 text-[11px] sm:text-xs">
-                      <span className="font-semibold text-brand-700 truncate">From ${(s.base_price_cents / 100).toFixed(0)}</span>
-                      <span className="text-slate-500 whitespace-nowrap shrink-0">{s.eta_label}</span>
+                    {/* Two lines, never truncated. A service whose name
+                        is cut off cannot be chosen on purpose. */}
+                    <div className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">
+                      {s.title}
+                    </div>
+                    <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-2">{s.blurb}</div>
+                    {/* The price with its unit and currency. "From $20"
+                        alone said neither what it buys nor in what money,
+                        and the $4.50 fee only appeared much later. */}
+                    <div className="mt-2 sm:mt-3 text-[11px] sm:text-xs">
+                      <div className="font-semibold text-brand-700">
+                        From {formatMoney(s.base_price_cents, currency)}
+                        <span className="font-normal text-slate-500">
+                          {" "}{unitFor(pricingRules[s.id])}
+                        </span>
+                      </div>
+                      <div className="text-slate-500 mt-0.5">
+                        + {formatMoney(SERVICE_FEE_CENTS, currency)} service fee
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -592,9 +651,14 @@ export function NewRequestView({
               selected={selected}
               rule={selected ? pricingRules[selected.id] ?? null : null}
               answers={pricedAnswers}
+              currency={currency}
               bundle={bundleEnabled ? { items: bundleItems, price: bundlePrice } : null}
             />
-            <ContinueButtons pending={pending} disabledReason={submitBlockedReason} />
+            <ContinueButtons
+              pending={pending}
+              disabledReason={submitBlockedReason}
+              awaitingAddress={!!state?.addressPrompt}
+            />
           </div>
         </section>
 
@@ -603,9 +667,14 @@ export function NewRequestView({
             selected={selected}
             rule={selected ? pricingRules[selected.id] ?? null : null}
             answers={pricedAnswers}
+            currency={currency}
             bundle={bundleEnabled ? { items: bundleItems, price: bundlePrice } : null}
           />
-          <ContinueButtons pending={pending} disabledReason={submitBlockedReason} />
+          <ContinueButtons
+            pending={pending}
+            disabledReason={submitBlockedReason}
+            awaitingAddress={!!state?.addressPrompt}
+          />
         </aside>
       </form>
     </div>
@@ -635,10 +704,11 @@ function Dash() {
   return <span className="flex-1 h-px border-t border-dashed border-slate-300 min-w-[8px]" />;
 }
 
-function SummaryCard({ selected, rule, answers, bundle }: {
+function SummaryCard({ selected, rule, answers, currency, bundle }: {
   selected: ServiceWithCategory | null;
   rule: PricingRule | null;
   answers: Record<string, string>;
+  currency: "USD" | "CAD";
   bundle: { items: BundleItemDraft[]; price: { itemsSubtotalCents: number; serviceFeeCents: number; totalCents: number } } | null;
 }) {
   if (!selected) {
@@ -736,20 +806,37 @@ function SummaryCard({ selected, rule, answers, bundle }: {
                 {priced.lines.map((line) => (
                   <div key={line.label} className="flex justify-between gap-2">
                     <dt className="text-slate-500 min-w-0">{line.label}</dt>
-                    <dd className="font-semibold text-slate-900 tabular-nums shrink-0">${dollars(line.cents)}</dd>
+                    <dd className="font-semibold text-slate-900 tabular-nums shrink-0">
+                      {formatMoney(line.cents, currency)}
+                    </dd>
                   </div>
                 ))}
                 <div className="flex justify-between">
                   <dt className="text-slate-500">Service fee</dt>
-                  <dd className="font-semibold text-slate-900 tabular-nums">${dollars(SERVICE_FEE_CENTS)}</dd>
+                  <dd className="font-semibold text-slate-900 tabular-nums">{formatMoney(SERVICE_FEE_CENTS, currency)}</dd>
                 </div>
                 <div className="flex justify-between pt-1.5 border-t border-slate-100">
-                  <dt className="text-sm font-bold text-slate-900">Total estimate</dt>
-                  <dd className="text-sm font-bold text-brand-700 tabular-nums">${dollars(quoteOneShotCents(priced.subtotalCents))}</dd>
+                  <dt className="text-sm font-bold text-slate-900">Total</dt>
+                  <dd className="text-sm font-bold text-brand-700 tabular-nums">
+                    {formatMoney(quoteOneShotCents(priced.subtotalCents), currency)}
+                  </dd>
+                </div>
+                <div className="text-[11px] text-slate-500 pt-0.5">
+                  {formatMoney(quoteOneShotCents(priced.subtotalCents), currency)} total before an optional tip.
                 </div>
               </>
             )}
           </dl>
+          {/* Said BEFORE submitting, not discovered afterwards: a hold
+              appearing on a statement with no warning reads as a charge. */}
+          <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-2.5">
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              We&rsquo;ll find a nearby helper. A <strong className="font-semibold">temporary hold</strong>{" "}
+              is placed on your card when one accepts — not a charge. You pay after the task is
+              marked complete, and nothing is taken if it&rsquo;s cancelled.
+            </p>
+          </div>
+
           <p className="text-[10px] text-slate-400 mt-2 leading-snug">
             This is the amount saved with your request. A tip is optional and goes to your helper in full. You&apos;re
             only charged after the task is marked complete.
@@ -787,7 +874,12 @@ function ScheduledPicker() {
   );
 }
 
-function ContinueButtons({ pending, disabledReason }: { pending: boolean; disabledReason?: string | null }) {
+function ContinueButtons({ pending, disabledReason, awaitingAddress }: {
+  pending: boolean;
+  disabledReason?: string | null;
+  /** The form came back needing the address confirmed first. */
+  awaitingAddress?: boolean;
+}) {
   return (
     <div className="space-y-2">
       {/* Only disabled while a submit is in flight. A button disabled for
@@ -797,10 +889,16 @@ function ContinueButtons({ pending, disabledReason }: { pending: boolean; disabl
           each field. */}
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || !!awaitingAddress}
         className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 text-white font-semibold shadow-lg shadow-brand-900/10 disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {pending ? "Submitting…" : <>Submit request <ArrowRight className="w-4 h-4" /></>}
+        {pending
+          ? "Submitting…"
+          : awaitingAddress
+            // The button is the thing they are looking at, so it is the
+            // thing that has to tell them the request did not go through.
+            ? <>Confirm address to continue <ArrowRight className="w-4 h-4" aria-hidden="true" /></>
+            : <>Submit request <ArrowRight className="w-4 h-4" aria-hidden="true" /></>}
       </button>
       {disabledReason && (
         <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 leading-snug">

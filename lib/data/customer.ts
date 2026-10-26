@@ -287,3 +287,41 @@ export async function listSavedAddresses() {
     needs_reconfirmation: boolean | null;
   }>;
 }
+
+/**
+ * Bookings waiting on something only the customer can do.
+ *
+ * A booking held up by a bank challenge used to read as "Scheduled"
+ * under Upcoming while the dashboard said "Nothing in progress" — so the
+ * single action standing between the customer and their helper starting
+ * looked like a job already under way.
+ */
+export async function listPendingActions(): Promise<
+  Array<{ bookingId: string; serviceTitle: string; kind: "confirm_card" | "card_declined" }>
+> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("bookings")
+    .select("id, payment_status, stripe_payment_intent_id, service:services(title)")
+    .eq("customer_id", user.id)
+    .in("status", ["scheduled", "in_progress"])
+    .in("payment_status", ["pending", "failed"]);
+
+  return ((data ?? []) as Array<Record<string, unknown>>)
+    // A booking with no intent has not been accepted yet: there is
+    // nothing for the customer to confirm, and asking them to would be
+    // asking them to fix something that has not happened.
+    .filter((b) => !!b.stripe_payment_intent_id)
+    .map((b) => {
+      const service = b.service as { title?: string } | { title?: string }[] | null;
+      const title = Array.isArray(service) ? service[0]?.title : service?.title;
+      return {
+        bookingId: String(b.id),
+        serviceTitle: title ?? "Your booking",
+        kind: b.payment_status === "failed" ? ("card_declined" as const) : ("confirm_card" as const),
+      };
+    });
+}

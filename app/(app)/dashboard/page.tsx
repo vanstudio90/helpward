@@ -1,3 +1,4 @@
+import { ActionNeeded } from "@/components/ActionNeeded";
 import Link from "next/link";
 import {
   Bell, Search, Plus, Calendar, CheckCircle2, DollarSign, Car, ShoppingBag,
@@ -8,8 +9,7 @@ import { ServiceIcon } from "@/components/ServiceIcon";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import {
   getMe, getDashboardStats, getActiveBooking, listMyBookings,
-  listSavedProviderIds,
-} from "@/lib/data/customer";
+  listSavedProviderIds, listPendingActions } from "@/lib/data/customer";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextStepsWidget } from "./next-steps";
@@ -27,6 +27,8 @@ export default async function DashboardPage() {
   // the recent[] list we already loaded for the "Recent" rail. Also pull
   // profiles.onboarded_at to decide whether to mount the welcome tour.
   const supabase = await createSupabaseServerClient();
+  const pendingActions = await listPendingActions();
+
   const [{ count: savedAddressCount }, savedHelperIds] = await Promise.all([
     supabase.from("saved_addresses").select("id", { count: "exact", head: true }),
     listSavedProviderIds(),
@@ -57,6 +59,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
+      <ActionNeeded actions={pendingActions} />
+
       <OnboardingTour open={showOnboardingTour} />
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4 lg:mb-6">
         <div>

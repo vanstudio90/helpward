@@ -1,4 +1,5 @@
-import { listMyBookings } from "@/lib/data/customer";
+import { ActionNeeded } from "@/components/ActionNeeded";
+import { listMyBookings, listPendingActions } from "@/lib/data/customer";
 import { listMyRequests } from "@/lib/data/requests";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { BookingsView } from "./view";
@@ -35,6 +36,8 @@ export default async function BookingsPage() {
     .order("created_at", { ascending: false })
     .limit(50);
 
+  const pendingActions = await listPendingActions();
+
   const [bookings, requests, { data: series }] = await Promise.all([
     listMyBookings(),
     listMyRequests(),
@@ -43,6 +46,11 @@ export default async function BookingsPage() {
   return (
     <>
       {user && <CustomerBookingsListRealtimeRefresh userId={user.id} />}
+      {pendingActions.length > 0 && (
+        <div className="px-4 lg:px-8 pt-5 lg:pt-8 max-w-[1500px] mx-auto">
+          <ActionNeeded actions={pendingActions} />
+        </div>
+      )}
       <BookingsView
         bookings={bookings}
         requests={requests}

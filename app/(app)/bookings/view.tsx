@@ -1,4 +1,5 @@
 "use client";
+import { bookingStatusLabel } from "@/lib/booking-status";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -248,7 +249,11 @@ function BookingRow({ booking }: { booking: BookingWithProvider }) {
               </span>
             )}
             <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold", STATUS_TONE[booking.status])}>
-              {booking.status === "in_progress" ? "In Progress" : booking.status[0].toUpperCase() + booking.status.slice(1)}
+              {bookingStatusLabel(
+                booking.status,
+                (booking as { payment_status?: string | null }).payment_status,
+                !!(booking as { stripe_payment_intent_id?: string | null }).stripe_payment_intent_id,
+              ).label}
             </span>
           </div>
         </div>

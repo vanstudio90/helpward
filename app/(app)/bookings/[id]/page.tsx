@@ -1,6 +1,7 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { one } from "@/lib/supabase/relation";
 import { InspectionView } from "./inspection-view";
+import { bookingStatusLabel, bookingStatusTone } from "@/lib/booking-status";
 import { CallPanel } from "@/components/CallPanel";
 import { describeIntake } from "@/lib/service-intake";
 import { notFound } from "next/navigation";
@@ -218,8 +219,13 @@ export default async function BookingDetailPage({
         {service?.image_url && (
           <div className="relative h-40 bg-slate-100">
             <img src={service.image_url} alt="" className="w-full h-full object-cover" />
-            <span className={`absolute top-3 right-3 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_TONE[b.status]}`}>
-              {b.status === "in_progress" ? "In progress" : b.status[0].toUpperCase() + b.status.slice(1)}
+            <span className={`absolute top-3 right-3 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                bookingStatusTone(
+                  b.status,
+                  bookingStatusLabel(b.status, b.payment_status, !!b.stripe_payment_intent_id).needsCustomer,
+                )
+              }`}>
+              {bookingStatusLabel(b.status, b.payment_status, !!b.stripe_payment_intent_id).label}
             </span>
           </div>
         )}

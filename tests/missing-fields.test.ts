@@ -40,3 +40,43 @@ describe("labels shown in the reminder", () => {
     assert.equal(tidyLabel("Pickup/drop-off"), "Pickup/drop-off");
   });
 });
+
+import { bookingStatusLabel } from "@/lib/booking-status";
+
+// A booking waiting on a bank challenge is `scheduled` with
+// payment_status 'pending'. Shown as "Scheduled" it told the customer a
+// job was arranged, while the dashboard said "Nothing in progress" — so
+// the one thing standing between them and their helper starting looked
+// like something already under way.
+describe("what a booking's state is called", () => {
+  test("a booking waiting on the customer's bank says so", () => {
+    const s = bookingStatusLabel("scheduled", "pending");
+    assert.equal(s.label, "Payment confirmation needed");
+    assert.equal(s.needsCustomer, true);
+  });
+
+  test("a declined card says that instead", () => {
+    const s = bookingStatusLabel("scheduled", "failed");
+    assert.equal(s.label, "Card declined");
+    assert.equal(s.needsCustomer, true);
+  });
+
+  test("a held booking is just Scheduled", () => {
+    const s = bookingStatusLabel("scheduled", "authorized");
+    assert.equal(s.label, "Scheduled");
+    assert.equal(s.needsCustomer, false);
+  });
+
+  test("a booking nobody has accepted is NOT the customer's problem", () => {
+    // No payment intent means no helper has accepted, so there is nothing
+    // to confirm — asking would be asking them to fix a thing that has
+    // not happened.
+    const s = bookingStatusLabel("scheduled", "pending", false);
+    assert.equal(s.label, "Scheduled");
+    assert.equal(s.needsCustomer, false);
+  });
+
+  test("in_progress reads as words, not an enum", () => {
+    assert.equal(bookingStatusLabel("in_progress", "captured").label, "In progress");
+  });
+});
