@@ -1,5 +1,6 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { one } from "@/lib/supabase/relation";
+import { InspectionView } from "./inspection-view";
 import { describeIntake } from "@/lib/service-intake";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -93,6 +94,21 @@ export default async function BookingDetailPage({
         .maybeSingle()
     : { data: null };
   const helperPhone = (helperContact?.phone as string | null) ?? null;
+
+  // The deliverable, for services that produce one. RLS lets both parties
+  // to the booking read it.
+  const { data: inspectionRow } = await supabase
+    .from("inspection_reports")
+    .select("id, summary, submitted_at")
+    .eq("booking_id", id)
+    .maybeSingle();
+  const { data: inspectionItems } = inspectionRow
+    ? await supabase
+        .from("inspection_items")
+        .select("id, area, condition, note")
+        .eq("report_id", inspectionRow.id)
+        .order("position")
+    : { data: null };
   const providerHref = provider ? `/providers/${provider.slug ?? provider.user_id}` : null;
   const service = (b as { service: { id: string; title: string; image_url: string | null } | null }).service;
   // The brief the customer gave when booking, carried onto the booking at
@@ -335,6 +351,14 @@ export default async function BookingDetailPage({
               </div>
             </dl>
           </div>
+
+          {inspectionRow && (
+            <InspectionView
+              summary={(inspectionRow.summary as string | null) ?? null}
+              submittedAt={(inspectionRow.submitted_at as string | null) ?? null}
+              items={(inspectionItems ?? []) as Array<{ id: string; area: string; condition: string; note: string | null }>}
+            />
+          )}
 
           {/* The bank wants the customer present. Without a route to the
               challenge, the booking simply sat unstartable and the helper

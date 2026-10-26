@@ -8,6 +8,7 @@ import { ClientDateTime } from "@/components/ClientDateTime";
 import { BundleChecklist, type BundleChecklistItem } from "./bundle-checklist";
 import { CompletionPhotos, type CompletionPhoto } from "./completion-photos";
 import { ProviderActiveRealtimeRefresh } from "./realtime-refresh";
+import { InspectionReport, type InspectionReportData } from "./inspection-report";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,34 @@ export default async function ProviderActivePage() {
         .maybeSingle()
     : { data: null };
   const customerPhone = (customerContact?.phone as string | null) ?? null;
+
+  // Services that owe the customer an artefact. complete_booking refuses
+  // without it (0056), so the helper needs somewhere to produce one.
+  let inspection: InspectionReportData | null = null;
+  if (booking && booking.service?.id === "property-inspection") {
+    // Creates the checklist from the scope the customer chose, or returns
+    // the existing one. Idempotent.
+    const { data: reportId } = await supabase
+      .rpc("ensure_inspection_report", { p_booking_id: booking.id });
+    if (reportId) {
+      const [{ data: reportRow }, { data: itemRows }] = await Promise.all([
+        supabase.from("inspection_reports")
+          .select("id, scope, summary, submitted_at").eq("id", reportId).maybeSingle(),
+        supabase.from("inspection_items")
+          .select("id, position, area, condition, note")
+          .eq("report_id", reportId).order("position"),
+      ]);
+      if (reportRow) {
+        inspection = {
+          id: reportRow.id as string,
+          scope: (reportRow.scope as string[]) ?? [],
+          summary: (reportRow.summary as string | null) ?? null,
+          submittedAt: (reportRow.submitted_at as string | null) ?? null,
+          items: (itemRows ?? []) as InspectionReportData["items"],
+        };
+      }
+    }
+  }
 
   // If the booking's parent request is a bundle, pull the child stops so the
   // helper sees a tap-to-advance checklist for each task in the trip.
@@ -268,6 +297,10 @@ export default async function ProviderActivePage() {
 
             {booking.status === "in_progress" && (
               <CompletionPhotos bookingId={booking.id} initial={completionPhotos} />
+            )}
+
+            {inspection && booking.status === "in_progress" && (
+              <InspectionReport bookingId={booking.id} report={inspection} />
             )}
 
             {/* Why Start is unavailable. start_booking refuses an
