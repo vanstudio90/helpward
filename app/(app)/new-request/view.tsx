@@ -15,6 +15,7 @@ import {
   type BundleItemDraft, newDraftItem, priceBundle, validateBundle,
 } from "@/lib/bundle-pure";
 import { SERVICE_FEE_CENTS, quoteOneShotCents, dollars } from "@/lib/pricing";
+import { pickInitialSelected } from "@/lib/new-request-selection";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 
@@ -34,18 +35,25 @@ export type PreferredHelper = {
 };
 
 export function NewRequestView({
-  services, categories, initialServiceId, initialQuery, savedAddresses = [], preferredHelper = null,
+  services, categories, initialServiceId, initialQuery, queryUnresolved = false,
+  savedAddresses = [], preferredHelper = null,
 }: {
   services: ServiceWithCategory[];
   categories: ServiceCategory[];
   initialServiceId?: string | null;
+  /** The customer searched and we could not resolve it to one service. */
+  queryUnresolved?: boolean;
   initialQuery?: string | null;
   savedAddresses?: SavedAddressOption[];
   preferredHelper?: PreferredHelper | null;
 }) {
   const [state, formAction, pending] = useActionState(createRequestAction, undefined);
+  // pickInitialSelected, not `?? services[0]`: an unresolved search must
+  // start with NOTHING selected. The old fallback meant a search for
+  // "plumber" silently preselected the first catalog row — Designated
+  // Driver — along with its hidden service_id and its price in the summary.
   const [selected, setSelected] = useState<ServiceWithCategory | null>(
-    services.find((s) => s.id === initialServiceId) ?? services[0] ?? null
+    () => pickInitialSelected(services, initialServiceId, queryUnresolved),
   );
   const [tab, setTab] = useState<string>("Popular");
   // This field rendered with no value or onChange, so typing in it did
@@ -94,6 +102,10 @@ export function NewRequestView({
     () => (bundleEnabled ? validateBundle(bundleItems) : null),
     [bundleEnabled, bundleItems],
   );
+  // Nothing selected is a real state now, so the form must not submit.
+  const submitBlockedReason = !selected
+    ? "Choose a service above to continue."
+    : bundleError;
 
   // When the user types directly into the input we clear any cached coords
   // (they no longer line up with the text). The server will forward-geocode
@@ -200,6 +212,14 @@ export function NewRequestView({
               </button>
             ))}
           </div>
+
+          {queryUnresolved && !selected && (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              We couldn&rsquo;t match {initialQuery ? <>&ldquo;{initialQuery}&rdquo;</> : "that search"} to
+              one service, so nothing is selected. Pick the closest one below &mdash; your
+              description is kept in the notes.
+            </div>
+          )}
 
           <div className="mt-5 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {filtered.map((s) => {
@@ -386,13 +406,13 @@ export function NewRequestView({
 
           <div className="lg:hidden mt-5 space-y-3">
             <SummaryCard selected={selected} bundle={bundleEnabled ? { items: bundleItems, price: bundlePrice } : null} />
-            <ContinueButtons pending={pending} disabledReason={bundleError} />
+            <ContinueButtons pending={pending} disabledReason={submitBlockedReason} />
           </div>
         </section>
 
         <aside className="hidden lg:block space-y-4 lg:sticky lg:top-6 lg:self-start">
           <SummaryCard selected={selected} bundle={bundleEnabled ? { items: bundleItems, price: bundlePrice } : null} />
-          <ContinueButtons pending={pending} disabledReason={bundleError} />
+          <ContinueButtons pending={pending} disabledReason={submitBlockedReason} />
         </aside>
       </form>
     </div>
