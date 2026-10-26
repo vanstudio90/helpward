@@ -1,6 +1,7 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { one } from "@/lib/supabase/relation";
 import { InspectionView } from "./inspection-view";
+import { CallPanel } from "@/components/CallPanel";
 import { describeIntake } from "@/lib/service-intake";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -111,6 +112,27 @@ export default async function BookingDetailPage({
     : { data: null };
   const providerHref = provider ? `/providers/${provider.slug ?? provider.user_id}` : null;
   const service = (b as { service: { id: string; title: string; image_url: string | null } | null }).service;
+
+  const { data: callService } = await supabase
+    .from("service_completion_requirements")
+    .select("delivered_by_call")
+    .eq("service_id", service?.id ?? "")
+    .maybeSingle();
+  const deliveredByCall =
+    callService?.delivered_by_call === true &&
+    (b.status === "scheduled" || b.status === "in_progress");
+
+  const { data: liveCall } = deliveredByCall
+    ? await supabase
+        .from("call_sessions")
+        .select("id")
+        .eq("booking_id", id)
+        .in("status", ["ringing", "connected"])
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
   // The brief the customer gave when booking, carried onto the booking at
   // acceptance so it survives the request being tidied away.
   const brief = describeIntake(
@@ -351,6 +373,15 @@ export default async function BookingDetailPage({
               </div>
             </dl>
           </div>
+
+          {deliveredByCall && user && (
+            <CallPanel
+              bookingId={id}
+              selfId={user.id}
+              counterpartName={provider?.profile?.full_name ?? "your helper"}
+              incomingCallId={(liveCall?.id as string | null) ?? null}
+            />
+          )}
 
           {inspectionRow && (
             <InspectionView

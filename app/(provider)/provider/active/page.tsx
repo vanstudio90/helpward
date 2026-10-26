@@ -10,6 +10,7 @@ import { CompletionPhotos, type CompletionPhoto } from "./completion-photos";
 import { ProviderActiveRealtimeRefresh } from "./realtime-refresh";
 import { InspectionReport, type InspectionReportData } from "./inspection-report";
 import { CrewPanel, type CrewMember } from "./crew-panel";
+import { CallPanel } from "@/components/CallPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -122,6 +123,33 @@ export default async function ProviderActivePage() {
       shareCents: Number(c.share_cents ?? 0),
       arrivedAt: (c.arrived_at as string | null) ?? null,
     }));
+  }
+
+  // Services that ARE a call. The flag lives in the database so the next
+  // remote service is a row rather than a code change.
+  let deliveredByCall = false;
+  let liveCallId: string | null = null;
+  if (booking) {
+    const { data: req } = await supabase
+      .from("service_completion_requirements")
+      .select("delivered_by_call")
+      .eq("service_id", booking.service?.id ?? "")
+      .maybeSingle();
+    deliveredByCall = req?.delivered_by_call === true;
+
+    if (deliveredByCall) {
+      // Join a call the customer already started rather than making the
+      // helper press Call and race them into a second session.
+      const { data: live } = await supabase
+        .from("call_sessions")
+        .select("id")
+        .eq("booking_id", booking.id)
+        .in("status", ["ringing", "connected"])
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      liveCallId = (live?.id as string | null) ?? null;
+    }
   }
 
   // Services that owe the customer an artefact. complete_booking refuses
@@ -328,6 +356,15 @@ export default async function ProviderActivePage() {
 
             {booking.status === "in_progress" && (
               <CompletionPhotos bookingId={booking.id} initial={completionPhotos} />
+            )}
+
+            {deliveredByCall && (
+              <CallPanel
+                bookingId={booking.id}
+                selfId={user.id}
+                counterpartName={booking.customer?.full_name ?? "your customer"}
+                incomingCallId={liveCallId}
+              />
             )}
 
             {crew.length > 0 && (
