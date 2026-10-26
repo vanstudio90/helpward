@@ -125,10 +125,15 @@ export default async function ProviderEarningsPage() {
   // Whether THIS helper can actually be paid, mirrored from Stripe.
   const { data: payoutState } = await supabase
     .from("provider_profiles")
-    .select("stripe_transfers_active")
+    .select("stripe_transfers_active, stripe_payouts_enabled, stripe_requirements_due")
     .eq("user_id", user.id)
     .maybeSingle();
   const payable = payoutState?.stripe_transfers_active === true;
+  // Earnings reach them, but Stripe will not move the balance to their
+  // bank yet — normally a document still under review. A distinct state
+  // from "not set up", and one a helper has to be told about rather than
+  // discover when no money arrives.
+  const payoutsPending = payable && payoutState?.stripe_payouts_enabled !== true;
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-5xl mx-auto pb-12">
@@ -170,13 +175,17 @@ export default async function ProviderEarningsPage() {
             onboarding, which is what the card now reports. */}
         <Stat
           icon={<Clock className="w-5 h-5" />}
-          tone={payable ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}
+          tone={payable && !payoutsPending
+            ? "bg-emerald-50 text-emerald-600"
+            : "bg-amber-50 text-amber-600"}
           label="Payouts"
-          value={payable ? "Active" : "Not set up"}
+          value={payable ? (payoutsPending ? "In review" : "Active") : "Not set up"}
           sub={
-            payable
-              ? "Stripe pays out on its own schedule"
-              : "Finish payout setup to get paid"
+            !payable
+              ? "Finish payout setup to get paid"
+              : payoutsPending
+                ? "Earnings are safe; bank transfers start once Stripe finishes checking your details"
+                : "Stripe pays out on its own schedule"
           }
         />
         <Stat
@@ -199,6 +208,20 @@ export default async function ProviderEarningsPage() {
           the card above it said payouts were Active — two statements on
           one screen that could not both be true. Connect IS wired; what
           varies is whether THIS helper has finished their own setup. */}
+      {payoutsPending && (
+        <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4 mb-6 flex items-start gap-3">
+          <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="text-sm text-amber-800">
+            <div className="font-semibold">Stripe is still checking your details.</div>
+            <div className="text-xs mt-0.5">
+              You can keep taking jobs — your earnings are being held safely in your Stripe
+              balance. Bank transfers begin as soon as the check clears. Nothing is lost in the
+              meantime.
+            </div>
+          </div>
+        </div>
+      )}
+
       {!payable && (
         <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4 mb-6 flex items-start gap-3">
           <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />

@@ -143,14 +143,36 @@ export function readConnectReadiness(account: Stripe.Account): ConnectReadiness 
 }
 
 /**
- * A helper can be paid only when Stripe says transfers will actually land.
- * payouts_enabled alone is not enough: an account can be payouts_enabled
- * while the transfers capability is still inactive, and the destination
- * charge then fails at authorization time with the customer watching.
+ * Can money REACH this helper?
+ *
+ * The transfers capability is the whole answer. A destination charge to an
+ * account without it fails at authorization, with the customer watching;
+ * with it, the charge lands even while Stripe is still verifying the
+ * account for bank payouts.
+ *
+ * This used to require payouts_enabled as well, which is a DIFFERENT
+ * question — whether Stripe will move the balance on to their bank — and
+ * made the gate wrong in both directions. A Canadian test account with
+ * transfers active and verification pending was refused work, even though
+ * a CAD destination charge to it was accepted and allocated correctly.
+ *
+ * The distinction matters to a real helper: their earnings accrue safely
+ * in their Stripe balance and pay out when verification clears. Refusing
+ * them work for days while Stripe reviews a document helps nobody. What
+ * they need instead is to be TOLD — see payoutsPending() and the banner
+ * on /provider/earnings.
  */
 export function canReceiveTransfers(account: Stripe.Account): boolean {
+  return account.capabilities?.transfers === "active";
+}
+
+/**
+ * Money can reach them, but Stripe will not send it to their bank yet.
+ * Usually an identity document still under review.
+ */
+export function payoutsPending(account: Stripe.Account): boolean {
   return (
-    account.payouts_enabled === true &&
-    account.capabilities?.transfers === "active"
+    account.capabilities?.transfers === "active" &&
+    account.payouts_enabled !== true
   );
 }

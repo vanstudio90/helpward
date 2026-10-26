@@ -75,6 +75,7 @@ end $$;
 -- ---------------------------------------------------------------------------
 create temp table pf (customer uuid, helper uuid, booking uuid, req uuid, svc text);
 
+
 do $$
 declare
   v_customer uuid; v_helper uuid; v_svc text; v_addr uuid; v_req uuid; v_bk uuid;
@@ -324,6 +325,84 @@ begin
     format('select start_booking(%L)', v_booking),
     'not been paid for',
     'T03i and therefore still cannot be started');
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Currency follows the job, not the customer (0052)
+-- ---------------------------------------------------------------------------
+do $$
+declare
+  r record; v_addr uuid; v_req uuid; v_bk uuid; v_currency text; v_was text;
+begin
+  perform pg_temp.become_service();
+  select * into r from pf;
+
+  -- A CANADIAN pickup, booked by a customer whose profile says US.
+  select country into v_was from profiles where id = r.customer;
+  update profiles set country = 'US'::country where id = r.customer;
+
+  insert into addresses (user_id, formatted, location, country, city, region,
+                         geocode_verified, geocoded_at)
+  values (r.customer, 'FIXTURE — 1055 Canada Pl, Vancouver BC',
+          st_setsrid(st_makepoint(-123.1115, 49.2888), 4326)::geography,
+          'CA', 'Vancouver', 'British Columbia', true, now())
+  returning id into v_addr;
+
+  insert into requests (customer_id, service_id, pickup_address_id,
+                        estimated_price_cents, estimated_duration_min, status)
+  values (r.customer, r.svc, v_addr, 2450, 60, 'matching') returning id into v_req;
+  insert into match_attempts (request_id, provider_id, distance_km, rank_score)
+  values (v_req, r.helper, 1.0, 1.0);
+
+  update provider_profiles set stripe_transfers_active = true where user_id = r.helper;
+  insert into provider_services (provider_id, service_id)
+  values (r.helper, r.svc) on conflict do nothing;
+
+  perform pg_temp.become(r.helper, 'provider');
+  v_bk := accept_request(v_req, r.helper);
+
+  perform pg_temp.become_service();
+  select currency into v_currency from bookings where id = v_bk;
+  update profiles set country = v_was::country where id = r.customer;
+
+  if v_currency <> 'CAD' then
+    raise exception
+      'FAIL C01 a job in Vancouver was priced %, not CAD — currency followed the customer, not the work',
+      v_currency;
+  end if;
+  raise notice 'PASS C01 a Vancouver job is priced in CAD even for a US customer';
+end $$;
+
+-- Control: a US pickup for the same customer still prices in USD, so the
+-- assertion above is reading the address and not simply always CAD.
+do $$
+declare r record; v_addr uuid; v_req uuid; v_bk uuid; v_currency text;
+begin
+  perform pg_temp.become_service();
+  select * into r from pf;
+
+  insert into addresses (user_id, formatted, location, country, city, region,
+                         geocode_verified, geocoded_at)
+  values (r.customer, 'FIXTURE — 202 C St, San Diego CA',
+          st_setsrid(st_makepoint(-117.1611, 32.7157), 4326)::geography,
+          'US', 'San Diego', 'California', true, now())
+  returning id into v_addr;
+
+  insert into requests (customer_id, service_id, pickup_address_id,
+                        estimated_price_cents, estimated_duration_min, status)
+  values (r.customer, r.svc, v_addr, 2450, 60, 'matching') returning id into v_req;
+  insert into match_attempts (request_id, provider_id, distance_km, rank_score)
+  values (v_req, r.helper, 1.0, 1.0);
+
+  perform pg_temp.become(r.helper, 'provider');
+  v_bk := accept_request(v_req, r.helper);
+
+  perform pg_temp.become_service();
+  select currency into v_currency from bookings where id = v_bk;
+  if v_currency <> 'USD' then
+    raise exception 'FAIL C02 a San Diego job priced %, not USD', v_currency;
+  end if;
+  raise notice 'PASS C02 a San Diego job is still priced in USD (control)';
 end $$;
 
 rollback;

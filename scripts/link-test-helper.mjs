@@ -38,11 +38,16 @@ const res = await fetch(`https://api.stripe.com/v1/accounts/${ACCOUNT}`, {
 const account = await res.json();
 if (account.error) { console.error("Stripe:", account.error.message); process.exit(1); }
 
-const payable = account.payouts_enabled === true && account.capabilities?.transfers === "active";
+// transfers is the gate that matters: it is what a destination charge
+// needs. payouts_enabled is a separate question — whether Stripe will
+// move the balance on to their bank — and is reported, not required.
+const payable = account.capabilities?.transfers === "active";
+const payoutsPending = payable && account.payouts_enabled !== true;
 console.log(`\n  ${ACCOUNT}`);
 console.log(`    payouts_enabled : ${account.payouts_enabled}`);
 console.log(`    transfers       : ${account.capabilities?.transfers}`);
-console.log(`    payable         : ${payable}\n`);
+console.log(`    payable         : ${payable}${payoutsPending ? "  (bank payouts still in review)" : ""}`);
+console.log(`    country         : ${account.country}  default currency: ${account.default_currency}\n`);
 if (!payable) {
   console.error("  That account cannot receive transfers yet. Finish its onboarding first.");
   process.exit(1);
@@ -65,12 +70,20 @@ if (!helpers.length) { console.error("No provider profiles in this database."); 
 // 2026-10-26 scope change and still contains a Los Angeles helper, which
 // is no longer a city Helpward serves — linking payouts to them would set
 // up a test that cannot produce a dispatchable booking.
-const IN_SCOPE = /san diego|vancouver|burnaby|richmond|surrey|coquitlam/i;
+// Match the helper to the account's COUNTRY. A Canadian job settles in
+// CAD and a US account converts it, which makes the split unreconcilable
+// — independent testing hit exactly that.
+const CA_AREAS = /vancouver|burnaby|richmond|surrey|coquitlam|delta|langley|white rock|new westminster|north vancouver|west vancouver|port moody|port coquitlam|maple ridge|pitt meadows/i;
+const US_AREAS = /san diego/i;
+const IN_SCOPE = account.country === "CA" ? CA_AREAS : US_AREAS;
 const inScope = helpers.filter((h) => IN_SCOPE.test(h.full_name ?? ""));
 const pool = inScope.length ? inScope : helpers;
 if (!inScope.length) {
-  console.warn("  WARNING: no helper named for a live service area; using " +
-               `${helpers[0].full_name}. Bookings may never dispatch to them.`);
+  console.error(
+    `  No helper in a ${account.country} service area to link this account to.\n` +
+    `  Linking a ${account.country} account to a helper elsewhere produces bookings\n` +
+    `  whose currency the account cannot settle. Refusing.`);
+  process.exit(1);
 }
 const target = pool.find((h) => !h.stripe_connect_account_id) ?? pool[0];
 
