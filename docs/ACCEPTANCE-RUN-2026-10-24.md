@@ -297,7 +297,7 @@ regional journeys ran and the financial journey is blocked.
 
 ### What this run does establish
 
-* 89 automated tests execute and pass, covering the two-stage service-area check and its fail-closed behaviour, the municipality allowlist, the ambiguity gate, placeholder detection, and the full pricing split including exhaustive rounding reconciliation.
+* 100 automated tests execute and pass, covering the two-stage service-area check and its fail-closed behaviour, the municipality allowlist, the ambiguity gate, placeholder detection, and the full pricing split including exhaustive rounding reconciliation.
 * The two crashes found in review are covered by tests that were **proven to fail** when the bugs were reintroduced.
 * Route status codes, sitemap, internal links and fabricated-content removal are verified against a real production build with zero server errors.
 * One new defect (no ambiguity rejection at request time) and one new deployment hazard (the migration deadlock) were found *by* running this plan, and both are fixed.
@@ -467,3 +467,32 @@ and could not demonstrate them.
 rehearsal, and must run only after their dependent migrations — service-role
 boundary loading before `0036`, real-role quote integrity after `0036` and
 `0038`.
+
+
+---
+
+## Independent source review, `a333f54` — three rehearsal issues addressed
+
+| # | Finding | Fix |
+|---|---|---|
+| G01 | §6 still called `pg_temp.must_fail()`, whose definition this revision replaced. In a fresh session that is an undefined function, and under `ON_ERROR_STOP` the file aborts there — **silently skipping every negative control in §7.** | §6 uses `must_fail_with()`, expecting the function's own authorisation message, and additionally accepts a privilege denial (SQLSTATE 42501) since `0033`'s REVOKE may deny EXECUTE first. Nothing else passes. |
+| G02 | `control_must_fail()` treated every exception as a successful control, so a wrong-reason refusal, an integrity constraint, or a missing helper could certify a removed guard. | Assertion failures now carry distinct SQLSTATEs — `HW001` unexpected success, `HW002` refused for the wrong reason, `HW003` verification persisted — and `control_must_fail(…, expected_state)` accepts **only** the intended one, propagating everything else with an explicit "blocked for an unrelated reason" message. Control C expects `HW003`, because the clamp does not raise. |
+| G03 | The rehearsal table ran `quote_integrity.sql` at R7b/c/d, **before** R8 applied `0036`/`0038` — the migrations that create the objects the suite needs. | Those rows moved to **R8b–R8e**, after the deploy, with the dependency stated. `boundary_containment.sql` is now R8e, since it needs an active dataset *and* `0038`. The top-level step 6 says explicitly that the suites must not run before step 5. |
+
+### Two things found while fixing these
+
+**A static check for the G01 class.** `tests/sql-suites.test.ts` parses both
+suites and asserts every `pg_temp` helper called is defined, dollar-quote
+tags balance, each file rolls back and never commits, `ON_ERROR_STOP` is
+set, no `gen_random_uuid()` sits in a foreign-key position, and
+`control_must_fail` compares SQLSTATEs rather than catching everything.
+Verified: reintroducing G01 and G02 fails it.
+
+**`boundary_containment.sql` was not transactional.** That check caught it
+immediately. The file auto-committed each statement while §5 deliberately
+deactivates every boundary dataset before reactivating it — an assertion
+failing in between would have left the environment with no active
+boundaries, and §7's fixture address and request would have persisted. Now
+wrapped in `begin; … rollback;`.
+
+Tests: 89 → **100**. Both SQL suites remain **unexecuted**.

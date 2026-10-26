@@ -18,6 +18,16 @@
 
 \set ON_ERROR_STOP on
 
+-- Wrapped in a transaction that is rolled back.
+--
+-- Without this the file auto-commits each statement, and section 5
+-- deliberately deactivates every boundary dataset before reactivating it.
+-- An assertion failing in between would leave the environment with NO
+-- active boundaries — which, by design, makes nothing dispatchable. Section
+-- 7 also inserts a fixture address and request. None of that should
+-- survive a test run.
+begin;
+
 do $$
 declare
   v_active int;
@@ -311,3 +321,5 @@ select 'placeholder guard assertions passed' as result;
 -- ---------------------------------------------------------------------------
 
 select 'boundary containment assertions passed' as result;
+
+rollback;

@@ -59,7 +59,7 @@ end $$;
 -- classes (23xxx) are rejected outright unless they ARE what is expected.
 create or replace function pg_temp.must_fail_with(
   p_label text, p_sql text, p_expect text
-) returns void language plpgsql as $$
+) returns void language plpgsql as $mfw$
 declare
   v_state text;
   v_msg text;
@@ -71,23 +71,31 @@ begin
       v_state := sqlstate;
       v_msg := sqlerrm;
 
+      -- HW002: refused, but not by the guard under test. A negative control
+      -- must NOT accept this — the mutation stayed blocked for an unrelated
+      -- reason, which certifies nothing about the removed guard.
       if v_state like '23%' and p_expect not like '%constraint%' then
-        raise exception
-          'FAIL %: refused by an integrity constraint (SQLSTATE %), not by the guard under test: %',
-          p_label, v_state, replace(v_msg, E'\n', ' ');
+        raise exception using errcode = 'HW002', message = format(
+          'FAIL %s: refused by an integrity constraint (SQLSTATE %s), not by the guard under test: %s',
+          p_label, v_state, replace(v_msg, E'\n', ' '));
       end if;
 
       if position(lower(p_expect) in lower(v_msg)) = 0 then
-        raise exception
-          'FAIL %: refused for the wrong reason. expected text %, got (SQLSTATE %) %',
-          p_label, quote_literal(p_expect), v_state, replace(v_msg, E'\n', ' ');
+        raise exception using errcode = 'HW002', message = format(
+          'FAIL %s: refused for the wrong reason. expected text %s, got (SQLSTATE %s) %s',
+          p_label, quote_literal(p_expect), v_state, replace(v_msg, E'\n', ' '));
       end if;
 
       raise notice 'PASS %  (guard: %)', p_label, replace(v_msg, E'\n', ' ');
       return;
   end;
-  raise exception 'FAIL %: the operation succeeded but must have been refused', p_label;
-end $$;
+
+  -- HW001: the operation SUCCEEDED when it should have been refused. This
+  -- is the only outcome a negative control may treat as proof that the
+  -- assertion depends on the guard.
+  raise exception using errcode = 'HW001', message = format(
+    'FAIL %s: the operation succeeded but must have been refused', p_label);
+end $mfw$;
 
 -- For guards that CLAMP rather than raise.
 --
@@ -98,7 +106,7 @@ end $$;
 -- statement may succeed or error, but verification must not end up true.
 create or replace function pg_temp.must_not_verify(
   p_label text, p_address_id uuid
-) returns void language plpgsql as $$
+) returns void language plpgsql as $mnv$
 declare
   v_errored boolean := false;
   v_after boolean;
@@ -110,17 +118,21 @@ begin
       v_errored := true;
   end;
 
-  -- Read back with privilege: the customer role may not be able to see the
-  -- column after an error aborts its subtransaction.
+  -- Read back with privilege: the customer role may not see the column
+  -- after an error aborts its subtransaction.
   perform pg_temp.become_service();
   select geocode_verified into v_after from addresses where id = p_address_id;
 
+  -- HW003: verification was actually persisted. Distinct from HW001 because
+  -- this guard clamps rather than raising, so "the statement succeeded" is
+  -- not itself a failure here.
   if coalesce(v_after, false) then
-    raise exception 'FAIL %: the customer persisted geocode_verified = true', p_label;
+    raise exception using errcode = 'HW003', message = format(
+      'FAIL %s: the customer persisted geocode_verified = true', p_label);
   end if;
   raise notice 'PASS %  (verification not persisted; statement %)',
     p_label, case when v_errored then 'was refused' else 'was clamped' end;
-end $$;
+end $mnv$;
 
 -- ---------------------------------------------------------------------------
 -- Fixture: one customer, one approved+online helper, a verified in-area
@@ -484,9 +496,29 @@ begin
     '{"type":"Polygon","coordinates":[[[-123.2,49.2],[-123.2,49.3],[-123.0,49.3],[-123.0,49.2],[-123.2,49.2]]]}');
   raise notice 'PASS: service role can load a boundary';
 
+  -- must_fail_with, not the removed must_fail: a call to a non-existent
+  -- helper aborts the whole file under ON_ERROR_STOP, which would have
+  -- silently skipped every negative control in section 7.
+  --
+  -- The expected refusal is the function's own authorisation message. If
+  -- the REVOKE in 0033 denies EXECUTE first, the error is SQLSTATE 42501
+  -- (insufficient_privilege) instead — also a correct refusal, so both are
+  -- accepted, but nothing else is.
   perform pg_temp.become(r.customer, 'customer');
-  perform pg_temp.must_fail('customer calls the boundary loader RPC',
-    'select insert_service_area_boundary(''fixture-ds'', ''lower-mainland-bc'', ''Hack'', ''{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}'')');
+  begin
+    perform pg_temp.must_fail_with('customer calls the boundary loader RPC',
+      'select insert_service_area_boundary(''fixture-ds'', ''lower-mainland-bc'', ''Hack'', ''{"type":"Polygon","coordinates":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}'')',
+      'not authorised');
+  exception
+    when sqlstate 'HW002' then
+      -- Wrong-reason: acceptable only if the reason is a privilege denial.
+      if position('permission denied' in lower(sqlerrm)) > 0
+         or position('42501' in sqlerrm) > 0 then
+        raise notice 'PASS customer calls the boundary loader RPC  (denied by EXECUTE privilege)';
+      else
+        raise;
+      end if;
+  end;
   perform pg_temp.become_service();
 end $$;
 
@@ -505,15 +537,35 @@ end $$;
 -- ---------------------------------------------------------------------------
 
 -- Expect an assertion to raise. Fails the suite if it passes.
-create or replace function pg_temp.control_must_fail(p_label text, p_sql text)
-returns void language plpgsql as $ctl$
+create or replace function pg_temp.control_must_fail(
+  p_label text, p_sql text, p_expect_state text default 'HW001'
+) returns void language plpgsql as $ctl$
+declare
+  v_state text;
 begin
   begin
     execute p_sql;
   exception
     when others then
-      raise notice 'PASS negative control %  (assertion correctly failed)', p_label;
-      return;
+      v_state := sqlstate;
+
+      -- Only the INTENDED assertion failure proves the assertion depends on
+      -- the guard that was removed:
+      --   HW001  the mutation succeeded when the assertion expected refusal
+      --   HW003  verification was persisted when the clamp was expected
+      --
+      -- Anything else means the mutation stayed blocked for an unrelated
+      -- reason — a constraint, a privilege, a wrong-reason refusal, or a
+      -- missing helper — so it certifies nothing. Those propagate.
+      if v_state = p_expect_state then
+        raise notice 'PASS negative control %  (assertion failed as required, SQLSTATE %)',
+          p_label, v_state;
+        return;
+      end if;
+
+      raise exception
+        'FAIL negative control %: the assertion failed with SQLSTATE % (expected %), so the mutation was blocked for an unrelated reason and this control proves nothing: %',
+        p_label, v_state, p_expect_state, replace(sqlerrm, E'\n', ' ');
   end;
   raise exception
     'FAIL negative control %: the assertion still passed with its guard removed, so it proves nothing',
@@ -592,7 +644,8 @@ begin
 
   perform pg_temp.become(r.customer, 'customer');
   perform pg_temp.control_must_fail('attestation clamp', format(
-    'select pg_temp.must_not_verify(%L, %L)', 'ctl attest', r.unverified_addr));
+    'select pg_temp.must_not_verify(%L, %L)', 'ctl attest', r.unverified_addr),
+    'HW003');
   perform pg_temp.become_service();
   execute v_real_attn;
 

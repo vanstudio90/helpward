@@ -31,8 +31,15 @@ Run exactly this. Do not reapply anything afterwards.
 3. Run the address backfill: `--dry-run`, review the ledger, then `--apply`.
 4. **Deploy the application release.**
 5. `0036`, then `0038`.
-6. Run the SQL suites: `supabase/tests/boundary_containment.sql` and
-   `supabase/tests/quote_integrity.sql`. Both roll back; both must pass.
+6. Run the SQL suites — **after step 5, never before**. Both depend on
+   objects that `0036`/`0038` create (`quote_fingerprint`,
+   `seal_bundle_quote()`, the attestation and quote triggers, the hardened
+   `accept_request`, `is_placeholder_point()`), and
+   `boundary_containment.sql` additionally needs an active boundary dataset
+   from step 2:
+   `\i supabase/tests/quote_integrity.sql` then
+   `\i supabase/tests/boundary_containment.sql`. Both roll back; both must
+   pass, including the negative controls.
 7. Verify: `node scripts/verify-migration-state.mjs`, then confirm the final
    `accept_request` definition is the hardened one (it must contain
    `compute_bundle_fingerprint`) and that
@@ -129,10 +136,11 @@ schema and behaviour probes.
 | R5 | Known unincorporated point | → `outside_boundary` |
 | R6 | Deactivate dataset, re-probe | → `no_dataset`, and nothing dispatchable |
 | R7 | Run backfill `--dry-run` then `--apply` | ledger classifies; ambiguous/failed/out-of-area stay unverified |
-| R7b | `\i supabase/tests/quote_integrity.sql` | all assertions pass under real customer / provider / service contexts |
-| R7c | (now automated) `quote_integrity.sql` §7 disables each guard in turn and requires the matching assertion to FAIL | a guard that can be removed without failing the suite reports `FAIL negative control …` |
-| R7d | Confirm §7's closing check reports all real guard definitions restored | the controls must not leave a weakened function behind |
 | R8 | Deploy new app, then apply `0036`,`0038` | succeed; final accept_request contains compute_bundle_fingerprint |
+| R8b | `\i supabase/tests/quote_integrity.sql` | all assertions pass under real customer / provider / service contexts. **Must run after R8**: the suite needs `quote_fingerprint`, `seal_bundle_quote()`, the attestation and quote triggers, and the hardened `accept_request`, all of which arrive with `0036`/`0038`. |
+| R8c | §7 negative controls, automated within R8b | each guard is disabled in turn and its assertion must FAIL; anything blocked for an unrelated reason reports `FAIL negative control …` rather than passing |
+| R8d | §7 closing check | reports all real guard definitions restored — the controls must not leave a weakened function behind |
+| R8e | `\i supabase/tests/boundary_containment.sql` | needs an active dataset (R4) and `0038`'s `is_placeholder_point`/`broadcast_request`; its §7 executes a real dispatch |
 | R9 | Submit a request at a verified in-boundary address | dispatches; no `dispatch_refusals` row |
 | R10 | Submit at an unremediated legacy address | refused; `address_unverified` row; admin notified |
 | R11 | **Roll the app back** to the previous build | requests refused, `address_unverified` rows accumulate, admins notified within one request |
