@@ -333,6 +333,15 @@ async function createRequestActionInner(
     createSupabaseServiceClient(), guard.address, user.id);
   if (!addr.ok) return { error: addr.error };
 
+  // The authoritative subtotal, from the same rules acceptance will use.
+  // Computed in the DATABASE rather than here: a price this action
+  // calculated would still be a price the server merely believed, and
+  // accept_request has to arrive at the same number independently.
+  const { data: pricedRow, error: priceErr } = await createSupabaseServiceClient()
+    .rpc("price_service_cents", { p_service_id: serviceId, p_intake: intake });
+  if (priceErr) return { error: "Could not price that request." };
+  const pricedSubtotal = Number(pricedRow ?? service.base_price_cents);
+
   // Create the request
   const { data: request, error: reqErr } = await supabase
     .from("requests")
@@ -344,7 +353,10 @@ async function createRequestActionInner(
       notes,
       // Includes the flat service fee so the saved estimate matches the
       // quote the customer was shown pre-submit (HW-03).
-      estimated_price_cents: quoteOneShotCents(service.base_price_cents),
+      // Priced from the customer's answers, not the flat catalog number.
+      // Dog walking quoted $24.50 for both 30 minutes and eight hours
+      // until this read the intake (migration 0053).
+      estimated_price_cents: quoteOneShotCents(pricedSubtotal),
       // Duration comes from the brief when the service asks for one, so a
       // 4-hour companion booking is not quoted as a 45-minute job.
       estimated_duration_min: Number(intake.duration_min) || 45,
@@ -357,6 +369,26 @@ async function createRequestActionInner(
 
   if (reqErr || !request) {
     return { error: "Couldn't create the request: " + (reqErr?.message ?? "unknown") };
+  }
+
+  // Seal the answers that set the price, BEFORE any helper is offered the
+  // job. The price now depends on the customer's own intake, and
+  // req_update (0002) lets them edit their own request — so without this,
+  // "8 hours" could become "30 minutes" after a helper accepted an
+  // eight-hour job, and acceptance would price the shorter one.
+  //
+  // Fatal, unlike the broadcast below: accept_request refuses an unsealed
+  // request, so a request that reached helpers without a seal is one
+  // nobody could ever accept.
+  const { error: sealErr } = await createSupabaseServiceClient()
+    .rpc("seal_request_quote", { p_request_id: request.id });
+  if (sealErr) {
+    await createSupabaseServiceClient()
+      .from("requests")
+      .update({ status: "cancelled" })
+      .eq("id", request.id);
+    console.error("could not seal request quote", request.id, sealErr);
+    return { error: "Couldn't lock in that quote. Please try again." };
   }
 
   // Broadcast to nearby providers — runs as service role so it can insert

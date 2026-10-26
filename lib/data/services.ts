@@ -1,3 +1,4 @@
+import { ruleFromRow, type PricingRule } from "@/lib/service-pricing";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import type { Service, ServiceCategory, Country } from "@/lib/supabase/types";
 
@@ -107,4 +108,24 @@ export async function getService(slug: string): Promise<ServiceWithCategory | nu
     return null;
   }
   return data as ServiceWithCategory;
+}
+
+/**
+ * Pricing rules, keyed by service id.
+ *
+ * Fetched so the form can quote live as the customer answers. The server
+ * prices the same request independently through price_service_cents() —
+ * a price the browser computed is a price the browser chose, so this one
+ * is for display only, and scripts/verify-pricing-parity.mjs asserts the
+ * two arithmetics agree across 3,808 combinations.
+ */
+export async function listPricingRules(): Promise<Record<string, PricingRule>> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.from("service_pricing").select("*");
+  const out: Record<string, PricingRule> = {};
+  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    const rule = ruleFromRow(row);
+    if (rule) out[rule.serviceId] = rule;
+  }
+  return out;
 }

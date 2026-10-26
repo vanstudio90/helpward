@@ -124,3 +124,72 @@ describe("broadcast offers withhold access details", () => {
     );
   });
 });
+
+// Pricing rules — the TypeScript half. The SQL half is asserted to agree
+// across 3,808 combinations by scripts/verify-pricing-parity.mjs.
+import { priceService, type PricingRule } from "@/lib/service-pricing";
+
+const DOG_WALK: PricingRule = {
+  serviceId: "dog-walking",
+  includedMinutes: 30, extraBlockMinutes: 30, extraBlockCents: 1500,
+  durationField: "duration_min",
+  unitField: "dog_count", includedUnits: 1, perExtraUnitCents: 800,
+  crewField: null, includedCrew: 1, perExtraCrewCents: null,
+};
+
+describe("duration and quantity reach the price", () => {
+  test("the defect: 30 minutes and 8 hours used to cost the same", () => {
+    const half = priceService(2000, DOG_WALK, { duration_min: "30" }).subtotalCents;
+    const long = priceService(2000, DOG_WALK, { duration_min: "480" }).subtotalCents;
+    assert.equal(half, 2000, "the base covers the first 30 minutes");
+    assert.ok(long > half, "eight hours must cost more than half an hour");
+    assert.equal(long, 2000 + 15 * 1500, "15 extra half-hour blocks");
+  });
+
+  test("blocks are started, not prorated — a helper's time is booked", () => {
+    // 31 minutes is one minute into the second block, and costs a block.
+    assert.equal(
+      priceService(2000, DOG_WALK, { duration_min: "31" }).subtotalCents,
+      2000 + 1500,
+    );
+    assert.equal(
+      priceService(2000, DOG_WALK, { duration_min: "60" }).subtotalCents,
+      2000 + 1500,
+    );
+    assert.equal(
+      priceService(2000, DOG_WALK, { duration_min: "61" }).subtotalCents,
+      2000 + 3000,
+    );
+  });
+
+  test("the included amount is free, and less than it is not a discount", () => {
+    for (const mins of ["0", "15", "30"]) {
+      assert.equal(
+        priceService(2000, DOG_WALK, { duration_min: mins }).subtotalCents, 2000,
+        `${mins} minutes should be the base price, never below it`,
+      );
+    }
+  });
+
+  test("extra units are charged, the first is not", () => {
+    assert.equal(priceService(2000, DOG_WALK, { dog_count: "1" }).subtotalCents, 2000);
+    assert.equal(priceService(2000, DOG_WALK, { dog_count: "3" }).subtotalCents, 2000 + 1600);
+  });
+
+  test("a missing or non-numeric answer never produces a cheaper job", () => {
+    for (const bad of ["", "   ", "abc", "-5", undefined]) {
+      const cents = priceService(2000, DOG_WALK, { duration_min: bad as string }).subtotalCents;
+      assert.ok(cents >= 2000, `"${bad}" priced ${cents}, below the base`);
+    }
+  });
+
+  test("a service with no rule is its flat base price", () => {
+    assert.equal(priceService(5500, null, { duration_min: "480" }).subtotalCents, 5500);
+  });
+
+  test("the breakdown adds up to the subtotal it reports", () => {
+    const p = priceService(2000, DOG_WALK, { duration_min: "120", dog_count: "3" });
+    assert.equal(p.lines.reduce((n, l) => n + l.cents, 0), p.subtotalCents);
+    assert.ok(p.lines.length >= 3, "the customer should see why, not just what");
+  });
+});

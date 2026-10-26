@@ -1,4 +1,4 @@
-import { listServices, listCategories } from "@/lib/data/services";
+import { listServices, listCategories, listPricingRules } from "@/lib/data/services";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NewRequestView, type SavedAddressOption, type PreferredHelper } from "./view";
 import { resolveInitialSelection } from "@/lib/new-request-selection";
@@ -7,8 +7,9 @@ export default async function NewRequestPage({
   searchParams,
 }: { searchParams: Promise<{ service?: string; q?: string; preferred_helper?: string }> }) {
   const supabase = await createSupabaseServerClient();
-  const [services, categories, params, savedAddrRes] = await Promise.all([
+  const [services, pricingRules, categories, params, savedAddrRes] = await Promise.all([
     listServices(),
+    listPricingRules(),
     listCategories(),
     searchParams,
     supabase
@@ -60,6 +61,7 @@ export default async function NewRequestPage({
   return (
     <NewRequestView
       services={services}
+      pricingRules={pricingRules}
       categories={categories}
       initialServiceId={initialServiceId}
       queryUnresolved={queryUnresolved}

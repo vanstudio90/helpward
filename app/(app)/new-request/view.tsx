@@ -12,6 +12,7 @@ import { RecurrencePicker } from "./recurrence-picker";
 import { BundlePicker } from "./bundle-picker";
 import { UseCurrentLocationButton } from "./use-current-location";
 import { MissingFieldsNotice, friendlyLabel, type MissingField } from "./missing-fields";
+import { priceService, type PricingRule } from "@/lib/service-pricing";
 import { AddressConfirm } from "./address-confirm";
 import { IntakeFields } from "./intake-fields";
 import { intakeFor } from "@/lib/service-intake";
@@ -39,7 +40,7 @@ export type PreferredHelper = {
 };
 
 export function NewRequestView({
-  services, categories, initialServiceId, initialQuery, queryUnresolved = false,
+  services, pricingRules, categories, initialServiceId, initialQuery, queryUnresolved = false,
   savedAddresses = [], preferredHelper = null,
 }: {
   services: ServiceWithCategory[];
@@ -48,6 +49,8 @@ export function NewRequestView({
   /** The customer searched and we could not resolve it to one service. */
   queryUnresolved?: boolean;
   initialQuery?: string | null;
+  /** Per-service pricing rules, for the live quote. Keyed by service id. */
+  pricingRules: Record<string, PricingRule>;
   savedAddresses?: SavedAddressOption[];
   preferredHelper?: PreferredHelper | null;
 }) {
@@ -85,6 +88,27 @@ export function NewRequestView({
   // to submit — telling someone what they have not done yet, before they
   // have had a chance to do it, is nagging rather than help.
   const [missing, setMissing] = useState<MissingField[]>([]);
+  // The answers that set the price, mirrored out of the (uncontrolled)
+  // intake inputs so the quote can move as the customer fills them in.
+  const [pricedAnswers, setPricedAnswers] = useState<Record<string, string>>({});
+
+  // Read the priced fields off the DOM. Cheaper and less invasive than
+  // making every intake input controlled, and the server re-derives the
+  // real price from the request anyway — this number is for display.
+  const readPricedAnswers = (form: HTMLFormElement): Record<string, string> => {
+    const rule = selected ? pricingRules[selected.id] : null;
+    if (!rule) return {};
+    const out: Record<string, string> = {};
+    for (const key of [rule.durationField, rule.unitField, rule.crewField]) {
+      if (!key) continue;
+      const el = form.elements.namedItem(`intake_${key}`);
+      const field = el instanceof RadioNodeList ? el[0] : el;
+      if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) {
+        out[key] = field.value;
+      }
+    }
+    return out;
+  };
 
   // Everything the customer still has to fill in, in page order.
   //
@@ -266,10 +290,12 @@ export function NewRequestView({
         // the form not noticing. Does nothing until they have actually
         // tried to submit.
         onInput={(e) => {
+          setPricedAnswers(readPricedAnswers(e.currentTarget));
           if (missing.length === 0) return;
           setMissing(findMissing(e.currentTarget));
         }}
         onChange={(e) => {
+          setPricedAnswers(readPricedAnswers(e.currentTarget));
           if (missing.length === 0) return;
           setMissing(findMissing(e.currentTarget));
         }}
@@ -562,13 +588,23 @@ export function NewRequestView({
           </div>
 
           <div className="lg:hidden mt-5 space-y-3">
-            <SummaryCard selected={selected} bundle={bundleEnabled ? { items: bundleItems, price: bundlePrice } : null} />
+            <SummaryCard
+              selected={selected}
+              rule={selected ? pricingRules[selected.id] ?? null : null}
+              answers={pricedAnswers}
+              bundle={bundleEnabled ? { items: bundleItems, price: bundlePrice } : null}
+            />
             <ContinueButtons pending={pending} disabledReason={submitBlockedReason} />
           </div>
         </section>
 
         <aside className="hidden lg:block space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <SummaryCard selected={selected} bundle={bundleEnabled ? { items: bundleItems, price: bundlePrice } : null} />
+          <SummaryCard
+            selected={selected}
+            rule={selected ? pricingRules[selected.id] ?? null : null}
+            answers={pricedAnswers}
+            bundle={bundleEnabled ? { items: bundleItems, price: bundlePrice } : null}
+          />
           <ContinueButtons pending={pending} disabledReason={submitBlockedReason} />
         </aside>
       </form>
@@ -599,8 +635,10 @@ function Dash() {
   return <span className="flex-1 h-px border-t border-dashed border-slate-300 min-w-[8px]" />;
 }
 
-function SummaryCard({ selected, bundle }: {
+function SummaryCard({ selected, rule, answers, bundle }: {
   selected: ServiceWithCategory | null;
+  rule: PricingRule | null;
+  answers: Record<string, string>;
   bundle: { items: BundleItemDraft[]; price: { itemsSubtotalCents: number; serviceFeeCents: number; totalCents: number } } | null;
 }) {
   if (!selected) {
@@ -613,6 +651,10 @@ function SummaryCard({ selected, bundle }: {
   }
 
   const filledStops = bundle?.items.filter((i) => i.serviceId) ?? [];
+  // Priced from the customer's answers. The same rules run in SQL at
+  // acceptance (price_service_cents, migration 0053); parity across both
+  // is asserted by scripts/verify-pricing-parity.mjs.
+  const priced = priceService(selected.base_price_cents, rule, answers);
 
   return (
     <div className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
@@ -691,17 +733,19 @@ function SummaryCard({ selected, bundle }: {
               </>
             ) : (
               <>
-                <div className="flex justify-between">
-                  <dt className="text-slate-500">Base price</dt>
-                  <dd className="font-semibold text-slate-900">${dollars(selected.base_price_cents)}</dd>
-                </div>
+                {priced.lines.map((line) => (
+                  <div key={line.label} className="flex justify-between gap-2">
+                    <dt className="text-slate-500 min-w-0">{line.label}</dt>
+                    <dd className="font-semibold text-slate-900 tabular-nums shrink-0">${dollars(line.cents)}</dd>
+                  </div>
+                ))}
                 <div className="flex justify-between">
                   <dt className="text-slate-500">Service fee</dt>
-                  <dd className="font-semibold text-slate-900">${dollars(SERVICE_FEE_CENTS)}</dd>
+                  <dd className="font-semibold text-slate-900 tabular-nums">${dollars(SERVICE_FEE_CENTS)}</dd>
                 </div>
                 <div className="flex justify-between pt-1.5 border-t border-slate-100">
                   <dt className="text-sm font-bold text-slate-900">Total estimate</dt>
-                  <dd className="text-sm font-bold text-brand-700">${dollars(quoteOneShotCents(selected.base_price_cents))}</dd>
+                  <dd className="text-sm font-bold text-brand-700 tabular-nums">${dollars(quoteOneShotCents(priced.subtotalCents))}</dd>
                 </div>
               </>
             )}
