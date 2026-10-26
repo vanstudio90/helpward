@@ -12,6 +12,14 @@
 export type IntakeOption = { value: string; label: string };
 
 export type IntakeField = {
+  /**
+   * Answers that must not go out with a broadcast offer.
+   *
+   * An offer reaches every candidate helper, including everyone who
+   * declines. A gate code or lockbox combination in that payload has been
+   * given away. describeIntake() withholds these until acceptance.
+   */
+  sensitive?: boolean;
   key: string;
   label: string;
   /** Shown under the label when the ask needs explaining. */
@@ -71,6 +79,9 @@ const ACCESS: IntakeField = {
   required: true,
   type: "textarea",
   maxLength: 600,
+  // Literally a key. Withheld from offers; shown once a helper is on the
+  // hook for the job.
+  sensitive: true,
 };
 
 const DRESS_CODE: IntakeField = {
@@ -633,14 +644,29 @@ export function validateIntake(serviceId: string, raw: IntakeValues): IntakeVali
 
 /** Readable label for a stored value, for the helper offer and booking page. */
 export function describeIntake(
-  serviceId: string, values: IntakeValues | null | undefined,
-): Array<{ label: string; value: string }> {
+  serviceId: string,
+  values: IntakeValues | null | undefined,
+  opts: {
+    /**
+     * Withhold fields marked `sensitive`. Set for broadcast offers, which
+     * reach every candidate helper including the ones who decline.
+     */
+    forOffer?: boolean;
+  } = {},
+): Array<{ label: string; value: string; withheld?: boolean }> {
   const spec = intakeFor(serviceId);
   if (!spec || !values) return [];
-  const out: Array<{ label: string; value: string }> = [];
+  const out: Array<{ label: string; value: string; withheld?: boolean }> = [];
   for (const field of spec.fields) {
     const v = values[field.key];
     if (v == null || (Array.isArray(v) && v.length === 0) || String(v).trim() === "") continue;
+
+    // Say that it exists, without saying what it is: a helper deciding
+    // whether to accept still needs to know there IS an access procedure.
+    if (opts.forOffer && field.sensitive) {
+      out.push({ label: field.label, value: "Shared once you accept", withheld: true });
+      continue;
+    }
 
     let text: string;
     if (field.type === "checkboxes") {

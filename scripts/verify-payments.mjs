@@ -104,6 +104,33 @@ const declined = await api("payment_intents", {
 });
 ok("a declined card returns a card_error", declined.error?.type === "card_error", JSON.stringify(declined.error?.code ?? declined.status));
 
+// --- 4b. A card that always challenges is recoverable, not a decline -------
+// Confirming off_session with such a card raises a CARD ERROR, not a
+// requires_action intent. Read as an ordinary decline it cancelled the
+// booking, leaving a customer with a working card and no way to use it.
+const challenged = await api("payment_intents", {
+  amount: String(TOTAL), currency: "usd", capture_method: "manual",
+  confirm: "true", off_session: "true", payment_method: "pm_card_authenticationRequired",
+  "automatic_payment_methods[enabled]": "true",
+  "automatic_payment_methods[allow_redirects]": "never",
+  description: "Helpward verify: authentication required",
+});
+ok("an always-authenticate card raises authentication_required",
+   challenged.error?.code === "authentication_required", JSON.stringify(challenged.error?.code));
+ok("the error carries the PaymentIntent, so the booking can be kept",
+   !!challenged.error?.payment_intent?.id, "no intent on the error");
+ok("that intent is recoverable, not dead",
+   challenged.error?.payment_intent?.status === "requires_payment_method" &&
+   challenged.error.payment_intent.last_payment_error?.code === "authentication_required",
+   `status=${challenged.error?.payment_intent?.status}`);
+// Why the page uses confirmCardPayment rather than handleNextAction:
+ok("it has NO next_action — handleNextAction would silently do nothing",
+   !challenged.error?.payment_intent?.next_action,
+   `next_action=${JSON.stringify(challenged.error?.payment_intent?.next_action)}`);
+if (challenged.error?.payment_intent?.id) {
+  await api(`payment_intents/${challenged.error.payment_intent.id}/cancel`, {});
+}
+
 // --- 5. Partial capture rescales the fee ---------------------------------
 const partialAuth = await api("payment_intents", {
   amount: String(TOTAL), currency: "usd", capture_method: "manual",

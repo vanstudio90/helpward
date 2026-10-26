@@ -9,10 +9,16 @@ import { ClientDateTime } from "@/components/ClientDateTime";
 // Payout readiness is mirrored from Stripe onto provider_profiles by the
 // account.updated webhook; see migration 0040.
 //
-// Historical note: Stripe payout state (arrival_date, status) lights up once Stripe Connect is
-// wired; until then we show the figures we already know (helper's 80% of
+// Earnings are computed from completed bookings (helper's 80% of
 // the service subtotal +
-// tips) and label payout columns as "Pending Stripe Connect."
+// subtotal plus 100% of tips). Whether the helper can actually BE paid is
+// mirrored from Stripe onto provider_profiles by the account.updated
+// webhook — see migration 0040 — and is what `payable` below reads.
+//
+// There is deliberately no predicted arrival date anywhere on this page.
+// Stripe decides its own payout schedule and reports a real arrival_date
+// when a payout exists; anything else is a guess shown to someone waiting
+// to be paid.
 
 type CompletedRow = {
   id: string;
@@ -34,12 +40,14 @@ type WeekBucket = {
   basePayoutCents: number; // helper's 80% of the service subtotal
   tipsCents: number;
   totalCents: number;     // sum for the week
-  expectedArrival: string; // "Tuesday Jun 2" — for the row directly after the week ends
 };
 
 // Monday at 00:00 UTC for a given date. Helpward payouts run weekly per Stripe
 // Connect best practice — Monday-through-Sunday work, paid out the following
-// Tuesday by standard ACH.
+
+// Monday at 00:00 UTC for a given date. Weeks are Monday-through-Sunday
+// for grouping only — Stripe sets its own payout schedule, and this page
+// deliberately predicts no arrival date.
 function mondayOf(d: Date): Date {
   const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   const day = x.getUTCDay(); // 0 Sun..6 Sat
@@ -54,12 +62,6 @@ function fmtWeekLabel(monday: Date): string {
   const end = new Date(monday); end.setUTCDate(end.getUTCDate() + 6);
   const m = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   return `${m(monday)} – ${m(end)}, ${monday.getUTCFullYear()}`;
-}
-
-function arrivalLabel(monday: Date): string {
-  // Tuesday of the following week
-  const t = new Date(monday); t.setUTCDate(t.getUTCDate() + 8);
-  return t.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 export default async function ProviderEarningsPage() {
@@ -104,7 +106,6 @@ export default async function ProviderEarningsPage() {
       basePayoutCents: 0,
       tipsCents: 0,
       totalCents: 0,
-      expectedArrival: arrivalLabel(monday),
     };
     existing.count += 1;
     existing.tipsCents += tip;
@@ -194,18 +195,23 @@ export default async function ProviderEarningsPage() {
         />
       </div>
 
-      {/* Stripe Connect wiring banner — disappears once the env var is set */}
-      <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4 mb-6 flex items-start gap-3">
-        <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-        <div className="text-sm text-amber-800">
-          <div className="font-semibold">Real payouts ship once Stripe Connect is wired.</div>
-          <div className="text-xs mt-0.5">
-            Today, your earnings are tallied accurately from completed bookings. Once Helpward&apos;s Stripe Connect
-            integration is live, the figures here become real bank-account-bound payouts with arrival tracking.
-            <Link href="/help/helper-payouts-and-earnings" className="ml-1 font-semibold underline">Learn how payouts work</Link>.
+      {/* This said "Real payouts ship once Stripe Connect is wired" while
+          the card above it said payouts were Active — two statements on
+          one screen that could not both be true. Connect IS wired; what
+          varies is whether THIS helper has finished their own setup. */}
+      {!payable && (
+        <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4 mb-6 flex items-start gap-3">
+          <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+          <div className="text-sm text-amber-800">
+            <div className="font-semibold">You can&apos;t be paid yet.</div>
+            <div className="text-xs mt-0.5">
+              Your earnings below are tallied from completed bookings, but Stripe still needs your
+              bank and tax details before any of it can reach you.
+              <Link href="/provider/onboard" className="ml-1 font-semibold underline">Finish payout setup</Link>.
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Weekly breakdown */}
       <section className="mb-8">
@@ -239,7 +245,12 @@ export default async function ProviderEarningsPage() {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-bold text-slate-900">{w.label}</div>
                   <div className="text-[11px] text-slate-500">
-                    {w.count} task{w.count === 1 ? "" : "s"} · Pays {w.expectedArrival}
+                    {/* "Pays Tuesday, Nov 3" was arithmetic, not a fact:
+                        next Monday plus one day, with no Stripe payout
+                        behind it. Stripe sets its own payout schedule and
+                        tells us the arrival date when a payout exists —
+                        until one does, there is no date to show. */}
+                    {w.count} task{w.count === 1 ? "" : "s"}
                   </div>
                 </div>
                 <div className="text-right shrink-0">

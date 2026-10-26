@@ -21,8 +21,10 @@ type OfferRequest = {
               eta_label: string | null; image_url: string | null } | Array<{ id: string; title: string;
               blurb: string | null; base_price_cents: number; eta_label: string | null;
               image_url: string | null }> | null;
-  pickup?: { city: string | null; region: string | null }
-         | Array<{ city: string | null; region: string | null }> | null;
+  // Snapshotted onto the request (migration 0048) rather than embedded
+  // from addresses, which 0047 correctly hides from an un-accepted helper.
+  pickup_city: string | null;
+  pickup_region: string | null;
   customer?: { full_name: string; avatar_url: string | null }
            | Array<{ full_name: string; avatar_url: string | null }> | null;
 };
@@ -41,8 +43,8 @@ export default async function ProviderInboxPage() {
       id, distance_km, rank_score, notified_at, preferred,
       request:requests(
         id, status, scheduled_for, notes, estimated_price_cents, intake,
+        pickup_city, pickup_region,
         service:services(id, title, blurb, base_price_cents, eta_label, image_url),
-        pickup:addresses!requests_pickup_address_id_fkey(city, region),
         customer:profiles!requests_customer_id_fkey(full_name, avatar_url)
       )
     `)
@@ -90,7 +92,6 @@ export default async function ProviderInboxPage() {
             const preferred = (row as { preferred: boolean }).preferred;
             const service = one(req.service);
             const customer = one(req.customer);
-            const pickup = one(req.pickup);
             return (
               <li
                 key={row.id}
@@ -142,8 +143,8 @@ export default async function ProviderInboxPage() {
                       icon={<MapPin className="w-3 h-3" />}
                       label="Area"
                       value={
-                        pickup?.city
-                          ? `${pickup.city}${pickup.region ? `, ${pickup.region}` : ""}`
+                        req.pickup_city
+                          ? `${req.pickup_city}${req.pickup_region ? `, ${req.pickup_region}` : ""}`
                           : "—"
                       }
                     />
@@ -155,9 +156,13 @@ export default async function ProviderInboxPage() {
                       the destination, the crew size, the stairs — not just a
                       price and a pin. */}
                   {(() => {
+                    // forOffer: this payload goes to every candidate,
+                    // including everyone who declines. Access codes are
+                    // withheld until someone is accountable for the job.
                     const brief = describeIntake(
                       service?.id ?? "",
                       (req as { intake?: Record<string, string | string[]> }).intake,
+                      { forOffer: true },
                     );
                     if (brief.length === 0) return null;
                     return (

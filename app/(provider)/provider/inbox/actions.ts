@@ -30,12 +30,17 @@ export async function acceptRequestAction(requestId: string) {
   if (stripeConfigured() && bookingId) {
     const payment = await authorizeBookingPayment(bookingId as string);
 
-    // ok but not held. The bank wants the customer present for a 3DS
-    // challenge, so no money is reserved yet. This used to be ignored:
-    // requiresAction came back true and the helper was sent straight to
-    // the job, which start_booking would then refuse with no explanation
-    // of why. The booking is kept — the customer can still authenticate —
-    // but the helper is told plainly.
+    // ok but not held. The bank wants the customer present, so no money
+    // is reserved yet.
+    //
+    // Two routes arrive here. Stripe may return a requires_action intent,
+    // or — for a card that always challenges — it raises a card error
+    // with code authentication_required and the intent attached.
+    // authorizeBookingPayment normalises both into this flag; the second
+    // one used to read as a plain decline and cancelled the booking.
+    //
+    // The booking is KEPT either way: the customer has a usable card and
+    // a route to confirm it, and the helper is told plainly.
     if (payment.ok && payment.requiresAction) {
       const admin = createSupabaseServiceClient();
       await admin.from("notifications").insert({

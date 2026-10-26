@@ -433,6 +433,39 @@ export async function authorizeBookingPayment(
       clientSecret: intent.status === "requires_action" ? intent.client_secret : null,
     };
   } catch (err) {
+    // A card that always challenges does NOT come back as a
+    // requires_action intent. Confirming off_session raises a
+    // StripeCardError with code "authentication_required", and the intent
+    // it carries sits at requires_payment_method. Treated as an ordinary
+    // decline, that cancelled the booking outright — the customer had a
+    // perfectly good card and no way to use it.
+    const e = err as Stripe.errors.StripeCardError;
+    const stranded = e?.code === "authentication_required" ? e.payment_intent : undefined;
+
+    if (stranded?.id) {
+      const { error: writeError } = await admin
+        .from("bookings")
+        .update({
+          stripe_payment_intent_id: stranded.id,
+          payment_status: "pending",
+          authorized_at: null,
+          payment_error: "Waiting for the customer to confirm this payment with their bank.",
+        })
+        .eq("id", booking.id);
+      if (writeError) {
+        console.error("AUTH-REQUIRED INTENT NOT RECORDED", {
+          bookingId: booking.id, intent: stranded.id, error: writeError,
+        });
+        return fail("persist_failed", "Could not set up that payment. Please try again.");
+      }
+      return {
+        ok: true,
+        paymentIntentId: stranded.id,
+        requiresAction: true,
+        clientSecret: stranded.client_secret ?? null,
+      };
+    }
+
     const problem = fromStripeError(err);
     await admin
       .from("bookings")
@@ -1084,7 +1117,17 @@ export async function pendingAuthorizationSecret(
     if (intent.status === "requires_capture" || intent.status === "succeeded") {
       return fail("already_authorized", "This payment is already confirmed.");
     }
-    if (intent.status !== "requires_action" && intent.status !== "requires_confirmation") {
+    // requires_payment_method is normally a dead intent, EXCEPT when the
+    // reason is authentication_required: that one is recoverable by
+    // confirming again with the customer present, using the card already
+    // attached to it.
+    const recoverable =
+      intent.status === "requires_action" ||
+      intent.status === "requires_confirmation" ||
+      (intent.status === "requires_payment_method" &&
+        intent.last_payment_error?.code === "authentication_required");
+
+    if (!recoverable) {
       return fail("not_confirmable", "This payment can't be confirmed — please contact support.");
     }
     if (!intent.client_secret) return fail("no_secret", "Could not start confirmation.");

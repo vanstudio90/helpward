@@ -62,7 +62,15 @@ export function ConfirmPaymentClient({
     const stripe = await stripeClient(publishableKey);
     if (!stripe) { setPhase("error"); setMessage("Could not reach Stripe."); return; }
 
-    const { error } = await stripe.handleNextAction({ clientSecret: secret });
+    // confirmCardPayment, not handleNextAction.
+    //
+    // A card that always challenges fails the off-session confirm with
+    // authentication_required, and the intent it leaves behind sits at
+    // requires_payment_method with no next_action attached — so
+    // handleNextAction has nothing to run and returns immediately as if
+    // everything were fine. Confirming again, with the customer present
+    // and the card already on the intent, is the documented recovery.
+    const { error } = await stripe.confirmCardPayment(secret);
     if (error) {
       setPhase("error");
       setMessage(error.message ?? "Your bank didn't approve that.");

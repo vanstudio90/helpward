@@ -91,3 +91,36 @@ describe("partial capture rescales the platform fee", () => {
     }
   });
 });
+
+// Offers are broadcast to every candidate helper, including everyone who
+// declines. Anything in that payload has been given away.
+import { describeIntake } from "@/lib/service-intake";
+
+describe("broadcast offers withhold access details", () => {
+  const values = {
+    duration_min: "60",
+    access: "Lockbox on the gate, code 4821, key under the mat",
+  };
+
+  test("an offer does not carry the access code", () => {
+    const brief = describeIntake("house-check-in", values, { forOffer: true });
+    const serialised = JSON.stringify(brief);
+    assert.ok(!serialised.includes("4821"), `access code leaked into an offer: ${serialised}`);
+    assert.ok(!serialised.includes("under the mat"), "access detail leaked into an offer");
+  });
+
+  test("but it does say an access procedure exists", () => {
+    const brief = describeIntake("house-check-in", values, { forOffer: true });
+    const access = brief.find((b) => b.withheld);
+    assert.ok(access, "the offer hid the field entirely instead of flagging it");
+    assert.match(access!.value, /once you accept/i);
+  });
+
+  test("the assigned helper gets the real thing", () => {
+    const brief = describeIntake("house-check-in", values);
+    assert.ok(
+      JSON.stringify(brief).includes("4821"),
+      "the accepted helper must still get the access code — they have to get in",
+    );
+  });
+});
