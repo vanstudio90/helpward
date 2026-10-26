@@ -244,3 +244,34 @@ export async function getUnreadCount(): Promise<number> {
     .is("read_at", null);
   return count ?? 0;
 }
+
+/**
+ * Addresses the customer deliberately SAVED and labelled, from
+ * `saved_addresses`.
+ *
+ * Distinct from listMyAddresses(), which reads `addresses` — one row per
+ * request, created automatically on every booking. That is dispatch
+ * history, not a saved place. Confusing the two made the Favorites page
+ * present seven request addresses as "Saved addresses" while Settings
+ * showed the single one the customer had actually saved.
+ */
+export async function listSavedAddresses() {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("saved_addresses")
+    .select("id, label, formatted, is_default, geocode_verified, needs_reconfirmation")
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("listSavedAddresses:", error.message);
+    return [];
+  }
+  return (data ?? []) as Array<{
+    id: string;
+    label: string;
+    formatted: string;
+    is_default: boolean;
+    geocode_verified: boolean | null;
+    needs_reconfirmation: boolean | null;
+  }>;
+}

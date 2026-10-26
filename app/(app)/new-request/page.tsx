@@ -2,6 +2,30 @@ import { listServices, listCategories } from "@/lib/data/services";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NewRequestView, type SavedAddressOption, type PreferredHelper } from "./view";
 
+// Best-effort match from free text to one service. Returns null unless the
+// match is unambiguous, so an unmatched search leaves the chooser open
+// rather than guessing.
+function matchServiceToQuery(
+  services: Array<{ id: string; title: string; blurb: string }>,
+  q: string | null,
+): string | null {
+  const needle = (q ?? "").trim().toLowerCase();
+  if (needle.length < 3) return null;
+
+  const exact = services.filter((s) => s.title.toLowerCase() === needle);
+  if (exact.length === 1) return exact[0].id;
+
+  const bySlug = services.filter((s) => s.id === needle.replace(/\s+/g, "-"));
+  if (bySlug.length === 1) return bySlug[0].id;
+
+  const byTitle = services.filter(
+    (s) => s.title.toLowerCase().includes(needle) || needle.includes(s.title.toLowerCase()),
+  );
+  if (byTitle.length === 1) return byTitle[0].id;
+
+  return null;
+}
+
 export default async function NewRequestPage({
   searchParams,
 }: { searchParams: Promise<{ service?: string; q?: string; preferred_helper?: string }> }) {
@@ -20,8 +44,17 @@ export default async function NewRequestPage({
   // who clicks a service card lands with that service already selected.
   // ?q=<text> from the hero search box pre-fills the notes textarea so the
   // helper sees what the customer typed/spoke verbatim.
-  const initialServiceId = services.find((s) => s.id === params.service)?.id ?? null;
   const initialQuery = typeof params.q === "string" ? params.q.slice(0, 500) : null;
+
+  // ?service=<slug> is the exact handoff the public service pages use.
+  // ?q=<text> comes from the homepage search box, which previously only
+  // pre-filled the notes field — so searching "Tech Setup" landed on the
+  // form with Designated Driver selected, because that is simply
+  // services[0]. Silently selecting a driver for someone who asked for a
+  // technician is worse than selecting nothing.
+  const explicit = services.find((s) => s.id === params.service)?.id ?? null;
+  const matchedFromQuery = explicit ? null : matchServiceToQuery(services, initialQuery);
+  const initialServiceId = explicit ?? matchedFromQuery;
   const savedAddresses = (savedAddrRes.data as SavedAddressOption[] | null) ?? [];
 
   // ?preferred_helper=<uuid> from the favorites Book-again CTA. We fetch the

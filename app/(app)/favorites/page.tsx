@@ -1,4 +1,4 @@
-import { listFavoritesByKind, listSavedProviders, listMyAddresses } from "@/lib/data/customer";
+import { listFavoritesByKind, listSavedProviders, listSavedAddresses } from "@/lib/data/customer";
 import { listServices } from "@/lib/data/services";
 import { getBatchAvailabilityStatus } from "@/lib/data/availability";
 import Link from "next/link";
@@ -8,9 +8,15 @@ import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 import { AvailabilityBadge } from "@/app/providers/[id]/availability";
 
 export default async function FavoritesPage() {
-  const [providers, addresses, serviceFavs, allServices] = await Promise.all([
+  // saved_addresses, NOT addresses. `addresses` is one row per request —
+  // dispatch history, created automatically every time someone books. This
+  // page listed seven of those under the heading "Saved addresses" while
+  // Settings showed the one address the customer had actually saved and
+  // labelled. They are different things and only the deliberate ones belong
+  // here.
+  const [providers, savedAddresses, serviceFavs, allServices] = await Promise.all([
     listSavedProviders(),
-    listMyAddresses(),
+    listSavedAddresses(),
     listFavoritesByKind("service"),
     listServices(),
   ]);
@@ -20,7 +26,7 @@ export default async function FavoritesPage() {
   // of N × 3 queries from per-card render calls.
   const availability = await getBatchAvailabilityStatus(providers.map((p) => p.user_id));
 
-  const total = providers.length + addresses.length + favServices.length;
+  const total = providers.length + savedAddresses.length + favServices.length;
 
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
@@ -128,13 +134,28 @@ export default async function FavoritesPage() {
             </Section>
           )}
 
-          {addresses.length > 0 && (
-            <Section title={`Saved addresses (${addresses.length})`}>
+          {savedAddresses.length > 0 && (
+            <Section title={`Saved addresses (${savedAddresses.length})`}>
               <ul className="space-y-2">
-                {addresses.map((a) => (
-                  <li key={a.id} className="rounded-2xl bg-white border border-slate-100 p-4">
-                    <div className="text-sm font-bold text-slate-900">{a.label ?? "Saved address"}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">{a.formatted}</div>
+                {savedAddresses.map((a) => (
+                  <li key={a.id} className="rounded-2xl bg-white border border-slate-100 p-4 flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        {a.label}
+                        {a.is_default && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">{a.formatted}</div>
+                    </div>
+                    <Link
+                      href="/settings"
+                      className="shrink-0 text-[11px] font-semibold text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-50"
+                    >
+                      Manage
+                    </Link>
                   </li>
                 ))}
               </ul>

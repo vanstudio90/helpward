@@ -48,6 +48,9 @@ export function NewRequestView({
     services.find((s) => s.id === initialServiceId) ?? services[0] ?? null
   );
   const [tab, setTab] = useState<string>("Popular");
+  // This field rendered with no value or onChange, so typing in it did
+  // nothing at all.
+  const [serviceQuery, setServiceQuery] = useState("");
   // Bundle state lives here, not inside BundlePicker, so the request summary
   // and the bundle panel quote the same thing (HW-07).
   const [bundleEnabled, setBundleEnabled] = useState(false);
@@ -100,9 +103,22 @@ export function NewRequestView({
     setCoords(null);
   };
 
-  const filtered = tab === "Popular"
-    ? services.filter((s) => s.popular).concat(services.filter((s) => !s.popular)).slice(0, 12)
-    : services.filter((s) => s.category.label === tab);
+  const filtered = (() => {
+    const q = serviceQuery.trim().toLowerCase();
+    if (q) {
+      // A search spans every category — scoping it to the active tab would
+      // hide the match the customer just typed.
+      return services.filter(
+        (s) =>
+          s.title.toLowerCase().includes(q) ||
+          s.blurb.toLowerCase().includes(q) ||
+          s.category.label.toLowerCase().includes(q),
+      );
+    }
+    return tab === "Popular"
+      ? services.filter((s) => s.popular).concat(services.filter((s) => !s.popular)).slice(0, 12)
+      : services.filter((s) => s.category.label === tab);
+  })();
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
@@ -161,6 +177,8 @@ export function NewRequestView({
             <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
               placeholder="Search services..."
+              value={serviceQuery}
+              onChange={(e) => setServiceQuery(e.target.value)}
               className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
             />
           </div>
@@ -225,6 +243,14 @@ export function NewRequestView({
               );
             })}
           </div>
+
+          {serviceQuery.trim() && filtered.length === 0 && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+              No service matches &ldquo;{serviceQuery.trim()}&rdquo;. Clear the search to
+              browse all services, or describe what you need in the notes below and
+              pick the closest match.
+            </div>
+          )}
 
           {/* Details section */}
           <div className="mt-7 lg:mt-8 space-y-4">

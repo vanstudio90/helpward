@@ -281,3 +281,59 @@ describe("placeholder coordinates defeat every geographic check", () => {
     assert.equal(isPlaceholderPoint(-123.1208, 49.2827), false, "tolerance must be tight");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Live-audit finding L10: a homepage search for "Tech Setup" landed on the
+// request form with Designated Driver selected, because `?q=` only
+// pre-filled the notes and the chooser fell back to services[0].
+// ---------------------------------------------------------------------------
+describe("free-text search resolves to a service", () => {
+  // Mirrors matchServiceToQuery in app/(app)/new-request/page.tsx.
+  const SERVICES = [
+    { id: "designated-driver", title: "Designated Driver", blurb: "a driver" },
+    { id: "tech-setup", title: "Tech Setup", blurb: "devices" },
+    { id: "dog-walking", title: "Dog Walking", blurb: "walks" },
+    { id: "moving-help", title: "Moving Help", blurb: "lifting" },
+  ];
+
+  function matchServiceToQuery(services: typeof SERVICES, q: string | null): string | null {
+    const needle = (q ?? "").trim().toLowerCase();
+    if (needle.length < 3) return null;
+    const exact = services.filter((s) => s.title.toLowerCase() === needle);
+    if (exact.length === 1) return exact[0].id;
+    const bySlug = services.filter((s) => s.id === needle.replace(/\s+/g, "-"));
+    if (bySlug.length === 1) return bySlug[0].id;
+    const byTitle = services.filter(
+      (s) => s.title.toLowerCase().includes(needle) || needle.includes(s.title.toLowerCase()),
+    );
+    if (byTitle.length === 1) return byTitle[0].id;
+    return null;
+  }
+
+  test("an exact title selects that service, not the first in the list", () => {
+    assert.equal(matchServiceToQuery(SERVICES, "Tech Setup"), "tech-setup");
+    assert.notEqual(matchServiceToQuery(SERVICES, "Tech Setup"), "designated-driver");
+  });
+
+  test("a slug and a partial title both resolve", () => {
+    assert.equal(matchServiceToQuery(SERVICES, "tech setup"), "tech-setup");
+    assert.equal(matchServiceToQuery(SERVICES, "dog"), "dog-walking");
+  });
+
+  test("an unmatched search selects NOTHING rather than guessing", () => {
+    // Selecting a driver for someone who asked for a plumber is worse than
+    // leaving the chooser open.
+    assert.equal(matchServiceToQuery(SERVICES, "plumber"), null);
+    assert.equal(matchServiceToQuery(SERVICES, "xyz"), null);
+    assert.equal(matchServiceToQuery(SERVICES, ""), null);
+    assert.equal(matchServiceToQuery(SERVICES, null), null);
+  });
+
+  test("an ambiguous search selects nothing", () => {
+    const ambiguous = [
+      { id: "a", title: "House Check-In", blurb: "" },
+      { id: "b", title: "House Cleaning", blurb: "" },
+    ];
+    assert.equal(matchServiceToQuery(ambiguous, "house"), null);
+  });
+});
