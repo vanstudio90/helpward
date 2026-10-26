@@ -1193,3 +1193,115 @@ export async function pendingAuthorizationSecret(
     return fromStripeError(err);
   }
 }
+
+/* =========================================================================
+   Paying a crew
+   ========================================================================= */
+
+/**
+ * Pay the helpers on a crewed job who are not the lead.
+ *
+ * A destination charge has exactly ONE destination, so capture sends the
+ * whole payout to the lead's connected account. Everyone else is paid by
+ * a separate transfer out of the platform balance, against the same
+ * charge — which keeps them linked for reporting and for reversal if the
+ * booking is later refunded.
+ *
+ * Each share was fixed when that helper accepted, so a rate change
+ * afterwards cannot alter what an already-committed helper is owed.
+ *
+ * Called after capture. A failure here does not un-complete the job: the
+ * helpers worked. It is recorded and left for support, which is a
+ * collections problem rather than a dispatch one.
+ */
+export async function payCrew(
+  bookingId: string,
+): Promise<PaymentResult<{ paid: number; owedCents: number; failures: string[] }>> {
+  if (!stripeConfigured()) return fail("not_configured", "Payouts are not available yet.");
+  const stripe = getStripe();
+  const admin = createSupabaseServiceClient();
+
+  const booking = await loadBooking(bookingId);
+  if (!booking) return fail("no_booking", "Booking not found.");
+  if (booking.payment_status !== "captured") {
+    return fail("not_captured", "The job has not been paid for yet.");
+  }
+
+  const { data: charge } = await admin
+    .from("bookings")
+    .select("stripe_charge_id")
+    .eq("id", bookingId)
+    .single();
+
+  const { data: crew } = await admin
+    .from("booking_crew")
+    .select("id, provider_id, is_lead, status, share_cents, paid_at")
+    .eq("booking_id", bookingId)
+    .in("status", ["accepted", "arrived"]);
+
+  // The lead already has their share: capture sent the whole payout to
+  // their account as the charge's destination.
+  const owed = ((crew ?? []) as Array<{
+    id: string; provider_id: string; is_lead: boolean;
+    share_cents: number; paid_at: string | null;
+  }>).filter((c) => !c.is_lead && !c.paid_at && c.share_cents > 0);
+
+  if (owed.length === 0) return { ok: true, paid: 0, owedCents: 0, failures: [] };
+
+  const failures: string[] = [];
+  let paid = 0;
+
+  for (const member of owed) {
+    const { data: helper } = await admin
+      .from("provider_profiles")
+      .select("stripe_connect_account_id, stripe_transfers_active")
+      .eq("user_id", member.provider_id)
+      .single();
+
+    if (!helper?.stripe_connect_account_id || !helper.stripe_transfers_active) {
+      failures.push(`${member.provider_id}: cannot receive transfers`);
+      continue;
+    }
+
+    try {
+      const transfer = await stripe.transfers.create(
+        {
+          amount: member.share_cents,
+          currency: booking.currency.toLowerCase(),
+          destination: helper.stripe_connect_account_id,
+          // Linking the transfer to the charge keeps the money traceable
+          // to the job and lets a refund reverse it.
+          ...(charge?.stripe_charge_id ? { source_transaction: charge.stripe_charge_id } : {}),
+          metadata: {
+            helpward_booking_id: bookingId,
+            helpward_provider_id: member.provider_id,
+            helpward_kind: "crew_share",
+          },
+        },
+        { idempotencyKey: `hw-crew-${bookingId}-${member.provider_id}` },
+      );
+
+      const { error } = await admin
+        .from("booking_crew")
+        .update({ stripe_transfer_id: transfer.id, paid_at: new Date().toISOString() })
+        .eq("id", member.id);
+      if (error) {
+        // Transferred but not recorded: a retry would pay twice were it
+        // not for the idempotency key above, which is why it is there.
+        console.error("CREW PAID BUT NOT RECORDED", { bookingId, member, transfer: transfer.id, error });
+      }
+      paid++;
+    } catch (err) {
+      const problem = fromStripeError(err);
+      console.error("crew transfer failed", { bookingId, member: member.provider_id, problem });
+      failures.push(`${member.provider_id}: ${problem.message}`);
+    }
+  }
+
+  return {
+    ok: true,
+    paid,
+    owedCents: owed.reduce((n, m) => n + m.share_cents, 0),
+    failures,
+  };
+}

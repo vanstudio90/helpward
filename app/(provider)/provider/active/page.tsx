@@ -9,6 +9,7 @@ import { BundleChecklist, type BundleChecklistItem } from "./bundle-checklist";
 import { CompletionPhotos, type CompletionPhoto } from "./completion-photos";
 import { ProviderActiveRealtimeRefresh } from "./realtime-refresh";
 import { InspectionReport, type InspectionReportData } from "./inspection-report";
+import { CrewPanel, type CrewMember } from "./crew-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ type ActiveBookingRow = {
   intake: Record<string, string | string[]> | null;
   payment_status: string;
   customer_id: string;
+  crew_size: number;
   service?: { id: string; title: string; image_url: string | null }
           | Array<{ id: string; title: string; image_url: string | null }> | null;
   customer?: { full_name: string; avatar_url: string | null }
@@ -45,7 +47,7 @@ export default async function ProviderActivePage() {
     .from("bookings")
     .select(`
       id, status, scheduled_for, started_at, total_cents, payout_cents, currency, request_id,
-      intake, payment_status, customer_id,
+      intake, payment_status, customer_id, crew_size,
       service:services(id, title, image_url),
       customer:profiles!bookings_customer_id_fkey(full_name, avatar_url),
       pickup_addr:requests!bookings_request_id_fkey(
@@ -92,6 +94,35 @@ export default async function ProviderActivePage() {
         .maybeSingle()
     : { data: null };
   const customerPhone = (customerContact?.phone as string | null) ?? null;
+
+  // Who else is on this job. Only fetched for a crewed booking: a solo
+  // job has one row and nothing to show.
+  let crew: CrewMember[] = [];
+  if (booking && (booking.crew_size ?? 1) > 1) {
+    const { data: crewRows } = await supabase
+      .from("booking_crew")
+      .select("id, provider_id, is_lead, status, share_cents, arrived_at")
+      .eq("booking_id", booking.id)
+      .order("is_lead", { ascending: false });
+
+    const ids = (crewRows ?? []).map((c) => c.provider_id as string);
+    const { data: names } = ids.length
+      ? await supabase.from("profiles").select("id, full_name").in("id", ids)
+      : { data: [] };
+    const nameById = new Map(
+      ((names ?? []) as Array<{ id: string; full_name: string }>).map((n) => [n.id, n.full_name]),
+    );
+
+    crew = ((crewRows ?? []) as Array<Record<string, unknown>>).map((c) => ({
+      id: String(c.id),
+      providerId: String(c.provider_id),
+      name: nameById.get(String(c.provider_id)) ?? "A helper",
+      isLead: c.is_lead === true,
+      status: c.status as CrewMember["status"],
+      shareCents: Number(c.share_cents ?? 0),
+      arrivedAt: (c.arrived_at as string | null) ?? null,
+    }));
+  }
 
   // Services that owe the customer an artefact. complete_booking refuses
   // without it (0056), so the helper needs somewhere to produce one.
@@ -297,6 +328,16 @@ export default async function ProviderActivePage() {
 
             {booking.status === "in_progress" && (
               <CompletionPhotos bookingId={booking.id} initial={completionPhotos} />
+            )}
+
+            {crew.length > 0 && (
+              <CrewPanel
+                bookingId={booking.id}
+                crewSize={booking.crew_size ?? 1}
+                members={crew}
+                viewerId={user.id}
+                currency={booking.currency}
+              />
             )}
 
             {inspection && booking.status === "in_progress" && (

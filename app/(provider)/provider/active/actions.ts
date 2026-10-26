@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { captureBookingPayment } from "@/lib/payments";
+import { captureBookingPayment, payCrew } from "@/lib/payments";
 import { stripeConfigured } from "@/lib/stripe";
 
 export async function setOnlineAction(isOnline: boolean) {
@@ -61,6 +61,17 @@ export async function completeBookingAction(bookingId: string) {
   // admin instead, which is a collections problem, not a dispatch one.
   if (stripeConfigured()) {
     const captured = await captureBookingPayment(bookingId);
+
+    // Capture sends the whole payout to the LEAD's account, because a
+    // destination charge has one destination. Everyone else on the crew
+    // is paid by a separate transfer.
+    if (captured.ok) {
+      const crew = await payCrew(bookingId);
+      if (crew.ok && crew.failures.length > 0) {
+        console.error("crew members unpaid after capture", bookingId, crew.failures);
+      }
+    }
+
     if (!captured.ok) {
       console.error("capture failed for completed booking", bookingId, captured);
       revalidatePath("/provider", "layout");
