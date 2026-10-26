@@ -8,8 +8,49 @@ import { MAX_BUNDLE_ITEMS } from "@/lib/bundle-pure";
 import { quoteOneShotCents, quoteBundleCents } from "@/lib/pricing";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
+import { reviewResolution } from "@/lib/address-confirmation";
 
-type State = { error?: string; success?: string } | undefined;
+/**
+ * Turn a guard result that needs the customer into something the form can
+ * render. The change notes are computed server-side so the client never
+ * has to reason about what the geocoder did.
+ */
+function toAddressPrompt(
+  guard: Extract<Awaited<ReturnType<typeof resolveDispatchableAddress>>, { candidates: unknown }>,
+): AddressPrompt {
+  const top = guard.candidates[0];
+  return {
+    mode: guard.code === "needs_selection" ? "needs_selection" : "needs_confirmation",
+    typed: guard.typed,
+    message: guard.error,
+    candidates: guard.candidates.map((c) => ({
+      formatted: c.formatted, lng: c.lng, lat: c.lat,
+      city: c.city, region: c.region, postalCode: c.postalCode,
+      confidence: c.confidence, token: c.token,
+    })),
+    changes: top ? reviewResolution(guard.typed, top.formatted).changes : [],
+  };
+}
+
+export type AddressPrompt = {
+  mode: "needs_confirmation" | "needs_selection";
+  typed: string;
+  message: string;
+  candidates: Array<{
+    formatted: string; lng: number; lat: number;
+    city: string | null; region: string | null; postalCode: string | null;
+    confidence: "exact" | "high" | "medium" | "low" | null;
+    token: string;
+  }>;
+  changes: Array<{ kind: string; from: string; to: string; significant: boolean; note: string }>;
+};
+
+type State = {
+  error?: string;
+  success?: string;
+  /** The address needs the customer's eyes before we can dispatch to it. */
+  addressPrompt?: AddressPrompt;
+} | undefined;
 
 type BundleItemInput = {
   serviceId: string;
@@ -227,7 +268,11 @@ export async function createRequestAction(
     text: addressText, lat: clientLat, lng: clientLng, client: supabase,
     userId: user.id, confirmationToken: addressConfirmation,
   });
-  if (!guard.ok) return { error: guard.error };
+  if (!guard.ok) {
+    return "candidates" in guard
+      ? { addressPrompt: toAddressPrompt(guard) }
+      : { error: guard.error };
+  }
   // Service client: see the bundle path above.
   const addr = await insertAttestedAddress(
     createSupabaseServiceClient(), guard.address, user.id);

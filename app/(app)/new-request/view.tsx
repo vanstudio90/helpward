@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Search, Sparkles, Check, ArrowRight, Calendar, MapPin,
@@ -11,6 +11,7 @@ import { createRequestAction } from "./actions";
 import { RecurrencePicker } from "./recurrence-picker";
 import { BundlePicker } from "./bundle-picker";
 import { UseCurrentLocationButton } from "./use-current-location";
+import { AddressConfirm } from "./address-confirm";
 import {
   type BundleItemDraft, newDraftItem, priceBundle, validateBundle,
 } from "@/lib/bundle-pure";
@@ -72,6 +73,11 @@ export function NewRequestView({
   // server can skip the forward-geocode round-trip.
   const defaultSavedAddr = savedAddresses.find((a) => a.is_default) ?? null;
   const [address, setAddress] = useState<string>(defaultSavedAddr?.formatted ?? "");
+  // Set when the customer presses "Confirm address". Posted back with the
+  // form; the server re-geocodes and checks it against what IT resolves,
+  // so this value cannot grant a verified address on its own.
+  const [addressConfirmation, setAddressConfirmation] = useState("");
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     defaultSavedAddr && defaultSavedAddr.lat != null && defaultSavedAddr.lng != null
       ? { lat: defaultSavedAddr.lat, lng: defaultSavedAddr.lng }
@@ -113,6 +119,10 @@ export function NewRequestView({
   const onAddressChange = (v: string) => {
     setAddress(v);
     setCoords(null);
+    // A confirmation is bound to one exact resolved address. Editing the
+    // field makes it stale, so drop it rather than submit something the
+    // server will reject.
+    setAddressConfirmation("");
   };
 
   const filtered = (() => {
@@ -149,7 +159,7 @@ export function NewRequestView({
         <StepDot n={3} label="Review & Confirm" active={false} done={false} />
       </div>
 
-      {state?.error && (
+      {state?.error && !state?.addressPrompt && (
         <div className="mb-4 flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {state.error}
         </div>
@@ -176,7 +186,12 @@ export function NewRequestView({
         </div>
       )}
 
-      <form action={formAction} className="grid lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px] gap-6">
+      <form
+        ref={formRef}
+        action={formAction}
+        className="grid lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px] gap-6"
+      >
+        <input type="hidden" name="address_confirmation" value={addressConfirmation} />
         <input type="hidden" name="service_id" value={selected?.id ?? ""} />
         {preferredHelper && (
           <input type="hidden" name="preferred_helper_id" value={preferredHelper.id} />
@@ -347,6 +362,32 @@ export function NewRequestView({
                     : <>Pick a saved address or tap &ldquo;Use my current location&rdquo; for precise matching.</>}
                 </p>
               </label>
+
+              {state?.addressPrompt && (
+                <AddressConfirm
+                  mode={state.addressPrompt.mode}
+                  typed={state.addressPrompt.typed}
+                  candidates={state.addressPrompt.candidates}
+                  changes={state.addressPrompt.changes}
+                  message={state.addressPrompt.message}
+                  onConfirm={(token, formatted) => {
+                    // Adopt the address we are about to be dispatched to, so
+                    // what the customer sees matches what the server stores.
+                    setAddress(formatted);
+                    setCoords(null);
+                    setAddressConfirmation(token);
+                    // Resubmit the SAME form. Every other field keeps its
+                    // value, so the service, schedule, notes, bundle and
+                    // recurrence all survive the round trip.
+                    requestAnimationFrame(() => formRef.current?.requestSubmit());
+                  }}
+                  onEdit={() => {
+                    setAddressConfirmation("");
+                    const el = formRef.current?.elements.namedItem("address");
+                    if (el instanceof HTMLInputElement) { el.focus(); el.select(); }
+                  }}
+                />
+              )}
 
               <fieldset>
                 <legend className="text-xs font-semibold text-slate-700">When</legend>

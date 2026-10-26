@@ -7,7 +7,9 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
-import { reviewResolution, differOnlyByDirection } from "../lib/address-confirmation.ts";
+import {
+  reviewResolution, differOnlyByDirection, relevantAlternatives,
+} from "../lib/address-confirmation.ts";
 import { classifyAcceptance, isAmbiguous } from "../lib/geocode.ts";
 import {
   issueConfirmationToken, verifyConfirmationToken,
@@ -228,5 +230,76 @@ describe("confirmation tokens", () => {
     } finally {
       Date.now = realNow;
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Relevance, not confidence, decides which alternatives are shown.
+//
+// Filtering by confidence tier happened to exclude Susanville but would
+// also have hidden a lower-ranked address on the other side of the same
+// street — the case that matters most.
+// ---------------------------------------------------------------------------
+describe("relevant alternatives", () => {
+  const laPrimary = {
+    formatted: "200 North Spring Street, Los Angeles, California 90012, United States",
+    lng: -118.242922, lat: 34.053611, city: "Los Angeles",
+    region: "California", postalCode: "90012", confidence: "high" as const,
+  };
+  const susanville = {
+    formatted: "200 North Spring Street, Susanville, California 96130, United States",
+    lng: -120.642612, lat: 40.416016, city: "Susanville",
+    region: "California", postalCode: "96130", confidence: "medium" as const,
+  };
+
+  test("a candidate in a city the customer did not name is excluded", () => {
+    const out = relevantAlternatives(
+      "200 N Spring St, Los Angeles, CA", laPrimary, [susanville],
+    );
+    assert.deepEqual(out, [], "Susanville is not an alternative to Los Angeles");
+  });
+
+  test("a LOWER-confidence alternative on the other side of the street is KEPT", () => {
+    const east = {
+      formatted: "202 East C Street, San Diego, California 92101, United States",
+      lng: -117.1600, lat: 32.7160, city: "San Diego",
+      region: "California", postalCode: "92101", confidence: "medium" as const,
+    };
+    const west = {
+      formatted: "202 West C Street, San Diego, California 92101, United States",
+      lng: -117.1680, lat: 32.7158, city: "San Diego",
+      region: "California", postalCode: "92101", confidence: "low" as const,
+    };
+    const out = relevantAlternatives("202 C St, San Diego, CA", east, [west]);
+    assert.equal(out.length, 1, "a different direction must survive a lower rank");
+    assert.equal(out[0].formatted, west.formatted);
+  });
+
+  test("a far-away street of the same name is excluded", () => {
+    const far = {
+      formatted: "202 East C Street, Sacramento, California 95814, United States",
+      lng: -121.4944, lat: 38.5816, city: "Sacramento",
+      region: "California", postalCode: "95814", confidence: "high" as const,
+    };
+    const east = { ...laPrimary, formatted: "202 East C Street, San Diego, California 92101, United States",
+      lng: -117.16, lat: 32.716, city: "San Diego", postalCode: "92101" };
+    assert.deepEqual(relevantAlternatives("202 C St, San Diego", east, [far]), []);
+  });
+
+  test("a nearby alternative with a different house number is kept", () => {
+    const a = { ...laPrimary };
+    const b = { ...laPrimary, formatted: "300 North Spring Street, Los Angeles, California 90012, United States", lat: 34.0545 };
+    const out = relevantAlternatives("200 N Spring St, Los Angeles, CA", a, [b]);
+    assert.equal(out.length, 1);
+  });
+
+  test("the primary never appears among its own alternatives", () => {
+    assert.deepEqual(relevantAlternatives("anything", laPrimary, [laPrimary]), []);
+  });
+
+  test("a postcode the customer typed excludes a different one", () => {
+    const other = { ...susanville, city: "Los Angeles", postalCode: "90210" };
+    const out = relevantAlternatives("200 N Spring St, Los Angeles 90012", laPrimary, [other]);
+    assert.deepEqual(out, []);
   });
 });

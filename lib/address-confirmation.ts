@@ -234,3 +234,107 @@ export function differOnlyByDirection(formatted: string[]): boolean {
 export function candidateLabel(formatted: string): string {
   return formatted.replace(/,\s*(United States|Canada)$/i, "");
 }
+
+// ---------------------------------------------------------------------------
+// Which alternatives actually matter
+// ---------------------------------------------------------------------------
+//
+// Confidence alone is the wrong filter. It gave the right answer for
+// Susanville (medium, 734km from the Los Angeles the customer typed) but
+// for the wrong reason — and it gives the WRONG answer for the case that
+// matters most: a nearby alternative on the other side of the street,
+// ranked lower, which is precisely what must not disappear.
+//
+// So relevance is judged against what the customer actually entered — city,
+// region, postcode — and then against how the alternative differs from the
+// primary.
+
+export type RelevanceCandidate = {
+  formatted: string;
+  lng: number;
+  lat: number;
+  city: string | null;
+  region: string | null;
+  postalCode: string | null;
+  confidence: "exact" | "high" | "medium" | "low" | null;
+};
+
+function tokensOf(s: string): Set<string> {
+  return new Set(words(s).flatMap((w) => acceptableForms(w)));
+}
+
+/** Did the customer name this city/region, and does the candidate contradict it? */
+function contradictsTypedPlace(typed: string, c: RelevanceCandidate): boolean {
+  const t = tokensOf(typed);
+
+  // Only judge when the customer actually named a place we can compare.
+  if (c.city) {
+    const cityWords = words(c.city);
+    const named = cityWords.some((w) => t.has(w));
+    // If the typed text mentions SOME city-ish word but none of this
+    // candidate's, it is somewhere else. Susanville fails here because the
+    // customer wrote "Los Angeles".
+    if (!named) {
+      const mentionsAnyCity = [...t].some((w) => w.length > 3);
+      if (mentionsAnyCity) return true;
+    }
+  }
+
+  if (c.postalCode) {
+    const typedPost = [...t].find((w) => /^\d{5}$/.test(w) || /^[a-z]\d[a-z]\d[a-z]\d$/.test(w));
+    if (typedPost) {
+      const cand = c.postalCode.toLowerCase().replace(/\s+/g, "");
+      if (!cand.startsWith(typedPost.slice(0, 3))) return true;
+    }
+  }
+
+  return false;
+}
+
+const METRES_PER_DEG_LAT = 110_540;
+
+function metresBetween(a: RelevanceCandidate, b: RelevanceCandidate): number {
+  const latRad = ((a.lat + b.lat) / 2) * (Math.PI / 180);
+  const dx = (a.lng - b.lng) * 111_320 * Math.cos(latRad);
+  const dy = (a.lat - b.lat) * METRES_PER_DEG_LAT;
+  return Math.hypot(dx, dy);
+}
+
+/** A local alternative is one close enough to be plausibly the same request. */
+const NEARBY_METRES = 8_000;
+
+/**
+ * Alternatives the customer must be shown, given what they typed.
+ *
+ * Included:
+ *   · anything differing from the primary by a street DIRECTION, at any
+ *     confidence — the East/West C Street case
+ *   · nearby alternatives that differ meaningfully (street, house number)
+ *
+ * Excluded:
+ *   · candidates in a city or postcode the customer did not ask for
+ *   · distant candidates that merely share a street name
+ *   · the primary itself
+ */
+export function relevantAlternatives<T extends RelevanceCandidate>(
+  typed: string,
+  primary: T,
+  others: T[],
+): T[] {
+  return others.filter((c) => {
+    if (c.formatted === primary.formatted) return false;
+    if (contradictsTypedPlace(typed, c)) return false;
+
+    const review = reviewResolution(primary.formatted, c.formatted);
+    const directionDiffers = review.changes.some(
+      (ch) => ch.kind === "directional" && ch.significant,
+    );
+    // A different side of the street is always worth showing, however
+    // Mapbox ranked it.
+    if (directionDiffers) return true;
+
+    // Otherwise it has to be both nearby and genuinely different.
+    if (metresBetween(primary, c) > NEARBY_METRES) return false;
+    return review.changes.some((ch) => ch.significant);
+  });
+}

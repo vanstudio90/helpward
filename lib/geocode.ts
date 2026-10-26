@@ -16,6 +16,7 @@
 // Vercel env, every subsequent address gets real coordinates.
 
 import "server-only";
+import { relevantAlternatives } from "@/lib/address-confirmation";
 
 export type GeocodeResult = {
   formatted: string;
@@ -223,14 +224,13 @@ export async function geocodeAddress(
     };
   }
 
-  // Only EQUALLY confident candidates are rivals. A medium match 734km
-  // away in another city is not a real alternative to a high match in the
-  // city the customer named; forcing a choice there is friction that buys
-  // nothing, and the service-area check would reject it anyway.
-  const topRank = rankOf(primary.feature.properties?.match_code?.confidence);
-  const peers = dedupedPairs
-    .filter((x) => rankOf(x.feature.properties?.match_code?.confidence) === topRank)
-    .map((x) => x.cand);
+  // Which alternatives matter is a question about RELEVANCE to what the
+  // customer typed, not about confidence tiers. Filtering by confidence
+  // happened to exclude Susanville, but it would also have hidden a
+  // lower-ranked address on the other side of the same street — the case
+  // that matters most. See relevantAlternatives().
+  const others = dedupedPairs.slice(1).map((x) => x.cand);
+  const peers = [primary.cand, ...relevantAlternatives(cleaned, primary.cand, others)];
 
   const pmc = primary.feature.properties?.match_code ?? {};
   const pconf = typeof pmc.confidence === "string" ? pmc.confidence.toLowerCase() : null;
