@@ -47,6 +47,16 @@ export type GeocodeResult = {
    * ambiguity rejected every real address we tried.
    */
   hasRivalCandidate: boolean;
+  /**
+   * Every plausible address candidate, best first. One entry means an
+   * unambiguous match; more than one means the customer must choose.
+   */
+  alternatives: Array<{
+    formatted: string; lng: number; lat: number;
+    country: string; region: string | null; city: string | null;
+    postalCode: string | null;
+    confidence: "exact" | "high" | "medium" | "low" | null;
+  }>;
   /** Which API produced this result. Never inferred. */
   origin: "forward" | "reverse";
   /** Mapbox feature_type: "address", "street", "place", "postcode", … */
@@ -107,8 +117,10 @@ export async function geocodeAddress(
   const url = new URL(ENDPOINT);
   url.searchParams.set("q", cleaned);
   url.searchParams.set("country", opts.countries ?? "us,ca");
-  // 2, not 1: a second plausible candidate is itself an ambiguity signal.
-  url.searchParams.set("limit", String(opts.limit ?? 2));
+  // 5, not 1: medium-confidence results are now eligible subject to
+  // customer confirmation, so several plausible addresses must be offered
+  // as a choice rather than silently ranked.
+  url.searchParams.set("limit", String(opts.limit ?? 5));
   url.searchParams.set("access_token", token);
   // Storage-permitted lookup: the result is written to `addresses`. See
   // isStoragePermitted().
@@ -136,7 +148,16 @@ export async function geocodeAddress(
   const features = (body as { features?: Array<unknown> } | null)?.features;
   if (!Array.isArray(features) || features.length === 0) return null;
 
-  const f = features[0] as {
+  // ---------------------------------------------------------------------
+  // Choose the primary candidate.
+  //
+  // Mapbox does NOT order candidates by confidence. For "1200 Third Ave,
+  // San Diego" the exact-string match comes back THIRD at high confidence,
+  // below a medium one 400m away. Taking features[0] as the answer
+  // downgraded a perfectly good address into a confirmation prompt and
+  // offered the worse match first.
+  // ---------------------------------------------------------------------
+  type RawFeature = {
     properties?: {
       full_address?: string;
       name?: string;
@@ -152,49 +173,85 @@ export async function geocodeAddress(
     geometry?: { coordinates?: [number, number] };
   };
 
-  const coords = f.geometry?.coordinates;
-  if (!coords || coords.length !== 2) return null;
-  const [lng, lat] = coords;
-  if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+  const isPlausible = (x: RawFeature): boolean => {
+    if (x.properties?.feature_type !== "address") return false;
+    const c = (x.properties?.match_code?.confidence ?? "").toLowerCase();
+    return c === "exact" || c === "high" || c === "medium";
+  };
 
-  const ctx = f.properties?.context ?? {};
-  const countryCode = (ctx.country?.country_code_alpha_2 ?? ctx.country?.country_code ?? "").toUpperCase();
-  // Report the real country. It used to be coerced to "US" for anything
-  // outside US/CA, which mislabelled e.g. a Tijuana address as American.
-  // The service-area check rejects anything we do not operate in anyway.
-  const country = countryCode || "";
+  const RANK: Record<string, number> = { exact: 3, high: 2, medium: 1 };
+  const rankOf = (c: string | null | undefined) => RANK[(c ?? "").toLowerCase()] ?? 0;
 
-  const mc = f.properties?.match_code ?? {};
-  const conf = typeof mc.confidence === "string" ? mc.confidence.toLowerCase() : null;
+  const raw = (features as RawFeature[]).filter(isPlausible);
 
-  // A rival is a second ADDRESS-type feature Mapbox also matched
-  // confidently. A `place`/`street`/`postcode` fallback is not a rival —
-  // it is Mapbox widening the net, which it does on every query.
-  const second = features[1] as {
-    properties?: { feature_type?: string; match_code?: { confidence?: string } };
-  } | undefined;
-  const secondConf = typeof second?.properties?.match_code?.confidence === "string"
-    ? second.properties.match_code.confidence.toLowerCase()
-    : null;
-  const hasRivalCandidate =
-    second?.properties?.feature_type === "address" &&
-    (secondConf === "exact" || secondConf === "high");
+  // Pair each candidate with the feature it came from, so the primary's
+  // match_code travels with it after sorting and deduping.
+  const paired = raw
+    .map((x) => ({ feature: x, cand: toCandidate(x) }))
+    .sort((a, b) =>
+      rankOf(b.feature.properties?.match_code?.confidence) -
+      rankOf(a.feature.properties?.match_code?.confidence));
+
+  const dedupedPairs: typeof paired = [];
+  for (const item of paired) {
+    const near = dedupedPairs.findIndex((k) => metresApart(k.cand, item.cand) <= SAME_PLACE_METRES);
+    if (near === -1) dedupedPairs.push(item);
+  }
+
+  const primary = dedupedPairs[0];
+  if (!primary) {
+    // Nothing precise enough came back. Return the top feature so the
+    // caller can refuse it with a specific reason rather than "not found".
+    const f0 = features[0] as RawFeature;
+    const c0 = f0.geometry?.coordinates;
+    if (!c0 || c0.length !== 2) return null;
+    const ctx0 = f0.properties?.context ?? {};
+    return {
+      formatted: f0.properties?.full_address ?? f0.properties?.name ?? cleaned,
+      lng: c0[0], lat: c0[1],
+      country: (ctx0.country?.country_code_alpha_2 ?? ctx0.country?.country_code ?? "").toUpperCase(),
+      region: ctx0.region?.name ?? null,
+      city: ctx0.place?.name ?? null,
+      postalCode: ctx0.postcode?.name ?? null,
+      confidence: null,
+      addressNumberMatch: null,
+      candidateCount: features.length,
+      hasRivalCandidate: false,
+      alternatives: [],
+      origin: "forward",
+      featureType: typeof f0.properties?.feature_type === "string" ? f0.properties.feature_type : null,
+    };
+  }
+
+  // Only EQUALLY confident candidates are rivals. A medium match 734km
+  // away in another city is not a real alternative to a high match in the
+  // city the customer named; forcing a choice there is friction that buys
+  // nothing, and the service-area check would reject it anyway.
+  const topRank = rankOf(primary.feature.properties?.match_code?.confidence);
+  const peers = dedupedPairs
+    .filter((x) => rankOf(x.feature.properties?.match_code?.confidence) === topRank)
+    .map((x) => x.cand);
+
+  const pmc = primary.feature.properties?.match_code ?? {};
+  const pconf = typeof pmc.confidence === "string" ? pmc.confidence.toLowerCase() : null;
 
   return {
-    formatted: f.properties?.full_address ?? f.properties?.name ?? cleaned,
-    lng,
-    lat,
-    country,
-    region: ctx.region?.name ?? null,
-    city: ctx.place?.name ?? null,
-    postalCode: ctx.postcode?.name ?? null,
-    confidence: (conf === "exact" || conf === "high" || conf === "medium" || conf === "low")
-      ? conf : null,
-    addressNumberMatch: typeof mc.address_number === "string" ? mc.address_number : null,
+    formatted: primary.cand.formatted || cleaned,
+    lng: primary.cand.lng,
+    lat: primary.cand.lat,
+    country: primary.cand.country,
+    region: primary.cand.region,
+    city: primary.cand.city,
+    postalCode: primary.cand.postalCode,
+    confidence: (pconf === "exact" || pconf === "high" || pconf === "medium" || pconf === "low")
+      ? pconf : null,
+    addressNumberMatch: typeof pmc.address_number === "string" ? pmc.address_number : null,
     candidateCount: features.length,
-    hasRivalCandidate,
+    hasRivalCandidate: peers.length > 1,
+    alternatives: peers,
     origin: "forward",
-    featureType: typeof f.properties?.feature_type === "string" ? f.properties.feature_type : null,
+    featureType: typeof primary.feature.properties?.feature_type === "string"
+      ? primary.feature.properties.feature_type : null,
   };
 }
 
@@ -277,6 +334,7 @@ export async function reverseGeocode(
     addressNumberMatch: null,
     candidateCount: 1,
     hasRivalCandidate: false,
+    alternatives: [],
     origin: "reverse",
     featureType: typeof f.properties?.feature_type === "string" ? f.properties.feature_type : null,
   };
@@ -316,9 +374,29 @@ export type ResolveFailure =
   | { ok: false; reason: "incomplete" }
   | { ok: false; reason: "ambiguous" };
 
-export type ResolveResult = { ok: true; address: ResolvedAddress } | ResolveFailure;
+/** Every reason a resolve can come back unusable, including the interactive ones. */
+export type ResolveReason =
+  | ResolveFailure["reason"]
+  | "needs_confirmation"
+  | "needs_selection";
 
-export const RESOLVE_FAILURE_MESSAGE: Record<ResolveFailure["reason"], string> = {
+
+export type AddressCandidate = {
+  formatted: string; lng: number; lat: number;
+  country: string; region: string | null; city: string | null;
+  postalCode: string | null;
+  confidence: "exact" | "high" | "medium" | "low" | null;
+};
+
+export type ResolveResult =
+  | { ok: true; address: ResolvedAddress }
+  /** One plausible match that the customer must look at and agree to. */
+  | { ok: false; reason: "needs_confirmation"; candidates: AddressCandidate[] }
+  /** Several plausible matches; the customer picks. */
+  | { ok: false; reason: "needs_selection"; candidates: AddressCandidate[] }
+  | ResolveFailure;
+
+export const RESOLVE_FAILURE_MESSAGE: Record<ResolveReason, string> = {
   geocoding_unavailable:
     "We can't verify addresses right now. Please try again in a few minutes.",
   storage_not_permitted:
@@ -328,7 +406,11 @@ export const RESOLVE_FAILURE_MESSAGE: Record<ResolveFailure["reason"], string> =
   incomplete:
     "That address is missing a city. Please enter a full street address.",
   ambiguous:
-    "We found more than one place matching that address. Please add a street number, city, or postal code \u2014 or use \u201cUse my current location\u201d.",
+    "We couldn't pin that to a specific building. Please include a street number and city \u2014 or use \u201cUse my current location\u201d.",
+  needs_confirmation:
+    "Please check the address we matched and confirm it.",
+  needs_selection:
+    "Several addresses match. Please choose the right one.",
 };
 
 // Acceptance rules for a coordinate that will be dispatched to.
@@ -351,38 +433,138 @@ export const RESOLVE_FAILURE_MESSAGE: Record<ResolveFailure["reason"], string> =
 /** Feature types precise enough to send a helper to. */
 const DISPATCHABLE_FEATURE_TYPES = new Set(["address"]);
 
-/** Match-code confidences we accept for a typed address. */
-const ACCEPTABLE_CONFIDENCE = new Set(["exact", "high"]);
+/** Accepted without asking the customer anything. */
+const AUTO_CONFIDENCE = new Set(["exact", "high"]);
 
+/** Accepted only after the customer confirms the resolved address. */
+const CONFIRMABLE_CONFIDENCE = new Set(["exact", "high", "medium"]);
+
+export type AcceptanceVerdict =
+  | { kind: "auto" }                 // unambiguous; proceed
+  | { kind: "confirm" }              // one plausible match, customer must agree
+  | { kind: "select" }               // several plausible matches, customer must pick
+  | { kind: "refuse" };              // not precise enough at any confidence
+
+/**
+ * How a forward-geocoded result may be used.
+ *
+ * Medium confidence is eligible, but never silently: Mapbox documents that
+ * medium can involve CORRECTED components, so a matched house number alone
+ * does not establish the intended street. "202 C St" resolving to "202 East
+ * C Street" is the canonical case.
+ *
+ * Everything that was refused before is still refused: low confidence,
+ * missing or unmatched street numbers, and non-address features.
+ */
+
+/**
+ * Metres between two points. Flat-earth approximation, which is exact
+ * enough at the scale that distinguishes "same building" from "different
+ * building".
+ */
+function metresApart(a: { lng: number; lat: number }, b: { lng: number; lat: number }): number {
+  const latRad = ((a.lat + b.lat) / 2) * (Math.PI / 180);
+  const dx = (a.lng - b.lng) * 111_320 * Math.cos(latRad);
+  const dy = (a.lat - b.lat) * 110_540;
+  return Math.hypot(dx, dy);
+}
+
+/** Two candidates this close are the same place under different spellings. */
+const SAME_PLACE_METRES = 30;
+
+/**
+ * Collapse candidates that describe the SAME location.
+ *
+ * Mapbox routinely returns one building under alternate street-name
+ * spellings — "1200 3rd Avenue" and "1200 Third Ave", or the identical
+ * string twice. Asking a customer to choose between those is a false
+ * choice: it adds a click, teaches them the prompt is noise, and protects
+ * nothing. Only genuinely different LOCATIONS are a real selection, which
+ * is what "202 East C Street" versus "202 West C Street" is.
+ *
+ * Best confidence wins within a cluster; ties keep the higher-ranked one,
+ * since Mapbox returns candidates best-first.
+ */
+function toCandidate(x: unknown) {
+  const p = (x as { properties?: Record<string, unknown> }).properties ?? {};
+  const ctx = (p.context ?? {}) as Record<string, { name?: string; country_code_alpha_2?: string; country_code?: string }>;
+  const geom = (x as { geometry?: { coordinates?: [number, number] } }).geometry;
+  const mc = (p.match_code ?? {}) as { confidence?: string };
+  const cc = (ctx.country?.country_code_alpha_2 ?? ctx.country?.country_code ?? "").toUpperCase();
+  return {
+    formatted: String(p.full_address ?? p.name ?? ""),
+    lng: geom?.coordinates?.[0] ?? 0,
+    lat: geom?.coordinates?.[1] ?? 0,
+    country: cc,
+    region: ctx.region?.name ?? null,
+    city: ctx.place?.name ?? null,
+    postalCode: ctx.postcode?.name ?? null,
+    confidence: ((mc.confidence ?? "").toLowerCase() || null) as "exact" | "high" | "medium" | "low" | null,
+  };
+}
+
+function dedupeByLocation<T extends { lng: number; lat: number; confidence: string | null }>(
+  candidates: T[],
+): T[] {
+  const rank = (c: string | null) =>
+    c === "exact" ? 3 : c === "high" ? 2 : c === "medium" ? 1 : 0;
+  const kept: T[] = [];
+  for (const c of candidates) {
+    const near = kept.findIndex((k) => metresApart(k, c) <= SAME_PLACE_METRES);
+    if (near === -1) { kept.push(c); continue; }
+    if (rank(c.confidence) > rank(kept[near].confidence)) kept[near] = c;
+  }
+  return kept;
+}
+
+export function classifyAcceptance(g: GeocodeResult): AcceptanceVerdict {
+  if (g.origin === "reverse") return { kind: "auto" };
+
+  if (!g.featureType || !DISPATCHABLE_FEATURE_TYPES.has(g.featureType)) return { kind: "refuse" };
+  if (g.confidence === null || !CONFIRMABLE_CONFIDENCE.has(g.confidence)) return { kind: "refuse" };
+  // A street number that was not matched means we do not know which
+  // building, at any confidence. "not_applicable" counts as not matched.
+  if (g.addressNumberMatch !== "matched") return { kind: "refuse" };
+
+  // Two signals for the same thing, and either is enough. `alternatives`
+  // carries the actual candidate list so a selection can be offered;
+  // `hasRivalCandidate` is the boolean the backfill classifier shares, and
+  // reverse-geocoded or synthetic results may carry only one of them.
+  const plausible = (g.alternatives ?? []).filter(
+    (a) => a.confidence && CONFIRMABLE_CONFIDENCE.has(a.confidence),
+  );
+  if (plausible.length > 1 || g.hasRivalCandidate) return { kind: "select" };
+
+  return AUTO_CONFIDENCE.has(g.confidence) ? { kind: "auto" } : { kind: "confirm" };
+}
+
+/**
+ * Kept for the tests and the backfill parity check: true when the result
+ * cannot be used without customer involvement.
+ */
 export function isAmbiguous(g: GeocodeResult): boolean {
-  if (g.origin === "reverse") return false;
-
-  // Forward lookups must land on an address-type feature.
-  if (!g.featureType || !DISPATCHABLE_FEATURE_TYPES.has(g.featureType)) return true;
-
-  // A genuine rival — a second address Mapbox also matched confidently —
-  // is an ambiguity signal in its own right, checked independently of this
-  // result's own confidence. Mere candidate COUNT is not: see
-  // hasRivalCandidate.
-  if (g.hasRivalCandidate) return true;
-
-  // An address feature without a match_code is unexpected; refuse rather
-  // than assume it was good.
-  if (g.confidence === null || !ACCEPTABLE_CONFIDENCE.has(g.confidence)) return true;
-
-  // "not_applicable" is refused as well as "unmatched": for a typed street
-  // address, no street number having been matched means we do not know
-  // which building. This matches what the backfill flags.
-  if (g.addressNumberMatch !== "matched") return true;
-
-  return false;
+  return classifyAcceptance(g).kind !== "auto";
 }
 
 function toResolved(g: GeocodeResult): ResolveResult {
   // A municipality is mandatory: the service-area check is by municipality,
   // so an address we can't attribute to one can't be approved for dispatch.
   if (!g.city) return { ok: false, reason: "incomplete" };
-  if (isAmbiguous(g)) return { ok: false, reason: "ambiguous" };
+
+  const verdict = classifyAcceptance(g);
+  if (verdict.kind === "refuse") return { ok: false, reason: "ambiguous" };
+  if (verdict.kind === "select") {
+    return {
+      ok: false, reason: "needs_selection",
+      candidates: (g.alternatives ?? []).filter((a) => a.confidence && a.confidence !== "low"),
+    };
+  }
+  if (verdict.kind === "confirm") {
+    return {
+      ok: false, reason: "needs_confirmation",
+      candidates: (g.alternatives ?? []).slice(0, 1),
+    };
+  }
   return {
     ok: true,
     address: {

@@ -73,7 +73,10 @@ export async function createSeriesAction(
   // more here than anywhere else: series materialisation reuses this row's
   // pickup_address_id for EVERY future occurrence, so an unverified or
   // out-of-area address would be re-dispatched indefinitely by the cron.
-  const guard = await resolveDispatchableAddress({ text: addressText, client: supabase });
+  const guard = await resolveDispatchableAddress({
+    text: addressText, client: supabase, userId: user.id,
+    confirmationToken: String(formData.get("address_confirmation") ?? "") || null,
+  });
   if (!guard.ok) return { error: guard.error };
   // Service client: geocode_verified is a server attestation (0036).
   const addr = await insertAttestedAddress(

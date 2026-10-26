@@ -1,8 +1,11 @@
 import "server-only";
 import {
   resolveAddressStrict, resolveCoordsStrict,
-  RESOLVE_FAILURE_MESSAGE, type ResolvedAddress,
+  RESOLVE_FAILURE_MESSAGE, type ResolvedAddress, type AddressCandidate,
 } from "@/lib/geocode";
+import {
+  issueConfirmationToken, verifyConfirmationToken, TOKEN_FAILURE_MESSAGE,
+} from "@/lib/address-token";
 import { type ServiceArea } from "@/lib/service-areas";
 import { checkServiceArea, type BoundaryRpcClient } from "@/lib/service-area-check";
 
@@ -27,7 +30,20 @@ export type AttestingClient = {
   from: (table: string) => any;
 };
 export type GuardFail = { ok: false; error: string; code?: string };
-export type GuardResult = GuardOk | GuardFail;
+
+/**
+ * The customer must look at what we matched before we dispatch to it.
+ * `candidates` each carry their own token, so pressing "Use this address"
+ * returns something the server signed rather than a client assertion.
+ */
+export type GuardNeedsCustomer = {
+  ok: false;
+  code: "needs_confirmation" | "needs_selection";
+  error: string;
+  typed: string;
+  candidates: Array<AddressCandidate & { token: string }>;
+};
+export type GuardResult = GuardOk | GuardFail | GuardNeedsCustomer;
 
 export async function resolveDispatchableAddress(opts: {
   text: string;
@@ -35,6 +51,10 @@ export async function resolveDispatchableAddress(opts: {
   lng?: number | null;
   /** Used for the authoritative polygon check. */
   client: BoundaryRpcClient;
+  /** Needed to bind and verify a confirmation. */
+  userId: string;
+  /** Returned by the form when the customer pressed "Use this address". */
+  confirmationToken?: string | null;
 }): Promise<GuardResult> {
   const hasCoords =
     opts.lat != null && opts.lng != null &&
@@ -44,22 +64,81 @@ export async function resolveDispatchableAddress(opts: {
     ? await resolveCoordsStrict(opts.lat as number, opts.lng as number)
     : await resolveAddressStrict(opts.text);
 
+  // Medium-confidence and multi-candidate results are not failures — they
+  // are a question for the customer. Re-resolving happens on every
+  // submission, so the token is always checked against what the SERVER
+  // just got, never against address text the client supplied.
+  if (!resolved.ok &&
+      (resolved.reason === "needs_confirmation" || resolved.reason === "needs_selection")) {
+    const candidates = resolved.candidates;
+
+    if (opts.confirmationToken) {
+      const match = candidates.find(
+        (c) => verifyConfirmationToken(opts.confirmationToken as string, c, opts.userId).ok,
+      );
+      if (match) {
+        // Confirmed. Build the attested address from the candidate the
+        // customer actually agreed to, not from the top-ranked one.
+        return afterGeocode(
+          {
+            formatted: match.formatted,
+            location: `POINT(${match.lng} ${match.lat})`,
+            country: match.country,
+            region: match.region,
+            city: match.city,
+            postalCode: match.postalCode,
+            lng: match.lng,
+            lat: match.lat,
+            verified: true,
+          },
+          opts.client,
+        );
+      }
+      // A token that does not match any current candidate means the
+      // address moved under it — typically the customer edited the field
+      // after confirming.
+      const why = verifyConfirmationToken(opts.confirmationToken, candidates[0], opts.userId);
+      return {
+        ok: false,
+        error: why.ok ? TOKEN_FAILURE_MESSAGE.address_changed : TOKEN_FAILURE_MESSAGE[why.reason],
+        code: "needs_confirmation",
+        typed: opts.text,
+        candidates: candidates.map((c) => ({ ...c, token: issueConfirmationToken(c, opts.userId) })),
+      };
+    }
+
+    return {
+      ok: false,
+      code: resolved.reason,
+      error: RESOLVE_FAILURE_MESSAGE[resolved.reason],
+      typed: opts.text,
+      candidates: candidates.map((c) => ({ ...c, token: issueConfirmationToken(c, opts.userId) })),
+    };
+  }
+
   if (!resolved.ok) {
     return { ok: false, error: RESOLVE_FAILURE_MESSAGE[resolved.reason] };
   }
 
+  return afterGeocode(resolved.address, opts.client);
+}
+
+/**
+ * Boundary enforcement, applied identically whether the address was
+ * auto-accepted or confirmed by the customer. Confirmation never relaxes
+ * it — a confirmed address outside a launch area is still refused.
+ */
+async function afterGeocode(
+  address: ResolvedAddress,
+  client: BoundaryRpcClient,
+): Promise<GuardResult> {
   const areaCheck = await checkServiceArea(
-    opts.client,
-    {
-      country: resolved.address.country,
-      region: resolved.address.region,
-      city: resolved.address.city,
-    },
-    resolved.address.location,
+    client,
+    { country: address.country, region: address.region, city: address.city },
+    address.location,
   );
   if (!areaCheck.ok) return { ok: false, error: areaCheck.error, code: areaCheck.code };
-
-  return { ok: true, address: resolved.address, area: areaCheck.area };
+  return { ok: true, address, area: areaCheck.area };
 }
 
 /**

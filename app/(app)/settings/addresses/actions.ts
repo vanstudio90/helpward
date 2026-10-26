@@ -33,7 +33,10 @@ export async function createSavedAddressAction(formData: FormData): Promise<Stat
   // serve. This used to geocode best-effort and save the raw text on
   // failure, which is how free text like "QA TEST — DO NOT DISPATCH" became
   // a saved address that then filled and submitted a real request.
-  const guard = await resolveDispatchableAddress({ text: formatted.trim(), client: supabase });
+  const guard = await resolveDispatchableAddress({
+    text: formatted.trim(), client: supabase, userId: user.id,
+    confirmationToken: String(formData.get("address_confirmation") ?? "") || null,
+  });
   if (!guard.ok) return { error: guard.error };
 
   // Service client: geocode_verified is a server attestation that the

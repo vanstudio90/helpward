@@ -66,6 +66,9 @@ export async function createRequestAction(
   const scheduledForRaw = String(formData.get("scheduled_for") ?? "").trim();
   const scheduledFor = scheduledForRaw ? new Date(scheduledForRaw).toISOString() : null;
   const addressText = String(formData.get("address") ?? "").trim();
+  // Present only when the customer pressed "Use this address" on a
+  // medium-confidence match. Signed by the server; see lib/address-token.
+  const addressConfirmation = String(formData.get("address_confirmation") ?? "") || null;
 
   if (!serviceId) {
     return { error: "Please pick a service." };
@@ -130,6 +133,7 @@ export async function createRequestAction(
     // we could not verify or do not serve.
     const guard = await resolveDispatchableAddress({
       text: addressText, lat: clientLat, lng: clientLng, client: supabase,
+      userId: user.id, confirmationToken: addressConfirmation,
     });
     if (!guard.ok) return { error: guard.error };
     // Service client: geocode_verified is a server attestation and the
@@ -221,6 +225,7 @@ export async function createRequestAction(
   // is no placeholder fallback any more.
   const guard = await resolveDispatchableAddress({
     text: addressText, lat: clientLat, lng: clientLng, client: supabase,
+    userId: user.id, confirmationToken: addressConfirmation,
   });
   if (!guard.ok) return { error: guard.error };
   // Service client: see the bundle path above.
