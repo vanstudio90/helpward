@@ -808,100 +808,293 @@ export async function hasUsableCard(userId: string): Promise<boolean> {
    ========================================================================= */
 
 /**
- * Refund a captured booking, taking the helper's share back with it.
+ * How much of an intent is still refundable, according to Stripe.
  *
- * `reverse_transfer` is the whole point. A destination charge belongs to
- * the PLATFORM — Helpward is the merchant of record and the money has
- * already been transferred onward — so a plain refund comes entirely out
- * of Helpward's balance and the helper keeps their 80% of a job the
- * customer is no longer paying for.
+ * Derived rather than tracked. A local counter drifts the moment a refund
+ * is issued from the Stripe dashboard, and the booking's payment_status is
+ * a label, not an amount — treating "partial_refund" as "nothing left"
+ * is what refused a legitimate second partial refund.
+ */
+async function remainingRefundable(intentId: string): Promise<number> {
+  const stripe = getStripe();
+  const intent = await stripe.paymentIntents.retrieve(intentId, { expand: ["latest_charge"] });
+  const charge = intent.latest_charge as Stripe.Charge | string | null;
+  if (!charge || typeof charge === "string") return 0;
+  return Math.max(0, (charge.amount_captured ?? 0) - (charge.amount_refunded ?? 0));
+}
+
+export type RefundLeg = {
+  kind: "job" | "tip";
+  paymentIntentId: string;
+  refundId: string;
+  amountCents: number;
+  helperShareReversed: boolean;
+};
+
+/**
+ * Refund a booking.
  *
- * Measured in the sandbox: refunding $10.00 of a $54.50 job plainly left
- * the helper's balance untouched; with reverse_transfer it fell by $7.34,
- * exactly their share, and Helpward paid only its own $2.66.
+ * A booking can hold TWO charges. The job is authorized at acceptance and
+ * captured at completion; a tip is a separate PaymentIntent raised
+ * afterwards, because a capture can never exceed the amount authorized.
+ * They have to be refunded separately — the first version refunded
+ * `total_cents` against the job's intent, and total_cents includes the
+ * tip, so a $24.50 job with a $5 tip tried to refund $29.50 from a $24.50
+ * charge and Stripe refused the whole thing.
  *
- * This is also why controller.losses.payments = "stripe" does NOT mean
- * Helpward is insulated from chargebacks. That setting governs the
- * connected account's balance. Disputes on destination charges hit the
- * platform, and they arrive without a reverse_transfer option — the
- * transfer must be reversed separately, which is what a dispute handler
- * has to do.
+ * TIP POLICY: a tip is not refunded unless asked for. It is money the
+ * customer chose to give for work that was done, and the common refund
+ * case — a service problem — does not make the helper's tip undeserved.
+ * `includeTip` is the explicit opt-in.
+ *
+ * `reverse_transfer` is what protects Helpward. A destination charge
+ * belongs to the platform, so a plain refund comes entirely out of
+ * Helpward's balance and the helper keeps their 80% of a job the customer
+ * is no longer paying for. Measured: refunding $10 of a $54.50 job plainly
+ * left the helper untouched; with reversal their balance fell $7.34.
  */
 export async function refundBooking(
   bookingId: string,
   opts: {
-    /** Partial refund in cents. Omit to refund the full captured amount. */
+    /**
+     * Amount to refund from the JOB charge, in cents. Omit to refund
+     * everything still refundable on it.
+     */
     amountCents?: number;
+    /** Also refund the tip, in full. Defaults to false — see TIP POLICY. */
+    includeTip?: boolean;
     /**
      * Leave the helper paid and absorb the refund entirely. Only correct
-     * when the helper did the work and the refund is a goodwill gesture.
-     * Defaults to false, so the money comes back proportionally.
+     * when the work was done and this is goodwill.
      */
     absorbHelperShare?: boolean;
     reason?: "duplicate" | "fraudulent" | "requested_by_customer";
+    /**
+     * Distinguishes two legitimate refunds of the same size from one
+     * retried refund. Without it, Stripe's idempotency replays the first.
+     */
+    operationId?: string;
   } = {},
-): Promise<PaymentResult<{ refundedCents: number; helperShareReversed: boolean }>> {
+): Promise<PaymentResult<{ legs: RefundLeg[]; totalRefundedCents: number }>> {
   if (!stripeConfigured()) return fail("not_configured", "Refunds are not available yet.");
   const stripe = getStripe();
   const admin = createSupabaseServiceClient();
 
-  const booking = await loadBooking(bookingId);
+  const { data: bookingRow } = await admin
+    .from("bookings")
+    .select(
+      "id, status, payment_status, total_cents, tip_cents," +
+        " stripe_payment_intent_id, tip_payment_intent_id",
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  const booking = bookingRow as unknown as {
+    id: string;
+    status: string;
+    payment_status: string;
+    total_cents: number;
+    tip_cents: number | null;
+    stripe_payment_intent_id: string | null;
+    tip_payment_intent_id: string | null;
+  } | null;
+
   if (!booking) return fail("no_booking", "Booking not found.");
   if (!booking.stripe_payment_intent_id) {
     return fail("nothing_to_refund", "This booking was never charged.");
   }
-  if (booking.payment_status !== "captured") {
+
+  // Only a booking that was never charged is categorically un-refundable.
+  // Everything else is decided by how much money is actually left, read
+  // from Stripe below — NOT by the payment_status label. The old check was
+  // `payment_status !== "captured"`, so the first partial refund flipped
+  // the label and locked out every later one with money still captured;
+  // and a fully refunded JOB blocked refunding the tip, which is a
+  // separate charge that had not been touched.
+  if (["pending", "authorized", "failed"].includes(booking.payment_status)) {
     return fail(
       "not_captured",
       "This booking has not been charged — cancel it to release the hold instead.",
     );
   }
 
-  const amount = opts.amountCents ?? booking.total_cents;
-  if (amount <= 0 || amount > booking.total_cents) {
-    return fail("bad_amount", "Refund amount is outside what was charged.");
-  }
-
   const reverse = !opts.absorbHelperShare;
+  const legs: RefundLeg[] = [];
 
   try {
-    const refund = await stripe.refunds.create(
-      {
-        payment_intent: booking.stripe_payment_intent_id,
-        amount,
-        // Reversing the transfer pulls the helper's proportional share
-        // back; refunding the application fee gives up Helpward's share of
-        // the same proportion. Together they unwind the split cleanly.
-        reverse_transfer: reverse,
-        refund_application_fee: reverse,
-        ...(opts.reason ? { reason: opts.reason } : {}),
-        metadata: { helpward_booking_id: booking.id },
-      },
-      { idempotencyKey: `hw-refund-${booking.id}-${amount}-${reverse ? "rev" : "abs"}` },
-    );
+    // ---- the job charge -------------------------------------------------
+    const jobRefundable = await remainingRefundable(booking.stripe_payment_intent_id);
+    const tipRefundableNow = opts.includeTip && booking.tip_payment_intent_id
+      ? await remainingRefundable(booking.tip_payment_intent_id)
+      : 0;
 
-    const full = amount === booking.total_cents;
-    const { error } = await admin
+    // Asking for everything when the job is spent but the tip is not is a
+    // valid tip-only refund, not an error.
+    const jobAmount = opts.amountCents ?? jobRefundable;
+
+    if (jobRefundable === 0 && tipRefundableNow === 0) {
+      return fail("already_refunded", "This booking has already been fully refunded.");
+    }
+
+    if (jobAmount > jobRefundable) {
+      return fail(
+        "exceeds_refundable",
+        jobRefundable === 0
+          ? "Nothing is left to refund on this booking."
+          : `Only ${(jobRefundable / 100).toFixed(2)} is left to refund on this booking.`,
+      );
+    }
+
+    if (jobAmount > 0) {
+      const refund = await stripe.refunds.create(
+        {
+          payment_intent: booking.stripe_payment_intent_id,
+          amount: jobAmount,
+          reverse_transfer: reverse,
+          refund_application_fee: reverse,
+          ...(opts.reason ? { reason: opts.reason } : {}),
+          metadata: { helpward_booking_id: booking.id, helpward_leg: "job" },
+        },
+        {
+          idempotencyKey:
+            `hw-refund-${booking.id}-job-${jobAmount}-${reverse ? "rev" : "abs"}` +
+            (opts.operationId ? `-${opts.operationId}` : ""),
+        },
+      );
+      legs.push({
+        kind: "job", paymentIntentId: booking.stripe_payment_intent_id,
+        refundId: refund.id, amountCents: jobAmount, helperShareReversed: reverse,
+      });
+    }
+
+    // ---- the tip charge, only if asked for ------------------------------
+    if (opts.includeTip && booking.tip_payment_intent_id) {
+      const tipRefundable = tipRefundableNow;
+      if (tipRefundable > 0) {
+        const tipRefund = await stripe.refunds.create(
+          {
+            payment_intent: booking.tip_payment_intent_id,
+            amount: tipRefundable,
+            // The tip carried no application fee — all of it went to the
+            // helper — so reversing the transfer is the whole refund.
+            reverse_transfer: reverse,
+            ...(opts.reason ? { reason: opts.reason } : {}),
+            metadata: { helpward_booking_id: booking.id, helpward_leg: "tip" },
+          },
+          {
+            idempotencyKey:
+              `hw-refund-${booking.id}-tip-${tipRefundable}-${reverse ? "rev" : "abs"}` +
+              (opts.operationId ? `-${opts.operationId}` : ""),
+          },
+        );
+        legs.push({
+          kind: "tip", paymentIntentId: booking.tip_payment_intent_id,
+          refundId: tipRefund.id, amountCents: tipRefundable, helperShareReversed: reverse,
+        });
+      }
+    }
+
+    if (legs.length === 0) {
+      return fail("nothing_to_refund", "Nothing is left to refund on this booking.");
+    }
+
+    // ---- record ---------------------------------------------------------
+    // Status from what Stripe says is LEFT, not from what we just asked
+    // for: a refund issued elsewhere would otherwise be overwritten.
+    const jobLeft = await remainingRefundable(booking.stripe_payment_intent_id);
+    const tipLeft = booking.tip_payment_intent_id
+      ? await remainingRefundable(booking.tip_payment_intent_id)
+      : 0;
+    // "Refunded" means nothing is left on either charge.
+    const fullyRefunded = jobLeft === 0 && tipLeft === 0;
+
+    const { error: statusError } = await admin
       .from("bookings")
       .update({
-        payment_status: full ? "refunded" : "partial_refund",
+        payment_status: fullyRefunded ? "refunded" : "partial_refund",
         payment_error: null,
       })
       .eq("id", booking.id);
-    if (error) {
-      // Money has moved. This must not read as a failed refund that
-      // someone might retry.
-      console.error("REFUND ISSUED BUT NOT RECORDED", { bookingId, refund: refund.id, error });
+    if (statusError) {
+      console.error("REFUND ISSUED BUT STATUS NOT RECORDED", { bookingId, legs, statusError });
     }
 
-    await admin.from("refunds").insert({
-      booking_id: booking.id,
-      stripe_refund_id: refund.id,
-      amount_cents: amount,
-      reason: opts.reason ?? "requested_by_customer",
-    });
+    // One row per leg, each carrying its own Stripe id, so the two charges
+    // can be reconciled independently.
+    const { error: ledgerError } = await admin.from("refunds").insert(
+      legs.map((leg) => ({
+        booking_id: booking.id,
+        stripe_refund_id: leg.refundId,
+        amount_cents: leg.amountCents,
+        reason: opts.reason ?? "requested_by_customer",
+        // NOT NULL on this table. Omitting it silently failed every ledger
+        // insert while the refunds themselves succeeded at Stripe — money
+        // moved and nothing recorded it.
+        status: "succeeded",
+      })),
+    );
+    if (ledgerError) {
+      console.error("REFUND ISSUED BUT NOT LEDGERED", { bookingId, legs, ledgerError });
+    }
 
-    return { ok: true, refundedCents: amount, helperShareReversed: reverse };
+    return {
+      ok: true,
+      legs,
+      totalRefundedCents: legs.reduce((n, l) => n + l.amountCents, 0),
+    };
+  } catch (err) {
+    // Refund-specific wording. fromStripeError's invalid-request branch
+    // says "Payment could not be set up", which is what a failed refund
+    // reported — a message about setting up a payment, for an operation
+    // that returns money.
+    const e = err as Stripe.errors.StripeError;
+    if (e?.type === "StripeInvalidRequestError") {
+      console.error("refund rejected by Stripe:", e.message);
+      return fail("refund_rejected", e.message ?? "That refund could not be processed.");
+    }
+    return fromStripeError(err);
+  }
+}
+
+/**
+ * The client secret for a booking whose authorization is waiting on a bank
+ * challenge, for the customer to complete it.
+ *
+ * Ownership is checked here rather than trusted from the page: a client
+ * secret is enough to act on a PaymentIntent, so handing one to the wrong
+ * person would be handing them someone else's payment.
+ */
+export async function pendingAuthorizationSecret(
+  bookingId: string,
+  userId: string,
+): Promise<PaymentResult<{ clientSecret: string; amountCents: number; currency: string }>> {
+  if (!stripeConfigured()) return fail("not_configured", "Payments are not available yet.");
+
+  const booking = await loadBooking(bookingId);
+  if (!booking) return fail("no_booking", "Booking not found.");
+  if (booking.customer_id !== userId) {
+    return fail("not_yours", "Booking not found.");
+  }
+  if (!booking.stripe_payment_intent_id) {
+    return fail("nothing_pending", "There is no payment waiting on this booking.");
+  }
+
+  try {
+    const intent = await getStripe().paymentIntents.retrieve(booking.stripe_payment_intent_id);
+    if (intent.status === "requires_capture" || intent.status === "succeeded") {
+      return fail("already_authorized", "This payment is already confirmed.");
+    }
+    if (intent.status !== "requires_action" && intent.status !== "requires_confirmation") {
+      return fail("not_confirmable", "This payment can't be confirmed — please contact support.");
+    }
+    if (!intent.client_secret) return fail("no_secret", "Could not start confirmation.");
+
+    return {
+      ok: true,
+      clientSecret: intent.client_secret,
+      amountCents: intent.amount,
+      currency: intent.currency.toUpperCase(),
+    };
   } catch (err) {
     return fromStripeError(err);
   }

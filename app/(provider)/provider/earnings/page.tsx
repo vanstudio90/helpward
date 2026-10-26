@@ -6,7 +6,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ClientDateTime } from "@/components/ClientDateTime";
 
 // Provider earnings — pulls real completed bookings and aggregates by week.
-// Stripe payout state (arrival_date, status) lights up once Stripe Connect is
+// Payout readiness is mirrored from Stripe onto provider_profiles by the
+// account.updated webhook; see migration 0040.
+//
+// Historical note: Stripe payout state (arrival_date, status) lights up once Stripe Connect is
 // wired; until then we show the figures we already know (helper's 80% of
 // the service subtotal +
 // tips) and label payout columns as "Pending Stripe Connect."
@@ -118,7 +121,13 @@ export default async function ProviderEarningsPage() {
   const thisMonday = mondayOf(new Date());
   const thisWeekKey = bucketKey(new Date());
   const thisWeek = buckets.get(thisWeekKey) ?? null;
-  const nextPayoutDate = arrivalLabel(thisMonday);
+  // Whether THIS helper can actually be paid, mirrored from Stripe.
+  const { data: payoutState } = await supabase
+    .from("provider_profiles")
+    .select("stripe_transfers_active")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const payable = payoutState?.stripe_transfers_active === true;
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-5xl mx-auto pb-12">
@@ -152,12 +161,22 @@ export default async function ProviderEarningsPage() {
           value={thisWeek ? formatMoney(thisWeek.totalCents, currency) : formatMoney(0, currency)}
           sub={thisWeek ? `${thisWeek.count} task${thisWeek.count === 1 ? "" : "s"}` : "No earnings yet"}
         />
+        {/* Read from the helper's actual Stripe state.
+            This used to show a computed next-Monday date under the words
+            "Once Stripe Connect is wired" — a payout date promised by a
+            page that simultaneously said payouts did not work. Connect IS
+            wired; what varies is whether THIS helper has finished
+            onboarding, which is what the card now reports. */}
         <Stat
           icon={<Clock className="w-5 h-5" />}
-          tone="bg-amber-50 text-amber-600"
-          label="Next payout"
-          value={nextPayoutDate}
-          sub="Once Stripe Connect is wired"
+          tone={payable ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}
+          label="Payouts"
+          value={payable ? "Active" : "Not set up"}
+          sub={
+            payable
+              ? "Stripe pays out on its own schedule"
+              : "Finish payout setup to get paid"
+          }
         />
         <Stat
           icon={<Heart className="w-5 h-5" />}

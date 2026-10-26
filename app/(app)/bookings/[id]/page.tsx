@@ -1,4 +1,5 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { one } from "@/lib/supabase/relation";
 import { describeIntake } from "@/lib/service-intake";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -17,6 +18,30 @@ import { PortfolioRevokeButton, PortfolioBadge } from "./portfolio-revoke";
 import { BookingDetailRealtimeRefresh } from "./realtime-refresh";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * What the customer is told about their money.
+ *
+ * Written from the booking's state as a whole, because payment_status
+ * alone is misleading: a cancelled booking sits at 'pending' once its hold
+ * is released, which read as "we still want your money" for a job that
+ * never happened.
+ */
+function PAYMENT_WORDING(bookingStatus: string, paymentStatus: string): string {
+  if (bookingStatus === "cancelled") {
+    return paymentStatus === "captured" || paymentStatus === "refunded"
+      ? "Cancelled after payment — see your refund below."
+      : "Hold released. You were not charged.";
+  }
+  switch (paymentStatus) {
+    case "authorized":   return "Card held. You're charged when the job is finished.";
+    case "captured":     return "Paid.";
+    case "refunded":     return "Refunded in full.";
+    case "partial_refund": return "Partially refunded.";
+    case "failed":       return "Payment failed. Update your card to continue.";
+    default:             return "Not charged yet.";
+  }
+}
 
 const STATUS_TONE: Record<string, string> = {
   scheduled: "bg-brand-50 text-brand-700",
@@ -64,8 +89,11 @@ export default async function BookingDetailPage({
   );
   const request = (b as { request: { id: string; is_bundle: boolean; bundle_item_count: number | null; pickup: { formatted: string } | null } | null }).request;
   const pickup = request?.pickup;
-  const convo = (b as { conversation: { id: string }[] | null }).conversation?.[0];
-  const review = (b as { review: { id: string; rating: number }[] | null }).review?.[0];
+  // conversation and review are UNIQUE relations, so PostgREST embeds them
+  // as objects. Reading [0] off an object gives undefined, which is why the
+  // booking's Message link vanished while chat itself worked.
+  const convo = one((b as { conversation?: { id: string } | { id: string }[] | null }).conversation);
+  const review = one((b as { review?: { id: string; rating: number } | { id: string; rating: number }[] | null }).review);
 
   // Pull bundle items if this booking is for a bundled request. RLS lets
   // the booking's owner read items (via the parent request's customer_id).
@@ -279,11 +307,35 @@ export default async function BookingDetailPage({
                 <dt className="text-base font-bold text-slate-900">Total</dt>
                 <dd className="text-base font-bold text-slate-900">${(b.total_cents / 100).toFixed(2)} {b.currency}</dd>
               </div>
-              <div className="text-[11px] text-slate-400 pt-1">
-                Payment {b.payment_status} {b.stripe_payment_intent_id ? `(${b.stripe_payment_intent_id.slice(0, 14)}…)` : "(pending Stripe wiring)"}
+              {/* The raw enum used to be printed here, with "(pending
+                  Stripe wiring)" when there was no intent — so a CANCELLED
+                  booking whose hold had been released correctly told the
+                  customer "Payment pending", and a working integration
+                  described itself as unwired. */}
+              <div className="text-[11px] text-slate-500 pt-1">
+                {PAYMENT_WORDING(b.status, b.payment_status)}
               </div>
             </dl>
           </div>
+
+          {/* The bank wants the customer present. Without a route to the
+              challenge, the booking simply sat unstartable and the helper
+              was told to wait for something the customer could not do. */}
+          {b.payment_status === "pending" && b.stripe_payment_intent_id &&
+           (b.status === "scheduled" || b.status === "in_progress") && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <div className="text-sm font-bold text-amber-950">Your bank needs to check it&rsquo;s you</div>
+              <p className="text-xs text-amber-900/90 mt-0.5">
+                Nothing is held until you confirm, and your helper can&rsquo;t start until then.
+              </p>
+              <Link
+                href={`/bookings/${b.id}/confirm-payment`}
+                className="mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-600 text-white text-xs font-semibold"
+              >
+                Confirm payment
+              </Link>
+            </div>
+          )}
 
           {/* Live tracking (if in_progress) */}
           {b.status === "in_progress" && provider && (

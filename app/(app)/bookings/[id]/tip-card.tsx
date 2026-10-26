@@ -7,6 +7,13 @@ import { setTipAction } from "../actions";
 
 // Post-completion tip widget. Shows preset percentages of the base price + a
 // custom field. 100% of the tip goes to the helper — we say so explicitly.
+//
+// A SENT TIP IS FINAL, and this component has to say so. It used to keep
+// offering "Update", "Remove tip" and the percentage buttons after a tip
+// had been charged; the server correctly refused every one, so the
+// customer was handed controls whose only possible outcome was an error.
+// The tip is a separate Stripe charge, so changing it would mean charging
+// a difference or refunding one.
 
 const PRESETS_PCT = [0, 10, 15, 20, 25];
 
@@ -20,6 +27,8 @@ export function TipCard({
   helperName: string;
 }) {
   const [pending, start] = useTransition();
+  // The money has moved. Nothing below may offer to change it.
+  const isFinal = currentTipCents > 0;
   const [custom, setCustom] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -72,6 +81,20 @@ export function TipCard({
         </div>
       )}
 
+      {isFinal ? (
+        <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+            <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+            {currency} ${currentTipDollars.toFixed(2)} sent to {helperName}
+          </div>
+          <p className="text-xs text-emerald-800/80 mt-1">
+            Tips are charged straight away and can&rsquo;t be changed or taken back.
+            If something went wrong,{" "}
+            <a href="/help" className="underline font-semibold">contact support</a>.
+          </p>
+        </div>
+      ) : (
+      <>
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
         {presets.map((p) => (
           <button
@@ -127,6 +150,8 @@ export function TipCard({
         >
           Remove tip
         </button>
+      )}
+      </>
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { one } from "@/lib/supabase/relation";
 import { payoutFromEstimateCents, dollars } from "@/lib/pricing";
 import { describeIntake } from "@/lib/service-intake";
 import { Inbox, Check, X, MapPin, Clock, DollarSign, Heart } from "lucide-react";
@@ -7,6 +8,24 @@ import { ClientDateTime } from "@/components/ClientDateTime";
 import { ProviderInboxRealtimeRefresh } from "./realtime-refresh";
 
 export const dynamic = "force-dynamic";
+
+/** The offer row's embedded request, as the page actually uses it. */
+type OfferRequest = {
+  id: string;
+  status: string;
+  scheduled_for: string | null;
+  notes: string | null;
+  estimated_price_cents: number | null;
+  intake: Record<string, string | string[]> | null;
+  service?: { id: string; title: string; blurb: string | null; base_price_cents: number;
+              eta_label: string | null; image_url: string | null } | Array<{ id: string; title: string;
+              blurb: string | null; base_price_cents: number; eta_label: string | null;
+              image_url: string | null }> | null;
+  pickup?: { city: string | null; region: string | null }
+         | Array<{ city: string | null; region: string | null }> | null;
+  customer?: { full_name: string; avatar_url: string | null }
+           | Array<{ full_name: string; avatar_url: string | null }> | null;
+};
 
 export default async function ProviderInboxPage() {
   const supabase = await createSupabaseServerClient();
@@ -23,7 +42,7 @@ export default async function ProviderInboxPage() {
       request:requests(
         id, status, scheduled_for, notes, estimated_price_cents, intake,
         service:services(id, title, blurb, base_price_cents, eta_label, image_url),
-        pickup:addresses!requests_pickup_address_id_fkey(formatted),
+        pickup:addresses!requests_pickup_address_id_fkey(city, region),
         customer:profiles!requests_customer_id_fkey(full_name, avatar_url)
       )
     `)
@@ -33,8 +52,8 @@ export default async function ProviderInboxPage() {
 
   // Filter out attempts whose request has already been taken
   const offers = (data ?? []).filter((row) => {
-    const req = (row as { request: { status: string } | null }).request;
-    return req && req.status === "matching";
+    const req = one((row as { request?: OfferRequest | OfferRequest[] | null }).request);
+    return !!req && req.status === "matching";
   });
 
   return (
@@ -62,9 +81,16 @@ export default async function ProviderInboxPage() {
       ) : (
         <ul className="space-y-3">
           {offers.map((row) => {
-            const req = (row as { request: NonNullable<typeof row.request> & { customer?: { full_name: string; avatar_url: string | null } | null } }).request;
+            // PostgREST embeds a to-one relation as an object and a
+            // to-many as an array, and the generated types do not reliably
+            // say which. one() asks what actually arrived instead of
+            // asserting a shape — the casts this replaces were wrong in
+            // both directions and failed silently, rendering nothing.
+            const req = one((row as { request?: OfferRequest | OfferRequest[] | null }).request)!;
             const preferred = (row as { preferred: boolean }).preferred;
-            const customer = req.customer;
+            const service = one(req.service);
+            const customer = one(req.customer);
+            const pickup = one(req.pickup);
             return (
               <li
                 key={row.id}
@@ -89,16 +115,16 @@ export default async function ProviderInboxPage() {
                     </div>
                   </div>
                 )}
-                {req.service?.image_url && (
+                {service?.image_url && (
                   <div className="h-32 bg-slate-100 relative">
-                    <img src={req.service.image_url} alt="" className="w-full h-full object-cover" />
+                    <img src={service.image_url} alt="" className="w-full h-full object-cover" />
                   </div>
                 )}
                 <div className="p-4 sm:p-5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="text-base font-bold text-slate-900">{req.service?.title}</div>
-                      <div className="text-xs text-slate-500 mt-1 line-clamp-2">{req.service?.blurb}</div>
+                      <div className="text-base font-bold text-slate-900">{service?.title}</div>
+                      <div className="text-xs text-slate-500 mt-1 line-clamp-2">{service?.blurb}</div>
                     </div>
                     <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full shrink-0 ${
                       preferred ? "text-rose-700 bg-white" : "text-amber-700 bg-amber-50"
@@ -107,7 +133,20 @@ export default async function ProviderInboxPage() {
                     </span>
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <Field icon={<MapPin className="w-3 h-3" />} label="Pickup" value={req.pickup?.formatted ?? "—"} />
+                    {/* Area, not the doorstep. An exact address at offer
+                        stage is an address handed to everyone the request
+                        was broadcast to, including everyone who declines.
+                        The street address unlocks on acceptance — see
+                        migration 0047. */}
+                    <Field
+                      icon={<MapPin className="w-3 h-3" />}
+                      label="Area"
+                      value={
+                        pickup?.city
+                          ? `${pickup.city}${pickup.region ? `, ${pickup.region}` : ""}`
+                          : "—"
+                      }
+                    />
                     <Field icon={<Clock className="w-3 h-3" />} label="When" value={req.scheduled_for ? <ClientDateTime iso={req.scheduled_for} /> : "ASAP"} />
                     <Field icon={<DollarSign className="w-3 h-3" />} label="Est. payout (80%)" value={`$${dollars(payoutFromEstimateCents(req.estimated_price_cents ?? 0))}`} />
                     <Field icon={<MapPin className="w-3 h-3" />} label="Distance" value={`${row.distance_km} km`} />
@@ -117,9 +156,7 @@ export default async function ProviderInboxPage() {
                       price and a pin. */}
                   {(() => {
                     const brief = describeIntake(
-                      // The id lives on the embedded service row, which
-                      // Supabase's generated types model as an array here.
-                      ((req as { service?: { id?: string } }).service?.id) ?? "",
+                      service?.id ?? "",
                       (req as { intake?: Record<string, string | string[]> }).intake,
                     );
                     if (brief.length === 0) return null;

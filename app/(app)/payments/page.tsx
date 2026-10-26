@@ -1,5 +1,6 @@
 import { CardManager, type CardRow } from "./card-form";
 import { listMyBookings, listMyPaymentMethods, getMe } from "@/lib/data/customer";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { CreditCard, Plus, Wallet, Gift, DollarSign, Download } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
@@ -11,13 +12,34 @@ export default async function PaymentsPage() {
     listMyPaymentMethods(),
   ]);
 
-  const totalSpentCents = completed.reduce((s, b) => s + b.total_cents, 0);
+  // Spending is net of refunds.
+  //
+  // It used to sum total_cents alone, so a customer who had been refunded
+  // $10 still saw the full $29.50 as "Total Spent" — the page told them
+  // they had spent money that was back on their card.
+  const supabase = await createSupabaseServerClient();
+  const { data: refundRows } = await supabase
+    .from("refunds")
+    .select("booking_id, amount_cents")
+    .in("booking_id", completed.map((b) => b.id));
+
+  const refundedByBooking = new Map<string, number>();
+  for (const r of (refundRows ?? []) as Array<{ booking_id: string; amount_cents: number }>) {
+    refundedByBooking.set(r.booking_id, (refundedByBooking.get(r.booking_id) ?? 0) + r.amount_cents);
+  }
+  const netOf = (b: { id: string; total_cents: number }) =>
+    Math.max(0, b.total_cents - (refundedByBooking.get(b.id) ?? 0));
+
+  const grossSpentCents = completed.reduce((s, b) => s + b.total_cents, 0);
+  const totalSpentCents = completed.reduce((s, b) => s + netOf(b), 0);
+  const refundedCents = grossSpentCents - totalSpentCents;
+
   const startOfMonth = new Date();
   startOfMonth.setUTCDate(1);
   startOfMonth.setUTCHours(0, 0, 0, 0);
   const monthSpentCents = completed
     .filter((b) => b.completed_at && new Date(b.completed_at) >= startOfMonth)
-    .reduce((s, b) => s + b.total_cents, 0);
+    .reduce((s, b) => s + netOf(b), 0);
   const walletCents = me?.customer?.wallet_balance_cents ?? 0;
 
   return (
@@ -26,7 +48,13 @@ export default async function PaymentsPage() {
       <p className="text-sm text-slate-500 mt-1 mb-6">Track your spending, manage payments and download receipts.</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <Stat label="Total Spent" value={`$${(totalSpentCents / 100).toFixed(2)}`} icon={<CreditCard className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" />
+        <Stat
+          label={refundedCents > 0 ? "Total Spent (net)" : "Total Spent"}
+          value={`$${(totalSpentCents / 100).toFixed(2)}`}
+          icon={<CreditCard className="w-5 h-5 text-brand-600" />}
+          tint="bg-brand-50"
+          sub={refundedCents > 0 ? `$${(refundedCents / 100).toFixed(2)} refunded` : undefined}
+        />
         <Stat label="This Month" value={`$${(monthSpentCents / 100).toFixed(2)}`} icon={<DollarSign className="w-5 h-5 text-emerald-600" />} tint="bg-emerald-50" />
         <Stat label="Completed" value={String(completed.length)} icon={<CreditCard className="w-5 h-5 text-amber-600" />} tint="bg-amber-50" />
         <Stat label="Your Balance" value={`$${(walletCents / 100).toFixed(2)}`} icon={<Wallet className="w-5 h-5 text-violet-600" />} tint="bg-violet-50" />
@@ -62,9 +90,18 @@ export default async function PaymentsPage() {
                 <div className="text-[11px] text-slate-500"><ClientDateTime iso={b.completed_at} mode="date" /></div>
               </div>
               <div className="text-sm font-bold text-slate-900">${(b.total_cents / 100).toFixed(2)}</div>
-              <button className="p-2 rounded-lg border border-slate-200" aria-label="Download receipt">
+              {/* Was an inert <button>: it rendered, it was clickable,
+                  and nothing happened. Now it opens the Stripe-hosted
+                  receipt, which already reflects any refunds. */}
+              <a
+                href={`/api/receipts/${b.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-lg border border-slate-200 hover:border-brand-300 inline-flex"
+                aria-label={`Receipt for ${b.service.title}`}
+              >
                 <Download className="w-3.5 h-3.5 text-slate-500" />
-              </button>
+              </a>
             </li>
           ))}
         </ul>
@@ -79,7 +116,7 @@ export default async function PaymentsPage() {
   );
 }
 
-function Stat({ label, value, icon, tint }: { label: string; value: string; icon: React.ReactNode; tint: string }) {
+function Stat({ label, value, icon, tint, sub }: { label: string; value: string; icon: React.ReactNode; tint: string; sub?: string }) {
   return (
     <div className="rounded-2xl bg-white border border-slate-100 p-4">
       <div className="flex items-start justify-between gap-2">
@@ -87,6 +124,7 @@ function Stat({ label, value, icon, tint }: { label: string; value: string; icon
         <span className={`inline-flex w-9 h-9 ${tint} rounded-xl items-center justify-center shrink-0`}>{icon}</span>
       </div>
       <div className="mt-3 text-xl font-bold text-slate-900">{value}</div>
+      {sub && <div className="text-[11px] text-slate-500 mt-0.5">{sub}</div>}
     </div>
   );
 }

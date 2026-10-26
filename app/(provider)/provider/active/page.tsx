@@ -1,4 +1,6 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { one } from "@/lib/supabase/relation";
+import { describeIntake } from "@/lib/service-intake";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { Activity, MessageSquare, Phone, CheckCircle2, Play } from "lucide-react";
 import { OnlineToggle, BookingActions } from "./client";
@@ -8,6 +10,22 @@ import { CompletionPhotos, type CompletionPhoto } from "./completion-photos";
 import { ProviderActiveRealtimeRefresh } from "./realtime-refresh";
 
 export const dynamic = "force-dynamic";
+
+/** The active booking as PostgREST returns it, embeds unnormalised. */
+type ActiveBookingRow = {
+  id: string; status: string; scheduled_for: string | null; started_at: string | null;
+  total_cents: number; payout_cents: number; currency: string; request_id: string;
+  intake: Record<string, string | string[]> | null;
+  payment_status: string;
+  service?: { id: string; title: string; image_url: string | null }
+          | Array<{ id: string; title: string; image_url: string | null }> | null;
+  customer?: { full_name: string; avatar_url: string | null; phone: string | null }
+           | Array<{ full_name: string; avatar_url: string | null; phone: string | null }> | null;
+  pickup_addr?: { id: string; is_bundle: boolean | null; notes: string | null;
+                  pickup: { formatted: string } | { formatted: string }[] | null }
+              | Array<{ id: string; is_bundle: boolean | null; notes: string | null;
+                  pickup: { formatted: string } | { formatted: string }[] | null }> | null;
+};
 
 export default async function ProviderActivePage() {
   const supabase = await createSupabaseServerClient();
@@ -25,10 +43,11 @@ export default async function ProviderActivePage() {
     .from("bookings")
     .select(`
       id, status, scheduled_for, started_at, total_cents, payout_cents, currency, request_id,
-      service:services(title, image_url),
+      intake, payment_status,
+      service:services(id, title, image_url),
       customer:profiles!bookings_customer_id_fkey(full_name, avatar_url, phone),
       pickup_addr:requests!bookings_request_id_fkey(
-        id, is_bundle,
+        id, is_bundle, notes,
         pickup:addresses!requests_pickup_address_id_fkey(formatted)
       )
     `)
@@ -36,7 +55,28 @@ export default async function ProviderActivePage() {
     .order("created_at", { ascending: false })
     .limit(1);
 
-  const booking = (bookings as Array<{ id: string; status: string; scheduled_for: string | null; started_at: string | null; total_cents: number; payout_cents: number; currency: string; request_id: string; service: { title: string; image_url: string | null }; customer: { full_name: string; avatar_url: string | null; phone: string | null }; pickup_addr: { id: string; is_bundle: boolean | null; pickup: { formatted: string } | null } | null }> | null)?.[0] ?? null;
+  // one() rather than a cast: PostgREST embeds a to-one relation as an
+  // object and a to-many as an array, and the generated types do not
+  // reliably say which. A wrong cast renders nothing and throws nothing.
+  const bookingRow = one(bookings as ActiveBookingRow | ActiveBookingRow[] | null);
+  const booking = bookingRow
+    ? {
+        ...bookingRow,
+        service: one(bookingRow.service),
+        customer: one(bookingRow.customer),
+        pickup_addr: one(bookingRow.pickup_addr),
+      }
+    : null;
+
+  // The brief the helper accepted on. It was shown at offer stage and then
+  // disappeared the moment they took the job — duration, dog size, lead
+  // location, access instructions, all of it — leaving them to work from
+  // memory. It is carried on the booking by accept_request precisely so it
+  // survives the request being tidied away.
+  const brief = booking
+    ? describeIntake(booking.service?.id ?? "", booking.intake)
+    : [];
+  const customerNotes = booking ? one(bookingRow!.pickup_addr)?.notes ?? null : null;
 
   // If the booking's parent request is a bundle, pull the child stops so the
   // helper sees a tap-to-advance checklist for each task in the trip.
@@ -156,12 +196,43 @@ export default async function ProviderActivePage() {
 
             <div className="rounded-xl bg-slate-50 p-3 text-sm">
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Pickup</div>
-              <div className="text-slate-900 mt-0.5">{booking.pickup_addr?.pickup?.formatted ?? "—"}</div>
+              <div className="text-slate-900 mt-0.5">
+                {one(booking.pickup_addr?.pickup)?.formatted ?? "—"}
+              </div>
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mt-2">When</div>
               <div className="text-slate-900 mt-0.5">
                 {booking.scheduled_for ? <ClientDateTime iso={booking.scheduled_for} /> : "ASAP"}
               </div>
             </div>
+
+            {/* The brief, kept visible for the whole job.
+                It was shown at offer stage and then vanished on
+                acceptance, so a helper mid-task had no way to recheck the
+                dog's size, the access code or where the lead is kept —
+                exactly when they need it. accept_request copies intake
+                onto the booking for this reason. */}
+            {(brief.length > 0 || customerNotes) && (
+              <div className="rounded-xl bg-amber-50/60 border border-amber-100 p-3 text-sm">
+                <div className="text-[11px] font-semibold text-amber-800 uppercase tracking-wide">
+                  The brief
+                </div>
+                {brief.length > 0 && (
+                  <dl className="mt-1.5 space-y-1">
+                    {brief.map((item) => (
+                      <div key={item.label} className="flex gap-2 text-xs">
+                        <dt className="text-slate-500 shrink-0">{item.label}</dt>
+                        <dd className="text-slate-900 font-medium min-w-0">{item.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                {customerNotes && (
+                  <p className="mt-2 text-xs text-slate-700 whitespace-pre-wrap border-t border-amber-100 pt-2">
+                    <span className="text-slate-500">Notes: </span>{customerNotes}
+                  </p>
+                )}
+              </div>
+            )}
 
             {bundleItems.length > 0 && (
               <BundleChecklist items={bundleItems} />
@@ -175,6 +246,23 @@ export default async function ProviderActivePage() {
               <CompletionPhotos bookingId={booking.id} initial={completionPhotos} />
             )}
 
+            {/* Why Start is unavailable. start_booking refuses an
+                unauthorized booking (migration 0043), and without this the
+                helper got a bare error with no idea what to do about it —
+                the answer being nothing: it is the customer's bank. */}
+            {booking.payment_status === "pending" && booking.status === "scheduled" && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+                <span className="font-bold">Waiting on the customer&rsquo;s bank.</span>{" "}
+                Their card needs confirming before you can start. We&rsquo;ve asked them —
+                message them if it stays like this.
+              </div>
+            )}
+            {booking.payment_status === "failed" && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-950">
+                <span className="font-bold">This booking can&rsquo;t be paid for.</span>{" "}
+                The customer&rsquo;s card was declined. Don&rsquo;t start work — contact support.
+              </div>
+            )}
             <BookingActions bookingId={booking.id} status={booking.status} />
           </div>
         </div>
