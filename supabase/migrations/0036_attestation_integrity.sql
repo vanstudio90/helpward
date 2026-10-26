@@ -309,12 +309,14 @@ begin
     request_id, customer_id, provider_id, service_id, status,
     scheduled_for,
     base_price_cents, distance_cents, service_fee_cents, total_cents,
-    platform_fee_cents, payout_cents, currency
+    platform_fee_cents, payout_cents, currency, intake
   ) values (
     p_request_id, v_request.customer_id, p_provider_id, v_request.service_id, 'scheduled',
     coalesce(v_request.scheduled_for, now()),
     v_subtotal, 0, v_fee, v_subtotal + v_fee,
-    v_platform, v_payout, v_currency
+    v_platform, v_payout, v_currency,
+    -- Carried over so the helper keeps the brief for the whole job.
+    v_request.intake
   ) returning id into v_booking_id;
 
   update requests set status = 'matched' where id = p_request_id;

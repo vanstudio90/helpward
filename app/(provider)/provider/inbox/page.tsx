@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { payoutFromEstimateCents, dollars } from "@/lib/pricing";
+import { describeIntake } from "@/lib/service-intake";
 import { Inbox, Check, X, MapPin, Clock, DollarSign, Heart } from "lucide-react";
 import { InboxRow } from "./row";
 import { ClientDateTime } from "@/components/ClientDateTime";
@@ -20,7 +21,7 @@ export default async function ProviderInboxPage() {
     .select(`
       id, distance_km, rank_score, notified_at, preferred,
       request:requests(
-        id, status, scheduled_for, notes, estimated_price_cents,
+        id, status, scheduled_for, notes, estimated_price_cents, intake,
         service:services(id, title, blurb, base_price_cents, eta_label, image_url),
         pickup:addresses!requests_pickup_address_id_fkey(formatted),
         customer:profiles!requests_customer_id_fkey(full_name, avatar_url)
@@ -111,6 +112,28 @@ export default async function ProviderInboxPage() {
                     <Field icon={<DollarSign className="w-3 h-3" />} label="Est. payout (80%)" value={`$${dollars(payoutFromEstimateCents(req.estimated_price_cents ?? 0))}`} />
                     <Field icon={<MapPin className="w-3 h-3" />} label="Distance" value={`${row.distance_km} km`} />
                   </dl>
+                  {/* The brief. A helper deciding whether to accept needs
+                      the destination, the crew size, the stairs — not just a
+                      price and a pin. */}
+                  {(() => {
+                    const brief = describeIntake(
+                      // The id lives on the embedded service row, which
+                      // Supabase's generated types model as an array here.
+                      ((req as { service?: { id?: string } }).service?.id) ?? "",
+                      (req as { intake?: Record<string, string | string[]> }).intake,
+                    );
+                    if (brief.length === 0) return null;
+                    return (
+                      <dl className="mt-3 rounded-lg bg-brand-50/70 border border-brand-100 p-2.5 space-y-1">
+                        {brief.map((b) => (
+                          <div key={b.label} className="flex items-start gap-2 text-[11px]">
+                            <dt className="text-brand-900/70 shrink-0 min-w-[7rem]">{b.label}</dt>
+                            <dd className="text-brand-950 font-medium min-w-0">{b.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    );
+                  })()}
                   {req.notes && (
                     <div className="mt-3 text-xs text-slate-600 bg-slate-50 rounded-lg p-2.5">
                       <span className="font-semibold">Note: </span>{req.notes}

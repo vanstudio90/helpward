@@ -12,6 +12,8 @@ import { RecurrencePicker } from "./recurrence-picker";
 import { BundlePicker } from "./bundle-picker";
 import { UseCurrentLocationButton } from "./use-current-location";
 import { AddressConfirm } from "./address-confirm";
+import { IntakeFields } from "./intake-fields";
+import { intakeFor } from "@/lib/service-intake";
 import {
   type BundleItemDraft, newDraftItem, priceBundle, validateBundle,
 } from "@/lib/bundle-pure";
@@ -432,6 +434,17 @@ export function NewRequestView({
                   className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
                 />
               </label>
+
+              {/* Service-specific questions. Keyed on the service id so
+                  switching services resets the answers rather than carrying
+                  a dog's details onto a TV mount. */}
+              {selected && intakeFor(selected.id) && (
+                <IntakeFields
+                  key={selected.id}
+                  spec={intakeFor(selected.id)!}
+                  serviceTitle={selected.title}
+                />
+              )}
 
               <BundlePicker
                 services={services}

@@ -1,4 +1,5 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { describeIntake } from "@/lib/service-intake";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -54,7 +55,13 @@ export default async function BookingDetailPage({
 
   const provider = (b as { provider: { user_id: string; slug: string | null; rating_avg: number | null; profile: { full_name: string; avatar_url: string | null; phone: string | null } | null } | null }).provider;
   const providerHref = provider ? `/providers/${provider.slug ?? provider.user_id}` : null;
-  const service = (b as { service: { title: string; image_url: string | null } | null }).service;
+  const service = (b as { service: { id: string; title: string; image_url: string | null } | null }).service;
+  // The brief the customer gave when booking, carried onto the booking at
+  // acceptance so it survives the request being tidied away.
+  const brief = describeIntake(
+    service?.id ?? "",
+    (b as { intake?: Record<string, string | string[]> | null }).intake,
+  );
   const request = (b as { request: { id: string; is_bundle: boolean; bundle_item_count: number | null; pickup: { formatted: string } | null } | null }).request;
   const pickup = request?.pickup;
   const convo = (b as { conversation: { id: string }[] | null }).conversation?.[0];
@@ -189,6 +196,24 @@ export default async function BookingDetailPage({
                 <MapPin className="w-4 h-4 text-brand-600" /> {pickup.formatted}
               </div>
             </div>
+          )}
+
+          {/* The brief. Same answers the helper saw on the offer, so both
+              sides are looking at one agreed description of the job. */}
+          {brief.length > 0 && (
+            <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
+              <h2 className="text-sm font-bold text-slate-900 mb-3">
+                {service?.title ? `${service.title} details` : "Booking details"}
+              </h2>
+              <dl className="space-y-2">
+                {brief.map((b2) => (
+                  <div key={b2.label} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-3 text-sm">
+                    <dt className="text-slate-500">{b2.label}</dt>
+                    <dd className="text-slate-900 font-medium whitespace-pre-line">{b2.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
           )}
 
           {/* Bundle items — shown only for multi-task bundles */}

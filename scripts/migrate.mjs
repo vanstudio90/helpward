@@ -166,8 +166,17 @@ if (has("--status") || !selectFiles()) {
 }
 
 // ---- apply -----------------------------------------------------------------
-const todo = selectFiles().filter((f) => !appliedMap.has(f));
-const skipped = selectFiles().filter((f) => appliedMap.has(f));
+// --redo re-applies files whose contents changed since they were applied.
+// Every migration here is written to be idempotent (create or replace,
+// add column if not exists), so this is safe and is how a corrected
+// function reaches an environment that already has the old one.
+const REDO = has("--redo");
+const changed = (f) => {
+  const was = appliedMap.get(f);
+  return was != null && was !== hash(fs.readFileSync(path.join(DIR, f), "utf8"));
+};
+const todo = selectFiles().filter((f) => !appliedMap.has(f) || (REDO && changed(f)));
+const skipped = selectFiles().filter((f) => !todo.includes(f));
 
 console.log(`\n${url.replace(/:[^:@/]+@/, ":****@")}`);
 console.log(`${todo.length} to apply, ${skipped.length} already applied.${DRY ? "  DRY RUN." : ""}\n`);
@@ -190,7 +199,12 @@ for (const f of todo) {
     await client.query("begin");
     await client.query(body);
     await client.query(
-      "insert into schema_migrations (filename, sha256, duration_ms) values ($1,$2,$3)",
+      `insert into schema_migrations (filename, sha256, duration_ms)
+         values ($1,$2,$3)
+       on conflict (filename) do update
+         set sha256 = excluded.sha256,
+             applied_at = now(),
+             duration_ms = excluded.duration_ms`,
       [f, hash(body), Date.now() - t0],
     );
     await client.query("commit");

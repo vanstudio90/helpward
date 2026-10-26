@@ -9,6 +9,26 @@ import { quoteOneShotCents, quoteBundleCents } from "@/lib/pricing";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
 import { reviewResolution } from "@/lib/address-confirmation";
+import { validateIntake, type IntakeValues } from "@/lib/service-intake";
+
+/**
+ * Pull the intake answers off the form. Checkbox groups arrive as repeated
+ * keys, so they are collected as arrays; everything else is a single value.
+ */
+function collectIntake(formData: FormData): IntakeValues {
+  const out: IntakeValues = {};
+  for (const [name, value] of formData.entries()) {
+    if (!name.startsWith("intake_")) continue;
+    const key = name.slice("intake_".length);
+    const v = String(value);
+    const existing = out[key];
+    if (existing === undefined) out[key] = v;
+    else if (Array.isArray(existing)) existing.push(v);
+    else out[key] = [existing as string, v];
+  }
+  // A single checked box looks like a scalar; the spec says otherwise.
+  return out;
+}
 
 /**
  * Turn a guard result that needs the customer into something the form can
@@ -123,6 +143,14 @@ export async function createRequestAction(
   if (notes && notes.length > 1000) {
     return { error: "Notes are too long (max 1000 chars)." };
   }
+
+  // Service-specific answers, checked against the spec server-side. The
+  // form can be bypassed, and a helper accepting a job with half the brief
+  // missing is exactly what this prevents.
+  const intakeRaw = collectIntake(formData);
+  const intakeCheck = validateIntake(serviceId, intakeRaw);
+  if (!intakeCheck.ok) return { error: intakeCheck.error };
+  const intake = intakeCheck.values;
 
   // Client-supplied coords come from the saved-address chips or the Use my
   // current location button. They are trusted as coordinates, but the guard
@@ -290,8 +318,11 @@ export async function createRequestAction(
       // Includes the flat service fee so the saved estimate matches the
       // quote the customer was shown pre-submit (HW-03).
       estimated_price_cents: quoteOneShotCents(service.base_price_cents),
-      estimated_duration_min: 45,
+      // Duration comes from the brief when the service asks for one, so a
+      // 4-hour companion booking is not quoted as a 45-minute job.
+      estimated_duration_min: Number(intake.duration_min) || 45,
       status: "matching",
+      intake,
       preferred_helper_id: preferredHelperId,
     })
     .select()
