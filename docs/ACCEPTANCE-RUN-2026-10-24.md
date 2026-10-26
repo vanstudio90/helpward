@@ -496,3 +496,38 @@ boundaries, and §7's fixture address and request would have persisted. Now
 wrapped in `begin; … rollback;`.
 
 Tests: 89 → **100**. Both SQL suites remain **unexecuted**.
+
+
+---
+
+## Independent source review, `06c2a53` — H01 addressed
+
+**H01 (P3): the static restoration check was tautological.** It asserted
+`sql.includes("v_real_item") || sql.includes(fn)`, and `v_real_item` appears
+somewhere in the file on every iteration, so the first operand was always
+true. The loop established nothing per guard, and function names appearing
+elsewhere would not have demonstrated restoration anyway.
+
+Replaced with per-guard assertions. For each of the four guards a negative
+control disables, the check now requires:
+
+* the **specific capture** — `v_real_x := pg_get_functiondef(to_regprocedure('public.<exact signature>'` ;
+* the **matching restoration** — `execute v_real_x;` ;
+* **capture before restore** by source position, so the pairing is not decorative;
+* the **disabling step** itself — a `$noop$` replacement for the three
+  trigger functions, and the `replace(v_real_accept, …compute_bundle_fingerprint…)`
+  body rewrite for control D.
+
+Proven by deleting one thing at a time, as the finding asked:
+
+| Omission | Result |
+|---|---|
+| one restoration (`execute v_real_attn;`) | **test fails** |
+| one capture (`v_real_req := …`) | **test fails** |
+| control D's fingerprint strip | **test fails** |
+| *the old assertion, against a file missing a restoration* | *passed — confirming it proved nothing* |
+
+100 tests still pass; clean build; 48 diagnostics unchanged.
+
+This is a static check on test source. It says nothing about whether the SQL
+controls work — only database execution can.

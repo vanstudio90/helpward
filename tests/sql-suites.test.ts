@@ -86,17 +86,75 @@ describe("SQL suites are internally consistent", () => {
     );
   });
 
-  test("quote_integrity: negative controls restore every guard they disable", () => {
+  test("quote_integrity: every disabled guard is captured and restored", () => {
     const sql = read("supabase/tests/quote_integrity.sql");
-    for (const fn of [
-      "enforce_bundle_item_quote", "enforce_request_quote",
-      "enforce_address_attestation", "accept_request",
-    ]) {
+
+    // Each negative control replaces a real function with a no-op. If its
+    // definition is not captured first AND executed again afterwards, the
+    // control leaves a weakened function behind for every later assertion
+    // in the same transaction.
+    //
+    // The previous version of this test asserted
+    // `sql.includes("v_real_item") || sql.includes(fn)`, where the first
+    // operand is true anywhere in the file — so it passed unconditionally
+    // and established nothing per guard.
+    const GUARDS: Array<[string, string]> = [
+      ["v_real_item",   "public.enforce_bundle_item_quote()"],
+      ["v_real_req",    "public.enforce_request_quote()"],
+      ["v_real_attn",   "public.enforce_address_attestation()"],
+      ["v_real_accept", "public.accept_request(uuid,uuid)"],
+    ];
+
+    for (const [variable, signature] of GUARDS) {
+      // The specific capture assignment, for this exact function.
+      const capture = new RegExp(
+        `${variable}\\s*:=\\s*pg_get_functiondef\\(\\s*to_regprocedure\\(\\s*'${
+          signature.replace(/[().]/g, (c) => `\\${c}`)
+        }'`,
+      );
+      assert.match(
+        sql, capture,
+        `${variable} must capture ${signature} before it is replaced`,
+      );
+
+      // And the matching restoration.
+      const restore = new RegExp(`execute\\s+${variable}\\s*;`);
+      assert.match(
+        sql, restore,
+        `${signature} is captured into ${variable} but never restored with "execute ${variable};"`,
+      );
+
+      // The no-op replacement must come between them, otherwise the pairing
+      // is decorative.
+      const iCapture = sql.search(capture);
+      const iRestore = sql.search(restore);
       assert.ok(
-        sql.includes(`v_real_item`) || sql.includes(fn),
-        `${fn} must be captured before being replaced`,
+        iCapture < iRestore,
+        `${variable} must be captured before it is restored`,
       );
     }
+
+    // Each guard must actually be disabled somewhere, or the control is not
+    // testing anything.
+    for (const fn of [
+      "enforce_bundle_item_quote", "enforce_request_quote",
+      "enforce_address_attestation",
+    ]) {
+      const noop = new RegExp(
+        `create or replace function public\\.${fn}\\(\\)[\\s\\S]{0,400}?\\$noop\\$`,
+        "i",
+      );
+      assert.match(sql, noop, `${fn} must be replaced with a no-op by its negative control`);
+    }
+
+    // accept_request is weakened by rewriting its body, not by a no-op.
+    assert.match(
+      sql,
+      /execute replace\(v_real_accept,[\s\S]{0,300}?compute_bundle_fingerprint/,
+      "control D must strip the fingerprint comparison from accept_request",
+    );
+
+    // And the suite must check its own restoration at the end.
     assert.match(sql, /a real guard definition was not restored/,
       "the suite must assert its own restoration");
   });
