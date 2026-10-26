@@ -130,7 +130,8 @@ schema and behaviour probes.
 | R6 | Deactivate dataset, re-probe | → `no_dataset`, and nothing dispatchable |
 | R7 | Run backfill `--dry-run` then `--apply` | ledger classifies; ambiguous/failed/out-of-area stay unverified |
 | R7b | `\i supabase/tests/quote_integrity.sql` | all assertions pass under real customer / provider / service contexts |
-| R7c | Remove a trigger branch or the fingerprint comparison, re-run R7b | **must fail** — proves the suite has teeth |
+| R7c | (now automated) `quote_integrity.sql` §7 disables each guard in turn and requires the matching assertion to FAIL | a guard that can be removed without failing the suite reports `FAIL negative control …` |
+| R7d | Confirm §7's closing check reports all real guard definitions restored | the controls must not leave a weakened function behind |
 | R8 | Deploy new app, then apply `0036`,`0038` | succeed; final accept_request contains compute_bundle_fingerprint |
 | R9 | Submit a request at a verified in-boundary address | dispatches; no `dispatch_refusals` row |
 | R10 | Submit at an unremediated legacy address | refused; `address_unverified` row; admin notified |

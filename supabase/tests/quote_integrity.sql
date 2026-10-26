@@ -47,18 +47,79 @@ begin
   perform set_config('request.jwt.claims', '', true);
 end $$;
 
--- Assert that a statement fails. Raises if it unexpectedly succeeds.
-create or replace function pg_temp.must_fail(p_label text, p_sql text)
-returns void language plpgsql as $$
+-- Assert that a statement fails FOR THE EXPECTED REASON.
+--
+-- A plain "any exception means PASS" helper is not evidence: a foreign-key
+-- violation, a permission error or a typo in the fixture all look like
+-- success. Two earlier assertions used gen_random_uuid() as a foreign key
+-- and would have passed with every guard removed, because the FK constraint
+-- rejected them on its own.
+--
+-- So: the error text must contain `p_expect`, and integrity-constraint
+-- classes (23xxx) are rejected outright unless they ARE what is expected.
+create or replace function pg_temp.must_fail_with(
+  p_label text, p_sql text, p_expect text
+) returns void language plpgsql as $$
+declare
+  v_state text;
+  v_msg text;
 begin
   begin
     execute p_sql;
   exception
     when others then
-      raise notice 'PASS %  (refused: %)', p_label, replace(sqlerrm, E'\n', ' ');
+      v_state := sqlstate;
+      v_msg := sqlerrm;
+
+      if v_state like '23%' and p_expect not like '%constraint%' then
+        raise exception
+          'FAIL %: refused by an integrity constraint (SQLSTATE %), not by the guard under test: %',
+          p_label, v_state, replace(v_msg, E'\n', ' ');
+      end if;
+
+      if position(lower(p_expect) in lower(v_msg)) = 0 then
+        raise exception
+          'FAIL %: refused for the wrong reason. expected text %, got (SQLSTATE %) %',
+          p_label, quote_literal(p_expect), v_state, replace(v_msg, E'\n', ' ');
+      end if;
+
+      raise notice 'PASS %  (guard: %)', p_label, replace(v_msg, E'\n', ' ');
       return;
   end;
   raise exception 'FAIL %: the operation succeeded but must have been refused', p_label;
+end $$;
+
+-- For guards that CLAMP rather than raise.
+--
+-- The attestation trigger silences a false-to-true transition by forcing the
+-- column back to false; it does not raise. And because 0001 grants
+-- table-wide UPDATE, a column-level REVOKE does not stop the statement
+-- either. So the only meaningful assertion is on the persisted value: the
+-- statement may succeed or error, but verification must not end up true.
+create or replace function pg_temp.must_not_verify(
+  p_label text, p_address_id uuid
+) returns void language plpgsql as $$
+declare
+  v_errored boolean := false;
+  v_after boolean;
+begin
+  begin
+    execute format('update addresses set geocode_verified = true where id = %L', p_address_id);
+  exception
+    when others then
+      v_errored := true;
+  end;
+
+  -- Read back with privilege: the customer role may not be able to see the
+  -- column after an error aborts its subtransaction.
+  perform pg_temp.become_service();
+  select geocode_verified into v_after from addresses where id = p_address_id;
+
+  if coalesce(v_after, false) then
+    raise exception 'FAIL %: the customer persisted geocode_verified = true', p_label;
+  end if;
+  raise notice 'PASS %  (verification not persisted; statement %)',
+    p_label, case when v_errored then 'was refused' else 'was clamped' end;
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -66,7 +127,11 @@ end $$;
 -- address, and a sealed two-stop bundle offered to the helper.
 -- ---------------------------------------------------------------------------
 create temp table t (customer uuid, helper uuid, addr uuid, req uuid,
-                     svc_a text, svc_b text, fp text, subtotal int);
+                     svc_a text, svc_b text, fp text, subtotal int,
+                     -- Valid, customer-owned FK targets so a reparent or a
+                     -- pickup-address change can only be refused by the
+                     -- guard, never by a foreign-key constraint.
+                     addr2 uuid, unverified_addr uuid, req2 uuid);
 
 do $$
 declare
@@ -120,46 +185,137 @@ begin
   insert into match_attempts (request_id, provider_id, distance_km, rank_score)
   values (v_req, v_helper, 1.0, 1.0);
 
-  insert into t values (v_customer, v_helper, v_addr, v_req, v_a, v_b, v_fp, v_sub);
+  insert into t (customer, helper, addr, req, svc_a, svc_b, fp, subtotal)
+  values (v_customer, v_helper, v_addr, v_req, v_a, v_b, v_fp, v_sub);
+end $$;
+
+-- Valid FK targets, all owned by the same customer and visible under RLS.
+do $$
+declare
+  r record; v_addr2 uuid; v_unver uuid; v_req2 uuid;
+begin
+  select * into r from t;
+  perform pg_temp.become_service();
+
+  -- A second VERIFIED address: a legitimate reassignment target, so only the
+  -- quote guard can refuse repointing the pickup.
+  insert into addresses (user_id, formatted, location, country, geocode_verified, geocoded_at)
+  values (r.customer, 'FIXTURE — second verified address',
+          st_setsrid(st_makepoint(-123.10, 49.26), 4326)::geography, 'CA', true, now())
+  returning id into v_addr2;
+
+  -- An UNVERIFIED address: the subject of the false-to-true attempt, which
+  -- is the transition the trigger actually guards. Attempting it on an
+  -- already-verified row is a no-op and proves nothing.
+  insert into addresses (user_id, formatted, location, country)
+  values (r.customer, 'FIXTURE — unverified address',
+          st_setsrid(st_makepoint(-123.11, 49.27), 4326)::geography, 'CA')
+  returning id into v_unver;
+  if (select geocode_verified from addresses where id = v_unver) then
+    raise exception 'Fixture error: the unverified address was created verified';
+  end if;
+
+  -- A second request owned by the same customer: a valid reparent target.
+  insert into requests (customer_id, service_id, pickup_address_id,
+                        estimated_price_cents, estimated_duration_min, status)
+  values (r.customer, r.svc_a, v_addr2, 2450, 45, 'matching')
+  returning id into v_req2;
+
+  update t set addr2 = v_addr2, unverified_addr = v_unver, req2 = v_req2;
+end $$;
+
+-- Confirm the targets are visible AND writable to the customer, so a later
+-- refusal cannot be blamed on RLS or on a missing row.
+do $$
+declare r record; v_seen int;
+begin
+  select * into r from t;
+  perform pg_temp.become(r.customer, 'customer');
+
+  select count(*) into v_seen from requests where id in (r.req, r.req2);
+  if v_seen <> 2 then
+    raise exception 'Fixture error: customer sees % of 2 own requests under RLS', v_seen;
+  end if;
+  select count(*) into v_seen from addresses where id in (r.addr, r.addr2, r.unverified_addr);
+  if v_seen <> 3 then
+    raise exception 'Fixture error: customer sees % of 3 own addresses under RLS', v_seen;
+  end if;
+
+  -- An UNPROTECTED column on the same rows must be writable, proving the
+  -- role can update these rows at all.
+  update requests set notes = 'control write' where id = r.req2;
+  update addresses set label = 'control write' where id = r.addr2;
+  raise notice 'PASS fixture control: customer can see and update its own rows';
+
+  perform pg_temp.become_service();
 end $$;
 
 -- ---------------------------------------------------------------------------
--- 1. As the actual CUSTOMER: every protected quote mutation must be refused.
+-- 1. As the actual CUSTOMER: every protected quote mutation must be refused
+--    BY ITS GUARD, not by a constraint, a permission or a missing row.
 -- ---------------------------------------------------------------------------
+do $$
+declare r record;
+  c_item constant text := 'fixed at request creation';
+  c_del  constant text := 'cannot be removed after the quote is created';
+  c_req  constant text := 'request quote fields are server-controlled';
+begin
+  select * into r from t;
+  perform pg_temp.become(r.customer, 'customer');
+
+  perform pg_temp.must_fail_with('customer deletes a bundle stop',
+    format('delete from request_bundle_items where request_id = %L and position = 2', r.req),
+    c_del);
+
+  perform pg_temp.must_fail_with('customer rewrites a stop price',
+    format('update request_bundle_items set item_price_cents = 0 where request_id = %L', r.req),
+    c_item);
+
+  perform pg_temp.must_fail_with('customer swaps a stop service',
+    format('update request_bundle_items set service_id = %L where request_id = %L and position = 1',
+           r.svc_b, r.req),
+    c_item);
+
+  perform pg_temp.must_fail_with('customer moves a stop position',
+    format('update request_bundle_items set position = 9 where request_id = %L and position = 1', r.req),
+    c_item);
+
+  -- Reparent onto a REAL request the same customer owns, so the foreign key
+  -- is satisfied and only the guard can refuse.
+  perform pg_temp.must_fail_with('customer reparents a stop onto another own request',
+    format('update request_bundle_items set request_id = %L where request_id = %L and position = 1',
+           r.req2, r.req),
+    c_item);
+
+  perform pg_temp.must_fail_with('customer edits bundle_item_count',
+    format('update requests set bundle_item_count = 1 where id = %L', r.req), c_req);
+
+  perform pg_temp.must_fail_with('customer edits the quote fingerprint',
+    format('update requests set quote_fingerprint = %L where id = %L', 'forged', r.req), c_req);
+
+  perform pg_temp.must_fail_with('customer edits the estimated price',
+    format('update requests set estimated_price_cents = 1 where id = %L', r.req), c_req);
+
+  perform pg_temp.must_fail_with('customer flips is_bundle',
+    format('update requests set is_bundle = false where id = %L', r.req), c_req);
+
+  -- Repoint at a REAL address the same customer owns.
+  perform pg_temp.must_fail_with('customer repoints pickup to another own address',
+    format('update requests set pickup_address_id = %L where id = %L', r.addr2, r.req), c_req);
+
+  perform pg_temp.become_service();
+end $$;
+
+-- The attestation guard CLAMPS rather than raising, and 0001 grants
+-- table-wide UPDATE, so this is asserted on the persisted value. The target
+-- is the UNVERIFIED address: false-to-true is the transition being guarded.
 do $$
 declare r record;
 begin
   select * into r from t;
   perform pg_temp.become(r.customer, 'customer');
-
-  perform pg_temp.must_fail('customer deletes a bundle stop',
-    format('delete from request_bundle_items where request_id = %L and position = 2', r.req));
-
-  perform pg_temp.must_fail('customer rewrites a stop price',
-    format('update request_bundle_items set item_price_cents = 0 where request_id = %L', r.req));
-
-  perform pg_temp.must_fail('customer swaps a stop service',
-    format('update request_bundle_items set service_id = %L where request_id = %L and position = 1',
-           r.svc_b, r.req));
-
-  perform pg_temp.must_fail('customer reparents a stop',
-    format('update request_bundle_items set request_id = gen_random_uuid() where request_id = %L', r.req));
-
-  perform pg_temp.must_fail('customer edits bundle_item_count',
-    format('update requests set bundle_item_count = 1 where id = %L', r.req));
-
-  perform pg_temp.must_fail('customer edits the quote fingerprint',
-    format('update requests set quote_fingerprint = %L where id = %L', 'forged', r.req));
-
-  perform pg_temp.must_fail('customer edits the estimated price',
-    format('update requests set estimated_price_cents = 1 where id = %L', r.req));
-
-  perform pg_temp.must_fail('customer repoints the pickup address',
-    format('update requests set pickup_address_id = gen_random_uuid() where id = %L', r.req));
-
-  perform pg_temp.must_fail('customer grants itself a verified address',
-    format('update addresses set geocode_verified = true where id = %L', r.addr));
-
+  perform pg_temp.must_not_verify(
+    'customer grants itself verification on an unverified address', r.unverified_addr);
   perform pg_temp.become_service();
 end $$;
 
@@ -334,6 +490,162 @@ begin
   perform pg_temp.become_service();
 end $$;
 
-select 'quote_integrity.sql: all assertions passed' as result;
+-- ---------------------------------------------------------------------------
+-- 7. NEGATIVE CONTROLS — prove the assertions above have teeth.
+--
+-- Both review findings on this file came down to assertions that would have
+-- passed with the guard removed: one targeted an already-true flag, two
+-- relied on a foreign-key violation. A suite that cannot fail is not
+-- evidence, so each protection is disabled in turn here and the
+-- corresponding assertion is REQUIRED to fail.
+--
+-- All of this runs inside the same transaction, which is rolled back, and
+-- each real definition is also restored explicitly. Runs last because it
+-- deliberately leaves tampered rows behind.
+-- ---------------------------------------------------------------------------
+
+-- Expect an assertion to raise. Fails the suite if it passes.
+create or replace function pg_temp.control_must_fail(p_label text, p_sql text)
+returns void language plpgsql as $ctl$
+begin
+  begin
+    execute p_sql;
+  exception
+    when others then
+      raise notice 'PASS negative control %  (assertion correctly failed)', p_label;
+      return;
+  end;
+  raise exception
+    'FAIL negative control %: the assertion still passed with its guard removed, so it proves nothing',
+    p_label;
+end $ctl$;
+
+do $neg$
+declare
+  r record;
+  v_real_item text;
+  v_real_req  text;
+  v_real_attn text;
+  v_real_accept text;
+  v_req3 uuid;
+  v_accepted boolean := false;
+begin
+  select * into r from t;
+  perform pg_temp.become_service();
+
+  v_real_item   := pg_get_functiondef(to_regprocedure('public.enforce_bundle_item_quote()'));
+  v_real_req    := pg_get_functiondef(to_regprocedure('public.enforce_request_quote()'));
+  v_real_attn   := pg_get_functiondef(to_regprocedure('public.enforce_address_attestation()'));
+  v_real_accept := pg_get_functiondef(to_regprocedure('public.accept_request(uuid,uuid)'));
+
+  -- ---- control A: bundle stop guard disabled ------------------------------
+  create or replace function public.enforce_bundle_item_quote()
+  returns trigger language plpgsql security definer set search_path = public as $noop$
+  begin return case when tg_op = 'DELETE' then old else new end; end $noop$;
+
+  perform pg_temp.become(r.customer, 'customer');
+  perform pg_temp.control_must_fail('stop price guard', format(
+    'select pg_temp.must_fail_with(%L, %L, %L)',
+    'ctl price',
+    format('update request_bundle_items set item_price_cents = 0 where request_id = %L', r.req),
+    'fixed at request creation'));
+  perform pg_temp.control_must_fail('stop reparent guard', format(
+    'select pg_temp.must_fail_with(%L, %L, %L)',
+    'ctl reparent',
+    format('update request_bundle_items set request_id = %L where request_id = %L and position = 1',
+           r.req2, r.req),
+    'fixed at request creation'));
+  perform pg_temp.control_must_fail('stop delete guard', format(
+    'select pg_temp.must_fail_with(%L, %L, %L)',
+    'ctl delete',
+    format('delete from request_bundle_items where request_id = %L and position = 2', r.req),
+    'cannot be removed after the quote is created'));
+  perform pg_temp.become_service();
+  execute v_real_item;
+
+  -- ---- control B: parent quote guard disabled -----------------------------
+  create or replace function public.enforce_request_quote()
+  returns trigger language plpgsql security definer set search_path = public as $noop$
+  begin return new; end $noop$;
+
+  perform pg_temp.become(r.customer, 'customer');
+  perform pg_temp.control_must_fail('bundle_item_count guard', format(
+    'select pg_temp.must_fail_with(%L, %L, %L)',
+    'ctl count',
+    format('update requests set bundle_item_count = 1 where id = %L', r.req),
+    'request quote fields are server-controlled'));
+  perform pg_temp.control_must_fail('pickup repoint guard', format(
+    'select pg_temp.must_fail_with(%L, %L, %L)',
+    'ctl pickup',
+    format('update requests set pickup_address_id = %L where id = %L', r.addr2, r.req),
+    'request quote fields are server-controlled'));
+  perform pg_temp.become_service();
+  execute v_real_req;
+
+  -- ---- control C: attestation clamp disabled ------------------------------
+  -- The control the original self-grant assertion lacked entirely: with the
+  -- clamp removed a customer CAN persist verification, so must_not_verify
+  -- must fail.
+  create or replace function public.enforce_address_attestation()
+  returns trigger language plpgsql security definer set search_path = public as $noop$
+  begin return new; end $noop$;
+
+  perform pg_temp.become(r.customer, 'customer');
+  perform pg_temp.control_must_fail('attestation clamp', format(
+    'select pg_temp.must_not_verify(%L, %L)', 'ctl attest', r.unverified_addr));
+  perform pg_temp.become_service();
+  execute v_real_attn;
+
+  update addresses set geocode_verified = false, needs_reconfirmation = false
+   where id = r.unverified_addr;
+
+  -- ---- control D: acceptance fingerprint comparison removed ---------------
+  -- Proves section 4 depends on the comparison and not on some other error.
+  insert into requests (customer_id, service_id, pickup_address_id,
+                        estimated_price_cents, estimated_duration_min, status,
+                        is_bundle, bundle_item_count)
+  values (r.customer, r.svc_a, r.addr, 0, 60, 'matching', true, 2)
+  returning id into v_req3;
+  insert into request_bundle_items (request_id, position, service_id, item_price_cents)
+  values (v_req3, 1, r.svc_a, 0), (v_req3, 2, r.svc_b, 0);
+  perform seal_bundle_quote(v_req3);
+  insert into match_attempts (request_id, provider_id, distance_km, rank_score)
+  values (v_req3, r.helper, 1.0, 1.0);
+
+  delete from request_bundle_items where request_id = v_req3 and position = 2;
+  update requests set bundle_item_count = 1 where id = v_req3;
+
+  execute replace(v_real_accept,
+    'if compute_bundle_fingerprint(p_request_id) <> v_request.quote_fingerprint then',
+    'if false then');
+
+  perform pg_temp.become(r.helper, 'provider');
+  begin
+    perform accept_request(v_req3, r.helper);
+    v_accepted := true;
+  exception when others then
+    v_accepted := false;
+  end;
+  perform pg_temp.become_service();
+  execute v_real_accept;
+
+  if not v_accepted then
+    raise exception 'FAIL negative control acceptance fingerprint: the tampered bundle was still refused with the comparison removed, so section 4 does not depend on it';
+  end if;
+  raise notice 'PASS negative control acceptance fingerprint  (tampered bundle accepted once the comparison was removed)';
+
+  -- Confirm the real definitions are back.
+  if position('fixed at request creation' in
+        pg_get_functiondef(to_regprocedure('public.enforce_bundle_item_quote()'))) = 0
+     or position('server-controlled' in
+        pg_get_functiondef(to_regprocedure('public.enforce_request_quote()'))) = 0
+     or position('compute_bundle_fingerprint' in
+        pg_get_functiondef(to_regprocedure('public.accept_request(uuid,uuid)'))) = 0 then
+    raise exception 'FAIL: a real guard definition was not restored after the negative controls';
+  end if;
+  raise notice 'PASS: all real guard definitions restored';
+end $neg$;
+
+select 'quote_integrity.sql: all assertions and negative controls passed' as result;
 
 rollback;

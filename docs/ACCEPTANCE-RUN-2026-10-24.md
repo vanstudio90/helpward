@@ -413,3 +413,57 @@ teeth.
 
 **Both SQL suites remain UNEXECUTED.** They are the substance of the
 isolated rehearsal, not evidence from it.
+
+
+---
+
+## Independent source review, `c0d9970` — two test defects addressed
+
+Both findings were about the new SQL tests failing to prove what they were
+cited for. Both are correct and are fixed; neither suite has been executed.
+
+**F01 — the self-grant assertion targeted an already-true flag.** The
+fixture address was created with `geocode_verified = true`, so the
+"customer grants itself verification" statement wrote `true` over `true`.
+The attestation trigger clamps a *false-to-true* transition and does not
+raise, so that assertion was either passing for a privilege reason or
+failing against correct behaviour. Two things were wrong, not one:
+
+* the target is now a **separate, unverified** customer-owned address, so
+  the attempt is the transition actually being guarded; and
+* the assertion shape changed. `must_fail()` was wrong here because the
+  guard clamps rather than raising — and `0001` grants table-wide `UPDATE`,
+  so the column-level `REVOKE` does not stop the statement either. The new
+  `must_not_verify()` runs the update, tolerates either success or error,
+  and asserts on the **persisted value**.
+
+**F02 — the reparent and pickup assertions were satisfied by foreign keys.**
+Both used `gen_random_uuid()` as the new key, so the FK constraint rejected
+them with every guard removed and `must_fail()` printed PASS. Fixed by
+creating a valid second customer-owned request and address as targets, and
+by replacing the helper:
+
+* `must_fail_with(label, sql, expected)` requires the error text to contain
+  the guard's own message, and **rejects integrity-constraint classes
+  (SQLSTATE 23xxx) outright** unless they are what is expected. An FK
+  violation now fails the assertion instead of satisfying it.
+* A fixture control first proves the customer can see all its own rows under
+  RLS and can update an *unprotected* column on them, so a later refusal
+  cannot be blamed on RLS or a missing row.
+
+**Negative controls, as both findings required.** New §7 disables each
+protection in turn inside the same rolled-back transaction and requires the
+matching assertion to fail: the bundle-stop guard (price, reparent, delete),
+the parent quote guard (count, pickup), the attestation clamp, and the
+acceptance fingerprint comparison. A guard that can be removed without
+failing the suite reports `FAIL negative control …`. §7 closes by asserting
+every real definition was restored. Runbook R7c is now automated; R7d checks
+the restoration.
+
+Also removed: `boundary_containment.sql` §8, which claimed these guarantees
+and could not demonstrate them.
+
+**Still unexecuted.** Both SQL suites are the substance of the isolated
+rehearsal, and must run only after their dependent migrations — service-role
+boundary loading before `0036`, real-role quote integrity after `0036` and
+`0038`.
