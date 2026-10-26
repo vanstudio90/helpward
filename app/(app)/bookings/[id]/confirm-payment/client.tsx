@@ -29,6 +29,7 @@ export function ConfirmPaymentClient({
   const [message, setMessage] = useState<string | null>(null);
   const [amount, setAmount] = useState<{ cents: number; currency: string } | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
+  const [paymentMethodId, setPaymentMethodId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +49,7 @@ export function ConfirmPaymentClient({
         return;
       }
       setSecret(started.clientSecret ?? null);
+      setPaymentMethodId(started.paymentMethodId ?? null);
       setAmount({ cents: started.amountCents ?? 0, currency: started.currency ?? "USD" });
       setPhase("ready");
     })();
@@ -70,7 +72,18 @@ export function ConfirmPaymentClient({
     // handleNextAction has nothing to run and returns immediately as if
     // everything were fine. Confirming again, with the customer present
     // and the card already on the intent, is the documented recovery.
-    const { error } = await stripe.confirmCardPayment(secret);
+    // The card must be supplied. A failed off-session confirm leaves the
+    // intent with no payment method attached, so confirming with only the
+    // client secret returns "PaymentIntent does not have a payment method
+    // and none was provided" and no challenge ever appears.
+    //
+    // The id comes from the server, which resolved it from this
+    // customer's own saved cards — the browser does not get to choose
+    // what is charged.
+    const { error } = await stripe.confirmCardPayment(
+      secret,
+      paymentMethodId ? { payment_method: paymentMethodId } : undefined,
+    );
     if (error) {
       setPhase("error");
       setMessage(error.message ?? "Your bank didn't approve that.");

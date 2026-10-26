@@ -127,8 +127,28 @@ ok("that intent is recoverable, not dead",
 ok("it has NO next_action — handleNextAction would silently do nothing",
    !challenged.error?.payment_intent?.next_action,
    `next_action=${JSON.stringify(challenged.error?.payment_intent?.next_action)}`);
-if (challenged.error?.payment_intent?.id) {
-  await api(`payment_intents/${challenged.error.payment_intent.id}/cancel`, {});
+// The recovery path, step by step. Confirming with only the client secret
+// returned "PaymentIntent does not have a payment method and none was
+// provided" — the failed off-session attempt leaves the intent WITHOUT a
+// card, so the browser never reached a challenge at all.
+const stranded = challenged.error?.payment_intent?.id;
+if (stranded) {
+  const before = await api(`payment_intents/${stranded}`);
+  ok("the stranded intent has no payment method — the cause of W01",
+     !before.payment_method, `payment_method=${before.payment_method}`);
+
+  await api(`payment_intents/${stranded}`, { payment_method: "pm_card_authenticationRequired" });
+  const after = await api(`payment_intents/${stranded}`);
+  ok("reattaching the customer's card makes it confirmable",
+     after.status === "requires_confirmation" && !!after.payment_method,
+     `status=${after.status} pm=${after.payment_method}`);
+
+  const confirmed = await api(`payment_intents/${stranded}/confirm`, {});
+  ok("confirming then produces an actual bank challenge",
+     confirmed.status === "requires_action" && !!confirmed.next_action,
+     `status=${confirmed.status} next_action=${JSON.stringify(confirmed.next_action?.type)}`);
+
+  await api(`payment_intents/${stranded}/cancel`, {});
 }
 
 // --- 5. Partial capture rescales the fee ---------------------------------

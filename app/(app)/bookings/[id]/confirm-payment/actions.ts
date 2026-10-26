@@ -16,6 +16,9 @@ export async function startPaymentConfirmationAction(bookingId: string) {
     clientSecret: pending.clientSecret,
     amountCents: pending.amountCents,
     currency: pending.currency,
+    // Resolved from the customer's own saved cards by the server. This
+    // action takes no card id from the caller.
+    paymentMethodId: pending.paymentMethodId,
   };
 }
 

@@ -1100,7 +1100,23 @@ export async function refundBooking(
 export async function pendingAuthorizationSecret(
   bookingId: string,
   userId: string,
-): Promise<PaymentResult<{ clientSecret: string; amountCents: number; currency: string }>> {
+): Promise<PaymentResult<{
+  clientSecret: string;
+  amountCents: number;
+  currency: string;
+  /**
+   * The customer's saved card, resolved HERE from their own records.
+   *
+   * A failed off-session confirm leaves the PaymentIntent with no payment
+   * method attached, so confirming again with only the client secret
+   * fails: "PaymentIntent does not have a payment method and none was
+   * provided." The card has to be supplied again.
+   *
+   * Resolved server-side and never taken from the caller: a client that
+   * could name the card would be choosing what gets charged.
+   */
+  paymentMethodId: string;
+}>> {
   if (!stripeConfigured()) return fail("not_configured", "Payments are not available yet.");
 
   const booking = await loadBooking(bookingId);
@@ -1132,11 +1148,46 @@ export async function pendingAuthorizationSecret(
     }
     if (!intent.client_secret) return fail("no_secret", "Could not start confirmation.");
 
+    // Prefer whatever is still on the intent; otherwise fall back to the
+    // customer's default saved card. The second case is the normal one
+    // after an authentication_required failure.
+    let paymentMethodId =
+      typeof intent.payment_method === "string"
+        ? intent.payment_method
+        : intent.payment_method?.id ?? null;
+
+    if (!paymentMethodId) {
+      const { data: card } = await createSupabaseServiceClient()
+        .from("payment_methods")
+        .select("stripe_payment_method_id")
+        .eq("customer_id", userId)
+        .order("is_default", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      paymentMethodId = (card?.stripe_payment_method_id as string | undefined) ?? null;
+    }
+
+    if (!paymentMethodId) {
+      return fail("no_payment_method", "Add a payment method, then try again.");
+    }
+
+    // Put it back on the intent as well. The client passes it too, but the
+    // intent being complete server-side is what makes the confirmation
+    // independent of what the browser sends.
+    if (intent.status === "requires_payment_method") {
+      try {
+        await getStripe().paymentIntents.update(intent.id, { payment_method: paymentMethodId });
+      } catch (err) {
+        console.error("could not reattach payment method", intent.id, err);
+      }
+    }
+
     return {
       ok: true,
       clientSecret: intent.client_secret,
       amountCents: intent.amount,
       currency: intent.currency.toUpperCase(),
+      paymentMethodId,
     };
   } catch (err) {
     return fromStripeError(err);

@@ -71,11 +71,31 @@ export function OnlineToggle({ initialOnline }: { initialOnline: boolean }) {
   );
 }
 
-export function BookingActions({ bookingId, status }: { bookingId: string; status: string }) {
+export function BookingActions({
+  bookingId, status, paymentStatus,
+}: {
+  bookingId: string;
+  status: string;
+  /** From the booking. start_booking refuses anything but authorized/captured. */
+  paymentStatus: string;
+}) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
 
   const action = status === "scheduled" ? "start" : "complete";
+
+  // The server already refuses an unpaid start (migration 0043), and did
+  // so correctly — but the button stayed enabled, so the helper's only way
+  // to discover the job was not startable was to press it and read an
+  // error. A control that cannot succeed should not look like it can.
+  const held = paymentStatus === "authorized" || paymentStatus === "captured";
+  const blockedReason =
+    action !== "start" || held
+      ? null
+      : paymentStatus === "failed"
+        ? "The customer's card was declined — don't start work."
+        : "Waiting for the customer to confirm their payment.";
+  const disabled = pending || !!blockedReason;
 
   return (
     <div>
@@ -86,7 +106,8 @@ export function BookingActions({ bookingId, status }: { bookingId: string; statu
       )}
       <button
         type="button"
-        disabled={pending}
+        disabled={disabled}
+        title={blockedReason ?? undefined}
         onClick={() => {
           setErr(null);
           start(async () => {
@@ -96,14 +117,20 @@ export function BookingActions({ bookingId, status }: { bookingId: string; statu
           });
         }}
         className={cn(
-          "w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl font-semibold disabled:opacity-60",
+          "w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl font-semibold",
+          "disabled:opacity-60 disabled:cursor-not-allowed",
           action === "start"
             ? "bg-brand-600 text-white"
             : "bg-emerald-600 text-white"
         )}
       >
-        {action === "start" ? <><Play className="w-4 h-4" /> {pending ? "Starting…" : "Start task"}</> : <><CheckCircle2 className="w-4 h-4" /> {pending ? "Completing…" : "Mark complete"}</>}
+        {action === "start"
+          ? <><Play className="w-4 h-4" aria-hidden="true" /> {pending ? "Starting…" : blockedReason ? "Waiting for payment" : "Start task"}</>
+          : <><CheckCircle2 className="w-4 h-4" aria-hidden="true" /> {pending ? "Completing…" : "Mark complete"}</>}
       </button>
+      {blockedReason && (
+        <p className="mt-1.5 text-[11px] text-slate-500 text-center">{blockedReason}</p>
+      )}
     </div>
   );
 }

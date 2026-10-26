@@ -263,7 +263,11 @@ export default async function ProviderActivePage() {
                 The customer&rsquo;s card was declined. Don&rsquo;t start work — contact support.
               </div>
             )}
-            <BookingActions bookingId={booking.id} status={booking.status} />
+            <BookingActions
+              bookingId={booking.id}
+              status={booking.status}
+              paymentStatus={booking.payment_status}
+            />
           </div>
         </div>
       )}
