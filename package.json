@@ -24,6 +24,7 @@
     "verify:refunds": "node --experimental-strip-types --import ./tests/register.mjs scripts/verify-refunds.mjs",
     "verify:payments": "node scripts/verify-payments.mjs",
     "verify:wiring": "node --experimental-strip-types --import ./tests/register.mjs scripts/verify-payment-wiring.mjs",
+    "verify:holds": "node scripts/reconcile-holds.mjs",
     "verify:webhooks": "node scripts/verify-webhooks.mjs",
     "sql:boundary": "node scripts/run-sql-suite.mjs supabase/tests/boundary_containment.sql",
     "boundaries:load": "node scripts/load-boundaries.mjs",

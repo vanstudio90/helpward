@@ -37,6 +37,35 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
+      // Stripe telling us a hold is in place. This is the durable half of
+      // the recovery: if the browser dies between bank approval and the
+      // app recording it, this arrives anyway and unblocks the booking
+      // without anyone having to press retry.
+      case "payment_intent.amount_capturable_updated": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        const { error } = await admin
+          .from("bookings")
+          .update({
+            payment_status: "authorized",
+            authorized_at: new Date().toISOString(),
+            payment_error: null,
+          })
+          .eq("stripe_payment_intent_id", pi.id)
+          .in("payment_status", ["pending", "failed"]);
+        if (error) throw error;
+        break;
+      }
+
+      case "payment_intent.canceled": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        await admin
+          .from("bookings")
+          .update({ payment_status: "pending", authorized_at: null })
+          .eq("stripe_payment_intent_id", pi.id)
+          .neq("payment_status", "captured");
+        break;
+      }
+
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent;
         await admin

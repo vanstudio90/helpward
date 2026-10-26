@@ -1130,8 +1130,38 @@ export async function pendingAuthorizationSecret(
 
   try {
     const intent = await getStripe().paymentIntents.retrieve(booking.stripe_payment_intent_id);
+
+    // The hold EXISTS at Stripe but the booking never heard about it.
+    //
+    // This is the gap independent testing found: the bank approved, the
+    // connection dropped before the app recorded it, and from then on the
+    // customer was told "this payment is already confirmed" while the
+    // helper's Start button stayed disabled and Stripe held the money.
+    // Reporting the truth was not enough — the booking had to be repaired.
+    //
+    // Idempotent, and it creates no second hold: it only writes down what
+    // Stripe already did.
     if (intent.status === "requires_capture" || intent.status === "succeeded") {
-      return fail("already_authorized", "This payment is already confirmed.");
+      if (booking.payment_status !== "authorized" && booking.payment_status !== "captured") {
+        const { error: repairError } = await createSupabaseServiceClient()
+          .from("bookings")
+          .update({
+            payment_status: "authorized",
+            authorized_at: new Date().toISOString(),
+            payment_error: null,
+          })
+          .eq("id", bookingId);
+        if (repairError) {
+          console.error("RECONCILE FAILED: Stripe holds the money, booking still blocked", {
+            bookingId, intent: intent.id, repairError,
+          });
+          return fail("reconcile_failed", "Your payment went through but we couldn't record it. Support has been notified.");
+        }
+        console.warn("reconciled a hold Stripe had and the booking did not", {
+          bookingId, intent: intent.id,
+        });
+      }
+      return fail("already_authorized", "This payment is confirmed — your helper can start.");
     }
     // requires_payment_method is normally a dead intent, EXCEPT when the
     // reason is authentication_required: that one is recoverable by

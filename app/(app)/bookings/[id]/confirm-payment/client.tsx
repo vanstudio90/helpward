@@ -38,10 +38,13 @@ export function ConfirmPaymentClient({
       if (cancelled) return;
       if ("error" in started && started.error) {
         // Already confirmed is not a failure — it is the happy ending
-        // arriving before this page did.
+        // arriving before this page did. Opening this page is itself the
+        // repair: the action reconciles a hold Stripe has and the booking
+        // does not, which is the state an interrupted bank approval
+        // leaves behind.
         if (started.code === "already_authorized") {
           setPhase("done");
-          setMessage("This payment is already confirmed.");
+          setMessage(started.error);
           return;
         }
         setPhase("error");

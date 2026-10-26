@@ -75,5 +75,57 @@ for (const c of cases) {
      naked.status === 400, `HTTP ${naked.status}`);
 }
 
+// ---------------------------------------------------------------------
+// The durable half of interrupted-approval recovery
+// ---------------------------------------------------------------------
+// A signed amount_capturable_updated must unblock a booking on its own,
+// without anyone pressing retry: that is the path that survives a closed
+// tab between bank approval and the app recording it.
+{
+  const { createClient } = await import("@supabase/supabase-js");
+  const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false } });
+
+  const [{ data: c }, { data: h }, { data: sv }] = await Promise.all([
+    admin.from("profiles").select("id").eq("role", "customer").limit(1).single(),
+    admin.from("provider_profiles").select("user_id").limit(1).single(),
+    admin.from("services").select("id").eq("active", true).limit(1).single(),
+  ]);
+
+  const fakeIntent = `pi_webhook_fixture_${Date.now()}`;
+  const { data: bk } = await admin.from("bookings").insert({
+    customer_id: c.id, provider_id: h.user_id, service_id: sv.id, status: "scheduled",
+    base_price_cents: 2000, service_fee_cents: 450, total_cents: 2450,
+    platform_fee_cents: 850, payout_cents: 1600, currency: "USD",
+    payment_status: "pending", stripe_payment_intent_id: fakeIntent,
+  }).select("id").single();
+
+  const event = {
+    id: "evt_capturable", type: "payment_intent.amount_capturable_updated",
+    data: { object: { id: fakeIntent, object: "payment_intent", amount_capturable: 2450 } },
+  };
+  const payload = JSON.stringify(event);
+  const res = await post("/api/webhooks/stripe", payload,
+    sign(payload, env.STRIPE_WEBHOOK_SECRET));
+
+  const { data: after } = await admin.from("bookings")
+    .select("payment_status, authorized_at").eq("id", bk.id).single();
+
+  ok("a signed amount_capturable_updated unblocks the booking",
+     res.status === 200 && after?.payment_status === "authorized",
+     `HTTP ${res.status}, booking ${after?.payment_status}`);
+  ok("... and stamps when the hold landed", !!after?.authorized_at);
+
+  // A repeat must not disturb a booking that has since been captured.
+  await admin.from("bookings").update({ payment_status: "captured" }).eq("id", bk.id);
+  await post("/api/webhooks/stripe", payload, sign(payload, env.STRIPE_WEBHOOK_SECRET));
+  const { data: again } = await admin.from("bookings")
+    .select("payment_status").eq("id", bk.id).single();
+  ok("a replayed event does not drag a captured booking backwards",
+     again?.payment_status === "captured", again?.payment_status);
+
+  await admin.from("bookings").delete().eq("id", bk.id);
+}
+
 console.log(`\n  ${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);
