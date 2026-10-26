@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Let users dismiss their own notifications. Existing policies on the
 -- notifications table cover SELECT + UPDATE (for marking read) — DELETE was
 -- never added because the original UX bulk-marked everything read on

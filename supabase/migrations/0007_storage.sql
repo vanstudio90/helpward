@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Helpward Supabase Storage buckets + RLS policies.
 -- Buckets:
 --   avatars        — public read; auth users can upload to avatars/{user_id}/*

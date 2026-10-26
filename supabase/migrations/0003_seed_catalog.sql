@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Seed the service catalog from the existing UI mock data.
 -- Safe to re-run (uses ON CONFLICT).
 

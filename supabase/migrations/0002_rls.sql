@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Row-Level Security policies for Helpward.
 -- Every table gets RLS ON. Service role bypasses RLS automatically.
 -- Pattern: app users are restricted; admin (jwt role='admin') sees everything.

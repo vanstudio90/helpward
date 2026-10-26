@@ -1,3 +1,4 @@
+import { CardManager, type CardRow } from "./card-form";
 import { listMyBookings, listMyPaymentMethods, getMe } from "@/lib/data/customer";
 import Link from "next/link";
 import { CreditCard, Plus, Wallet, Gift, DollarSign, Download } from "lucide-react";
@@ -70,29 +71,10 @@ export default async function PaymentsPage() {
       )}
 
       <h2 className="text-base font-bold text-slate-900 mt-6 mb-3">Payment Methods</h2>
-      {methods.length === 0 ? (
-        <div className="rounded-2xl bg-white border border-slate-100 p-6 text-center">
-          <p className="text-sm text-slate-500">No payment methods added yet.</p>
-          <button disabled title="Paying by card isn&rsquo;t available yet" className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-brand-700 border border-brand-200 px-3 py-2 rounded-lg disabled:opacity-50 cursor-not-allowed">
-            <Plus className="w-3.5 h-3.5" /> Add Payment Method
-          </button>
-          <p className="text-[11px] text-slate-400 mt-2">Saving a card isn&rsquo;t available yet.</p>
-        </div>
-      ) : (
-        <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
-          {methods.map((m) => (
-            <li key={m.id} className="p-4 flex items-center gap-3">
-              <span className="inline-flex w-10 h-7 rounded items-center justify-center text-white text-[10px] font-bold bg-blue-600">
-                {m.brand?.slice(0, 4).toUpperCase() ?? "CARD"}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold">{m.brand} •••• {m.last4}</div>
-                <div className="text-[11px] text-slate-500">Expires {m.exp_month}/{m.exp_year}</div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <CardManager
+        cards={methods as CardRow[]}
+        publishableKey={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null}
+      />
     </div>
   );
 }

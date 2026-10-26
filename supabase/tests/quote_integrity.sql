@@ -161,10 +161,17 @@ begin
   end if;
 
   -- Make the helper genuinely eligible.
+  --
+  -- stripe_transfers_active matters as of 0045: accept_request now refuses
+  -- a helper who cannot be paid, and this suite calls accept_request
+  -- repeatedly to test quote integrity. Without it the whole file aborts
+  -- on the payability guard before reaching a single quote assertion.
   update provider_profiles
      set status = 'approved', is_online = true, vacation_mode = false,
          current_location = st_setsrid(st_makepoint(-123.12, 49.28), 4326)::geography,
-         location_updated_at = now(), service_radius_km = 25
+         location_updated_at = now(), service_radius_km = 25,
+         stripe_transfers_active = true,
+         stripe_connect_account_id = coalesce(stripe_connect_account_id, 'acct_fixture_quote')
    where user_id = v_helper;
   insert into provider_services (provider_id, service_id)
   values (v_helper, v_a), (v_helper, v_b)

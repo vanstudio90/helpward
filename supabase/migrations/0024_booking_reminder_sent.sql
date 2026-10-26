@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- bookings.reminder_sent_at — timestamp set by the T-30 reminder cron when
 -- it has notified both parties about an upcoming booking, so repeat ticks
 -- of the cron dont fire duplicate notifications. Null means "never sent",

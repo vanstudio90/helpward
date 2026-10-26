@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Official municipal boundary polygons — the AUTHORITATIVE service-area test.
 --
 -- Municipality-name matching (lib/service-areas.ts) is retained, but only as

@@ -38,10 +38,10 @@ export async function loginAction(
   if (verifiedTotp) {
     // Stash the destination so the challenge page can redirect properly
     // after the step-up succeeds.
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .single();
+    const { data: { user: mfaUser } } = await supabase.auth.getUser();
+    const { data: profile } = mfaUser
+      ? await supabase.from("profiles").select("role").eq("id", mfaUser.id).maybeSingle()
+      : { data: null };
     const destination =
       profile?.role === "provider" ? "/provider/dashboard"
       : profile?.role === "admin" ? "/admin"
@@ -49,11 +49,16 @@ export async function loginAction(
     redirect(`/login/mfa?next=${encodeURIComponent(destination)}`);
   }
 
-  // Determine role to send them to the right home
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .single();
+  // Determine role to send them to the right home.
+  //
+  // Filtered by id: profiles_read exposes every provider row, so an
+  // unfiltered .single() returned PGRST116 and a null role, which routed
+  // every helper to the customer dashboard — the other half of the
+  // sign-in redirect loop.
+  const { data: { user: signedIn } } = await supabase.auth.getUser();
+  const { data: profile } = signedIn
+    ? await supabase.from("profiles").select("role").eq("id", signedIn.id).maybeSingle()
+    : { data: null };
 
   revalidatePath("/", "layout");
 

@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- After a review is inserted, recompute the provider's rating_avg + rating_count.
 create or replace function public.refresh_provider_rating()
 returns trigger language plpgsql security definer set search_path = public as $$

@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Recurring bookings — a customer schedules a series ("every Tuesday at
 -- 10am, dog walking") which materialises into individual `requests` (and
 -- then bookings) via a daily cron.

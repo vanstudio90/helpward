@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Multi-task bundles — a single request can carry N sub-tasks ("groceries
 -- + dry cleaning + package pickup") that the helper handles in one trip.
 --

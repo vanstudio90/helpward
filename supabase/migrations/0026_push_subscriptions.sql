@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- push_subscriptions — OneSignal player_id registry, one row per device per
 -- user. We delegate the actual push delivery to OneSignal so this table
 -- doesnt need to hold endpoint/p256dh/auth keys like raw Web Push would;

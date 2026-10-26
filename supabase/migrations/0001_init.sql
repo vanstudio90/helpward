@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Helpward initial schema
 -- Phase 0: profiles, customer/provider profiles, service catalog, addresses,
 -- requests, bookings, conversations, messages, locations, payments, reviews,

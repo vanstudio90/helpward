@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Service-specific intake.
 --
 -- Every service used to share one form: address, when, free-text notes. A

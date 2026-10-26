@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Referral program — every user gets a unique code they can share. When a
 -- friend signs up with that code we create an attribution row. Once the
 -- friend completes their first booking the attribution becomes 'qualified'

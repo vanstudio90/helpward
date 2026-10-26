@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Human-readable slugs for helper profile URLs. /providers/<uuid> stays
 -- working forever (the route resolver checks UUID shape first), but every
 -- approved helper also gets a /providers/maya-r-3a8b style URL that

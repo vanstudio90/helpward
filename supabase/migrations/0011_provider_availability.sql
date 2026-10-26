@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Provider availability — weekly recurring rules + dated overrides.
 --
 -- Model:

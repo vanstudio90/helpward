@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Helpward matching engine: PostGIS proximity + broadcast + accept functions.
 -- All security definer so they can run from a customer/provider context but
 -- still touch tables the caller doesn't directly have RLS rights on.

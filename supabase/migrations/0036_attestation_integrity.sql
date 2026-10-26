@@ -1,4 +1,5 @@
 -- Protect server attestations from the clients they are meant to constrain.
+-- CLASS: deploy-coupled — Rewrites accept_request and adds triggers the running app must already expect.
 --
 -- Independent review found that the new trust signals were writable by the
 -- very parties they gate:

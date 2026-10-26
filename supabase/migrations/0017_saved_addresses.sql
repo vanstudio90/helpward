@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Saved addresses — customers stash named places ("Home", "Mom's", "Office")
 -- so /new-request can offer one-tap fill instead of forcing them to retype
 -- the same line every booking.

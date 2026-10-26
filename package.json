@@ -18,6 +18,8 @@
     "addresses:backfill": "node scripts/backfill-addresses.mjs"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^7.0.1",
+    "@stripe/stripe-js": "^10.2.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
     "clsx": "^2.1.1",

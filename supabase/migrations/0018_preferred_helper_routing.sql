@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Preferred-helper routing — when a customer hits "Book again" on a saved
 -- favorite helper, the new request is offered to that helper for 2 minutes
 -- before the matching engine broadcasts to the broader pool.

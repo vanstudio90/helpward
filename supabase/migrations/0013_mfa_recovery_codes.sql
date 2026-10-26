@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- MFA recovery codes — 10 single-use backup codes generated when a user
 -- completes TOTP enrollment. Stored as scrypt hashes (key=salt+hash) so a
 -- DB leak doesn't immediately expose the codes.

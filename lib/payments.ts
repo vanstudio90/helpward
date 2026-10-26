@@ -531,3 +531,171 @@ export async function chargeTip(
     return fromStripeError(err);
   }
 }
+
+/* =========================================================================
+   Saving a card
+   ========================================================================= */
+
+export type SavedCard = {
+  id: string;
+  brand: string | null;
+  last4: string | null;
+  expMonth: number | null;
+  expYear: number | null;
+  isDefault: boolean;
+};
+
+/**
+ * Persist a card the customer just entered, after confirming with Stripe
+ * that it is real and theirs.
+ *
+ * The client sends only a SetupIntent id. Everything recorded is read back
+ * from Stripe: the browser cannot assert a card it does not have, cannot
+ * attach someone else's payment method, and cannot invent a brand or last4.
+ */
+export async function saveCardFromSetupIntent(
+  userId: string,
+  setupIntentId: string,
+): Promise<PaymentResult<{ card: SavedCard }>> {
+  if (!stripeConfigured()) return fail("not_configured", "Payments are not available yet.");
+  if (!/^seti_[A-Za-z0-9_]+$/.test(setupIntentId ?? "")) {
+    return fail("bad_intent", "That card could not be saved. Please try again.");
+  }
+  const stripe = getStripe();
+  const admin = createSupabaseServiceClient();
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("id", userId)
+    .single();
+  if (!profile?.stripe_customer_id) {
+    return fail("no_customer", "That card could not be saved. Please try again.");
+  }
+
+  try {
+    const intent = await stripe.setupIntents.retrieve(setupIntentId, {
+      expand: ["payment_method"],
+    });
+
+    // Ownership, not just validity. Without this check any customer could
+    // post another customer's SetupIntent id and attach their card.
+    if (intent.customer !== profile.stripe_customer_id) {
+      console.error("setup intent/customer mismatch", { setupIntentId, userId });
+      return fail("not_yours", "That card could not be saved. Please try again.");
+    }
+    if (intent.status !== "succeeded") {
+      return fail("not_complete", "That card was not confirmed. Please try again.");
+    }
+
+    const pm = intent.payment_method as Stripe.PaymentMethod | null;
+    if (!pm || typeof pm === "string" || !pm.card) {
+      return fail("no_card", "That card could not be read. Please try again.");
+    }
+
+    // First card becomes the default; later ones do not silently take over.
+    const { count } = await admin
+      .from("payment_methods")
+      .select("id", { count: "exact", head: true })
+      .eq("customer_id", userId);
+    const isFirst = (count ?? 0) === 0;
+
+    const { data: saved, error } = await admin
+      .from("payment_methods")
+      .upsert(
+        {
+          customer_id: userId,
+          stripe_payment_method_id: pm.id,
+          type: pm.type,
+          brand: pm.card.brand,
+          last4: pm.card.last4,
+          exp_month: pm.card.exp_month,
+          exp_year: pm.card.exp_year,
+          is_default: isFirst,
+        },
+        { onConflict: "stripe_payment_method_id" },
+      )
+      .select("id, brand, last4, exp_month, exp_year, is_default")
+      .single();
+    if (error) return fail("persist_failed", error.message);
+
+    return {
+      ok: true,
+      card: {
+        id: saved.id,
+        brand: saved.brand,
+        last4: saved.last4,
+        expMonth: saved.exp_month,
+        expYear: saved.exp_year,
+        isDefault: saved.is_default,
+      },
+    };
+  } catch (err) {
+    return fromStripeError(err);
+  }
+}
+
+/** Detach a card from Stripe and forget it here. */
+export async function removeCard(userId: string, cardId: string): Promise<PaymentResult> {
+  if (!stripeConfigured()) return fail("not_configured", "Payments are not available yet.");
+  const admin = createSupabaseServiceClient();
+
+  const { data: card } = await admin
+    .from("payment_methods")
+    .select("id, stripe_payment_method_id, is_default, customer_id")
+    .eq("id", cardId)
+    .eq("customer_id", userId)   // ownership, enforced in the query
+    .maybeSingle();
+  if (!card) return fail("not_found", "Card not found.");
+
+  try {
+    await getStripe().paymentMethods.detach(card.stripe_payment_method_id);
+  } catch (err) {
+    // A card already detached at Stripe should still disappear from here.
+    console.warn("detach failed, removing locally anyway", cardId, err);
+  }
+
+  await admin.from("payment_methods").delete().eq("id", cardId).eq("customer_id", userId);
+
+  // Never leave a customer with cards but no default — authorization picks
+  // the default, and a null default means every booking fails.
+  if (card.is_default) {
+    const { data: next } = await admin
+      .from("payment_methods")
+      .select("id")
+      .eq("customer_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (next) {
+      await admin.from("payment_methods").update({ is_default: true }).eq("id", next.id);
+    }
+  }
+  return { ok: true };
+}
+
+/** Make one saved card the default, clearing the others. */
+export async function setDefaultCard(userId: string, cardId: string): Promise<PaymentResult> {
+  const admin = createSupabaseServiceClient();
+  const { data: card } = await admin
+    .from("payment_methods")
+    .select("id")
+    .eq("id", cardId)
+    .eq("customer_id", userId)
+    .maybeSingle();
+  if (!card) return fail("not_found", "Card not found.");
+
+  await admin.from("payment_methods").update({ is_default: false }).eq("customer_id", userId);
+  await admin.from("payment_methods").update({ is_default: true }).eq("id", cardId);
+  return { ok: true };
+}
+
+/** Does this customer have a card we can authorize against? */
+export async function hasUsableCard(userId: string): Promise<boolean> {
+  const admin = createSupabaseServiceClient();
+  const { count } = await admin
+    .from("payment_methods")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_id", userId);
+  return (count ?? 0) > 0;
+}

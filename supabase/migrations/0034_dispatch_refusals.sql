@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Make a blocked dispatch VISIBLE and ACTIONABLE.
 --
 -- The problem this solves: broadcast_request returns an integer count, and

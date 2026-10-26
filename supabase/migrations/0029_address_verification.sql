@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Address geocode verification + launch service areas.
 --
 -- Context: MAPBOX_TOKEN was never set in production, so every address

@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- profiles.onboarded_at — timestamp set by dismissOnboardingAction the
 -- first time a customer sees the welcome modal on /dashboard. Null = never
 -- seen, non-null = seen + dismissed. Server-side gate so the tour doesn't

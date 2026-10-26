@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- CCPA / PIPEDA / GDPR compliance: queueing tables for data export + account
 -- deletion requests. User clicks the button → row lands here → a background
 -- job (added in a follow-up round, or run manually by admin) picks it up,

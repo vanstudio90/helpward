@@ -8,13 +8,19 @@ import { HelperNextStepsWidget } from "./next-steps";
 export default async function ProviderDashboardPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // The layout already redirects an unauthenticated visitor; this is the
+  // narrowing the identity-filtered lookups below need.
+  if (!user) return null;
 
   const [{ data: profile }, { data: pp }] = await Promise.all([
-    supabase.from("profiles").select("full_name, avatar_url").single(),
-    supabase.from("provider_profiles").select("*").single(),
+    supabase.from("profiles").select("full_name, avatar_url").eq("id", user.id).single(),
+    supabase.from("provider_profiles").select("*").eq("user_id", user.id).maybeSingle(),
   ]);
 
-  const needsOnboarding = !pp?.id_verified_at || !pp?.stripe_connect_account_id;
+  // Payout readiness means transfers are ACTIVE, not merely that an account
+  // exists: an account can be created with Stripe still waiting on a
+  // document, and a destination charge to it fails at authorization.
+  const needsOnboarding = !pp?.id_verified_at || !pp?.stripe_transfers_active;
 
   // Only fetch the next-steps inputs once we know the helper is past the
   // onboarding wall — pre-onboarding the only valid next step is "finish

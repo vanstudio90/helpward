@@ -1,4 +1,5 @@
 -- DEPLOY-COUPLED — apply only WITH or AFTER the matching application
+-- CLASS: deploy-coupled — Changes find_nearby_providers' signature/behaviour; the new app must be live first.
 -- release, never before.
 --
 -- DEPENDS ON 0033 (is_point_serviceable), 0034 (record_dispatch_refusal)

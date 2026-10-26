@@ -34,7 +34,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name")
-    .single();
+    .eq("id", user.id)
+    .maybeSingle();
 
   return (
     <div className="min-h-screen lg:flex bg-slate-50">

@@ -25,11 +25,25 @@ export default async function ProviderLayout({ children }: { children: React.Rea
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/provider/dashboard");
 
-  const { data: profile } = await supabase
+  // Filtered by id, and the error is read.
+  //
+  // Without the filter this was an infinite redirect: profiles_read
+  // (migration 0002) exposes every provider row to any authenticated user,
+  // so .single() matched 1 + <provider count> rows, returned PGRST116, and
+  // left `profile` null. A null profile fails the role check below, sending
+  // the helper to /dashboard, whose own role gate sends them straight back.
+  // The helper could sign in and never reach a single page.
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("full_name, role")
+    .eq("id", user.id)
     .single();
 
+  // A lookup that FAILED is not the same as a user who is not a provider.
+  // Treating the two alike is what turned a transient error into a loop.
+  if (profileError) {
+    throw new Error(`Could not load your profile: ${profileError.message}`);
+  }
   if (profile?.role !== "provider" && profile?.role !== "admin") {
     redirect("/dashboard");
   }
@@ -37,7 +51,8 @@ export default async function ProviderLayout({ children }: { children: React.Rea
   const { data: pp } = await supabase
     .from("provider_profiles")
     .select("status, approved_at")
-    .single();
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   // If they haven't finished onboarding, force them to /provider/onboard
   // (status='pending' AND no approved_at means they haven't submitted KYC yet)

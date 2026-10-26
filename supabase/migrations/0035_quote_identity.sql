@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Quote identity — ADDITIVE, pre-deploy safe.
 --
 -- Split out of 0036 because the new application calls seal_bundle_quote()

@@ -11,7 +11,8 @@ export default async function ProviderOnboardPage() {
   const { data: pp } = await supabase
     .from("provider_profiles")
     .select("*")
-    .single();
+    .eq("user_id", user?.id ?? "")
+    .maybeSingle();
   const services = await listServices();
   const { data: myServiceRows } = user
     ? await supabase

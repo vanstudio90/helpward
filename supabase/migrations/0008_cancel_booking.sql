@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Customer (or provider, or admin) can cancel a booking after it's been matched.
 -- Different from cancel_request which only works pre-match.
 

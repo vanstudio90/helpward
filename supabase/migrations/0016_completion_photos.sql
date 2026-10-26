@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Photo proof of completion — the helper attaches 1–3 photos when marking
 -- a booking complete (grocery on the doorstep, package picked up, etc.) so
 -- the customer has visual proof and a trust signal before the 24h review

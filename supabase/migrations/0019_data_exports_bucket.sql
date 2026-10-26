@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Storage bucket for CCPA/PIPEDA/GDPR data exports.
 --
 -- Archives are JSON files written by /api/cron/process-data-exports and

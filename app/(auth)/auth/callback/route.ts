@@ -15,10 +15,10 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       // Route by role; if the profile row didn't seed (rare), fall through to next.
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .single();
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = user
+        ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+        : { data: null };
       const target =
         profile?.role === "provider" ? "/provider/dashboard"
         : profile?.role === "admin"   ? "/admin"

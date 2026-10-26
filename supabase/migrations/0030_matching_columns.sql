@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- ADDITIVE ONLY — safe to apply before the application release.
 --
 -- Split out of the original 0030 because the function replacements in that

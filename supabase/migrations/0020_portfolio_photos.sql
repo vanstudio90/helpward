@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Helper portfolio gallery — opt-in flag on existing completion photos so
 -- helpers can feature past work on their public /providers/[id] profile.
 -- We reuse the booking_completion_photos table (no new bucket, no new

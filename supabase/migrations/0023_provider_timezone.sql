@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Stored timezone on provider_profiles so server-side helper surfaces
 -- (analytics hour histogram, future schedule materialisation, future
 -- offer-window alignment notifications) can render in the helpers actual

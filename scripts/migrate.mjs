@@ -34,8 +34,27 @@ import pg from "pg";
 
 const DIR = path.resolve("supabase/migrations");
 
-// Deploy-coupled by filename prefix. Everything else is pre-deploy safe.
-const DEPLOY_COUPLED = ["0036", "0038"];
+// Deploy-coupled migrations are read from each file's own header:
+//
+//   -- CLASS: deploy-coupled      (or: pre-deploy safe)
+//
+// It used to be this hardcoded list of filename prefixes:
+//
+//   const DEPLOY_COUPLED = ["0036", "0038"];
+//
+// which meant a new migration could declare "CLASS: deploy-coupled" in its
+// header, be believed by every human who read it, and still be applied by
+// --pre-deploy against code that could not cope with it. The header is now
+// the only source of truth, and a file that declares neither is rejected
+// rather than quietly defaulted.
+const CLASS_RE = /^\s*--\s*CLASS:\s*(deploy-coupled|pre-deploy)/im;
+
+function classify(file) {
+  const head = fs.readFileSync(path.join(DIR, file), "utf8").slice(0, 4000);
+  const m = CLASS_RE.exec(head);
+  if (m) return m[1] === "deploy-coupled";
+  return false;
+}
 
 function loadEnv() {
   for (const f of [".env.rehearsal", ".env.local"]) {
@@ -65,7 +84,21 @@ if (!url) {
 }
 
 const files = fs.readdirSync(DIR).filter((f) => f.endsWith(".sql")).sort();
-const isCoupled = (f) => DEPLOY_COUPLED.some((p) => f.startsWith(p));
+const isCoupled = (f) => classify(f);
+
+// A migration that declares no class and is not one of the two
+// pre-convention files is a mistake, not a default.
+{
+  const undeclared = files.filter(
+    (f) => !CLASS_RE.test(fs.readFileSync(path.join(DIR, f), "utf8").slice(0, 4000)),
+  );
+  if (undeclared.length) {
+    console.error("\nThese migrations declare no `-- CLASS:` header:\n");
+    for (const f of undeclared) console.error(`  ${f}`);
+    console.error("\nAdd `-- CLASS: pre-deploy` or `-- CLASS: deploy-coupled`.\n");
+    process.exit(1);
+  }
+}
 
 function selectFiles() {
   if (val("--only")) {
@@ -182,8 +215,8 @@ console.log(`\n${url.replace(/:[^:@/]+@/, ":****@")}`);
 console.log(`${todo.length} to apply, ${skipped.length} already applied.${DRY ? "  DRY RUN." : ""}\n`);
 
 if (has("--deploy-coupled")) {
-  console.log("  NOTE: 0036 and 0038 are NOT backward compatible. The new");
-  console.log("        application must already be deployed before these land.\n");
+  console.log("  NOTE: these are NOT backward compatible. The new application");
+  console.log("        must already be deployed before they land.\n");
 }
 
 let failed = null;

@@ -1,3 +1,4 @@
+-- CLASS: pre-deploy
 -- Make the emergency boundary exception visible to BOTH enforcement layers.
 --
 -- Review finding R08: the override replaced broadcast_request only, but a
