@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { captureBookingPayment } from "@/lib/payments";
+import { stripeConfigured } from "@/lib/stripe";
 
 export async function setOnlineAction(isOnline: boolean) {
   const supabase = await createSupabaseServerClient();
@@ -52,6 +54,24 @@ export async function completeBookingAction(bookingId: string) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("complete_booking", { p_booking_id: bookingId });
   if (error) return { error: error.message };
+
+  // Settle the hold placed at acceptance. The job is done either way, so a
+  // capture failure must not un-complete it — the helper has already
+  // worked. It is recorded on the booking (payment_error) and surfaced to
+  // admin instead, which is a collections problem, not a dispatch one.
+  if (stripeConfigured()) {
+    const captured = await captureBookingPayment(bookingId);
+    if (!captured.ok) {
+      console.error("capture failed for completed booking", bookingId, captured);
+      revalidatePath("/provider", "layout");
+      return {
+        success: "Completed.",
+        warning:
+          "The job is marked complete. Payment is still settling — support has been notified if it does not clear.",
+      };
+    }
+  }
+
   revalidatePath("/provider", "layout");
   return { success: "Completed." };
 }

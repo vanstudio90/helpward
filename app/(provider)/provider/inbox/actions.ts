@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import { authorizeBookingPayment } from "@/lib/payments";
+import { stripeConfigured } from "@/lib/stripe";
 
 export async function acceptRequestAction(requestId: string) {
   const supabase = await createSupabaseServerClient();
@@ -16,6 +18,44 @@ export async function acceptRequestAction(requestId: string) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Place the hold before the helper is sent anywhere.
+  //
+  // accept_request has to run first — the total and the helper are not
+  // known until the booking row exists — so there is a window where the job
+  // is accepted but unpaid. If authorization fails the acceptance comes
+  // back out, because dispatching a helper to a job that cannot be paid for
+  // is worse than telling someone their card was declined.
+  if (stripeConfigured() && bookingId) {
+    const payment = await authorizeBookingPayment(bookingId as string);
+    if (!payment.ok) {
+      // A helper-side problem (payouts not set up) is fixable by a
+      // different helper, so the job goes back out. A card problem is not
+      // — every helper would hit the same decline — so the request is
+      // cancelled and the customer is told.
+      const requeue = payment.code === "helper_not_payable";
+      const admin = createSupabaseServiceClient();
+      const { error: releaseError } = await admin.rpc("release_unpaid_booking", {
+        p_booking_id: bookingId,
+        p_reason: `Payment could not be authorized: ${payment.message}`,
+        p_requeue: requeue,
+      });
+      if (releaseError) {
+        // The booking is accepted and unpayable and we could not undo it.
+        // Loud, because it needs a human: the helper may be on their way.
+        console.error(
+          "STRANDED BOOKING: authorization failed and release failed",
+          { bookingId, payment, releaseError },
+        );
+      }
+      revalidatePath("/provider/inbox");
+      return {
+        error: requeue
+          ? "Finish setting up payouts before accepting jobs. This one has gone back out to other helpers."
+          : `This job could not be paid for: ${payment.message}`,
+      };
+    }
   }
 
   revalidatePath("/provider/inbox");

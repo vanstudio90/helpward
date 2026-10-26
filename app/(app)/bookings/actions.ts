@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { voidBookingAuthorization, chargeTip } from "@/lib/payments";
+import { stripeConfigured } from "@/lib/stripe";
 
 export async function cancelRequestAction(requestId: string) {
   const supabase = await createSupabaseServerClient();
@@ -38,6 +40,19 @@ export async function setTipAction(bookingId: string, tipDollars: number) {
   });
   if (error) return { error: error.message };
 
+  // The tip is a second charge, not a larger capture: the original hold was
+  // authorized before the tip existed, and a capture can never exceed the
+  // amount authorized. 100% goes to the helper.
+  if (stripeConfigured() && tipCents > 0) {
+    const charged = await chargeTip(bookingId, tipCents);
+    if (!charged.ok) {
+      // Undo the recorded tip so the helper is not shown earnings that
+      // were never collected.
+      await supabase.rpc("set_booking_tip", { p_booking_id: bookingId, p_tip_cents: 0 });
+      return { error: `The tip could not be charged: ${charged.message}` };
+    }
+  }
+
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/bookings");
   return { success: tipCents > 0 ? `Tip of $${tipDollars.toFixed(2)} added.` : "Tip removed." };
@@ -50,6 +65,16 @@ export async function cancelBookingAction(bookingId: string, reason?: string) {
     p_reason: reason ?? null,
   });
   if (error) return { error: error.message };
+
+  // Release the hold rather than refunding it. A void never reaches the
+  // customer's statement; a refund appears as a charge and then a credit
+  // days later, which reads as being charged for a job that never happened.
+  if (stripeConfigured()) {
+    const released = await voidBookingAuthorization(bookingId);
+    if (!released.ok && released.code !== "already_captured") {
+      console.error("could not void authorization on cancel", bookingId, released);
+    }
+  }
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/dashboard");

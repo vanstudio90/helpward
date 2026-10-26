@@ -3,6 +3,7 @@ import Link from "next/link";
 import { listServices } from "@/lib/data/services";
 import { Check, Clock } from "lucide-react";
 import { ProviderServicesForm } from "./services-form";
+import { PayoutStep, type PayoutState } from "./payout-step";
 
 export default async function ProviderOnboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -26,8 +27,21 @@ export default async function ProviderOnboardPage() {
     { key: "services", title: "Pick services you offer", done: providerServiceCount > 0 },
     { key: "id", title: "Verify your ID", done: !!pp?.id_verified_at, blocked: "Pending Stripe Identity wiring" },
     { key: "background", title: "Background check", done: !!pp?.background_verified_at, blocked: "Pending Checkr / Triton wiring" },
-    { key: "payouts", title: "Connect a bank account", done: !!pp?.stripe_connect_account_id, blocked: "Pending Stripe Connect wiring" },
+    // Started is not done: an account can exist with Stripe still waiting on
+    // a document. stripe_transfers_active is the flag that means a
+    // destination charge to this helper will actually land.
+    { key: "payouts", title: "Connect a bank account", done: !!pp?.stripe_transfers_active },
   ];
+
+  const payoutState: PayoutState = {
+    started: !!pp?.stripe_connect_account_id,
+    payable: !!pp?.stripe_transfers_active,
+    detailsSubmitted: !!pp?.stripe_details_submitted,
+    requirementsDue: Array.isArray(pp?.stripe_requirements_due)
+      ? (pp.stripe_requirements_due as string[])
+      : [],
+    disabledReason: (pp?.stripe_disabled_reason as string | null) ?? null,
+  };
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-3xl mx-auto">
@@ -51,9 +65,10 @@ export default async function ProviderOnboardPage() {
                   <Clock className="w-3 h-3" /> {s.blocked}
                 </div>
               )}
-              {s.done && (
+              {s.done && s.key !== "payouts" && (
                 <div className="text-xs text-emerald-700 mt-0.5">Completed</div>
               )}
+              {s.key === "payouts" && <PayoutStep state={payoutState} />}
             </div>
           </li>
         ))}
