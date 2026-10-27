@@ -76,17 +76,9 @@ export default async function DashboardPage() {
           </Link>
         </div>
       </div>
-
-      <div className="relative mb-5 lg:mb-6">
-        <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-        <input
-          placeholder="Search across services and bookings (ships soon)…"
-          disabled
-          title="Global search ships soon — use /services or /bookings to filter for now"
-          aria-label="Global search (coming soon)"
-          className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white border border-slate-200 text-sm placeholder:text-slate-400 cursor-not-allowed opacity-70"
-        />
-      </div>
+        {/* A global search box sat here, cursor-not-allowed and inert.
+            A search field you cannot type in is worse than no search
+            field: it invites the one action it refuses. */}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3 lg:gap-4 mb-5">
         <StatCard icon={<Calendar className="w-5 h-5 text-brand-600" />} tint="bg-brand-50" label="Upcoming Tasks" value={String(stats.upcoming)} cta="View all" href="/bookings" arrow />

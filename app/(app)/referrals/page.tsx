@@ -15,7 +15,50 @@ export const metadata = {
   description: "Give $10, get $10. Share your Helpward code and earn credit when friends complete their first booking.",
 };
 
+// NOT IN THE LAUNCH. Entry points are removed from the navigation, and
+// this page says so if anyone reaches the URL directly.
+//
+// The programme promises "$10 in credit toward your next task" and that
+// credit does not exist, in two independent ways:
+//
+//   profiles.referral_credits_cents is READ, to show a balance, and
+//   written by NOTHING — qualifying a referral awards nobody anything.
+//
+//   Nothing at checkout applies credit. authorizeBookingPayment charges
+//   the full total, so even an awarded credit could not be spent.
+//
+// Hidden rather than re-worded, because there is no honest wording for
+// "you both get $10" when nobody gets $10.
+//
+// Finishing it means an RPC that awards on a qualifying booking, plus a
+// discount applied in the payment path — and because the quote is sealed
+// at creation (0054), that discount has to be sealed with it or a
+// customer can manufacture one. Real work, not a copy change, and not
+// something to improvise inside a payment path this heavily tested.
+const REFERRALS_LIVE = false;
+
 export default async function ReferralsPage() {
+  if (!REFERRALS_LIVE) {
+    return (
+      <div className="px-4 sm:px-6 lg:px-8 py-16 max-w-xl mx-auto text-center">
+        <span className="inline-flex w-14 h-14 rounded-2xl bg-slate-100 items-center justify-center mb-4">
+          <Gift className="w-6 h-6 text-slate-400" aria-hidden="true" />
+        </span>
+        <h1 className="text-2xl font-bold text-slate-900">Referrals aren&rsquo;t live yet</h1>
+        <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+          We&rsquo;d rather not offer you credit we can&rsquo;t yet apply to a booking.
+          When the programme opens, it&rsquo;ll be here.
+        </p>
+        <Link
+          href="/dashboard"
+          className="mt-5 inline-block text-sm font-semibold text-brand-700 underline underline-offset-2"
+        >
+          Back to your dashboard
+        </Link>
+      </div>
+    );
+  }
+
   // First-visit: mint a code if the user doesn't have one. Idempotent.
   await ensureMyReferralCode();
 

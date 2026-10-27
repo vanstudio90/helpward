@@ -40,14 +40,13 @@ export default async function PaymentsPage() {
   const monthSpentCents = completed
     .filter((b) => b.completed_at && new Date(b.completed_at) >= startOfMonth)
     .reduce((s, b) => s + netOf(b), 0);
-  const walletCents = me?.customer?.wallet_balance_cents ?? 0;
 
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
       <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Payments</h1>
       <p className="text-sm text-slate-500 mt-1 mb-6">Track your spending, manage payments and download receipts.</p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-3 gap-3 mb-5">
         <Stat
           label={refundedCents > 0 ? "Total Spent (net)" : "Total Spent"}
           value={`$${(totalSpentCents / 100).toFixed(2)}`}
@@ -57,24 +56,16 @@ export default async function PaymentsPage() {
         />
         <Stat label="This Month" value={`$${(monthSpentCents / 100).toFixed(2)}`} icon={<DollarSign className="w-5 h-5 text-emerald-600" />} tint="bg-emerald-50" />
         <Stat label="Completed" value={String(completed.length)} icon={<CreditCard className="w-5 h-5 text-amber-600" />} tint="bg-amber-50" />
-        <Stat label="Your Balance" value={`$${(walletCents / 100).toFixed(2)}`} icon={<Wallet className="w-5 h-5 text-violet-600" />} tint="bg-violet-50" />
+
       </div>
 
-      <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-violet-50 border border-brand-100 p-5 mb-5">
-        <div className="text-sm font-semibold text-slate-900">Wallet Balance</div>
-        <div className="mt-2 text-3xl font-bold text-slate-900">${(walletCents / 100).toFixed(2)}</div>
-        <div className="text-xs text-slate-500 mt-1">Available credits</div>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <button disabled title="Paying by card isn&rsquo;t available yet" className="py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-50 cursor-not-allowed">
-            Add Credits
-          </button>
-          <button disabled title="Paying by card isn&rsquo;t available yet" className="py-2.5 rounded-xl bg-white border border-brand-200 text-brand-700 text-sm font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-50 cursor-not-allowed">
-            <Gift className="w-4 h-4" /> Send a Gift
-          </button>
-        </div>
-        <p className="text-[11px] text-slate-500 mt-3">Buying credits and sending gifts aren&rsquo;t available yet.</p>
-      </div>
-
+      {/* A "Wallet Balance" card used to sit here with Add Credits and
+          Send a Gift. wallet_balance_cents is read in three places and
+          written by nothing, so the number was always $0.00 and could
+          never be anything else — and the two buttons were disabled with
+          "Paying by card isn't available yet", which stopped being true
+          the day card entry shipped. Removed rather than re-labelled:
+          there is no wallet. */}
       <h2 className="text-base font-bold text-slate-900 mb-3">Transactions</h2>
       {completed.length === 0 ? (
         <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center">

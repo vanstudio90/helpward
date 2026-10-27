@@ -71,7 +71,6 @@ export default async function SettingsPage() {
             </h2>
             <span className="text-[10px] font-bold text-brand-700 bg-brand-50 px-2 py-1 rounded-full">Standard Plan</span>
           </div>
-          <Row label="Account Balance" value={`$${((me.customer?.wallet_balance_cents ?? 0) / 100).toFixed(2)}`} />
           <Row label="Country" value={me.profile.country} />
           <Row label="Default Currency" value={me.profile.default_currency} />
           <Row label="Time Zone" value={me.profile.default_timezone} />

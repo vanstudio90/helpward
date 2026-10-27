@@ -437,20 +437,11 @@ export default async function LandingPage() {
                   >
                     Get started in your browser <ArrowRight className="w-4 h-4" />
                   </Link>
-                  <button
-                    disabled
-                    title="Native iOS app ships soon — use the web app for now"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-900/40 border border-white/20 text-white text-sm font-semibold cursor-not-allowed opacity-80"
-                  >
-                    <Apple className="w-4 h-4" /> Download on the <span className="font-bold">App Store</span>
-                  </button>
-                  <button
-                    disabled
-                    title="Native Android app ships soon — use the web app for now"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-900/40 border border-white/20 text-white text-sm font-semibold cursor-not-allowed opacity-80"
-                  >
-                    <Play className="w-4 h-4" /> Get it on <span className="font-bold">Google Play</span>
-                  </button>
+                  {/* "Download on the App Store" and "Get it on Google
+                      Play" sat here, disabled, captioned "ships soon".
+                      There is no native app and no build to ship, so the
+                      buttons advertised a product that does not exist.
+                      Helpward runs in the browser; that is the offer. */}
                 </div>
               </div>
               <div className="hidden lg:block relative">

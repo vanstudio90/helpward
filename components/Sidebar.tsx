@@ -4,13 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Plus, Grid3x3, MessageCircle, Calendar, Heart,
-  CreditCard, Star, Briefcase, BarChart3, Settings, Gift, ChevronDown, LogOut,
+  CreditCard, Star, Briefcase, BarChart3, Settings, ChevronDown, LogOut,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { logoutAction } from "@/app/(auth)/auth/actions";
-import { REFERRAL_REWARD_DOLLARS } from "@/lib/referrals-pure";
 
-const nav = [
+// A badge is optional. Every item that carried one has been
+// removed, so without this TypeScript narrows `tag` out of the
+// inferred type and the badge branch stops compiling.
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  tag?: string;
+};
+
+const nav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/new-request", label: "New Request", icon: Plus },
   { href: "/services", label: "All Services", icon: Grid3x3 },
@@ -19,9 +29,9 @@ const nav = [
   { href: "/saved-providers", label: "Saved Providers", icon: Heart },
   { href: "/payments", label: "Payments", icon: CreditCard },
   { href: "/favorites", label: "Favorites", icon: Star },
-  { href: "/business", label: "Business Tools", icon: Briefcase, tag: "Soon" },
+  // "Business Tools" was a nav entry tagged "Soon" leading to a page
+  // that says "Coming Soon". Two steps to learn nothing.
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/referrals", label: "Refer a friend", icon: Gift, tag: `$${REFERRAL_REWARD_DOLLARS}` },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -66,24 +76,10 @@ export function Sidebar({
       </nav>
 
       <div className="px-3 pb-4 space-y-3">
-        <div className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Gift className="w-4 h-4 text-brand-600" />
-            <span className="text-sm font-semibold text-slate-900">Refer & Earn</span>
-          </div>
-          {/* Was "$20 in credits" next to a "$10" nav badge and a $10
-              referrals page, over a DEFAULT_REWARD_CENTS of 1000 (HW-15).
-              The button also had no handler at all (HW-13). */}
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Invite a friend — you each get ${REFERRAL_REWARD_DOLLARS} in credits.
-          </p>
-          <Link
-            href="/referrals"
-            className="mt-3 block w-full text-center text-xs font-semibold text-brand-700 bg-white border border-brand-200 rounded-lg py-2 hover:bg-brand-50 transition"
-          >
-            Invite Now
-          </Link>
-        </div>
+        {/* A "Refer & Earn — you each get $10 in credits" card sat here.
+            No credit is ever awarded and none can be spent, so the card
+            advertised money that does not exist. See the note in
+            app/(app)/referrals/page.tsx. */}
 
         {user && (
           <Link href="/settings" className="block rounded-2xl border border-slate-200 bg-white p-3 hover:bg-slate-50">

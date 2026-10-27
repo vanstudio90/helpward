@@ -131,7 +131,9 @@ export function ChatThread({
         </div>
       )}
       <div className="border-t border-slate-100 p-3 bg-white flex items-center gap-2">
-        <button aria-label="Attach" title="File attachments ship once Supabase Storage upload UI is wired" className="p-2 text-slate-400 cursor-not-allowed" disabled><Paperclip className="w-4 h-4" /></button>
+        {/* A disabled paperclip sat here. Attachments are not built, and
+            a greyed control is still a control: it invites the one click
+            it refuses. */}
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

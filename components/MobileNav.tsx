@@ -11,7 +11,6 @@ import {
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import { NotificationBell } from "@/components/NotificationBell";
 import { cn } from "@/lib/cn";
-import { REFERRAL_REWARD_DOLLARS } from "@/lib/referrals-pure";
 
 // `badge` stays in the type so a real unread count can be dropped in once
 // it is derived per-account, but no item carries one today (HW-18).
@@ -47,7 +46,8 @@ const drawer: NavItem[] = [
   { href: "/saved-providers", label: "Saved Providers", icon: Heart },
   { href: "/payments", label: "Payments", icon: CreditCard },
   { href: "/favorites", label: "Favorites", icon: Star },
-  { href: "/business", label: "Business Tools", icon: Briefcase, tag: "Soon" },
+  // "Business Tools" was a nav entry tagged "Soon" leading to a page
+  // that says "Coming Soon". Two steps to learn nothing.
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -201,7 +201,6 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
               <Gift className="w-4 h-4 text-brand-600" />
               <span className="text-sm font-semibold text-slate-900">Refer & Earn</span>
             </div>
-            <p className="text-xs text-slate-500">Invite a friend — you each get ${REFERRAL_REWARD_DOLLARS} in credits.</p>
           </div>
           <form action={logoutAction}>
             <button

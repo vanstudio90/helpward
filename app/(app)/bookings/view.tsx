@@ -119,12 +119,6 @@ export function BookingsView({
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input placeholder="Search bookings..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-slate-200 text-sm" />
             </div>
-            <button disabled title="Filters ship soon" aria-label="Filter" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm cursor-not-allowed opacity-70">
-              <SlidersHorizontal className="w-4 h-4 text-slate-500" /> Filter
-            </button>
-            <button disabled title="Date-range picker ships soon" aria-label="Date range" className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm cursor-not-allowed opacity-70">
-              <Calendar className="w-4 h-4 text-slate-500" /> All Time <ChevronDown className="w-3 h-3 text-slate-400" />
-            </button>
             <a
               href="/api/customer/export/bookings?days=365"
               download
@@ -141,12 +135,6 @@ export function BookingsView({
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input placeholder="Search bookings..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm" />
           </div>
-          <button disabled title="Filters ship soon" aria-label="Filter" className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm cursor-not-allowed opacity-70">
-            <SlidersHorizontal className="w-4 h-4 text-slate-500" />
-          </button>
-          <button disabled title="Date-range picker ships soon" aria-label="Date range" className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm cursor-not-allowed opacity-70">
-            <Calendar className="w-4 h-4 text-slate-500" />
-          </button>
         </div>
       </div>
 
