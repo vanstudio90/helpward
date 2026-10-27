@@ -16,6 +16,33 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type CallPhase = "idle" | "ringing" | "connecting" | "connected" | "ended" | "failed";
 
+/**
+ * Why the microphone was refused, and what to do about it.
+ *
+ * "Helpward needs microphone access" is not actionable once the browser
+ * has remembered a refusal — the prompt never appears again, so the
+ * person presses Call forever. Each browser hides the reset somewhere
+ * different.
+ */
+function micError(err: unknown): string {
+  const name = (err as DOMException)?.name;
+  const isSafari = typeof navigator !== "undefined"
+    && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return isSafari
+      ? "Microphone access is blocked. In Safari, open Settings for this website and set Microphone to Allow, then try again."
+      : "Microphone access is blocked. Click the icon at the left of the address bar, set Microphone to Allow, then try again.";
+  }
+  if (name === "NotFoundError" || name === "OverconstrainedError") {
+    return "No microphone was found. Plug one in, or use the phone number instead.";
+  }
+  if (name === "NotReadableError") {
+    return "Your microphone is in use by another app. Close it and try again.";
+  }
+  return "Couldn't reach your microphone. Try again, or use the phone number.";
+}
+
 type Signal = { id: number; kind: string; payload: unknown; sender_id: string };
 
 // Public STUN only. A TURN relay is needed for the minority of networks
@@ -68,11 +95,22 @@ export function useCall(bookingId: string, selfId: string) {
     });
   }, [selfId]);
 
-  const buildPeer = useCallback(async (id: string) => {
+  /**
+   * Ask for the microphone.
+   *
+   * Separated from buildPeer so it can run BEFORE a session is created.
+   * It used to run after: a refused microphone left a 'ringing' session
+   * nobody was on, and the next page load auto-joined that corpse
+   * instead of starting a fresh call.
+   */
+  const acquireMic = useCallback(async (): Promise<MediaStream> => {
+    return navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  }, []);
+
+  const buildPeer = useCallback(async (id: string, stream: MediaStream) => {
     const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     pc.current = peer;
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     localStream.current = stream;
     stream.getTracks().forEach((t) => peer.addTrack(t, stream));
 
@@ -93,7 +131,26 @@ export function useCall(bookingId: string, selfId: string) {
       const state = peer.connectionState;
       if (state === "connected") {
         setPhase("connected");
-        void supabase.current.rpc("update_call_status", { p_call_id: id, p_status: "connected" });
+        // Checked and retried, not fired and forgotten.
+        //
+        // This was `void rpc(...)`, so when the write failed nothing said
+        // so: both screens showed a 43-second call and the row ended with
+        // connected_at and duration_sec null. A discarded error is a bug
+        // you cannot see.
+        void (async () => {
+          for (let attempt = 0; attempt < 2; attempt++) {
+            const { error } = await supabase.current.rpc("update_call_status", {
+              p_call_id: id, p_status: "connected",
+            });
+            if (!error) return;
+            console.error(`recording call connection failed (attempt ${attempt + 1})`, error);
+            await new Promise((r) => setTimeout(r, 800));
+          }
+          // The server has a second line of defence: at end time it
+          // recovers connected_at from the `answer` signal, which is
+          // evidence the peers negotiated. See migration 0062.
+          console.error("call connected but never recorded; relying on server recovery", id);
+        })();
       } else if (state === "failed") {
         // Normally a network that blocks peer-to-peer entirely. No retry
         // fixes that, so say so rather than spinning forever.
@@ -156,13 +213,13 @@ export function useCall(bookingId: string, selfId: string) {
     }
   }, [applySignal]);
 
-  const join = useCallback(async (id: string, asCaller: boolean) => {
+  const join = useCallback(async (id: string, asCaller: boolean, stream: MediaStream) => {
     setCallId(id);
     setError(null);
     setPhase(asCaller ? "ringing" : "connecting");
 
     try {
-      const peer = await buildPeer(id);
+      const peer = await buildPeer(id, stream);
 
       const channel = supabase.current
         .channel(`call:${id}`)
@@ -195,12 +252,11 @@ export function useCall(bookingId: string, selfId: string) {
 
       return () => { void supabase.current.removeChannel(channel); };
     } catch (err) {
+      console.error("call setup failed", err);
       setPhase("failed");
-      setError(
-        (err as DOMException)?.name === "NotAllowedError"
-          ? "Helpward needs microphone access to make a call."
-          : "Couldn't start the call.",
-      );
+      setError("Couldn't set up the call. Try again.");
+      // The session exists but nobody is on it; do not leave it ringing.
+      await supabase.current.rpc("abandon_call", { p_call_id: id, p_reason: "setup_failed" });
       teardown();
       return () => {};
     }
@@ -222,32 +278,69 @@ export function useCall(bookingId: string, selfId: string) {
    * either person pressed and in whatever order — deterministic, with no
    * race to lose.
    */
-  const enter = useCallback(async (id: string) => {
+  const enter = useCallback(async (id: string, stream: MediaStream) => {
     const { data: session } = await supabase.current
       .from("call_sessions")
       .select("started_by, status")
       .eq("id", id)
       .maybeSingle();
 
-    if (session?.status === "ended" || session?.status === "declined") {
+    if (session && session.status !== "ringing" && session.status !== "connected") {
+      // Already over. Release the microphone we just took.
+      stream.getTracks().forEach((t) => t.stop());
       setPhase("ended");
       return;
     }
-    await join(id, session?.started_by === selfId);
+    await join(id, session?.started_by === selfId, stream);
   }, [join, selfId]);
 
   const startCall = useCallback(async () => {
+    setError(null);
+    setPhase("connecting");
+
+    // MICROPHONE FIRST, session second.
+    //
+    // The other order left a live 'ringing' session behind every time
+    // someone refused the permission prompt — and the next page load
+    // auto-joined that dead session rather than starting a real call.
+    // Nothing is created until we know we can actually speak.
+    let stream: MediaStream;
+    try {
+      stream = await acquireMic();
+    } catch (err) {
+      setPhase("failed");
+      setError(micError(err));
+      return;
+    }
+
     const { data, error: rpcError } = await supabase.current
       .rpc("start_call", { p_booking_id: bookingId });
     if (rpcError || !data) {
+      // No session was created, but the microphone is open. Close it.
+      stream.getTracks().forEach((t) => t.stop());
       setPhase("failed");
       setError(rpcError?.message ?? "Couldn't start the call.");
       return;
     }
-    await enter(data as string);
-  }, [bookingId, enter]);
+    await enter(data as string, stream);
+  }, [bookingId, enter, acquireMic]);
 
-  const answerCall = useCallback(async (id: string) => { await enter(id); }, [enter]);
+  const answerCall = useCallback(async (id: string) => {
+    setError(null);
+    setPhase("connecting");
+    let stream: MediaStream;
+    try {
+      stream = await acquireMic();
+    } catch (err) {
+      setPhase("failed");
+      setError(micError(err));
+      // Someone IS calling and we cannot answer. Mark the attempt dead so
+      // it does not sit ringing forever.
+      await supabase.current.rpc("abandon_call", { p_call_id: id, p_reason: "mic_denied" });
+      return;
+    }
+    await enter(id, stream);
+  }, [enter, acquireMic]);
 
   const hangUp = useCallback(async () => {
     if (callId) {

@@ -32,6 +32,8 @@ export type SavedAddressOption = {
   is_default: boolean;
   lat?: number | null;
   lng?: number | null;
+  /** ISO alpha-2, verified when the address was saved. Drives the quote's currency. */
+  country?: string | null;
 };
 
 export type PreferredHelper = {
@@ -112,8 +114,21 @@ export function NewRequestView({
   //   3  both, so what is left is to check the total and send it
   const step: 1 | 2 | 3 = !selected ? 1 : address.trim().length === 0 ? 2 : 3;
 
-  const currency: "USD" | "CAD" =
-    /\b(BC|British Columbia|Canada)\b/i.test(address) ? "CAD" : defaultCurrency;
+  // Quoted in the currency of the PLACE, from the address the server
+  // actually RESOLVED — never from guessing at what was typed.
+  //
+  // This was a regex over the raw input box, so the quote flipped
+  // mid-keystroke: "…Vancouver" read CA$, the resolved address
+  // re-rendered as US$, then flipped back. A price that changes
+  // currency three times before submission is not a quote.
+  //
+  // Null until something is verified. An unresolved address has no
+  // country, and inventing one is what made it oscillate — so the
+  // customer's own country stands in until then, and the booking's
+  // real currency comes from the pickup country at acceptance (0052).
+  const currency: "USD" | "CAD" = confirmedCountry
+    ? (confirmedCountry === "CA" ? "CAD" : "USD")
+    : defaultCurrency;
   // The answers that set the price, mirrored out of the (uncontrolled)
   // intake inputs so the quote can move as the customer fills them in.
   const [pricedAnswers, setPricedAnswers] = useState<Record<string, string>>({});
@@ -223,6 +238,9 @@ export function NewRequestView({
   const onAddressChange = (v: string) => {
     setAddress(v);
     setCoords(null);
+    // Editing the address makes any previously verified country stale.
+    // Keeping it would quote the old place's money for the new address.
+    setConfirmedCountry(null);
     // A confirmation is bound to one exact resolved address. Editing the
     // field makes it stale, so drop it rather than submit something the
     // server will reject.
@@ -487,6 +505,10 @@ export function NewRequestView({
                           onClick={() => {
                             setAddress(a.formatted);
                             setCoords(a.lat != null && a.lng != null ? { lat: a.lat, lng: a.lng } : null);
+                            // A saved address was verified when it was
+                            // saved, so its country is known without a
+                            // round trip.
+                            setConfirmedCountry(a.country === "CA" ? "CA" : "US");
                           }}
                           className={cn(
                             "inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-full border transition",
@@ -531,9 +553,12 @@ export function NewRequestView({
                   <input type="hidden" name="address_lng" value={coords.lng} />
                 )}
                 <UseCurrentLocationButton
-                  onResolved={(formatted, lat, lng) => {
+                  onResolved={(formatted, lat, lng, country) => {
                     setAddress(formatted);
                     setCoords({ lat, lng });
+                    // A reverse geocode IS a verified resolution, so the
+                    // quote can use its country straight away.
+                    setConfirmedCountry(country === "CA" ? "CA" : "US");
                   }}
                 />
                 <p className="text-[11px] text-slate-500 mt-1 inline-flex items-center gap-1">

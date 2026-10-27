@@ -16,7 +16,7 @@ export default async function NewRequestPage({
     searchParams,
     supabase
       .from("saved_addresses")
-      .select("id, label, formatted, is_default, lat, lng")
+      .select("id, label, formatted, is_default, lat, lng, country")
       .order("is_default", { ascending: false })
       .order("created_at", { ascending: false }),
   ]);

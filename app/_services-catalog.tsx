@@ -10,8 +10,7 @@ import { bookingBadge } from "@/lib/booking-badge";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 import type { PricingRule } from "@/lib/service-pricing";
-import { formatMoney, unitFor } from "@/lib/money";
-import { SERVICE_FEE_CENTS } from "@/lib/pricing";
+import { ServicePriceLine } from "@/components/ServicePriceLine";
 
 // Catalog with category-filter tabs. Client because the tab state is interactive,
 // but every service still renders in the SSR'd HTML — the tabs just toggle
@@ -137,17 +136,12 @@ export function ServicesCatalog({
                           same as the booking form. "From $20" said
                           neither, and the service fee appeared only much
                           later in the journey. */}
-                      <div className="mt-2 sm:mt-3 text-[11px] sm:text-xs">
-                        <div className="font-semibold text-slate-900">
-                          From {formatMoney(s.base_price_cents, currency)}
-                          <span className="font-normal text-slate-500">
-                            {" "}{unitFor(pricingRules?.[s.id])}
-                          </span>
-                        </div>
-                        <div className="text-slate-500 mt-0.5">
-                          + {formatMoney(SERVICE_FEE_CENTS, currency)} service fee
-                        </div>
-                      </div>
+                      <ServicePriceLine
+                        baseCents={s.base_price_cents}
+                        rule={pricingRules?.[s.id]}
+                        currency={currency}
+                        className="mt-2 sm:mt-3"
+                      />
                     </div>
                   </Link>
                 ))}

@@ -116,3 +116,61 @@ describe("the intake does not offer what is not built", () => {
     assert.ok(withOptions.length > 20, `only ${withOptions.length} fields have options`);
   });
 });
+
+// Three catalogues rendered service prices independently — the public
+// page, the signed-in page and the booking form. Fixing "From $20" in two
+// of them left the third saying it, so a customer browsing signed in saw
+// a different price format from one browsing signed out.
+import { readFileSync as read } from "node:fs";
+
+describe("service prices are rendered in one place", () => {
+  const CATALOGUES = [
+    "app/_services-catalog.tsx",
+    "app/(app)/services/view.tsx",
+  ];
+
+  test("no catalogue formats a price by hand", () => {
+    const offenders = CATALOGUES.filter((f) =>
+      /From \$\{?\$?\{?\(?s\.base_price_cents/.test(read(f, "utf8")),
+    );
+    assert.deepEqual(
+      offenders, [],
+      `these build a price string themselves instead of using ServicePriceLine:\n${offenders.join("\n")}`,
+    );
+  });
+
+  test("every catalogue uses the shared component", () => {
+    const missing = CATALOGUES.filter((f) => !read(f, "utf8").includes("ServicePriceLine"));
+    assert.deepEqual(missing, [], `catalogues not using the shared price line:\n${missing.join("\n")}`);
+  });
+
+  // Control: the files exist and are being read, so neither assertion can
+  // pass because the list is wrong.
+  test("the catalogue list points at real files", () => {
+    for (const f of CATALOGUES) {
+      assert.ok(read(f, "utf8").length > 500, `${f} is missing or tiny`);
+    }
+  });
+});
+
+// The form quoted CA$ as soon as "Vancouver" appeared in the address BOX,
+// so the price flipped mid-keystroke and flipped back once the address
+// resolved. Currency follows the country the server verified, never a
+// guess at what was typed.
+describe("currency is never guessed from typed text", () => {
+  test("no file infers a country from raw address text", () => {
+    const FILES = [
+      "app/(app)/new-request/view.tsx",
+      "app/(app)/services/view.tsx",
+      "app/_services-catalog.tsx",
+    ];
+    const offenders = FILES.filter((f) => {
+      const src = read(f, "utf8");
+      return /\/[^/\n]*\b(BC|British Columbia|Canada)\b[^/\n]*\/[a-z]*\.test\(/.test(src);
+    });
+    assert.deepEqual(
+      offenders, [],
+      `these guess currency from typed text instead of the verified country:\n${offenders.join("\n")}`,
+    );
+  });
+});

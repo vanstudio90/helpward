@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Phone, PhoneOff, Mic, MicOff, AlertCircle, Loader2 } from "lucide-react";
 import { useCall } from "@/lib/call/use-call";
 
@@ -26,6 +26,10 @@ export function CallPanel({
   incomingCallId?: string | null;
 }) {
   const call = useCall(bookingId, selfId);
+  // Local to the button, not the call: the call's own phase does not
+  // change until the microphone prompt is answered, which can be a long
+  // time if the person is reading it.
+  const [starting, setStarting] = useState(false);
 
   // Join a call that is already ringing rather than making the person
   // press Call and race the other side into a second session.
@@ -65,9 +69,17 @@ export function CallPanel({
             {call.phase === "connected" ? `On a call with ${counterpartName}` : counterpartName}
           </div>
           <div className="text-xs text-slate-500" aria-live="polite">
-            {call.phase === "idle" && "This service is delivered by call."}
-            {call.phase === "ringing" && "Ringing…"}
-            {call.phase === "connecting" && "Connecting…"}
+            {/* Each state says what is happening and whose turn it is.
+                "Connecting…" covered everything from asking for the
+                microphone to negotiating audio, so a press looked like
+                nothing had happened. */}
+            {call.phase === "idle" && (incomingCallId
+              ? "Incoming call — answering…"
+              : "This service is delivered by call.")}
+            {call.phase === "ringing" && "Calling — waiting for them to pick up…"}
+            {call.phase === "connecting" && (incomingCallId
+              ? "Connecting audio…"
+              : "Starting call…")}
             {call.phase === "connected" && clock(call.seconds)}
             {call.phase === "ended" && "Call ended."}
             {call.phase === "failed" && "Couldn't connect."}
@@ -102,11 +114,20 @@ export function CallPanel({
         ) : (
           <button
             type="button"
-            onClick={() => void call.startCall()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold shrink-0"
+            // Disabled the instant it is pressed. Two presses created two
+            // attempts, and the screen showed no change in between, so
+            // pressing twice was the natural thing to do.
+            disabled={starting}
+            onClick={() => {
+              setStarting(true);
+              void call.startCall().finally(() => setStarting(false));
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Phone className="w-4 h-4" aria-hidden="true" />
-            {call.phase === "ended" || call.phase === "failed" ? "Call again" : "Start call"}
+            {starting
+              ? "Starting call…"
+              : call.phase === "ended" || call.phase === "failed" ? "Call again" : "Start call"}
           </button>
         )}
       </div>

@@ -10,6 +10,8 @@ import Link from "next/link";
 import { SERVICE_FEE_CENTS, quoteOneShotCents, dollars } from "@/lib/pricing";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
+import type { PricingRule } from "@/lib/service-pricing";
+import { ServicePriceLine } from "@/components/ServicePriceLine";
 import { toggleFavoriteAction } from "@/app/(app)/favorites/actions";
 import { cn } from "@/lib/cn";
 
@@ -18,11 +20,19 @@ const CAT_ICONS: Record<string, LucideIcon> = {
 };
 
 export function ServicesView({
-  services, categories, initialFavoritedIds = [],
+  services, categories, initialFavoritedIds = [], pricingRules, currency = "USD",
 }: {
   services: ServiceWithCategory[];
   categories: ServiceCategory[];
   initialFavoritedIds?: string[];
+  /** Per-service pricing rules, so a card can say what its price buys. */
+  pricingRules?: Record<string, PricingRule>;
+  /**
+   * Browsing happens before any address is known, so this is the viewer's
+   * own country. The booking's real currency comes from the pickup
+   * country at acceptance (migration 0052).
+   */
+  currency?: "USD" | "CAD";
 }) {
   const [activeTab, setActiveTab] = useState<string>("All Services");
   const [selected, setSelected] = useState<ServiceWithCategory | null>(services[0] ?? null);
@@ -171,7 +181,10 @@ export function ServicesView({
               </button>
             )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          {/* Two readable columns, matching /new-request and the public
+              catalogue. Four at 1280px left ~122px per card, truncating
+              names and even the price string. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
             {filtered.map((s) => (
               <div
                 key={s.id}
@@ -198,14 +211,14 @@ export function ServicesView({
                     )}
                   </span>
                   <span className="block p-3 sm:p-4">
-                    <span className="block text-sm font-bold text-slate-900 truncate">{s.title}</span>
-                    <span className="block text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-1">{s.blurb}</span>
-                    <span className="mt-2 sm:mt-3 flex items-center justify-between gap-2 text-[11px] sm:text-xs">
-                      <span className="font-semibold text-slate-900 truncate">
-                        From ${(s.base_price_cents / 100).toFixed(0)}
-                      </span>
-                      <span className="text-slate-500 whitespace-nowrap shrink-0">{s.eta_label}</span>
-                    </span>
+                    <span className="block text-sm font-bold text-slate-900 leading-snug line-clamp-2">{s.title}</span>
+                    <span className="block text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-2">{s.blurb}</span>
+                    <ServicePriceLine
+                      baseCents={s.base_price_cents}
+                      rule={pricingRules?.[s.id]}
+                      currency={currency}
+                      className="mt-2 sm:mt-3"
+                    />
                   </span>
                 </button>
                 <button

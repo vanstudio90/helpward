@@ -16,7 +16,14 @@ import { reverseGeocodeAction } from "./location-actions";
 export function UseCurrentLocationButton({
   onResolved,
 }: {
-  onResolved: (formatted: string, lat: number, lng: number) => void;
+  /**
+   * The resolved address, with the country the geocoder reported.
+   *
+   * The country was already in the reverse-geocode result and was simply
+   * dropped here — so a GPS fix in Vancouver still quoted US$, because
+   * the form had nothing verified to read.
+   */
+  onResolved: (formatted: string, lat: number, lng: number, country: string) => void;
 }) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -53,7 +60,7 @@ export function UseCurrentLocationButton({
         setErr(r.error);
         return;
       }
-      onResolved(r.formatted, r.lat, r.lng);
+      onResolved(r.formatted, r.lat, r.lng, r.country);
     });
   };
 
