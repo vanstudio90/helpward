@@ -362,7 +362,11 @@ function SidePanel({
       <div className="mt-5">
         <div className="text-sm font-bold text-slate-900 mb-2">What's included</div>
         <ul className="space-y-2 text-sm text-slate-700">
-          {["Verified, background-checked provider", "Real-time tracking & messaging", "Fully insured during the task", "Pay only after completion", "24/7 support if anything goes wrong"].map((i) => (
+          {/* Same list as the booking panel, and it has to say the same
+              true things. Checkr is not wired, so background_verified_at
+              is never written; insurance_active_until is written by
+              nothing at all. */}
+          {["Reviewed and approved by Helpward before taking work", "Real-time tracking & messaging", "Pay only after completion", "Support if anything goes wrong"].map((i) => (
             <li key={i} className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> {i}
             </li>

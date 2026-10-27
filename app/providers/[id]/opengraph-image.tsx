@@ -171,9 +171,8 @@ export default async function HelperOgImage({
         >
           <div style={{ display: "flex" }}>✓ ID verified</div>
           <div style={{ display: "flex" }}>·</div>
-          <div style={{ display: "flex" }}>✓ Background checked</div>
+          <div style={{ display: "flex" }}>✓ Approved by Helpward</div>
           <div style={{ display: "flex" }}>·</div>
-          <div style={{ display: "flex" }}>✓ Fully insured</div>
         </div>
       </div>
     ),

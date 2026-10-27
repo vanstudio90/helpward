@@ -25,7 +25,7 @@ const STEPS: Step[] = [
     title: "Welcome to Helpward",
     body: "Helpward is on-demand real humans for real-world tasks — grocery pickups, errands, deliveries, pet care, home help, and a lot more.",
     bullets: [
-      "Every helper is ID-verified and background-checked",
+      "Every helper is reviewed and approved by us before taking work",
       "Real-time GPS tracking from accept to complete",
       "Pay after the task is done, not before",
     ],

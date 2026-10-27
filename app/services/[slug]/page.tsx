@@ -26,7 +26,7 @@ export async function generateMetadata({
   const service = await getServicePublic(slug);
   if (!service) return { title: "Service not found — Helpward" };
   const title = `${service.title} — Book a verified helper | Helpward`;
-  const description = `${service.blurb} Helpers in your area, background-checked, insured, average response ${service.eta_label ?? "under 20 min"}. From $${(service.base_price_cents / 100).toFixed(0)}.`;
+  const description = `${service.blurb} Approved local helpers. From $${(service.base_price_cents / 100).toFixed(0)}, paid only after the task is complete.`;
   return {
     title,
     description,
@@ -74,7 +74,7 @@ export default async function ServiceDetailPage({
   const SERVICE_FAQS = [
     {
       q: `What is ${service.title.toLowerCase()} on Helpward?`,
-      a: `${service.blurb} Helpward matches your request with a nearby verified human helper, typically within ${service.eta_label ?? "20 minutes"}. Every helper is background-checked, identity-verified, and insured during the booking.`,
+      a: `${service.blurb} Helpward matches your request with a nearby helper who has been reviewed and approved by a person at Helpward before they can take work.`,
     },
     {
       q: `How much does ${service.title.toLowerCase()} cost?`,
@@ -86,7 +86,7 @@ export default async function ServiceDetailPage({
     },
     {
       q: `Are Helpward helpers verified?`,
-      a: `Yes. Every helper passes a government-ID verification through Stripe Identity, a background check through Checkr, and is covered by Helpward's platform insurance (up to $1M) while on the booking.`,
+      a: `Every helper is reviewed and approved by a person at Helpward before they can take a task, and no unapproved helper is ever offered work. Automated ID verification and background checks are not running yet — we will say so here when they are, rather than before. Helpward does not currently carry platform insurance.`,
     },
   ];
 
@@ -173,7 +173,7 @@ export default async function ServiceDetailPage({
             {/* AI-friendly summary block — leads with a definition for snippet extraction */}
             <p className="mt-6 text-sm text-slate-500 leading-relaxed max-w-2xl">
               <strong className="text-slate-700">{service.title} on Helpward</strong> is an on-demand{" "}
-              {service.category?.label.toLowerCase()} service that connects you with a verified, background-checked
+              {service.category?.label.toLowerCase()} service that connects you with an approved
               human in your city. Pricing starts at ${baseDollars.toFixed(0)}, a flat $4.50 service fee applies, and
               you only pay once the helper marks the task complete. Service is available in our launch areas
               in the U.S. and Canada.

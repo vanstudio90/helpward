@@ -32,7 +32,7 @@ export async function generateMetadata({
   if (!city || !service) return { title: "Not found — Helpward" };
 
   const title = `${service.title} in ${city.name}, ${city.region} | Helpward`;
-  const description = `Book a verified ${service.title.toLowerCase()} in ${city.name} via Helpward. Background-checked helpers, $${(service.base_price_cents / 100).toFixed(0)} base, average arrival ${service.eta_label ?? "under 20 min"}, $1M insurance per booking.`;
+  const description = `Book a ${service.title.toLowerCase()} in ${city.name} via Helpward. Approved local helpers, $${(service.base_price_cents / 100).toFixed(0)} base price, payment only after the task is complete.`;
   const url = `https://helpward.com/cities/${city.slug}/${service.id}`;
   return {
     title,
@@ -95,7 +95,7 @@ export default async function CityServicePage({
     "@type": "LocalBusiness",
     "@id": `https://helpward.com/cities/${city.slug}/${service.id}#localbusiness`,
     name: `Helpward ${service.title} — ${city.name}`,
-    description: `On-demand ${service.title.toLowerCase()} service in ${city.name}, ${city.region}. Verified helpers, transparent pricing, $1M insurance per booking.`,
+    description: `On-demand ${service.title.toLowerCase()} service in ${city.name}, ${city.region}. Approved helpers, transparent pricing, payment after completion.`,
     url: `https://helpward.com/cities/${city.slug}/${service.id}`,
     parentOrganization: { "@id": "https://helpward.com/#organization" },
     areaServed: {

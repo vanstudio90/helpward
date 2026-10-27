@@ -795,12 +795,19 @@ function SummaryCard({ selected, rule, answers, currency, bundle }: {
         <div className="mt-4 border-t border-slate-100 pt-4">
           <div className="text-xs font-bold text-slate-900 mb-2">What&apos;s included</div>
           <ul className="space-y-1.5 text-xs text-slate-700">
+            {/* Only what is true today.
+                "Background-checked" required Checkr, which is not wired —
+                background_verified_at is written solely by its webhook,
+                so no helper has one. "Fully insured" was worse:
+                insurance_active_until is written by NOTHING, so there is
+                no policy behind the claim at all. A safety promise is
+                the last thing to overstate — someone books a stranger
+                into their home on the strength of it. */}
             {[
-              "Verified, background-checked provider",
+              "Reviewed and approved by Helpward before taking work",
               "Real-time tracking & messaging",
-              "Fully insured during the task",
               "Pay only after completion",
-              "24/7 support if anything goes wrong",
+              "Support if anything goes wrong",
             ].map((i) => (
               <li key={i} className="flex items-start gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" /> {i}

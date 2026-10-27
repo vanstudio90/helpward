@@ -50,7 +50,7 @@ const ORG_LD = {
     height: 512,
   },
   description:
-    "Helpward is the Human Infrastructure Network — an on-demand marketplace of verified, background-checked humans for rides, errands, home help, deliveries, and almost any real-world task in the U.S. and Canada.",
+    "Helpward is an on-demand marketplace of approved local helpers for rides, errands, home help, deliveries, and almost any real-world task in San Diego and Vancouver's Lower Mainland.",
   areaServed: ["US", "CA"],
   knowsAbout: [
     "On-demand local help",
@@ -59,7 +59,7 @@ const ORG_LD = {
     "Furniture assembly",
     "Grocery delivery",
     "Senior check-ins",
-    "Background-checked helpers",
+    "Approved local helpers",
   ],
   sameAs: [
     "https://helpward.com/about",

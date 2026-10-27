@@ -174,3 +174,60 @@ describe("currency is never guessed from typed text", () => {
     );
   });
 });
+
+// Safety claims have to be true. "Fully insured during the task" sat on
+// the booking panel, the service detail panel and two social images —
+// and insurance_active_until is written by NOTHING, so there was no
+// policy behind any of it. "Background-checked" needed Checkr, which is
+// not wired, so background_verified_at is never written either.
+//
+// Someone books a stranger into their home on the strength of these.
+/**
+ * Comments explaining a removed claim are not the claim.
+ *
+ * The first version of this only skipped lines beginning `//`, so the
+ * JSX block comments describing WHY "Fully insured" was removed were
+ * themselves read as the promise — the test failed on its own
+ * explanation.
+ */
+function stripComments(src: string): string {
+  return src
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .filter((l) => !l.trim().startsWith("//"))
+    .join("\n");
+}
+
+describe("trust claims match what the system can actually do", () => {
+  const SURFACES = [
+    "app/page.tsx",
+    "app/layout.tsx",
+    "app/opengraph-image.tsx",
+    "app/providers/[id]/opengraph-image.tsx",
+    "app/(app)/new-request/view.tsx",
+    "app/(app)/services/view.tsx",
+    "app/(app)/dashboard/onboarding-tour.tsx",
+  ];
+
+  test("nothing claims helpers are insured", () => {
+    const offenders = SURFACES.filter((f) => {
+      return /insured/i.test(stripComments(read(f, "utf8")));
+    });
+    assert.deepEqual(offenders, [], `these claim insurance that does not exist:\n${offenders.join("\n")}`);
+  });
+
+  test("nothing asserts background checks are run", () => {
+    const offenders = SURFACES.filter((f) => {
+      // A question ("Are helpers background-checked?") is fine; an
+      // assertion that they are is not.
+      return /background[- ]check(ed)?\s*(helpers?|providers?|humans?)|★ Background|✓ Background/i
+        .test(stripComments(read(f, "utf8")));
+    });
+    assert.deepEqual(offenders, [], `these assert background checks that are not run:\n${offenders.join("\n")}`);
+  });
+
+  test("the surface list points at real files", () => {
+    for (const f of SURFACES) assert.ok(read(f, "utf8").length > 200, `${f} missing`);
+  });
+});

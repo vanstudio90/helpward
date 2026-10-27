@@ -42,7 +42,7 @@ export async function generateMetadata({
     : "";
   const countryLabel = prof?.country === "CA" ? "Canada" : "United States";
   const description = pp.bio?.trim()
-    || `${ratingFragment}${pp.tasks_completed ?? 0} tasks completed. Background-checked, insured, ready to help across ${countryLabel}.`;
+    || `${ratingFragment}${pp.tasks_completed ?? 0} tasks completed. Approved by Helpward, ready to help across ${countryLabel}.`;
 
   const canonical = `/providers/${pp.slug ?? pp.user_id}`;
   return {
@@ -215,7 +215,7 @@ export default async function PublicProviderProfile({
           <div className="mt-4 flex flex-wrap justify-center gap-2 text-[11px] font-semibold">
             <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">✓ ID Verified</span>
             <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">✓ Background Checked</span>
-            <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">✓ Insured</span>
+            <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">✓ Approved</span>
           </div>
           {pp.bio && <p className="mt-4 text-sm text-slate-600 leading-relaxed max-w-md mx-auto">{pp.bio}</p>}
           <div className="mt-6 grid grid-cols-3 gap-2 text-xs max-w-md mx-auto">

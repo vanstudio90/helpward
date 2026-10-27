@@ -26,7 +26,7 @@ export async function generateMetadata({
   const city = getCity(citySlug);
   if (!city) return { title: "City not found — Helpward" };
   const title = `On-demand help in ${city.name}, ${city.region} | Helpward`;
-  const description = `Book verified, background-checked helpers in ${city.name} for rides, errands, home help, deliveries, and more. Pricing upfront, payment after completion, $1M insurance per booking.`;
+  const description = `Book approved local helpers in ${city.name} for rides, errands, home help, deliveries, and more. Pricing upfront, payment only after the task is complete.`;
   return {
     title,
     description,

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { decideSignal } from "@/lib/call/signal-order";
 
 // A two-party audio call over WebRTC, signalled through Supabase.
 //
@@ -64,17 +65,78 @@ export function useCall(bookingId: string, selfId: string) {
   const localStream = useRef<MediaStream | null>(null);
   const remoteAudio = useRef<HTMLAudioElement | null>(null);
   const lastSignalId = useRef(0);
-  const supabase = useRef(createSupabaseBrowserClient());
+  // Lazily, and once.
+  //
+  // useRef(createSupabaseBrowserClient()) evaluates the factory on EVERY
+  // render — the argument is always computed, even though only the first
+  // value is kept — so this built a fresh browser client on each render,
+  // including during server rendering where there is no browser. That is
+  // the likeliest source of the server/client mismatch seen around this
+  // component.
+  const supabaseRef = useRef<ReturnType<typeof createSupabaseBrowserClient> | null>(null);
+  const supabase = {
+    get current() {
+      if (!supabaseRef.current) supabaseRef.current = createSupabaseBrowserClient();
+      return supabaseRef.current;
+    },
+  };
+
+  // Everything below is scoped to ONE call. A retry builds a new peer,
+  // and state left over from the previous attempt would be applied to it.
+  //
+  // `generation` is the guard: realtime callbacks and in-flight promises
+  // from an abandoned call check it and drop out, instead of racing the
+  // call that replaced them.
+  const generation = useRef(0);
+  type LiveChannel = ReturnType<ReturnType<typeof createSupabaseBrowserClient>["channel"]>;
+  const channel = useRef<LiveChannel | null>(null);
+  /**
+   * ICE candidates that arrived before there was a remote description to
+   * attach them to.
+   *
+   * addIceCandidate throws InvalidStateError when the remote description
+   * is null, and the browser console filled with exactly that: candidates
+   * routinely overtake the offer or answer they belong to, because
+   * realtime delivers them as separate messages and the handler did not
+   * wait for the previous one. They are held here and flushed the moment
+   * a remote description exists.
+   */
+  const pendingCandidates = useRef<RTCIceCandidateInit[]>([]);
+  /**
+   * Signal ids already handled. Realtime and the catch-up read overlap by
+   * design — the catch-up exists to cover the window before the
+   * subscription is live — so the same row arrives twice.
+   */
+  const handled = useRef<Set<number>>(new Set());
+  /** One signal at a time, in arrival order. */
+  const queue = useRef<Promise<void>>(Promise.resolve());
 
   // Tear everything down exactly once, from wherever it is triggered:
   // hang-up, failure, unmount, the other side leaving. A microphone left
   // open after a call is a live microphone.
   const teardown = useCallback(() => {
+    // Invalidate anything still in flight for the call being torn down.
+    generation.current += 1;
+
     pc.current?.getSenders().forEach((s) => s.track?.stop());
     pc.current?.close();
     pc.current = null;
     localStream.current?.getTracks().forEach((t) => t.stop());
     localStream.current = null;
+
+    // The realtime subscription used to outlive the call. join() returned
+    // a cleanup function and enter() dropped it on the floor, so every
+    // retry left another channel alive — all of them still delivering
+    // signals, into whichever peer happened to be current.
+    if (channel.current) {
+      void supabase.current.removeChannel(channel.current);
+      channel.current = null;
+    }
+
+    pendingCandidates.current = [];
+    handled.current = new Set();
+    lastSignalId.current = 0;
+    queue.current = Promise.resolve();
   }, []);
 
   useEffect(() => teardown, [teardown]);
@@ -171,6 +233,27 @@ export function useCall(bookingId: string, selfId: string) {
     return peer;
   }, [send, teardown]);
 
+  /**
+   * Attach every candidate that was waiting for a remote description.
+   *
+   * Called immediately after setRemoteDescription succeeds — that is the
+   * moment they become applicable.
+   */
+  const flushCandidates = useCallback(async (peer: RTCPeerConnection) => {
+    const waiting = pendingCandidates.current;
+    pendingCandidates.current = [];
+    for (const candidate of waiting) {
+      try {
+        await peer.addIceCandidate(candidate);
+      } catch (err) {
+        // A candidate that fails WITH a remote description present is
+        // genuinely unusable — stale, or for a connection that has moved
+        // on. Dropping it costs one network path, not the call.
+        console.warn("buffered candidate rejected", err);
+      }
+    }
+  }, []);
+
   const applySignal = useCallback(async (id: string, sig: Signal) => {
     if (sig.sender_id === selfId) return;
     const peer = pc.current;
@@ -179,6 +262,7 @@ export function useCall(bookingId: string, selfId: string) {
     try {
       if (sig.kind === "offer") {
         await peer.setRemoteDescription(sig.payload as RTCSessionDescriptionInit);
+        await flushCandidates(peer);
         const answer = await peer.createAnswer();
         await peer.setLocalDescription(answer);
         await send(id, "answer", answer);
@@ -187,8 +271,26 @@ export function useCall(bookingId: string, selfId: string) {
         // from a reconnect; applying it would break a working call.
         if (peer.signalingState === "have-local-offer") {
           await peer.setRemoteDescription(sig.payload as RTCSessionDescriptionInit);
+          await flushCandidates(peer);
         }
       } else if (sig.kind === "ice") {
+        // decideSignal is the tested rule (lib/call/signal-order.ts):
+        // a candidate is only applicable once a remote description
+        // exists. Without the buffer the console filled with
+        //   InvalidStateError: ... The remote description was null
+        // and each of those candidates was LOST — the handler logged and
+        // moved on, discarding a path that would have worked moments
+        // later. Candidates routinely overtake the offer they belong to,
+        // because realtime delivers them as separate rows.
+        const plan = decideSignal("ice", {
+          fromSelf: false,
+          seen: false,
+          hasRemoteDescription: peer.remoteDescription != null,
+        });
+        if (plan.action === "buffer") {
+          pendingCandidates.current.push(sig.payload as RTCIceCandidateInit);
+          return;
+        }
         await peer.addIceCandidate(sig.payload as RTCIceCandidateInit);
       } else if (sig.kind === "bye") {
         setPhase("ended");
@@ -197,52 +299,98 @@ export function useCall(bookingId: string, selfId: string) {
     } catch (err) {
       console.error("signal failed", sig.kind, err);
     }
-  }, [selfId, send, teardown]);
+  }, [selfId, send, teardown, flushCandidates]);
+
+  /**
+   * Hand a signal to the queue.
+   *
+   * Realtime callbacks fire independently and the old code called
+   * applySignal without awaiting the previous one, so an offer could
+   * still be mid-setRemoteDescription while the next signal was already
+   * being applied to the same peer. Everything now runs in arrival
+   * order, once each.
+   */
+  const enqueue = useCallback((id: string, sig: Signal, forGeneration: number) => {
+    if (handled.current.has(sig.id)) return;
+    handled.current.add(sig.id);
+    lastSignalId.current = Math.max(lastSignalId.current, sig.id);
+
+    queue.current = queue.current
+      .then(() => {
+        // The call this signal belongs to is gone.
+        if (generation.current !== forGeneration) return;
+        return applySignal(id, sig);
+      })
+      .catch((err) => console.error("signal queue", err));
+  }, [applySignal]);
 
   /** Anything that arrived before the subscription was live. */
-  const drain = useCallback(async (id: string) => {
+  const drain = useCallback(async (id: string, forGeneration: number) => {
     const { data } = await supabase.current
       .from("call_signals")
       .select("id, kind, payload, sender_id")
       .eq("call_id", id)
-      .gt("id", lastSignalId.current)
       .order("id");
-    for (const sig of (data ?? []) as Signal[]) {
-      lastSignalId.current = Math.max(lastSignalId.current, sig.id);
-      await applySignal(id, sig);
-    }
-  }, [applySignal]);
+    // Through the same queue, deduplicated by id. The catch-up and the
+    // subscription deliberately overlap — the catch-up covers the window
+    // before the subscription was live — so rows arrive twice and must be
+    // applied once.
+    for (const sig of (data ?? []) as Signal[]) enqueue(id, sig, forGeneration);
+  }, [enqueue]);
 
   const join = useCallback(async (id: string, asCaller: boolean, stream: MediaStream) => {
     setCallId(id);
     setError(null);
     setPhase(asCaller ? "ringing" : "connecting");
 
+    // Everything from here belongs to THIS attempt. A retry bumps the
+    // generation and anything still in flight for the old one drops out.
+    const myGeneration = ++generation.current;
+
     try {
       const peer = await buildPeer(id, stream);
 
-      const channel = supabase.current
+      // Held in a ref so teardown can dispose it. join used to RETURN a
+      // cleanup function that enter() discarded, so every retry left
+      // another live subscription feeding signals into whichever peer
+      // happened to be current.
+      const live = supabase.current
         .channel(`call:${id}`)
         .on("postgres_changes",
           { event: "INSERT", schema: "public", table: "call_signals", filter: `call_id=eq.${id}` },
-          (p) => {
-            const sig = p.new as Signal;
-            lastSignalId.current = Math.max(lastSignalId.current, sig.id);
-            void applySignal(id, sig);
-          })
-        .subscribe();
+          (p) => enqueue(id, p.new as Signal, myGeneration));
+      channel.current = live;
 
-      // Catch up on whatever was sent before that subscription existed —
-      // the normal case for whoever joins second.
-      await drain(id);
+      // Wait for the subscription to be LIVE before catching up.
+      //
+      // Subscribing and reading concurrently leaves a gap: a row written
+      // between the read and the subscription becoming active is
+      // delivered by neither. Ordering them closes it, and the overlap
+      // the other way is harmless because the queue deduplicates.
+      await new Promise<void>((resolve) => {
+        live.subscribe((status) => {
+          if (status === "SUBSCRIBED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            resolve();
+          }
+        });
+      });
+
+      if (generation.current !== myGeneration) return () => {};
+
+      await drain(id, myGeneration);
+      // Let the queue finish applying what the catch-up found, so the
+      // glare check below reads a settled signalling state.
+      await queue.current;
+
+      if (generation.current !== myGeneration) return () => {};
 
       // A second safety net for glare: if an offer was already applied
-      // during the drain we are answering it, whatever started_by said.
-      // Sending our own offer now would tear down a connection that is
-      // already negotiating.
+      // during the catch-up we are answering it, whatever started_by
+      // said. Sending our own offer now would tear down a connection
+      // that is already negotiating.
       const alreadyNegotiating =
         pc.current?.signalingState === "have-remote-offer" ||
-        pc.current?.signalingState === "stable" && pc.current?.remoteDescription != null;
+        (pc.current?.signalingState === "stable" && pc.current?.remoteDescription != null);
 
       if (asCaller && !alreadyNegotiating) {
         const offer = await peer.createOffer();
@@ -250,7 +398,7 @@ export function useCall(bookingId: string, selfId: string) {
         await send(id, "offer", offer);
       }
 
-      return () => { void supabase.current.removeChannel(channel); };
+      return () => {};
     } catch (err) {
       console.error("call setup failed", err);
       setPhase("failed");
@@ -260,7 +408,7 @@ export function useCall(bookingId: string, selfId: string) {
       teardown();
       return () => {};
     }
-  }, [buildPeer, applySignal, drain, send, teardown]);
+  }, [buildPeer, enqueue, drain, send, teardown]);
 
   /**
    * Join a call, working out which end of it we are.

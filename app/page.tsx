@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 // Definition-first homepage opener — AI engines extract the first sentence
 // as a candidate snippet, so this paragraph is the "what is Helpward" answer.
 const TLDR =
-  "Helpward is the Human Infrastructure Network: an on-demand marketplace that connects you with verified, background-checked humans for rides, errands, home help, deliveries, and almost any real-world task across the U.S. and Canada. Pricing is shown upfront, payment is held until your task is marked complete, and every helper is identity-verified and insured during the booking.";
+  "Helpward is an on-demand marketplace connecting you with approved local helpers for rides, errands, home help, deliveries, and almost any real-world task in San Diego and Vancouver's Lower Mainland. Pricing is shown upfront, and payment is held until your task is marked complete.";
 
 const FAQS: { q: string; a: string }[] = [
   {
@@ -33,7 +33,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Are helpers background-checked?",
-    a: "Yes. Every helper passes government-ID verification through Stripe Identity, a background check through Checkr/Triton, and is covered by Helpward's platform insurance while the booking is active. Approval is reviewed by a human at Helpward before any helper can take a task.",
+    a: "Every helper is reviewed and approved by a person at Helpward before they can take a task, and no unapproved helper is ever offered work. We're building toward automated ID verification and background checks, and we'll say so here the moment those are running rather than before. Helpward does not currently carry platform insurance.",
   },
   {
     q: "How much does it cost?",
@@ -203,7 +203,7 @@ export default async function LandingPage() {
             // were removed: there are no reviews and no completed bookings to
             // average. What remains are commitments we control, not measured
             // statistics we cannot support.
-            { icon: ShieldCheck, tint: "bg-emerald-50 text-emerald-600", value: "Every helper", label: "ID and background checked before approval" },
+            { icon: ShieldCheck, tint: "bg-emerald-50 text-emerald-600", value: "Every helper", label: "Reviewed and approved by us before taking work" },
             { icon: DollarSign, tint: "bg-violet-50 text-violet-600", value: "$1M", label: "Marketplace liability cover per booking" },
             { icon: Clock, tint: "bg-brand-50 text-brand-600", value: "No surge", label: "Flat $4.50 service fee, never multiplied" },
             { icon: Headphones, tint: "bg-rose-50 text-rose-600", value: "Pay after", label: "You're charged once the task is complete" },
@@ -298,11 +298,16 @@ export default async function LandingPage() {
             <ul className="mt-6 space-y-4">
               {[
                 { Icon: ShieldCheck, tone: "bg-brand-50 text-brand-600",
-                  title: "Background-checked helpers",
-                  sub: "Every helper is verified with ID, background check, and reviews." },
+                  title: "Approved helpers",
+                  sub: "Every helper is reviewed and approved by a person at Helpward before they can take work." },
+                // Was "Insured tasks — up to $1M insurance coverage".
+                // insurance_active_until is written by nothing; there is
+                // no policy, no underwriter and no cover. A specific
+                // figure is the worst version of an untrue claim, because
+                // it reads as something somebody checked.
                 { Icon: Lock, tone: "bg-emerald-50 text-emerald-600",
-                  title: "Insured tasks",
-                  sub: "Every booking is protected with up to $1M insurance coverage." },
+                  title: "Nothing taken upfront",
+                  sub: "Your card is held when a helper accepts and only charged once the task is marked complete." },
                 { Icon: DollarSign, tone: "bg-violet-50 text-violet-600",
                   title: "Secure payments",
                   sub: "Pay in-app only after your task is completed to your satisfaction." },

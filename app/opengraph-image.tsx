@@ -82,8 +82,7 @@ export default async function Image() {
             opacity: 0.9,
           }}
         >
-          <div>★ Background-checked</div>
-          <div>· Fully insured</div>
+          <div>★ Approved helpers</div>
           <div>· Pay after completion</div>
         </div>
       </div>
