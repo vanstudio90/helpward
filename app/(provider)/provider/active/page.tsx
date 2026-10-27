@@ -364,6 +364,8 @@ export default async function ProviderActivePage() {
                 selfId={user.id}
                 counterpartName={booking.customer?.full_name ?? "your customer"}
                 incomingCallId={liveCallId}
+                awaitingPayment={!["authorized", "captured"].includes(booking.payment_status)}
+                viewerIs="helper"
               />
             )}
 

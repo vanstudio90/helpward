@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Phone, PhoneOff, Mic, MicOff, AlertCircle, Loader2 } from "lucide-react";
 import { useCall } from "@/lib/call/use-call";
 
@@ -17,13 +18,20 @@ function clock(seconds: number): string {
 }
 
 export function CallPanel({
-  bookingId, selfId, counterpartName, incomingCallId,
+  bookingId, selfId, counterpartName, incomingCallId, awaitingPayment, viewerIs,
 }: {
   bookingId: string;
   selfId: string;
   counterpartName: string;
   /** Set when the other side has already started one. */
   incomingCallId?: string | null;
+  /**
+   * The call IS the service here, and the card has not been held yet.
+   * start_call refuses in this state (migration 0063); saying so beats a
+   * button that returns an error.
+   */
+  awaitingPayment?: boolean;
+  viewerIs: "customer" | "helper";
 }) {
   const call = useCall(bookingId, selfId);
   // Local to the button, not the call: the call's own phase does not
@@ -44,6 +52,40 @@ export function CallPanel({
   }, [incomingCallId, phase, answerCall]);
 
   const live = call.phase === "ringing" || call.phase === "connecting" || call.phase === "connected";
+
+  // Before the hold exists there is nothing to say about microphones or
+  // ringing — there is one thing to do, and only one person can do it.
+  if (awaitingPayment) {
+    return (
+      <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+        <div className="flex items-start gap-3">
+          <span className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 inline-flex items-center justify-center shrink-0">
+            <Phone className="w-5 h-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <div className="text-sm font-bold text-amber-950">
+              {viewerIs === "customer"
+                ? "Confirm your card to start your session"
+                : "Waiting for the customer to confirm payment"}
+            </div>
+            <p className="text-xs text-amber-900/80 mt-0.5">
+              {viewerIs === "customer"
+                ? `This session is delivered by call. ${counterpartName} can't start it until the hold is in place — you're charged after it finishes.`
+                : `${counterpartName} has been asked to confirm their card. The call opens as soon as they do.`}
+            </p>
+            {viewerIs === "customer" && (
+              <Link
+                href={`/bookings/${bookingId}/confirm-payment`}
+                className="mt-2.5 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-semibold"
+              >
+                Confirm card
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">

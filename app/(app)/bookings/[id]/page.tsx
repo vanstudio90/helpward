@@ -386,6 +386,8 @@ export default async function BookingDetailPage({
               selfId={user.id}
               counterpartName={provider?.profile?.full_name ?? "your helper"}
               incomingCallId={(liveCall?.id as string | null) ?? null}
+              awaitingPayment={!["authorized", "captured"].includes(b.payment_status)}
+              viewerIs="customer"
             />
           )}
 

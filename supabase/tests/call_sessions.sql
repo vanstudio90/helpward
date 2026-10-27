@@ -207,4 +207,141 @@ begin
   end;
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- L09 — an answer signal is NOT a connection
+-- ---------------------------------------------------------------------------
+-- 0062 recovered a missing connected_at from the earliest `answer`
+-- signal, reasoning that an answer proves the peers negotiated. It does —
+-- but the answer is sent right after setLocalDescription, BEFORE ICE has
+-- found a path, and the call can still fail afterwards. So a call that
+-- negotiated and never connected gained a positive duration: exactly the
+-- invented fact that fallback existed to avoid. 0063 keeps the answer
+-- time as negotiated_at, which is what it is.
+do $$
+declare r record; v_call uuid; v_conn timestamptz; v_neg timestamptz; v_dur int;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by)
+  values (r.booking, r.customer, r.helper, r.customer) returning id into v_call;
+  insert into call_signals (call_id, sender_id, kind, payload)
+  values (v_call, r.helper, 'answer', '{"sdp":"negotiated"}'::jsonb);
+
+  perform pg_temp.become(r.customer, 'customer');
+  -- Negotiated, then the network refused a path.
+  perform update_call_status(v_call, 'ended', 'ice_failed');
+
+  perform pg_temp.become_service();
+  select connected_at, negotiated_at, duration_sec into v_conn, v_neg, v_dur
+    from call_sessions where id = v_call;
+
+  if v_conn is not null then
+    raise exception 'FAIL L09 a call that never connected recorded a connection time';
+  end if;
+  if v_dur is not null then
+    raise exception 'FAIL L09 a call that never connected recorded a duration of %s', v_dur;
+  end if;
+  if v_neg is null then
+    raise exception 'FAIL L09 the answer time was lost instead of kept as negotiated_at';
+  end if;
+  raise notice 'PASS L09 negotiated-but-never-connected has no duration, and keeps negotiated_at';
+end $$;
+
+-- POSITIVE CONTROL: a call that really connected records both.
+do $$
+declare r record; v_call uuid; v_conn timestamptz; v_dur int;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by)
+  values (r.booking, r.customer, r.helper, r.customer) returning id into v_call;
+
+  perform pg_temp.become(r.customer, 'customer');
+  perform update_call_status(v_call, 'connected', null);
+
+  -- Age the connection by hand rather than sleeping.
+  --
+  -- now() is TRANSACTION START time in Postgres, so it does not advance
+  -- inside one transaction however long you wait — pg_sleep(1.1) here
+  -- produced a duration of 0 and looked like a bug in the arithmetic.
+  -- In production the connect and the hang-up are separate transactions
+  -- seconds or minutes apart, which is what this reproduces.
+  perform pg_temp.become_service();
+  update call_sessions set connected_at = connected_at - interval '42 seconds'
+   where id = v_call;
+
+  perform pg_temp.become(r.customer, 'customer');
+  perform update_call_status(v_call, 'ended', 'hung_up');
+
+  perform pg_temp.become_service();
+  select connected_at, duration_sec into v_conn, v_dur from call_sessions where id = v_call;
+  if v_conn is null then
+    raise exception 'FAIL L10 a connected call recorded no connection time';
+  end if;
+  if coalesce(v_dur, 0) < 40 or v_dur > 45 then
+    raise exception 'FAIL L10 a 42-second call recorded a duration of %s', v_dur;
+  end if;
+  raise notice 'PASS L10 a real connection records its time and duration (% s)', v_dur;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- L11 — where the call IS the service, it needs the payment hold
+-- ---------------------------------------------------------------------------
+do $$
+declare r record;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  update bookings set status = 'in_progress', payment_status = 'pending' where id = r.booking;
+
+  perform pg_temp.become(r.customer, 'customer');
+  begin
+    perform start_call(r.booking);
+    raise exception 'FAIL L11 a paid listening session started with no payment hold';
+  exception when others then
+    if sqlerrm like 'FAIL %' then raise; end if;
+    if position('payment is confirmed' in sqlerrm) = 0 then
+      raise exception 'FAIL L11 refused for the wrong reason: %', sqlerrm;
+    end if;
+    raise notice 'PASS L11 a call-delivered service needs the hold first';
+  end;
+
+  -- CONTROL: authorize it and the same call goes through, so the refusal
+  -- above is the payment gate and not something else failing.
+  perform pg_temp.become_service();
+  update bookings set payment_status = 'authorized' where id = r.booking;
+  perform pg_temp.become(r.customer, 'customer');
+  perform start_call(r.booking);
+  raise notice 'PASS L12 once authorized, the session starts (control)';
+end $$;
+
+-- Messaging is deliberately NOT gated: coordinating about a booking is
+-- not the thing being sold.
+do $$
+declare r record; v_rows int;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  perform pg_temp.become(r.customer, 'customer');
+  select count(*) into v_rows from conversations where booking_id = r.booking;
+  raise notice 'PASS L13 messaging stays reachable regardless of payment (% conversation row(s))', v_rows;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- L14 — a call belongs to a person
+-- ---------------------------------------------------------------------------
+-- started_by is NOT NULL and comes from auth.uid(). Without the explicit
+-- check this surfaced as a constraint violation rather than a reason.
+do $$
+declare r record;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  begin
+    perform start_call(r.booking);
+    raise exception 'FAIL L14 a call was started by nobody';
+  exception when others then
+    if sqlerrm like 'FAIL %' then raise; end if;
+    if position('null value in column' in sqlerrm) > 0 then
+      raise exception 'FAIL L14 failed on a constraint instead of explaining: %', sqlerrm;
+    end if;
+    raise notice 'PASS L14 a caller with no identity is refused with a reason';
+  end;
+end $$;
+
 rollback;
