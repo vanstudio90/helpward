@@ -14,6 +14,7 @@ import { UseCurrentLocationButton } from "./use-current-location";
 import { MissingFieldsNotice, friendlyLabel, type MissingField } from "./missing-fields";
 import { priceService, type PricingRule } from "@/lib/service-pricing";
 import { formatMoney, unitFor } from "@/lib/money";
+import { nextConfirmedCountry, quoteCurrency, type Country } from "@/lib/quote-currency";
 import { AddressConfirm } from "./address-confirm";
 import { IntakeFields } from "./intake-fields";
 import { intakeFor } from "@/lib/service-intake";
@@ -98,7 +99,7 @@ export function NewRequestView({
   // The country of the address the SERVER resolved, once it has. Null
   // until then: an unresolved address has no country, and pretending
   // otherwise is what made the quote flip.
-  const [confirmedCountry, setConfirmedCountry] = useState<"US" | "CA" | null>(null);
+  const [confirmedCountry, setConfirmedCountry] = useState<Country | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   // What the customer still has to fill in. Empty until they actually try
   // to submit — telling someone what they have not done yet, before they
@@ -126,9 +127,7 @@ export function NewRequestView({
   // country, and inventing one is what made it oscillate — so the
   // customer's own country stands in until then, and the booking's
   // real currency comes from the pickup country at acceptance (0052).
-  const currency: "USD" | "CAD" = confirmedCountry
-    ? (confirmedCountry === "CA" ? "CAD" : "USD")
-    : defaultCurrency;
+  const currency = quoteCurrency(confirmedCountry, defaultCurrency === "CAD" ? "CA" : "US");
   // The answers that set the price, mirrored out of the (uncontrolled)
   // intake inputs so the quote can move as the customer fills them in.
   const [pricedAnswers, setPricedAnswers] = useState<Record<string, string>>({});
@@ -238,9 +237,9 @@ export function NewRequestView({
   const onAddressChange = (v: string) => {
     setAddress(v);
     setCoords(null);
-    // Editing the address makes any previously verified country stale.
-    // Keeping it would quote the old place's money for the new address.
-    setConfirmedCountry(null);
+    // Editing makes any verified country stale: keeping it would quote
+    // the old place's money against the new address.
+    setConfirmedCountry((c) => nextConfirmedCountry(c, { type: "typed" }));
     // A confirmation is bound to one exact resolved address. Editing the
     // field makes it stale, so drop it rather than submit something the
     // server will reject.
@@ -507,8 +506,10 @@ export function NewRequestView({
                             setCoords(a.lat != null && a.lng != null ? { lat: a.lat, lng: a.lng } : null);
                             // A saved address was verified when it was
                             // saved, so its country is known without a
-                            // round trip.
-                            setConfirmedCountry(a.country === "CA" ? "CA" : "US");
+                            // round trip. Older rows predate the column
+                            // and leave what we already had.
+                            setConfirmedCountry((c) =>
+                              nextConfirmedCountry(c, { type: "saved_address", country: a.country }));
                           }}
                           className={cn(
                             "inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-full border transition",
@@ -558,7 +559,7 @@ export function NewRequestView({
                     setCoords({ lat, lng });
                     // A reverse geocode IS a verified resolution, so the
                     // quote can use its country straight away.
-                    setConfirmedCountry(country === "CA" ? "CA" : "US");
+                    setConfirmedCountry((c) => nextConfirmedCountry(c, { type: "gps", country }));
                   }}
                 />
                 <p className="text-[11px] text-slate-500 mt-1 inline-flex items-center gap-1">
@@ -586,7 +587,7 @@ export function NewRequestView({
                     setAddressConfirmation(token);
                     // Now there is a verified country, so the quote can
                     // stop guessing at one.
-                    setConfirmedCountry(country === "CA" ? "CA" : "US");
+                    setConfirmedCountry((c) => nextConfirmedCountry(c, { type: "confirmed", country }));
                     // Resubmit the SAME form. Every other field keeps its
                     // value, so the service, schedule, notes, bundle and
                     // recurrence all survive the round trip.

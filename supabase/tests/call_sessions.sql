@@ -344,4 +344,171 @@ begin
   end;
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- L15 — abandoned ringing sessions are swept
+-- ---------------------------------------------------------------------------
+-- A refused microphone, a closed tab or a crash left a session 'ringing'
+-- forever, and the next page load auto-joined that corpse instead of
+-- starting a real call.
+do $$
+declare r record; v_old uuid; v_new uuid; v_swept int; v_status text;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by, started_at)
+  values (r.booking, r.customer, r.helper, r.customer, now() - interval '10 minutes')
+  returning id into v_old;
+
+  -- One that is genuinely still ringing, to prove the sweep is selective.
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by)
+  values (r.booking, r.customer, r.helper, r.customer)
+  returning id into v_new;
+
+  v_swept := expire_stale_calls(r.booking);
+
+  select status::text into v_status from call_sessions where id = v_old;
+  if v_status <> 'missed' then
+    raise exception 'FAIL L15 a 10-minute-old ringing session was not swept (is %)', v_status;
+  end if;
+
+  select status::text into v_status from call_sessions where id = v_new;
+  if v_status <> 'ringing' then
+    raise exception 'FAIL L15 the sweep killed a call that was still ringing (is %)', v_status;
+  end if;
+  raise notice 'PASS L15 abandoned rings are swept, live ones are not (% swept)', v_swept;
+
+  -- And a CONNECTED call is never swept, however long it runs.
+  perform pg_temp.become_service();
+  update call_sessions set status = 'connected', connected_at = now(),
+         started_at = now() - interval '3 hours'
+   where id = v_new;
+  perform expire_stale_calls(r.booking);
+  select status::text into v_status from call_sessions where id = v_new;
+  if v_status <> 'connected' then
+    raise exception 'FAIL L16 a three-hour call in progress was swept (is %)', v_status;
+  end if;
+  raise notice 'PASS L16 a long call in progress is never swept';
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- L17 — an anonymous caller cannot touch a call
+-- ---------------------------------------------------------------------------
+-- `auth.uid() not in (a, b)` is NULL when auth.uid() is NULL, and NULL is
+-- not TRUE — so the `if` never fired and an UNAUTHENTICATED caller
+-- holding a call id could end someone else's call. Found against the
+-- running database, not by reading.
+create or replace function pg_temp.become_anon()
+returns void language plpgsql as $$
+begin
+  -- A JWT with no `sub`: exactly what an anon key produces.
+  perform set_config('request.jwt.claims',
+    json_build_object('role', 'anon')::text, true);
+  execute 'set local role anon';
+end $$;
+
+do $$
+declare r record; v_call uuid; v_status text;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by)
+  values (r.booking, r.customer, r.helper, r.customer) returning id into v_call;
+
+  perform pg_temp.become_anon();
+  begin
+    perform update_call_status(v_call, 'ended', 'hijacked');
+    perform pg_temp.become_service();
+    select status::text into v_status from call_sessions where id = v_call;
+    if v_status = 'ended' then
+      raise exception 'FAIL L17 an anonymous caller ended someone else''s call';
+    end if;
+    raise notice 'PASS L17 an anonymous caller cannot end a call';
+  exception when others then
+    if sqlerrm like 'FAIL %' then raise; end if;
+    perform pg_temp.become_service();
+    raise notice 'PASS L17 an anonymous caller is refused outright: %', left(sqlerrm, 40);
+  end;
+
+  -- Control: the real participant still can, so the refusal above is the
+  -- identity check and not the function being broken for everyone.
+  perform pg_temp.become(r.customer, 'customer');
+  perform update_call_status(v_call, 'ended', 'hung_up');
+  perform pg_temp.become_service();
+  select status::text into v_status from call_sessions where id = v_call;
+  if v_status <> 'ended' then
+    raise exception 'FAIL L18 the real participant could not end their own call (%)', v_status;
+  end if;
+  raise notice 'PASS L18 the real participant still can (control)';
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- L19 — refusing the microphone on an INCOMING call
+-- ---------------------------------------------------------------------------
+-- Someone IS calling and we cannot answer. Without this the attempt sits
+-- ringing until the sweeper notices, and the caller watches it ring.
+do $$
+declare r record; v_call uuid; v_status text; v_reason text;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by)
+  values (r.booking, r.customer, r.helper, r.customer) returning id into v_call;
+
+  -- The HELPER is being called and their microphone is blocked.
+  perform pg_temp.become(r.helper, 'provider');
+  perform abandon_call(v_call, 'mic_denied');
+
+  perform pg_temp.become_service();
+  select status::text, end_reason into v_status, v_reason
+    from call_sessions where id = v_call;
+  if v_status <> 'missed' then
+    raise exception 'FAIL L19 a refused incoming call stayed % instead of missed', v_status;
+  end if;
+  raise notice 'PASS L19 a refused incoming call ends immediately (%)', v_reason;
+end $$;
+
+-- A connected call cannot be abandoned out from under the people on it.
+do $$
+declare r record; v_call uuid; v_status text;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by, status, connected_at)
+  values (r.booking, r.customer, r.helper, r.customer, 'connected', now())
+  returning id into v_call;
+
+  perform pg_temp.become(r.helper, 'provider');
+  perform abandon_call(v_call, 'mic_denied');
+
+  perform pg_temp.become_service();
+  select status::text into v_status from call_sessions where id = v_call;
+  if v_status <> 'connected' then
+    raise exception 'FAIL L20 a live call was abandoned (is %)', v_status;
+  end if;
+  raise notice 'PASS L20 a connected call cannot be abandoned';
+end $$;
+
+-- And a stranger cannot abandon a call they are not on.
+do $$
+declare r record; v_call uuid; v_status text;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by)
+  values (r.booking, r.customer, r.helper, r.customer) returning id into v_call;
+
+  perform pg_temp.become(r.other, 'provider');
+  begin
+    perform abandon_call(v_call, 'hijack');
+    perform pg_temp.become_service();
+    select status::text into v_status from call_sessions where id = v_call;
+    if v_status <> 'ringing' then
+      raise exception 'FAIL L21 a stranger killed someone else''s call';
+    end if;
+    raise notice 'PASS L21 a stranger cannot abandon a call they are not on';
+  exception when others then
+    -- assert_call_participant raises SQLSTATE HW051, a custom class that
+    -- `when raise_exception` (P0001) does not catch.
+    if sqlerrm like 'FAIL %' then raise; end if;
+    perform pg_temp.become_service();
+    raise notice 'PASS L21 a stranger is refused outright: %', left(sqlerrm, 40);
+  end;
+end $$;
+
 rollback;
