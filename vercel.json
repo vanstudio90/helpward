@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/sweep-calls",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/offline-stale-helpers",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

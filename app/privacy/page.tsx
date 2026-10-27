@@ -1,13 +1,15 @@
 import { MarketingShell } from "@/components/MarketingShell";
+import { LEGAL_DOCS, formatLegalDate } from "@/lib/legal";
 
 export const metadata = { title: "Privacy Policy — Helpward" };
 
 export default function Privacy() {
   return (
-    <MarketingShell title="Privacy Policy" subtitle={`Last updated ${new Date().toLocaleDateString()}`}>
-      <p className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-3">
-        ⚠ Template language. Engage privacy counsel before launch to confirm CCPA / PIPEDA / GDPR compliance.
-      </p>
+    <MarketingShell title="Privacy Policy" subtitle={`Last updated ${formatLegalDate(LEGAL_DOCS.privacy.updated)}`}>
+      {/* A red banner here told the READER this was template language
+          needing a lawyer. The warning is right; the audience was not.
+          It lives in lib/legal.ts and `npm run verify` reports it, so
+          it reaches the people who can act on it. */}
       <h2>What we collect</h2>
       <ul>
         <li><strong>Account:</strong> name, email, phone, password hash, country</li>

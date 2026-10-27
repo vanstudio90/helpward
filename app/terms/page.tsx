@@ -1,14 +1,15 @@
 import { MarketingShell } from "@/components/MarketingShell";
+import { LEGAL_DOCS, formatLegalDate } from "@/lib/legal";
 
 export const metadata = { title: "Terms of Service — Helpward" };
 
 export default function Terms() {
   return (
-    <MarketingShell title="Terms of Service" subtitle={`Last updated ${new Date().toLocaleDateString()}`}>
-      <p className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-3">
-        ⚠ This is template language. Get a real lawyer to review before launch. Marketplace ToS has
-        nuances around AB5 / contractor classification / IC vs. employee that need professional review.
-      </p>
+    <MarketingShell title="Terms of Service" subtitle={`Last updated ${formatLegalDate(LEGAL_DOCS.terms.updated)}`}>
+      {/* A red banner here told the READER this was template language
+          needing a lawyer. The warning is right; the audience was not.
+          It lives in lib/legal.ts and `npm run verify` reports it, so
+          it reaches the people who can act on it. */}
       <h2>1. Who we are</h2>
       <p>
         Helpward (&ldquo;we,&rdquo; &ldquo;us&rdquo;) operates a two-sided marketplace at <a href="https://helpward.com">helpward.com</a>

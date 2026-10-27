@@ -39,7 +39,7 @@ export default async function ProviderActivePage() {
 
   const { data: pp } = await supabase
     .from("provider_profiles")
-    .select("is_online, current_location, status")
+    .select("is_online, current_location, status, offline_reason, went_offline_at")
     .eq("user_id", user.id)
     .single();
 
@@ -227,6 +227,19 @@ export default async function ProviderActivePage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto">
+      {pp?.offline_reason === "location_stale" && (
+        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" role="status">
+          <div className="text-sm font-bold text-amber-950">
+            You were marked offline — we stopped receiving your location
+          </div>
+          <p className="text-xs text-amber-900/80 mt-0.5 leading-relaxed">
+            Helpward matches you to nearby jobs using your position, and it stops updating when this
+            tab is closed or in the background. While it was stale you weren&rsquo;t being offered
+            work. Go back online below, keep this tab open, and allow location when asked.
+          </p>
+        </div>
+      )}
+
       <ProviderActiveRealtimeRefresh userId={user.id} />
       <div className="flex items-center justify-between gap-3 mb-5">
         <div>

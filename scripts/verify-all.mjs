@@ -20,6 +20,7 @@ const STEPS = [
   { name: "sql: contact visibility", cmd: "node scripts/run-sql-suite.mjs supabase/tests/contact_visibility.sql" },
   { name: "sql: inspection reports", cmd: "node scripts/run-sql-suite.mjs supabase/tests/inspection_report.sql" },
   { name: "sql: crew staffing",    cmd: "node scripts/run-sql-suite.mjs supabase/tests/crew_staffing.sql" },
+  { name: "sql: stale helpers",   cmd: "node scripts/run-sql-suite.mjs supabase/tests/stale_helpers.sql" },
   { name: "sql: calls",            cmd: "node scripts/run-sql-suite.mjs supabase/tests/call_sessions.sql" },
 
   { name: "stripe: payment mechanics", cmd: "node scripts/verify-payments.mjs" },
@@ -57,6 +58,23 @@ for (const step of STEPS) {
     for (const line of tail) console.log(`      ${line}`);
     failed++;
   }
+}
+
+// Things that are not failures but must not be forgotten. A warning that
+// only a customer ever saw (the old red banner on /terms) is a warning
+// nobody could act on.
+try {
+  const { unreviewedLegalDocs } = await import("../lib/legal.ts");
+  const pending = unreviewedLegalDocs();
+  if (pending.length) {
+    console.log("\n  \x1b[33mBEFORE LAUNCH\x1b[0m — legal review outstanding:");
+    for (const d of pending) {
+      console.log(`    /${d.name} (last changed ${d.updated})`);
+      console.log(`      ${d.outstanding}`);
+    }
+  }
+} catch {
+  // Running without the TypeScript loader; skip rather than fail the run.
 }
 
 const secs = Math.round((Date.now() - started) / 1000);

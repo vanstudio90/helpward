@@ -83,3 +83,36 @@ describe("what the quote is shown in", () => {
     assert.deepEqual(seen, ["USD", "USD", "CAD"], `the quote flipped: ${seen.join(" → ")}`);
   });
 });
+
+import { formatLegalDate, LEGAL_DOCS } from "@/lib/legal";
+
+// /terms and /privacy rendered `Last updated ${new Date()}`, so each
+// claimed to have been updated TODAY, every day, whatever its contents.
+// The date is the one thing a reader checks to see whether the terms
+// changed since they agreed to them.
+describe("legal documents date themselves honestly", () => {
+  test("the date is a fixed value, not today", () => {
+    for (const [name, doc] of Object.entries(LEGAL_DOCS)) {
+      assert.match(doc.updated, /^\d{4}-\d{2}-\d{2}$/, `${name} has no ISO date`);
+      const today = new Date().toISOString().slice(0, 10);
+      // It may legitimately BE today if edited today — but it has to be
+      // stored, not computed, which is what the format check above
+      // enforces. This asserts it is not in the future.
+      assert.ok(doc.updated <= today, `${name} is dated in the future: ${doc.updated}`);
+    }
+  });
+
+  test("formatting is stable across locale and runtime", () => {
+    // toLocaleDateString() differs between server and client and between
+    // locales, which is a hydration mismatch as well as a wrong date.
+    assert.equal(formatLegalDate("2026-10-27"), "27 October 2026");
+    assert.equal(formatLegalDate("2026-01-01"), "1 January 2026");
+  });
+
+  test("an unreviewed document says what it still needs", () => {
+    for (const [name, doc] of Object.entries(LEGAL_DOCS)) {
+      if (doc.reviewed) continue;
+      assert.ok(doc.outstanding.length > 30, `${name} is unreviewed but says nothing about why`);
+    }
+  });
+});

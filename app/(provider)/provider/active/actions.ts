@@ -16,10 +16,7 @@ export async function setOnlineAction(isOnline: boolean) {
   // twin of the address placeholder bug. There is no seed any more: a
   // helper's location comes from real GPS pings (lib/gps/ping.ts) or they
   // are simply not dispatchable yet.
-  const { error } = await supabase
-    .from("provider_profiles")
-    .update({ is_online: isOnline })
-    .eq("user_id", user.id);
+  const { error } = await supabase.rpc("set_online", { p_online: isOnline });
 
   if (error) return { error: error.message };
 
