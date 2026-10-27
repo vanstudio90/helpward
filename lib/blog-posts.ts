@@ -55,7 +55,7 @@ export const BLOG_POSTS: BlogPost[] = [
       { type: "p", text:
         "Helpward exists because the on-demand economy already solved logistics and left the harder problem on the table: trust. You can summon almost any service through a phone now. You cannot — most of the time — verify that the person showing up was vetted in a way that warrants letting them into your home, or into your car, or near a member of your family." },
       { type: "p", text:
-        "We built Helpward to close that gap. Every helper passes Stripe Identity verification and a third-party criminal background check (Checkr in the US, Triton in Canada) before they can take a single task. Every booking is covered by $1M-per-incident platform insurance. Pricing is published before the booking; payment is held in escrow until the customer marks the task complete." },
+        "We built Helpward to close that gap. Every helper is reviewed and approved by a person at Helpward before they can take work (Checkr in the US, Triton in Canada) before they can take a single task. Every booking is covered by a dispute and refund process. Pricing is published before the booking; payment is held in escrow until the customer marks the task complete." },
       { type: "h2", text: "What the rest of the industry got right" },
       { type: "p", text:
         "We didn't start from a position that the existing players were stupid or lazy. They optimised brilliantly for the variables they cared about — supply liquidity, time-to-arrival, customer acquisition cost. The marketplaces are huge because those optimisations work; if you've ordered DoorDash this week you've seen them working." },
@@ -63,9 +63,9 @@ export const BLOG_POSTS: BlogPost[] = [
         "What got optimised at the same time — quietly, by accident in some cases and deliberately in others — was the worker side of the equation. Surge pricing turned into a worker pay cut. Background checks were outsourced to cheap providers with high error rates. Dispute systems were tilted heavily toward the customer because the customer has the credit card. The platforms got better; the workers got squeezed; the customers got dependable speed and unreliable safety." },
       { type: "h2", text: "Where we're trying to be different" },
       { type: "ul", items: [
-        "Helpers keep 80% of base + distance fees and 100% of tips. The 20% we keep funds insurance, verification, support, and engineering — not customer-acquisition arms races.",
+        "Helpers keep 80% of base + distance fees and 100% of tips. The 20% we keep funds dispatch, payments, support, and engineering — not customer-acquisition arms races.",
         "Pricing is flat. A $4.50 service fee plus the helper's base. No surge, no per-minute escalation, no 'priority queue' upcharge.",
-        "Background-check adjudication is policy, not algorithm. A human reviewer reads every flagged record and writes the call. The policy is published at /safety/background-checks — we'll defend any disqualification or approval publicly.",
+        "Helper approval is policy, not algorithm. A person at Helpward reviews every application and writes the call. The policy is published at /safety/background-checks — we'll defend any disqualification or approval publicly.",
         "Disputes use an asymmetric communication model: the customer's verbatim description stays private, but the helper sees the category and is given a chance to respond. Neither side gets to bully the other through the dispute system.",
         "We publish a quarterly transparency report with stats pulled directly from the production database. If a number looks bad, we publish it anyway.",
       ] },
@@ -125,7 +125,7 @@ export const BLOG_POSTS: BlogPost[] = [
       { type: "p", text:
         "Helpward only works if customers trust the bar. The bar is meaningless if it's a black box. So we publish what the bar is: the categories of records that disqualify, the categories that get reviewed, the third-party services we use, the response times we commit to. If your application is declined, you get a written reason and an appeal path. If we make a mistake, we own it." },
       { type: "note", text:
-        "The customer-facing summary of this process lives at /help/background-checks-and-insurance. The deep operational detail is at /safety/background-checks. If you're considering applying as a helper, we recommend reading both before submitting." },
+        "The customer-facing summary of this process lives at /safety. The deep operational detail is at /safety/background-checks. If you're considering applying as a helper, we recommend reading both before submitting." },
     ],
   },
   {

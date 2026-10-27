@@ -111,7 +111,7 @@ export default function VersusIndexPage() {
       <ul>
         <li><strong>Feature presence only.</strong> We don&apos;t publish competitor pricing or operational specifics because those drift quarter to quarter and we can&apos;t keep them accurate.</li>
         <li><strong>&ldquo;Not advertised&rdquo; never &ldquo;No.&rdquo;</strong> If a competitor doesn&apos;t publicly document a feature, we say so. We never make negative factual claims about a company we can&apos;t verify each quarter.</li>
-        <li><strong>Parity is called out.</strong> Where both platforms ship the same feature (background checks, insurance, pay-after-completion), we say &ldquo;Parity&rdquo; so the page reads fair, not one-sided.</li>
+        <li><strong>Parity is called out.</strong> Where both platforms ship the same feature (pay-after-completion, GPS tracking, in-app messaging), we say &ldquo;Parity&rdquo; so the page reads fair, not one-sided. Where Helpward is BEHIND — automated background checks and platform insurance, which we don&rsquo;t have yet — the table says that too.</li>
         <li><strong>Honest CTAs.</strong> Every page closes with a &ldquo;pick the other one when…&rdquo; line. Some tasks are genuinely a better fit for a single-vertical app, and we&apos;ll tell you when.</li>
       </ul>
 

@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
-import { isRetiredCityPath, retiredCityHtml } from "@/lib/retired-pages";
+import {
+  isRetiredCityPath, retiredCityHtml,
+  isRetiredSafetyPath, retiredSafetyHtml,
+} from "@/lib/retired-pages";
 
 const PUBLIC_PATHS = new Set([
   "/", "/login", "/signup", "/forgot-password", "/verify-email",
@@ -57,6 +60,21 @@ export async function proxy(request: NextRequest) {
         sameSite: "lax",
       });
     }
+  }
+
+  // Safety pages that described processes Helpward does not have —
+  // insurance with no policy, background checks that are not wired,
+  // a transparency report with no data. Published, so 410 rather than
+  // 404, and checked before the public-prefix allowlist.
+  if (isRetiredSafetyPath(pathname)) {
+    return new NextResponse(retiredSafetyHtml(pathname), {
+      status: 410,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "public, max-age=3600",
+        "x-robots-tag": "noindex",
+      },
+    });
   }
 
   // Retired city pages: deliberate 410 Gone with a useful body, checked

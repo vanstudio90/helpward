@@ -122,6 +122,7 @@ describe("the intake does not offer what is not built", () => {
 // of them left the third saying it, so a customer browsing signed in saw
 // a different price format from one browsing signed out.
 import { readFileSync as read } from "node:fs";
+import { execSync } from "node:child_process";
 
 describe("service prices are rendered in one place", () => {
   const CATALOGUES = [
@@ -229,5 +230,93 @@ describe("trust claims match what the system can actually do", () => {
 
   test("the surface list points at real files", () => {
     for (const f of SURFACES) assert.ok(read(f, "utf8").length > 200, `${f} missing`);
+  });
+});
+
+// The claim sweep, as a standing check rather than a one-off.
+//
+// "$1M platform insurance" and "background-checked helpers" were spread
+// across the homepage, the booking panel, provider profiles, city pages,
+// service pages, help articles, blog posts, the comparison matrix and
+// two social images. insurance_active_until is written by nothing;
+// background_verified_at only by a Checkr webhook that is not wired.
+describe("no surface claims insurance or screening we do not have", () => {
+  // Kept on disk for the owner's decision and served as 410; competitor
+  // columns describe other companies; job ads describe roles; and the
+  // Checkr webhook and the DB column are the integration itself.
+  const EXEMPT = [
+    "safety/insurance", "safety/background-checks", "safety/transparency-report",
+    "competitors.ts", "careers.ts", "webhooks/checkr", "supabase/types", "retired-pages",
+  ];
+
+  // Assertions of possession, not any mention of the words. Saying we do
+  // NOT have insurance is the whole point of this work, so a check that
+  // flagged every occurrence would fight its own fix — the first version
+  // did exactly that, and failed on the sentence explaining the removal.
+  const CLAIMS: Array<[RegExp, string]> = [
+    [/\$1M|\$1 ?million/i, "a specific insurance figure"],
+    [/(fully|platform|marketplace) insur(ed|ance)/i, "insurance we do not carry"],
+    [/every helper (passes|goes through|is) [^.]{0,60}background.check/i,
+      "background checks we do not run"],
+    [/background.checked (helper|provider|human|worker)/i, "background-checked helpers"],
+    [/(we|helpward) (require|run|ship|include)s? [^.]{0,30}(background.check|insurance)/i,
+      "a capability we do not have"],
+    [/covered by (helpward|our) [^.]{0,30}insurance/i, "cover that does not exist"],
+  ];
+
+  function surfaces(): string[] {
+    return execSync(
+      'grep -rl -iE "insured|insurance|background.check|\\$1M" --include="*.tsx" --include="*.ts" app lib components | grep -v node_modules',
+      { encoding: "utf8" },
+    ).trim().split("\n").filter(Boolean).filter((f) => !EXEMPT.some((e) => f.includes(e)));
+  }
+
+  test("nothing asserts insurance or screening Helpward does not have", () => {
+    const offenders: string[] = [];
+    for (const f of surfaces()) {
+      const lines = stripComments(read(f, "utf8")).split("\n");
+      for (const [i, line] of lines.entries()) {
+        // A sentence that DENIES the thing is the fix, not the defect:
+        // "we don't carry marketplace insurance" contains the phrase and
+        // is precisely what this work was for.
+        //
+        // Two things the first version got wrong. The negation can sit
+        // either side of the phrase, so the whole sentence is checked
+        // rather than a lookahead. And JSX prose wraps, so "None of
+        // that exists" lands on the NEXT line from the claim it denies —
+        // a window of lines is read, not one.
+        const window = lines.slice(Math.max(0, i - 1), i + 2).join(" ");
+        const prose = window.replace(/&rsquo;|&apos;|&#39;/g, "'");
+        if (/\b(not|no|don't|doesn't|without|never|isn't|aren't|behind|none)\b/i.test(prose)) continue;
+        for (const [pattern, what] of CLAIMS) {
+          if (pattern.test(line)) {
+            offenders.push(`${f}:${i + 1} — ${what}\n    ${line.trim().slice(0, 96)}`);
+            break;
+          }
+        }
+      }
+    }
+    assert.deepEqual(offenders, [], `claims we cannot back:\n${offenders.join("\n")}`);
+  });
+
+  // Two controls, because a detector that matches nothing and a codebase
+  // that claims nothing look identical from here.
+  test("the sweep finds files to read", () => {
+    assert.ok(surfaces().length > 3, `only ${surfaces().length} files scanned`);
+  });
+
+  test("the patterns still recognise the claims that were removed", () => {
+    const REMOVED = [
+      "Every booking is protected with up to $1M insurance coverage.",
+      "Verified, background-checked provider",
+      "Fully insured during the task",
+      "We require background checks on every helper",
+    ];
+    for (const line of REMOVED) {
+      assert.ok(
+        CLAIMS.some(([p]) => p.test(line)),
+        `the detector no longer recognises: "${line}"`,
+      );
+    }
   });
 });

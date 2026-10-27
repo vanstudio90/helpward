@@ -21,6 +21,27 @@ const RETIRED = new Set(RETIRED_CITY_SLUGS);
  * fall through to the normal 404, which is correct: they were never
  * published, so they are "not found", not "gone".
  */
+/**
+ * Safety pages that described processes Helpward does not have.
+ *
+ * /safety/insurance set out an underwriter, coverage tiers and
+ * exclusions for a policy that was never bought;
+ * /safety/background-checks described Checkr/Triton screening that is
+ * not wired; /safety/transparency-report promised quarterly statistics
+ * for a marketplace with no quarters and no bookings.
+ *
+ * Published, so they are 410 Gone rather than 404: the pages existed,
+ * they are not coming back in that form, and a search engine should drop
+ * them rather than keep offering them.
+ */
+const RETIRED_SAFETY = new Set(["insurance", "background-checks", "transparency-report"]);
+
+export function isRetiredSafetyPath(pathname: string): boolean {
+  const m = /^\/safety\/([^/]+)\/?$/.exec(pathname);
+  if (!m) return false;
+  return RETIRED_SAFETY.has(decodeURIComponent(m[1]).toLowerCase());
+}
+
 export function isRetiredCityPath(pathname: string): boolean {
   const m = /^\/cities\/([^/]+)(?:\/([^/]+))?\/?$/.exec(pathname);
   if (!m) return false;
@@ -30,6 +51,42 @@ export function isRetiredCityPath(pathname: string): boolean {
 function escapeHtml(v: string): string {
   return v.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+}
+
+/** Self-contained body for a retired safety page, returned WITH a 410. */
+export function retiredSafetyHtml(pathname: string): string {
+  const slug = (/^\/safety\/([^/]+)/.exec(pathname)?.[1] ?? "").replace(/-/g, " ");
+  const pretty = escapeHtml(slug.replace(/\b\w/g, (c) => c.toUpperCase()).trim() || "That page");
+  return `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>${pretty} — Helpward</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin:0; font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;
+         background:#f8fafc; color:#0f172a; }
+  @media (prefers-color-scheme: dark) { body { background:#0f172a; color:#e2e8f0; } }
+  main { max-width:40rem; margin:0 auto; padding:4rem 1.25rem; }
+  h1 { font-size:1.6rem; line-height:1.25; margin:0 0 .75rem; }
+  p { margin:0 0 1rem; }
+  a { color:#4f46e5; }
+</style>
+</head><body><main>
+<h1>${pretty} isn&rsquo;t published</h1>
+<p>
+  This page described a process Helpward doesn&rsquo;t currently run, so we took it
+  down rather than leave it up. We&rsquo;d rather say nothing than say something
+  that isn&rsquo;t true about your safety.
+</p>
+<p>
+  What is true today: every helper is reviewed and approved by a person at
+  Helpward before they can take work, and payment is held until your task is
+  marked complete.
+</p>
+<p><a href="/safety">Safety at Helpward</a> &middot; <a href="/">Home</a></p>
+</main></body></html>`;
 }
 
 /** Self-contained "not currently served" body, returned WITH a 410 status. */

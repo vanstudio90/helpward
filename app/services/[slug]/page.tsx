@@ -212,9 +212,9 @@ export default async function ServiceDetailPage({
               <h2 className="text-2xl font-bold text-slate-900">What&apos;s included</h2>
               <ul className="mt-4 space-y-3 text-sm text-slate-700">
                 {[
-                  "Verified, background-checked helper in your city",
+                  "Approved local helper in your city",
                   "Real-time GPS tracking and in-app chat",
-                  "Platform insurance up to $1M during the booking",
+                  "Payment held until you confirm the task is done",
                   "Payment held until you confirm the task is complete",
                   "24-hour dispute window with human support review",
                   "24/7 customer support — call, chat, or email",
@@ -228,8 +228,8 @@ export default async function ServiceDetailPage({
             <div>
               <h2 className="text-2xl font-bold text-slate-900">Why Helpward</h2>
               <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-                <Trust icon={Users} title="Verified humans" sub="Every helper passes ID + background check" />
-                <Trust icon={ShieldCheck} title="Fully insured" sub="Up to $1M coverage on every booking" />
+                <Trust icon={Users} title="Approved helpers" sub="Reviewed by a person at Helpward before taking work" />
+                <Trust icon={ShieldCheck} title="Pay after completion" sub="Your card is held, not charged, until the task is done" />
                 <Trust icon={Clock} title="Fast matching" sub="Average match in 2m 14s" />
                 <Trust icon={Sparkles} title="Transparent pricing" sub="No surge, no hidden fees" />
               </div>

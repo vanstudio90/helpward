@@ -104,7 +104,7 @@ export default function Safety() {
           If you&apos;re in immediate danger, call <strong>911</strong> (US/Canada) first. Then email{" "}
           <a href="mailto:safety@helpward.com" className="font-semibold">safety@helpward.com</a> with the booking
           ID — the on-call safety reviewer responds within 4 hours, 24/7. Property damage and major safety incidents
-          are auto-escalated to a senior reviewer; the dispute and insurance processes start the same hour the
+          are auto-escalated to a senior reviewer; the dispute process starts the same hour the
           report arrives.
         </p>
 

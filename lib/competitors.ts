@@ -25,6 +25,17 @@ export type Competitor = {
   cta: string;            // Closing pitch tailored to why you'd switch
 };
 
+// The HELPWARD column has to be what Helpward actually does.
+//
+// Every row here claimed parity on background checks and insurance.
+// Checkr is not wired, so background_verified_at is never written, and
+// insurance_active_until is written by nothing at all — there is no
+// policy. A comparison page that overstates your own side is worse than
+// no comparison page: it is the one place a reader has come
+// specifically to be told the difference.
+//
+// The competitor columns are left as they were. They describe other
+// companies, and correcting those is a separate exercise.
 export const COMPETITORS: Competitor[] = [
   {
     slug: "taskrabbit",
@@ -34,15 +45,15 @@ export const COMPETITORS: Competitor[] = [
     matrix: [
       {
         feature: "ID + background-checked helpers",
-        helpward: "Required for every helper",
+        helpward: "Not yet — helpers are reviewed and approved by a person",
         competitor: "Yes",
-        notes: "Parity — table stakes for both.",
+        notes: "Not parity. Automated screening is not running on Helpward yet.",
       },
       {
         feature: "Insurance on every booking",
-        helpward: "Included on every booking",
+        helpward: "No — Helpward does not carry platform insurance",
         competitor: "Yes",
-        notes: "Both platforms ship marketplace insurance.",
+        notes: "Not parity. Helpward has no platform policy; this is a real gap.",
       },
       {
         feature: "Real-time GPS tracking",
@@ -104,7 +115,7 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         feature: "ID + background-checked workers",
-        helpward: "Required for every helper",
+        helpward: "Not yet — helpers are reviewed and approved by a person",
         competitor: "Yes",
         notes: "Parity.",
       },
@@ -164,15 +175,15 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         feature: "ID + background-checked workers",
-        helpward: "Required for every helper",
+        helpward: "Not yet — helpers are reviewed and approved by a person",
         competitor: "Yes",
         notes: "Parity.",
       },
       {
         feature: "Insurance on every booking",
-        helpward: "Included on every booking",
+        helpward: "No — Helpward does not carry platform insurance",
         competitor: "Yes",
-        notes: "Parity — marketplace insurance is table stakes.",
+        notes: "Not parity. Helpward has no platform policy; this is a real gap.",
       },
       {
         feature: "Bundle restaurant + errand + home task in one trip",
@@ -257,13 +268,13 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         feature: "ID + background-checked workers",
-        helpward: "Required for every helper",
+        helpward: "Not yet — helpers are reviewed and approved by a person",
         competitor: "Yes",
         notes: "Parity.",
       },
       {
         feature: "Insurance on every booking",
-        helpward: "Included on every booking",
+        helpward: "No — Helpward does not carry platform insurance",
         competitor: "Yes",
         notes: "Parity.",
       },
@@ -316,13 +327,13 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         feature: "Background-checked workers",
-        helpward: "Required for every helper",
+        helpward: "Not yet — helpers are reviewed and approved by a person",
         competitor: "Yes",
         notes: "Parity.",
       },
       {
         feature: "Insurance on every booking",
-        helpward: "Included on every booking",
+        helpward: "No — Helpward does not carry platform insurance",
         competitor: "Yes",
         notes: "Parity.",
       },
@@ -373,13 +384,13 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         feature: "Background-checked workers",
-        helpward: "Required for every helper",
+        helpward: "Not yet — helpers are reviewed and approved by a person",
         competitor: "Yes",
         notes: "Parity.",
       },
       {
         feature: "Insurance on every booking",
-        helpward: "Included on every booking",
+        helpward: "No — Helpward does not carry platform insurance",
         competitor: "Yes",
         notes: "Parity.",
       },
@@ -434,7 +445,7 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         feature: "Background-checked workers",
-        helpward: "Required for every helper",
+        helpward: "Not yet — helpers are reviewed and approved by a person",
         competitor: "Yes",
         notes: "Parity.",
       },
@@ -463,7 +474,7 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         feature: "Insurance on every booking",
-        helpward: "Included on every booking",
+        helpward: "No — Helpward does not carry platform insurance",
         competitor: "Yes",
         notes: "Parity.",
       },
@@ -548,7 +559,7 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         feature: "Background-checked workers",
-        helpward: "Required for every helper",
+        helpward: "Not yet — helpers are reviewed and approved by a person",
         competitor: "Limited",
         notes: "Thumbtack runs background checks on pros who opt in via Top Pro tier; Helpward requires checks for every helper.",
       },
@@ -616,7 +627,7 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         feature: "Background-checked workers",
-        helpward: "Required for every helper",
+        helpward: "Not yet — helpers are reviewed and approved by a person",
         competitor: "Yes",
         notes: "Parity — Angi runs background checks on listed pros.",
       },
@@ -653,13 +664,13 @@ export const COMPETITORS: Competitor[] = [
       },
       {
         feature: "Background-checked workers",
-        helpward: "Required for every helper",
+        helpward: "Not yet — helpers are reviewed and approved by a person",
         competitor: "Yes",
         notes: "Parity.",
       },
       {
         feature: "Insurance on every booking",
-        helpward: "Included on every booking",
+        helpward: "No — Helpward does not carry platform insurance",
         competitor: "Yes",
         notes: "Parity.",
       },

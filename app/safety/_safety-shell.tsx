@@ -110,34 +110,33 @@ export function SafetyShell({
 
 // Registry of safety sub-pages — single source of truth for the hub list,
 // the sitemap, and the cross-link bar at the bottom of each topic page.
+// THREE PAGES ARE OUT OF LAUNCH, and the reason is the same for all of
+// them: each described a process that does not exist.
+//
+//   background-checks  Checkr/Triton screening. Not wired. Nothing ever
+//                      writes background_verified_at except that
+//                      webhook, so no helper has one.
+//   insurance          "$1M platform insurance", with an underwriter,
+//                      coverage tiers and exclusions.
+//                      insurance_active_until is written by NOTHING.
+//                      There is no policy and no carrier.
+//   transparency-report  Quarterly marketplace statistics. There are no
+//                      quarters, no bookings and no statistics.
+//
+// There is no honest edit to a page describing cover that was never
+// bought, so they are delisted rather than reworded: gone from this
+// index, from the sitemap, and from the safety hub. The files are kept —
+// the decision to retire them permanently or to build what they describe
+// is the owner's, and deleting the text would make that decision harder,
+// not easier. /safety/insurance etc. are served as 410 Gone meanwhile
+// (lib/retired-pages.ts), because they were published.
 export const SAFETY_PAGES = [
-  {
-    slug: "background-checks",
-    title: "Background checks",
-    summary:
-      "Every helper passes a Checkr (US) or Triton (Canada) background check before approval. What we screen, what we don't, and when we re-check.",
-    icon: "ShieldCheck",
-  },
-  {
-    slug: "insurance",
-    title: "Insurance coverage",
-    summary:
-      "Helpward's $1M platform insurance covers every active booking. What's included, what's excluded, and how to file a claim.",
-    icon: "Umbrella",
-  },
   {
     slug: "disputes",
     title: "Disputes & refunds",
     summary:
       "If something goes wrong on a task, open a dispute within 24 hours. Step-by-step on what happens, who reviews it, and how refunds work.",
     icon: "Scale",
-  },
-  {
-    slug: "transparency-report",
-    title: "Transparency report",
-    summary:
-      "Quarterly stats on the marketplace: helper approval rate, response times, incident rate, refund rate. Updated every three months.",
-    icon: "BarChart3",
   },
 ] as const;
 

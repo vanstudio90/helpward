@@ -73,7 +73,7 @@ export default function PricingPage() {
         <li>
           <strong>Flat $4.50 service fee per booking.</strong> One fee per booking, regardless of how
           many stops the helper makes. This covers dispatch, payment processing, marketplace
-          insurance, and platform support. It does not change with demand, time of day, weather, or
+          and platform support. It does not change with demand, time of day, weather, or
           how many other people are booking nearby.
         </li>
         <li>
@@ -91,7 +91,7 @@ export default function PricingPage() {
           gates, no &ldquo;Pro&rdquo; bump for hitting volume targets.
         </li>
         <li>
-          <strong>20% to the platform.</strong> Fixed. Funds dispatch, payments, support, insurance,
+          <strong>20% to the platform.</strong> Fixed. Funds dispatch, payments, support,
           and platform engineering.
         </li>
         <li>

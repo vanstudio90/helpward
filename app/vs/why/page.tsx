@@ -147,10 +147,10 @@ export default function WhyPage() {
       <h2>Honest claims about Helpward</h2>
       <ul>
         <li>
-          We require background checks on <em>every</em> helper, not just opt-in tiers.
+          A person at Helpward reviews and approves <em>every</em> helper before they can take work. Automated background checks are not running yet, and the comparison table says so.
         </li>
         <li>
-          We ship marketplace insurance on every booking — same baseline as any reputable platform
+          We don&rsquo;t carry marketplace insurance yet, and we say so on the comparison table rather than leaving you to find out
           in this space.
         </li>
         <li>

@@ -45,7 +45,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "What if I'm not satisfied?",
-    a: "Open a dispute from the booking page within 24 hours of completion. Helpward's support team reviews the case, contacts both parties, and can refund partial or full payment depending on what the evidence shows. Your platform-insurance coverage stays active throughout.",
+    a: "Open a dispute from the booking page within 24 hours of completion. Helpward's support team reviews the case, contacts both parties, and can refund partial or full payment depending on what the evidence shows. Helpward doesn't currently carry platform insurance, so damage beyond the booking value isn't covered by us.",
   },
   {
     q: "What can I request on Helpward?",
@@ -480,7 +480,7 @@ export default async function LandingPage() {
                   ["About us", "/about"],
                   ["Careers", "/careers"],
                   ["Blog", "/blog"],
-                  ["Safety & insurance", "/safety"],
+                  ["Safety", "/safety"],
                   ["Help center", "/help"],
                   ["Become a helper", "/signup?role=provider"],
                 ].map(([label, href]) => (

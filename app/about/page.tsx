@@ -7,7 +7,7 @@ import { MarketingShell } from "@/components/MarketingShell";
 
 const TITLE = "About Helpward";
 const INTRO =
-  "Helpward is the Human Infrastructure Network — an on-demand marketplace connecting people with verified, background-checked humans for real-world tasks across the U.S. and Canada.";
+  "Helpward is the Human Infrastructure Network — an on-demand marketplace connecting people with approved local humans for real-world tasks across the U.S. and Canada.";
 const LAST_UPDATED = "2026-05-29";
 
 export const metadata: Metadata = {
@@ -56,8 +56,8 @@ export default function About() {
         </p>
         <p>
           We&apos;re not trying to be cheaper than the alternatives — we&apos;re trying to be{" "}
-          <em>worth</em> the booking. That means investing in identity verification, criminal background checks,
-          $1M-per-incident platform insurance, real-time GPS tracking, encrypted in-app chat, and a 24/7 safety
+          <em>worth</em> the booking. That means investing in careful helper approval,
+          a dispute and refund process, real-time GPS tracking, encrypted in-app chat, and a 24/7 safety
           team that responds within four hours. None of these are premium upsells. They&apos;re the baseline on
           every booking, paid for out of the flat service fee.
         </p>
@@ -72,9 +72,10 @@ export default function About() {
 
         <div className="not-prose my-6 grid sm:grid-cols-2 gap-4">
           <Card icon={<ShieldCheck className="w-5 h-5 text-emerald-600" />} title="Trust is the product">
-            Every helper passes Stripe Identity verification and a Checkr (US) or Triton (Canada) background check
-            before they can take a single task. Approval is reviewed by a human, not an algorithm.{" "}
-            <Link href="/safety/background-checks" className="font-semibold">Read the background-check process</Link>.
+            Every helper is reviewed and approved by a person at Helpward before they can take a single task,
+            and an unapproved account is never offered work. Automated ID verification and background
+            checks are not running yet; we&apos;ll say so here when they are.{" "}
+            <Link href="/safety" className="font-semibold">Read how helpers are approved</Link>.
           </Card>
           <Card icon={<MapPin className="w-5 h-5 text-brand-600" />} title="Real cities, real density">
             We launch one city at a time and don&apos;t move to the next until helper supply hits the density that
@@ -124,7 +125,7 @@ export default function About() {
         </p>
         <ul>
           <li>
-            A <Link href="/safety/transparency-report" className="font-semibold">quarterly transparency report</Link>{" "}
+            A quarterly transparency report
             with marketplace stats (helper approval rate, response times, incident rate, refund rate) pulled
             directly from the production database — no PR curation.
           </li>

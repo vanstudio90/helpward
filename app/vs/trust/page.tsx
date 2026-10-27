@@ -7,12 +7,12 @@ import { MarketingShell } from "@/components/MarketingShell";
 
 export const metadata: Metadata = {
   title: "Trust + safety — how we built Helpward to be safe at every layer",
-  description: "Letting a stranger into your home, your car, or near your dog is a trust transaction first and a task transaction second. Here's the layered model — verification, accountability, insurance, privacy — that makes the trust transaction work.",
+  description: "Letting a stranger into your home, your car, or near your dog is a trust transaction first and a task transaction second. Here's the layered model — approval, accountability, privacy — that makes the trust transaction work, and the parts we haven't built yet.",
   alternates: { canonical: "/vs/trust" },
   openGraph: {
     type: "article",
     title: "Trust + safety on Helpward",
-    description: "ID verification, background checks, GPS tracking, photo proof, marketplace insurance, dispute process, data export.",
+    description: "Human approval, GPS tracking, photo proof, dispute process, data export.",
     url: "/vs/trust",
     siteName: "Helpward",
   },
@@ -25,7 +25,7 @@ const ld = {
       "@type": "Article",
       "@id": "https://helpward.com/vs/trust#article",
       headline: "Trust + safety — how we built Helpward to be safe at every layer",
-      description: "Layered trust model on Helpward: verification, accountability, insurance, privacy.",
+      description: "Layered trust model on Helpward: approval, accountability, privacy.",
       author: { "@type": "Organization", name: "Helpward" },
       publisher: { "@type": "Organization", name: "Helpward" },
       datePublished: "2026-06-06",
@@ -46,7 +46,7 @@ export default function TrustPage() {
   return (
     <MarketingShell
       title="Trust + safety on Helpward"
-      subtitle="A layered model — verification, accountability, insurance, privacy."
+      subtitle="A layered model — approval, accountability, privacy — and what we haven\u2019t built yet."
     >
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
 
@@ -59,26 +59,26 @@ export default function TrustPage() {
         catching something the others miss.
       </p>
 
-      <h2>Layer 1 — verification before the first task</h2>
+      <h2>Layer 1 — approval before the first task</h2>
       <p>
-        Every helper goes through three checks before they can accept a single offer. We require all
-        three, not opt-in tiers — there is no &ldquo;background-check verified&rdquo; badge on
-        Helpward because it&apos;s the default state of every active account.
+        Every helper is reviewed and approved by a person at Helpward before they can accept a
+        single offer, and an unapproved account is never offered work — the dispatcher refuses it,
+        not just the interface.
+      </p>
+      <p>
+        This page previously described government-ID verification through Stripe Identity,
+        third-party criminal background screening and annual re-screening. None of those is running
+        yet. We would rather tell you that than let you assume a check happened because a page said
+        it did.
       </p>
       <ul>
         <li>
-          <strong>Government ID verification.</strong> Photo of a real driver&apos;s license or
-          passport matched against a selfie at signup. Stripe Identity runs the actual comparison.
+          <strong>Human review.</strong> An application is read by a person, who approves or rejects
+          it. That is the gate today, and it is the only one.
         </li>
         <li>
-          <strong>Criminal background check.</strong> Standard US/CA background screening through a
-          vetted provider. Specific disqualifiers (violent offences, sex offences, fraud convictions
-          in the last 10 years) are surfaced on{" "}
-          <Link href="/safety/background-checks">our background-check policy page</Link>.
-        </li>
-        <li>
-          <strong>Continuous re-screening.</strong> Every 12 months while a helper is active. The
-          first check at signup is a snapshot; continuous re-screening keeps the snapshot honest.
+          <strong>Automated ID and background checks.</strong> Being built. This page will say so
+          when they are live, with the disqualifiers listed, and not before.
         </li>
       </ul>
 
@@ -108,23 +108,29 @@ export default function TrustPage() {
         </li>
       </ul>
 
-      <h2>Layer 3 — insurance when something does go wrong</h2>
+      <h2>Layer 3 — what happens when something goes wrong</h2>
       <p>
-        Designed-in layers catch most of what goes wrong. They don&apos;t catch everything.
-        Helpward includes marketplace insurance on every booking — not an opt-in upgrade or a
-        Plus-tier feature — so the moment a task crosses from &ldquo;done well&rdquo; to &ldquo;made
-        an expensive mistake,&rdquo; there&apos;s a claims process instead of a refund argument.
+        Designed-in layers catch most of what goes wrong. They don&apos;t catch everything, and
+        this is where Helpward is behind the larger platforms rather than ahead of them.
       </p>
       <p>
-        Coverage limits + claim mechanics + what&apos;s explicitly excluded live on{" "}
-        <Link href="/safety/insurance">our insurance page</Link>. The summary:
+        <strong>Helpward does not currently carry marketplace insurance.</strong> This essay used
+        to describe a $1M aggregate policy, an underwriter and a claims process. None of that
+        exists. If a helper damages something beyond the value of the booking, there is no policy
+        of ours to claim against, and you should factor that in before booking anything where that
+        is a real risk.
       </p>
+      <p>What does exist:</p>
       <ul>
-        <li>$1M aggregate marketplace policy in effect during every booking window.</li>
-        <li>Claims go through Helpward support; we adjudicate then file with the underwriter.</li>
         <li>
-          The dispute process at <Link href="/safety/disputes">/safety/disputes</Link> handles the
-          adjudication stage when the customer and helper disagree on what happened.
+          A full or partial refund of the booking, through the dispute process at{" "}
+          <Link href="/safety/disputes">/safety/disputes</Link>.
+        </li>
+        <li>Removal of a helper from the platform where the evidence warrants it.</li>
+        <li>
+          Payment held rather than taken: your card is authorized when a helper accepts and only
+          charged once the task is marked complete, so a job that goes wrong before completion
+          costs you nothing.
         </li>
       </ul>
 
@@ -180,10 +186,10 @@ export default function TrustPage() {
       <p>
         If you&apos;re thinking about trying Helpward, the most useful first move is to read the
         three pages this essay links to:{" "}
-        <Link href="/safety/background-checks">background-check policy</Link>,{" "}
-        <Link href="/safety/insurance">insurance coverage</Link>,{" "}
-        <Link href="/safety/disputes">dispute process</Link>. They&apos;re the load-bearing ones.
-        Everything else on the platform is built on top.
+        <Link href="/safety/disputes">the dispute process</Link> and{" "}
+        <Link href="/safety">how helpers are approved</Link>. Those are the load-bearing ones
+        today. The background-check and insurance pages this essay once linked to described
+        processes we do not run, and have been taken down rather than left up.
       </p>
 
       <div className="not-prose mt-6 flex flex-wrap gap-2">

@@ -27,7 +27,7 @@ export default function Page() {
         { q: "Can the helper retaliate by leaving me a bad review?", a: "Helpers don't write reviews — only customers rate helpers, not the other way around. Helpward's reviews are one-directional by design specifically to prevent this kind of retaliation." },
         { q: "Will the helper see what I wrote in the dispute?", a: "The helper sees the category (Quality / Damage / No-show / etc.) and is given a chance to respond, but they don't see your verbatim description unless you choose to share it. The full content goes to Helpward's ops team and stays there." },
         { q: "What's the difference between a dispute and a chargeback?", a: "A dispute is filed with Helpward and resolved by our ops team using the booking's full record. A chargeback is filed with your credit-card issuer and bypasses Helpward entirely. We strongly recommend disputes first — they're faster, free, and don't risk your helper losing already-issued payout. Filing a chargeback also pauses your Helpward account until the chargeback is resolved." },
-        { q: "Does opening a dispute trigger an insurance claim?", a: "Disputes in the Damage and Safety categories are auto-flagged as insurance claims and routed to both the ops team and the underwriting carrier. Quality and billing disputes don't go through insurance — they're handled by Helpward operations only." },
+        { q: "What can a dispute result in?", a: "A dispute can result in a partial or full refund, a warning to the helper, or their removal from the platform. Helpward does not currently carry platform insurance, so damage beyond the booking value is not covered by us — we will say so here if that changes." },
         { q: "What if the helper says I broke something they didn't do?", a: "Helpward reviews evidence from both sides: photos, the in-app chat history, GPS location history during the task, and any prior-condition photos either side has on record. Our default in genuinely ambiguous cases is to favour the customer up to a reasonable amount (typically $500), beyond which we require photographic evidence." },
       ]}
     >
@@ -39,7 +39,7 @@ export default function Page() {
       <ul>
         <li><strong>No-show</strong> — the helper accepted the booking but never arrived or marked it complete without doing the task.</li>
         <li><strong>Quality</strong> — the task was done, but poorly. The TV was mounted crooked; the groceries arrived spoiled; the assembly looks wrong.</li>
-        <li><strong>Damage</strong> — your property was damaged during the booking (also files an insurance claim — see <Link href="/safety/insurance" className="font-semibold">/safety/insurance</Link>).</li>
+        <li><strong>Damage</strong> — your property was damaged during the booking.</li>
         <li><strong>Billing</strong> — you were charged the wrong amount, charged twice, or charged for a cancelled booking.</li>
         <li><strong>Safety</strong> — the helper behaved unsafely, made you feel unsafe, or violated Helpward&apos;s community standards.</li>
         <li><strong>Other</strong> — anything else. We&apos;d rather you over-report than not at all.</li>
@@ -68,8 +68,8 @@ export default function Page() {
       <div className="not-prose my-4 space-y-3">
         <Phase n={1} title="Acknowledgement (within 4 hours)" body="A real human at Helpward reads your dispute, assigns a reference number, and emails you the case ID. Damage and safety disputes are routed to a senior reviewer immediately." />
         <Phase n={2} title="Investigation (1–3 days for most cases)" body="The reviewer pulls the booking's full record: in-app chat, GPS history, photos, prior bookings between you and the helper, and any reviews. The helper gets a chance to respond — they see the category but not your verbatim description." />
-        <Phase n={3} title="Decision" body="The reviewer makes a call: refund (partial or full), insurance claim opened (damage), warning to the helper, removal from the platform (severe), or no-fault-found with a written explanation. You can appeal any decision once." />
-        <Phase n={4} title="Resolution (24-48h for refunds, 30 days for claims)" body="Refunds hit your card via Stripe within 5–10 business days. Insurance claims follow the claims process at /safety/insurance. Helper consequences are non-public." />
+        <Phase n={3} title="Decision" body="The reviewer makes a call: refund (partial or full), warning to the helper, removal from the platform (severe), or no-fault-found with a written explanation. You can appeal any decision once." />
+        <Phase n={4} title="Resolution (24-48h)" body="Refunds hit your card via Stripe within 5–10 business days. Helper consequences are non-public." />
       </div>
 
       <h2>What gets refunded</h2>
@@ -81,7 +81,7 @@ export default function Page() {
         <li><strong>Quality (minor):</strong> Partial refund (typically 20–50% of base) and a credit toward a future booking. Helper receives partial payout.</li>
         <li><strong>Quality (major):</strong> 100% refund. Helper receives nothing or partial depending on whether ops finds the task was attempted in good faith.</li>
         <li><strong>Billing error:</strong> 100% refund of the disputed amount. Service fee is also refunded if the error was on our end.</li>
-        <li><strong>Damage:</strong> 100% refund of the booking + insurance claim opened. Repair costs/replacement value handled by the carrier.</li>
+        <li><strong>Damage:</strong> 100% refund of the booking. Helpward does not currently carry platform insurance, so repair or replacement costs beyond the booking are not covered by us.</li>
         <li><strong>Safety:</strong> 100% refund. Helper consequences (warning, suspension, removal) decided separately.</li>
       </ul>
 

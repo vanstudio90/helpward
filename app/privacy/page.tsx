@@ -12,7 +12,7 @@ export default function Privacy() {
       <ul>
         <li><strong>Account:</strong> name, email, phone, password hash, country</li>
         <li><strong>Profile:</strong> avatar, language, currency, time zone</li>
-        <li><strong>Providers:</strong> government ID images (held by Stripe Identity, not Helpward), bank account details (held by Stripe Connect, not Helpward), background-check results</li>
+        <li><strong>Providers:</strong> bank account and identity details required for payouts (held by Stripe Connect, not Helpward)</li>
         <li><strong>Tasks:</strong> request details, addresses, scheduled times, notes, photos</li>
         <li><strong>Messages:</strong> message content between Customer and Provider</li>
         <li><strong>Location:</strong> GPS coordinates while a task is in progress (deleted 30 days after task ends)</li>
@@ -32,8 +32,7 @@ export default function Privacy() {
       <ul>
         <li><strong>The matched Provider</strong> (your name, photo, task details, pickup address)</li>
         <li><strong>Stripe</strong> (payments, identity verification, payouts)</li>
-        <li><strong>Checkr / Triton</strong> (background checks for Providers — Customers don&apos;t go through these)</li>
-        <li><strong>Twilio, OneSignal, Resend, Mapbox</strong> (operational service providers)</li>
+                <li><strong>Twilio, OneSignal, Resend, Mapbox</strong> (operational service providers)</li>
         <li><strong>Law enforcement</strong> when legally required</li>
       </ul>
       <h2>Your rights</h2>

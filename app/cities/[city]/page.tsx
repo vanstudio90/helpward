@@ -101,7 +101,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
               On-demand help in {city.name}.<br />Verified humans, anywhere in {city.metro ?? city.name}.
             </h1>
             <p className="mt-4 text-base sm:text-lg text-slate-700 max-w-2xl leading-relaxed">
-              Helpward connects {city.name} residents with verified, background-checked helpers for rides, errands,
+              Helpward connects {city.name} residents with approved local helpers for rides, errands,
               home tasks, deliveries, and almost any real-world request. Match in minutes, track in real time, pay
               only when the task is complete.
             </p>
@@ -122,7 +122,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-slate-600">
-              <span className="inline-flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> All helpers background-checked</span>
+              <span className="inline-flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> All helpers approved</span>
               <span className="inline-flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-amber-600" /> Avg arrival 18 min</span>
               <span className="inline-flex items-center gap-1.5"><Users className="w-3.5 h-3.5 text-brand-600" /> 24/7 support</span>
             </div>

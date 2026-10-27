@@ -87,12 +87,12 @@ export function categoryImage(id: string): string {
 export function categorySummary(id: string, items: { title: string }[]): string {
   const list = items.slice(0, 8).map((i) => i.title).join(", ");
   const intros: Record<string, string> = {
-    transportation: `Helpward provides same-day transportation help across the U.S. and Canada including ${list}. Helpers arrive within an average of 18 minutes, are fully insured during the booking, and accept payment only after the ride is complete.`,
-    home: `Helpward connects you with verified handy-helpers for home tasks: ${list}. Every helper passes a Checkr background check and Stripe Identity verification, and bookings are protected by up to $1M in platform insurance.`,
+    transportation: `Helpward provides same-day transportation help across the U.S. and Canada including ${list}. Helpers are approved by a person at Helpward before they can take work, and payment is only taken after the ride is complete.`,
+    home: `Helpward connects you with approved handy-helpers for home tasks: ${list}. Every helper is approved by a person at Helpward before they can take work, and payment is held until you confirm the task is done.`,
     errands: `Helpward errand-runners handle the time-consuming chores you don't want to do — ${list}. Match in under 3 minutes on average, real-time GPS tracking, and a 24-hour dispute window on every booking.`,
-    presence: `Helpward presence-companion services pair you with a verified human for visits and waiting tasks: ${list}. These services are emotionally important — every helper is background-checked, identity-verified, and reviewed.`,
+    presence: `Helpward presence-companion services pair you with an approved helper for visits and waiting tasks: ${list}. These services are emotionally important — every helper is background-checked, identity-verified, and reviewed.`,
     lifestyle: `Helpward lifestyle helpers cover ${list}. Book on-demand or schedule ahead. All helpers are vetted by a human reviewer at Helpward before they take a single task.`,
-    business: `Helpward business-services helpers handle ${list} for small businesses and operators. Background-checked, insured, and available for one-off or recurring engagements.`,
+    business: `Helpward business-services helpers handle ${list} for small businesses and operators. Approved by Helpward, and available for one-off or recurring engagements.`,
   };
-  return intros[id] ?? `Helpward offers ${list} in this category, with verified helpers, transparent pricing, and platform insurance on every booking.`;
+  return intros[id] ?? `Helpward offers ${list} in this category, with approved helpers and transparent pricing, paid only after the task is complete.`;
 }

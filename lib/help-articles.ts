@@ -38,7 +38,7 @@ export const HELP_CATEGORIES: { id: HelpCategory; label: string; blurb: string }
   { id: "getting-started", label: "Getting started", blurb: "How Helpward works, first booking, account setup." },
   { id: "bookings", label: "Bookings", blurb: "Cancelling, rescheduling, tracking, disputes." },
   { id: "payments", label: "Payments & refunds", blurb: "Pricing, fees, refunds, receipts, taxes." },
-  { id: "safety", label: "Safety & insurance", blurb: "Background checks, insurance, what to do if something goes wrong." },
+  { id: "safety", label: "Safety", blurb: "How helpers are approved, and what to do if something goes wrong." },
   { id: "account", label: "Account & privacy", blurb: "Password, notifications, data export, deletion." },
   { id: "helpers", label: "For helpers", blurb: "Becoming a helper, payouts, schedule, taxes." },
 ];
@@ -49,13 +49,13 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "getting-started",
     title: "What is Helpward?",
     summary:
-      "Helpward is the Human Infrastructure Network — an on-demand marketplace that matches you with verified, background-checked humans for almost any real-world task in the U.S. and Canada.",
+      "Helpward is the Human Infrastructure Network — an on-demand marketplace that matches you with approved local humans for almost any real-world task in the U.S. and Canada.",
     body: [
       { type: "p", text:
         "Helpward connects people who need help with verified humans nearby. Customers (we call them askers) post a request, the matching engine notifies qualified helpers in their area, and the first to accept becomes your helper. Tasks are tracked end-to-end with live GPS and in-app chat, and payment is held until the task is marked complete." },
       { type: "h2", text: "How is it different from a regular gig app?" },
       { type: "ul", items: [
-        "Every helper passes ID verification, a background check, and is insured during the booking.",
+        "Every helper is reviewed and approved by a person at Helpward before they can take work.",
         "Pricing is published upfront — no surge fees, no after-the-fact markups.",
         "You only pay after the helper marks the task complete and you've had 24 hours to review.",
         "Real humans only. No autonomous bots or drones.",
@@ -121,7 +121,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         "Each service has a base price published on the catalog page — for example, a designated driver might start at $29. The base price covers the helper's time for the typical task in that category." },
       { type: "h2", text: "Service fee" },
       { type: "p", text:
-        "Helpward adds a flat $4.50 service fee to every booking. The fee funds platform insurance, 24/7 support, identity verification, and background checks. It's the same regardless of task size." },
+        "Helpward adds a flat $4.50 service fee to every booking. It funds dispatch, payments, support and running the platform, and it is the same $4.50 whatever the task, whatever the time, wherever you are." },
       { type: "h2", text: "Distance, time, and tips" },
       { type: "p", text:
         "Long-distance or extended tasks may incur additional charges, always shown on the booking page before you confirm. Tipping is optional and goes 100% to the helper." },
@@ -154,27 +154,9 @@ export const HELP_ARTICLES: HelpArticle[] = [
     ],
     updatedAt: "2026-05-28",
   },
-  {
-    slug: "background-checks-and-insurance",
-    category: "safety",
-    title: "How Helpward verifies helpers and what's insured",
-    summary:
-      "Every helper passes government-ID verification (Stripe Identity), a background check (Checkr/Triton), and is covered by Helpward's platform insurance — up to $1M per booking.",
-    body: [
-      { type: "h2", text: "Identity verification" },
-      { type: "p", text:
-        "Before a helper can accept any task, they must verify a government-issued ID through Stripe Identity. The face on the ID is matched against a live selfie. We re-verify if a helper's account is dormant for an extended period." },
-      { type: "h2", text: "Background checks" },
-      { type: "p", text:
-        "U.S. helpers are screened via Checkr; Canadian helpers via Triton Canada. Both run county-level criminal record searches plus national sex-offender registries. A human at Helpward reviews any flagged report before approving." },
-      { type: "h2", text: "Insurance" },
-      { type: "p", text:
-        "Every booking is covered by Helpward's platform insurance, up to $1M per incident. Coverage applies during the active booking window — from helper acceptance through task completion or cancellation." },
-      { type: "note", text:
-        "Insurance does not cover anything illegal, reckless, or outside the scope of the booking. Read /safety for the detailed policy." },
-    ],
-    updatedAt: "2026-05-28",
-  },
+  // A help article titled "Background checks and insurance" sat
+  // here. Both halves described processes Helpward does not run.
+  // Removed with the pages it pointed at.
   {
     slug: "what-to-do-if-something-goes-wrong",
     category: "safety",
@@ -274,7 +256,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         "Go online from /provider/active to start receiving offers.",
       ] },
       { type: "p", text:
-        "Helpers keep 80% of the base + distance fee, plus 100% of any tip. Helpward takes 20% to cover insurance, support, identity verification, and platform costs." },
+        "Helpers keep 80% of the base + distance fee, plus 100% of any tip. Helpward takes 20% to cover dispatch, support, identity verification, and platform costs." },
     ],
     updatedAt: "2026-05-28",
   },
@@ -444,7 +426,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         "80% of the base price for the service.",
         "80% of any distance / time fees.",
         "100% of any tip the customer adds.",
-        "Helpward keeps 20% of the base + distance to fund insurance, support, and platform costs.",
+        "Helpward keeps 20% of the base + distance to fund dispatch, support, and platform costs.",
       ] },
       { type: "h2", text: "Tax forms" },
       { type: "p", text:

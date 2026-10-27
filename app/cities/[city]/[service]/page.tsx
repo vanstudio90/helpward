@@ -121,8 +121,8 @@ export default async function CityServicePage({
       a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)} (${city.country === "CA" ? "CAD" : "USD"}). A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. Pricing is the same across ${city.name} — no surge fees, no per-block markup. You're only charged after the helper marks the task complete.`,
     },
     {
-      q: `Are Helpward helpers in ${city.name} background-checked?`,
-      a: `Yes. Every ${city.name} helper passes government-ID verification through Stripe Identity, a Checkr/Triton background check, and is covered by Helpward's platform insurance (up to $1M) during the booking. Approval is human-reviewed before any helper can take a task.`,
+      q: `Are Helpward helpers in ${city.name} approved?`,
+      a: `Every ${city.name} helper is reviewed and approved by a person at Helpward before they can take a task, and an unapproved helper is never offered work. Automated ID verification and background checks are not running yet, and Helpward does not currently carry platform insurance — we'll say so here when that changes.`,
     },
   ];
 
@@ -192,9 +192,9 @@ export default async function CityServicePage({
                 {service.title} in {city.name}
               </h1>
               <p className="mt-3 text-base sm:text-lg text-slate-700 max-w-2xl leading-relaxed">
-                Book a verified, background-checked {service.title.toLowerCase()} in {city.metro ?? city.name} via
+                Book a verified, approved {service.title.toLowerCase()} in {city.metro ?? city.name} via
                 Helpward. {service.blurb} Pricing is upfront, payment is held until the task is marked complete,
-                and every helper is insured during the booking.
+                and payment is held until the task is marked complete.
               </p>
 
               <div className="mt-5 flex flex-wrap items-center gap-3 text-xs">
@@ -258,9 +258,9 @@ export default async function CityServicePage({
               <h2 className="text-2xl font-bold text-slate-900">What&apos;s included for every {city.name} booking</h2>
               <ul className="mt-4 space-y-3 text-sm text-slate-700">
                 {[
-                  `Verified, background-checked helper in ${city.name}`,
+                  `Approved local helper in ${city.name}`,
                   "Real-time GPS tracking and in-app chat",
-                  "Platform insurance up to $1M during the booking",
+                  "Payment held until you confirm the task is done",
                   "Payment held until you confirm the task is complete",
                   "24-hour dispute window with human support review",
                   "24/7 customer support — call, chat, or email",
@@ -275,7 +275,7 @@ export default async function CityServicePage({
               <h2 className="text-2xl font-bold text-slate-900">Why Helpward in {city.name}</h2>
               <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
                 <Trust icon={Users} title="Local helpers" sub={`Verified humans in ${city.metro ?? city.name}`} />
-                <Trust icon={ShieldCheck} title="Fully insured" sub="Up to $1M coverage on every booking" />
+                <Trust icon={ShieldCheck} title="Approved helpers" sub="Reviewed by a person at Helpward before taking work" />
                 <Trust icon={Clock} title="Fast matching" sub="Average match in 2m 14s" />
                 <Trust icon={Sparkles} title="Transparent pricing" sub="No surge, no hidden fees" />
               </div>
