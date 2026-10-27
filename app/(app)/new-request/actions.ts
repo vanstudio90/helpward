@@ -47,7 +47,7 @@ function toAddressPrompt(
     candidates: guard.candidates.map((c) => ({
       formatted: c.formatted, lng: c.lng, lat: c.lat,
       city: c.city, region: c.region, postalCode: c.postalCode,
-      confidence: c.confidence, token: c.token,
+      country: c.country, confidence: c.confidence, token: c.token,
     })),
     changes: top ? reviewResolution(guard.typed, top.formatted).changes : [],
   };
@@ -60,6 +60,8 @@ export type AddressPrompt = {
   candidates: Array<{
     formatted: string; lng: number; lat: number;
     city: string | null; region: string | null; postalCode: string | null;
+    /** ISO alpha-2 of the resolved address — what the quote's currency follows. */
+    country: string;
     confidence: "exact" | "high" | "medium" | "low" | null;
     token: string;
   }>;

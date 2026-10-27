@@ -134,9 +134,15 @@ function remoteCall(extra: IntakeField[] = []): ServiceIntake {
         label: "How should your helper reach you?",
         required: true,
         type: "select",
+        // Video is deliberately absent. The in-app call is audio only —
+        // offering a video option the app cannot deliver is a promise
+        // broken at the moment the customer needs the service, and these
+        // are conversations where that moment matters.
+        //
+        // Add it back when there is a video implementation to add it for,
+        // not before: video carries its own consent questions.
         options: [
           { value: "app-voice", label: "Voice call in the Helpward app" },
-          { value: "app-video", label: "Video call in the Helpward app" },
           { value: "phone", label: "My phone number" },
         ],
       },

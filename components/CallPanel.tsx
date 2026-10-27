@@ -29,9 +29,15 @@ export function CallPanel({
 
   // Join a call that is already ringing rather than making the person
   // press Call and race the other side into a second session.
+  //
+  // Depending on `call` re-ran this on EVERY render — the hook returns a
+  // fresh object each time — so it fired repeatedly while the connection
+  // was still being set up. Depending on the two stable values it
+  // actually reads is both correct and quiet.
+  const { phase, answerCall } = call;
   useEffect(() => {
-    if (incomingCallId && call.phase === "idle") void call.answerCall(incomingCallId);
-  }, [incomingCallId, call]);
+    if (incomingCallId && phase === "idle") void answerCall(incomingCallId);
+  }, [incomingCallId, phase, answerCall]);
 
   const live = call.phase === "ringing" || call.phase === "connecting" || call.phase === "connected";
 

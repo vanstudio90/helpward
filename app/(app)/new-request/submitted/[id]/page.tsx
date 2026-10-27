@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { LiveRequestStatus, type LiveStage } from "./live-status";
 import { formatMoney } from "@/lib/money";
+import { one } from "@/lib/supabase/relation";
 
 export default async function RequestSubmittedPage({
   params,
@@ -13,7 +14,7 @@ export default async function RequestSubmittedPage({
   const supabase = await createSupabaseServerClient();
   const { data: request } = await supabase
     .from("requests")
-    .select("*, service:services(title), pickup:addresses!requests_pickup_address_id_fkey(formatted)")
+    .select("*, service:services(title), pickup:addresses!requests_pickup_address_id_fkey(formatted, country)")
     .eq("id", id)
     .single();
 
@@ -41,6 +42,16 @@ export default async function RequestSubmittedPage({
     : booking.payment_status === "authorized" || booking.payment_status === "captured" ? "ready"
     : "matched";
 
+  // Before a booking exists there is no booking currency, and this
+  // defaulted to USD — so a Vancouver request quoted CA$ on the form,
+  // US$ here, then CA$ again once accepted. The pickup address has a
+  // verified country; that is the one to read, and it is the same fact
+  // accept_request uses (migration 0052).
+  const pickupCountry =
+    (one((request as { pickup?: { country?: string } | { country?: string }[] | null }).pickup)?.country) ?? "US";
+  const quoteCurrency = (booking?.currency as string | undefined)
+    ?? (pickupCountry === "CA" ? "CAD" : "USD");
+
   const copy = describeStatus(request.status as string);
 
   return (
@@ -62,7 +73,7 @@ export default async function RequestSubmittedPage({
             label={booking ? "Total" : "Estimated total"}
             value={
               request.estimated_price_cents
-                ? `${formatMoney(booking?.total_cents ?? request.estimated_price_cents, booking?.currency ?? "USD")} before an optional tip`
+                ? `${formatMoney(booking?.total_cents ?? request.estimated_price_cents, quoteCurrency)} before an optional tip`
                 : "—"
             }
           />

@@ -179,7 +179,15 @@ export function useCall(bookingId: string, selfId: string) {
       // the normal case for whoever joins second.
       await drain(id);
 
-      if (asCaller) {
+      // A second safety net for glare: if an offer was already applied
+      // during the drain we are answering it, whatever started_by said.
+      // Sending our own offer now would tear down a connection that is
+      // already negotiating.
+      const alreadyNegotiating =
+        pc.current?.signalingState === "have-remote-offer" ||
+        pc.current?.signalingState === "stable" && pc.current?.remoteDescription != null;
+
+      if (asCaller && !alreadyNegotiating) {
         const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
         await send(id, "offer", offer);
@@ -198,6 +206,36 @@ export function useCall(bookingId: string, selfId: string) {
     }
   }, [buildPeer, applySignal, drain, send, teardown]);
 
+  /**
+   * Join a call, working out which end of it we are.
+   *
+   * WHO CALLS AND WHO ANSWERS IS NOT "who pressed the button".
+   *
+   * start_call returns the LIVE session when one exists, so if the helper
+   * pressed Call first and the customer pressed Call second, both got the
+   * same session id — and the old code joined both as the caller. Two
+   * offers, no answer, and both sides sat on "Connecting" forever. That
+   * is exactly the failure independent testing hit: the helper sent an
+   * offer and ICE candidates, and the customer never answered.
+   *
+   * The session records started_by. That is the caller, whichever button
+   * either person pressed and in whatever order — deterministic, with no
+   * race to lose.
+   */
+  const enter = useCallback(async (id: string) => {
+    const { data: session } = await supabase.current
+      .from("call_sessions")
+      .select("started_by, status")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (session?.status === "ended" || session?.status === "declined") {
+      setPhase("ended");
+      return;
+    }
+    await join(id, session?.started_by === selfId);
+  }, [join, selfId]);
+
   const startCall = useCallback(async () => {
     const { data, error: rpcError } = await supabase.current
       .rpc("start_call", { p_booking_id: bookingId });
@@ -206,10 +244,10 @@ export function useCall(bookingId: string, selfId: string) {
       setError(rpcError?.message ?? "Couldn't start the call.");
       return;
     }
-    await join(data as string, true);
-  }, [bookingId, join]);
+    await enter(data as string);
+  }, [bookingId, enter]);
 
-  const answerCall = useCallback(async (id: string) => { await join(id, false); }, [join]);
+  const answerCall = useCallback(async (id: string) => { await enter(id); }, [enter]);
 
   const hangUp = useCallback(async () => {
     if (callId) {

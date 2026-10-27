@@ -20,6 +20,8 @@ export type ConfirmCandidate = {
   city: string | null;
   region: string | null;
   postalCode: string | null;
+  /** ISO alpha-2. The quote's currency follows the place, not the customer. */
+  country: string;
   confidence: "exact" | "high" | "medium" | "low" | null;
   token: string;
 };
@@ -93,8 +95,8 @@ export function AddressConfirm({
   candidates: ConfirmCandidate[];
   changes: AddressChangeNote[];
   message?: string | null;
-  /** Receives the token for the chosen candidate. */
-  onConfirm: (token: string, formatted: string) => void;
+  /** Receives the token, the formatted address and its country. */
+  onConfirm: (token: string, formatted: string, country: string) => void;
   onEdit: () => void;
 }) {
   // Deliberately no preselection when there is a choice to make: a
@@ -214,7 +216,7 @@ export function AddressConfirm({
           disabled={!chosen}
           onClick={() => {
             const c = candidates.find((x) => x.token === chosen);
-            if (c) onConfirm(c.token, c.formatted);
+            if (c) onConfirm(c.token, c.formatted, c.country);
           }}
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
         >

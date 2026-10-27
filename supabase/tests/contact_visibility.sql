@@ -186,4 +186,60 @@ begin
   end;
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- P05 — saving your own number, including the FIRST time
+-- ---------------------------------------------------------------------------
+-- Settings failed with "permission denied for table profile_contacts".
+-- The cause was the upsert: PostgREST puts every column it was given into
+-- the ON CONFLICT ... SET clause, user_id included, and user_id is
+-- deliberately not writable. Edits to an existing row worked; first-time
+-- saves did not — so the bug only appeared for people who had never
+-- given a number, which is everyone at launch.
+do $$
+declare r record; v_phone text; v_verified boolean;
+begin
+  perform pg_temp.become_service(); select * into r from cf;
+  delete from profile_contacts where user_id = r.customer;
+
+  perform pg_temp.become(r.customer, 'customer');
+  perform set_my_phone('+1-555-FIRST');
+  perform pg_temp.become_service();
+  select phone into v_phone from profile_contacts where user_id = r.customer;
+  if v_phone is distinct from '+1-555-FIRST' then
+    raise exception 'FAIL P05 a first-time save did not persist (got %)', v_phone;
+  end if;
+  raise notice 'PASS P05 a first-time save works';
+
+  -- A changed number is an unverified number: carrying verification
+  -- across would let someone verify one number and swap in another.
+  update profile_contacts set phone_verified = true where user_id = r.customer;
+  perform pg_temp.become(r.customer, 'customer');
+  perform set_my_phone('+1-555-SECOND');
+  perform pg_temp.become_service();
+  select phone, phone_verified into v_phone, v_verified
+    from profile_contacts where user_id = r.customer;
+  if v_phone <> '+1-555-SECOND' then
+    raise exception 'FAIL P06 an edit did not persist';
+  end if;
+  if v_verified then
+    raise exception 'FAIL P06 a changed number kept its verification';
+  end if;
+  raise notice 'PASS P06 changing the number clears its verification';
+end $$;
+
+-- And it still only ever writes YOUR row.
+do $$
+declare r record; v_other text;
+begin
+  perform pg_temp.become_service(); select * into r from cf;
+  perform pg_temp.become(r.other, 'provider');
+  perform set_my_phone('+1-555-MINE');
+  perform pg_temp.become_service();
+  select phone into v_other from profile_contacts where user_id = r.customer;
+  if v_other = '+1-555-MINE' then
+    raise exception 'FAIL P07 set_my_phone wrote someone else''s row';
+  end if;
+  raise notice 'PASS P07 set_my_phone writes only the caller''s own row';
+end $$;
+
 rollback;

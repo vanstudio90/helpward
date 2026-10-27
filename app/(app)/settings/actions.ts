@@ -108,13 +108,12 @@ export async function updateProfileAction(
   // it was readable by every authenticated user, because profiles_read
   // exposes any helper row and RLS cannot hide one column of it.
   //
-  // Upsert, not update: someone who has never given a number has no row.
-  const { error: contactError } = await supabase
-    .from("profile_contacts")
-    .upsert(
-      { user_id: user.id, phone, updated_at: new Date().toISOString() },
-      { onConflict: "user_id" },
-    );
+  // Through a function rather than an upsert. A PostgREST upsert is
+  // INSERT ... ON CONFLICT DO UPDATE and puts every column it was given
+  // into the SET clause, user_id included — which authenticated must not
+  // be able to write, so first-time saves failed with "permission denied"
+  // while edits to an existing row worked.
+  const { error: contactError } = await supabase.rpc("set_my_phone", { p_phone: phone });
   if (contactError) return { error: contactError.message };
 
   revalidatePath("/", "layout");

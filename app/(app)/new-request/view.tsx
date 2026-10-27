@@ -93,6 +93,10 @@ export function NewRequestView({
   // form; the server re-geocodes and checks it against what IT resolves,
   // so this value cannot grant a verified address on its own.
   const [addressConfirmation, setAddressConfirmation] = useState("");
+  // The country of the address the SERVER resolved, once it has. Null
+  // until then: an unresolved address has no country, and pretending
+  // otherwise is what made the quote flip.
+  const [confirmedCountry, setConfirmedCountry] = useState<"US" | "CA" | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   // What the customer still has to fill in. Empty until they actually try
   // to submit — telling someone what they have not done yet, before they
@@ -549,12 +553,15 @@ export function NewRequestView({
                   candidates={state.addressPrompt.candidates}
                   changes={state.addressPrompt.changes}
                   message={state.addressPrompt.message}
-                  onConfirm={(token, formatted) => {
+                  onConfirm={(token, formatted, country) => {
                     // Adopt the address we are about to be dispatched to, so
                     // what the customer sees matches what the server stores.
                     setAddress(formatted);
                     setCoords(null);
                     setAddressConfirmation(token);
+                    // Now there is a verified country, so the quote can
+                    // stop guessing at one.
+                    setConfirmedCountry(country === "CA" ? "CA" : "US");
                     // Resubmit the SAME form. Every other field keeps its
                     // value, so the service, schedule, notes, bundle and
                     // recurrence all survive the round trip.

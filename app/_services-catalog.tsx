@@ -9,17 +9,28 @@ import { categorySummary } from "@/lib/marketing";
 import { bookingBadge } from "@/lib/booking-badge";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
+import type { PricingRule } from "@/lib/service-pricing";
+import { formatMoney, unitFor } from "@/lib/money";
+import { SERVICE_FEE_CENTS } from "@/lib/pricing";
 
 // Catalog with category-filter tabs. Client because the tab state is interactive,
 // but every service still renders in the SSR'd HTML — the tabs just toggle
 // visibility client-side so AI crawlers see the full inventory regardless.
 export function ServicesCatalog({
-  services, categories, bookingCounts,
+  services, categories, bookingCounts, pricingRules, currency = "USD",
 }: {
   services: ServiceWithCategory[];
   categories: ServiceCategory[];
   // Plain Record (not Map) — Map isn't serialisable across the server/client boundary.
   bookingCounts: Record<string, number>;
+  /** Per-service pricing rules, so a card can say what its price buys. */
+  pricingRules?: Record<string, PricingRule>;
+  /**
+   * Which money to quote in. This is the browsing catalogue, before any
+   * address is known, so it is the viewer's own country — the booking's
+   * real currency comes from the pickup address at acceptance (0052).
+   */
+  currency?: "USD" | "CAD";
 }) {
   const [tab, setTab] = useState<string>("all");
 
@@ -80,7 +91,11 @@ export function ServicesCatalog({
               <p className="text-xs sm:text-sm text-slate-600 mb-4 lg:mb-5 max-w-3xl leading-relaxed">
                 {categorySummary(category.id, items)}
               </p>
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+              {/* Two columns, matching /new-request.
+                  Four columns at 1280px left ~122px per card, truncating
+                  service names and even the price string — this page was
+                  missed when the booking form was fixed. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3 sm:gap-4">
                 {items.map((s) => (
                   <Link
                     key={s.id}
@@ -103,7 +118,7 @@ export function ServicesCatalog({
                       </div>
                     )}
                     <div className="p-3 sm:p-4 flex-1 flex flex-col">
-                      <div className="text-sm font-bold text-slate-900 truncate">{s.title}</div>
+                      <div className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{s.title}</div>
                       <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-2 flex-1">{s.blurb}</div>
                       {(() => {
                         const badge = bookingBadge(bookingCounts[s.id] ?? 0);
@@ -118,9 +133,20 @@ export function ServicesCatalog({
                           </span>
                         );
                       })()}
-                      <div className="mt-2 sm:mt-3 flex items-center justify-between gap-2 text-[11px] sm:text-xs">
-                        <span className="font-semibold text-slate-900 truncate">From ${(s.base_price_cents / 100).toFixed(0)}</span>
-                        <span className="text-slate-500 whitespace-nowrap shrink-0">{s.eta_label}</span>
+                      {/* Price with its currency and what it buys, the
+                          same as the booking form. "From $20" said
+                          neither, and the service fee appeared only much
+                          later in the journey. */}
+                      <div className="mt-2 sm:mt-3 text-[11px] sm:text-xs">
+                        <div className="font-semibold text-slate-900">
+                          From {formatMoney(s.base_price_cents, currency)}
+                          <span className="font-normal text-slate-500">
+                            {" "}{unitFor(pricingRules?.[s.id])}
+                          </span>
+                        </div>
+                        <div className="text-slate-500 mt-0.5">
+                          + {formatMoney(SERVICE_FEE_CENTS, currency)} service fee
+                        </div>
                       </div>
                     </div>
                   </Link>

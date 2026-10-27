@@ -9,7 +9,7 @@ import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "./_landing-header";
 import { ServicesCatalog } from "./_services-catalog";
 import { HeroSearch } from "./_hero-search";
-import { listServices, listCategories } from "@/lib/data/services";
+import { listServices, listCategories, listPricingRules } from "@/lib/data/services";
 import { CITIES, categoryImage } from "@/lib/marketing";
 import { getVisitor } from "@/lib/geo";
 import { getBookingCountsByService } from "@/lib/data/service-stats";
@@ -105,9 +105,10 @@ const WHY_FEATURES = [
 ];
 
 export default async function LandingPage() {
-  const [services, categories, visitor, bookingCountsMap] = await Promise.all([
+  const [services, categories, pricingRules, visitor, bookingCountsMap] = await Promise.all([
     listServices(),
     listCategories(),
+    listPricingRules(),
     getVisitor(),
     getBookingCountsByService(7),
   ]);
@@ -348,7 +349,12 @@ export default async function LandingPage() {
           `bookings where status = 'completed'` once there are any. */}
 
       {/* FULL CATALOG (client component handles filter tabs) */}
-      <ServicesCatalog services={services} categories={categories} bookingCounts={bookingCounts} />
+      <ServicesCatalog
+        services={services}
+        categories={categories}
+        bookingCounts={bookingCounts}
+        pricingRules={pricingRules}
+      />
 
       {/* WHY CHOOSE HELPWARD */}
       <section id="business" className="bg-slate-50 border-t border-slate-100 py-14 lg:py-20">

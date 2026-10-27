@@ -94,3 +94,25 @@ describe("every label in the catalogue reads well in the notice", () => {
     assert.deepEqual(verbose, [], verbose.join("\n"));
   });
 });
+
+// What the catalogue promises has to be something the app can do.
+describe("the intake does not offer what is not built", () => {
+  test("no service offers a video call", () => {
+    // The in-app call is audio only — WebRTC with video: false. An option
+    // the app cannot deliver is a promise broken at the moment the
+    // customer needs the service.
+    const offenders = allFields.flatMap(({ service, field }) =>
+      (field.options ?? [])
+        .filter((o) => /video/i.test(o.value) || /video/i.test(o.label))
+        .map((o) => `${service}.${field.key} -> "${o.label}"`),
+    );
+    assert.deepEqual(offenders, [], offenders.join("\n"));
+  });
+
+  // Control: the scanner sees options at all, so the test above cannot
+  // pass simply by finding nothing to look at.
+  test("the scanner does read option labels", () => {
+    const withOptions = allFields.filter(({ field }) => (field.options ?? []).length > 0);
+    assert.ok(withOptions.length > 20, `only ${withOptions.length} fields have options`);
+  });
+});
