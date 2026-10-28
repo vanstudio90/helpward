@@ -214,6 +214,7 @@ export function ServicesView({
                     <span className="block text-sm font-bold text-slate-900 leading-snug line-clamp-2">{s.title}</span>
                     <span className="block text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-2">{s.blurb}</span>
                     <ServicePriceLine
+                      countryPricing={s.country_pricing}
                       baseCents={s.base_price_cents}
                       rule={pricingRules?.[s.id]}
                       currency={currency}

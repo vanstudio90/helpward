@@ -48,11 +48,18 @@ export function sealIntakeCountry<T extends Record<string, unknown>>(
   return clean as T & Record<string, unknown>;
 }
 
-/** Per-country overrides for one service, as the catalogue reads them. */
+/**
+ * Per-country overrides for one service.
+ *
+ * Deliberately the DATABASE row shape, snake_case and all. A camelCase
+ * mirror would need mapping at every query, and the one thing that must
+ * not happen is a catalogue quietly dropping the overrides on the way
+ * through and advertising a price the server will not charge.
+ */
 export type CountryPrice = {
   country: PricedCountry;
-  basePriceCents: number;
-  extraBlockCents: number | null;
+  base_price_cents: number;
+  extra_block_cents: number | null;
 };
 
 /**
@@ -71,7 +78,7 @@ export function displayBaseCents(
 ): number {
   if (!isPricedCountry(country) || !overrides?.length) return serviceBaseCents;
   const row = overrides.find((o) => o.country === country);
-  return row ? row.basePriceCents : serviceBaseCents;
+  return row ? row.base_price_cents : serviceBaseCents;
 }
 
 /** Same rule for the per-block extra. Null means "keep the service's rule". */
@@ -82,5 +89,5 @@ export function displayExtraBlockCents(
 ): number | null {
   if (!isPricedCountry(country) || !overrides?.length) return ruleExtraCents;
   const row = overrides.find((o) => o.country === country);
-  return row?.extraBlockCents ?? ruleExtraCents;
+  return row?.extra_block_cents ?? ruleExtraCents;
 }

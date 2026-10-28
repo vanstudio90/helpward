@@ -69,8 +69,8 @@ test("an unknown country leaves no country at all, not a stale one", () => {
 
 test("display pricing falls back the same way the database does", () => {
   const overrides = [
-    { country: "US" as const, basePriceCents: 3500, extraBlockCents: 1750 },
-    { country: "CA" as const, basePriceCents: 4000, extraBlockCents: 2000 },
+    { country: "US" as const, base_price_cents: 3500, extra_block_cents: 1750 },
+    { country: "CA" as const, base_price_cents: 4000, extra_block_cents: 2000 },
   ];
   assert.equal(displayBaseCents(1500, overrides, "US"), 3500);
   assert.equal(displayBaseCents(1500, overrides, "CA"), 4000);
@@ -127,4 +127,32 @@ test("a refused venue releases the hold rather than capturing it", () => {
   const actions = readFileSync("app/(provider)/provider/active/actions.ts", "utf8");
   assert.match(actions, /settlement === "release"/);
   assert.match(actions, /voidBookingAuthorization/);
+});
+
+/* ------------------------------------------------- price display parity */
+
+test("every catalogue passes the country overrides to the price line", () => {
+  // ServicePriceLine is already enforced as the single place a price is
+  // rendered. The overrides have to reach it, or a catalogue advertises a
+  // number price_service_cents will not charge — which is how the live
+  // page said $15 for a job billed at CA$40.
+  for (const f of ["app/_services-catalog.tsx", "app/(app)/services/view.tsx"]) {
+    const src = readFileSync(f, "utf8");
+    assert.match(src, /countryPricing=\{s\.country_pricing\}/, `${f} drops the country overrides`);
+  }
+});
+
+test("the price line applies the overrides itself", () => {
+  const src = readFileSync("components/ServicePriceLine.tsx", "utf8");
+  assert.match(src, /displayBaseCents/);
+  // And must render the resolved figure, not the raw base.
+  assert.match(src, /formatMoney\(shown, currency\)/);
+  assert.doesNotMatch(src, /formatMoney\(baseCents, currency\)/);
+});
+
+test("every service query carries the overrides", () => {
+  const src = readFileSync("lib/data/services.ts", "utf8");
+  assert.match(src, /country_pricing:service_country_pricing/);
+  // Through one shared select, so no query can forget them.
+  assert.equal((src.match(/\.select\(SERVICE_SELECT\)/g) ?? []).length >= 4, true);
 });

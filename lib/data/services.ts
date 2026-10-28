@@ -13,15 +13,12 @@ import type { Service, ServiceCategory, Country } from "@/lib/supabase/types";
 export const SERVICE_SELECT =
   "*, category:service_categories(*), country_pricing:service_country_pricing(country, base_price_cents, extra_block_cents)";
 
-export type ServiceCountryPrice = {
-  country: "US" | "CA";
-  base_price_cents: number;
-  extra_block_cents: number | null;
-};
+import type { CountryPrice } from "@/lib/country-price";
+export type { CountryPrice as ServiceCountryPrice } from "@/lib/country-price";
 
 export type ServiceWithCategory = Service & {
   category: ServiceCategory;
-  country_pricing?: ServiceCountryPrice[] | null;
+  country_pricing?: CountryPrice[] | null;
 };
 
 /* Build-time-safe variants — use service-role client (no cookies()) so they
