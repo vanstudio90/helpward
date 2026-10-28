@@ -71,9 +71,26 @@ succeed**. A route file existing locally is not evidence it ever executed.
 ## 1. Stripe: activate the account
 
 **Decided 2026-10-28: Helpward is a US business and the Stripe platform is
-US.** So `acct_1UUsXV8ZAIHcYg7R` is the account to activate — country US,
-settlement USD, and that country is permanent. Activation submits US
-business details: entity, representative, EIN, and a US bank account.
+US.** Country is permanent and settlement is USD; activation submits US
+business details — entity, representative, EIN, and a US bank account.
+
+**Confirm WHICH account you are activating first.** `acct_1UUsXV8ZAIHcYg7R`
+is the account behind the test keys in `.env.rehearsal`, and the dashboard
+presents it as **"Helpward sandbox"** with Stripe's sandbox banner. A
+sandbox cannot be activated, and its "you've provided all required business
+information" panel is simulated — it grants nothing live.
+
+Before following any account-scoped link below, leave the sandbox (the
+environment switcher, top-left, where it reads "Helpward sandbox") and open
+the API keys page. Then:
+
+- publishable key reads `pk_live_51UUsXV8…` -> same account; the
+  `acct_1UUsXV8ZAIHcYg7R` links below are correct.
+- a different id, or no live key at all -> the live platform is a
+  **different account**. Use the unscoped links
+  (`https://dashboard.stripe.com/settings/...`), and the Connect platform
+  profile must be completed on THAT account, not in the sandbox. The
+  rehearsal work still stands; only the account changes.
 
 Vancouver bookings are charged in **CAD** against this US platform, which is
 verified working in sandbox: CAD payment intents with the transfer
