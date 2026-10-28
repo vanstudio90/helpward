@@ -60,12 +60,12 @@ export function providerRequirements(r: ProviderReadiness): Requirement[] {
   return [
     {
       key: "approval",
-      label: "Application approved",
+      label: "Application approval",
       detail: approved
-        ? "A person at Helpward approved your application."
+        ? "Your application has been approved."
         : r.status === "suspended"
           ? "Your account is suspended. Contact support to restore access."
-          : "A person at Helpward reads every application. We'll email you when yours is decided.",
+          : "Every application is personally reviewed by the Helpward team. We'll notify you by email once a decision has been made.",
       met: approved,
       // Nothing the helper can press makes a human decide faster, and a
       // button that implies otherwise is worse than no button.
@@ -74,23 +74,23 @@ export function providerRequirements(r: ProviderReadiness): Requirement[] {
     },
     {
       key: "services",
-      label: "Services you offer",
+      label: "Select your services",
       detail: r.serviceCount > 0
-        ? `You're offering ${r.serviceCount} ${r.serviceCount === 1 ? "service" : "services"}.`
-        : "Pick at least one service. Offers only reach helpers who offer that service.",
+        ? `You currently offer ${r.serviceCount} ${r.serviceCount === 1 ? "service" : "services"}.`
+        : "Choose at least one service you provide to receive relevant job offers.",
       met: r.serviceCount > 0,
       href: "/provider/onboard",
-      action: r.serviceCount > 0 ? "Change services" : "Pick services",
+      action: r.serviceCount > 0 ? "Update services" : "Select services",
     },
     {
       key: "payouts",
-      label: "Bank account connected",
+      label: "Set up payouts",
       detail: r.transfersActive
-        ? "Payouts are active."
-        : "Connect a bank account. You can't accept a job until payouts work, because the payment would have nowhere to land.",
+        ? "Your payout account is active."
+        : "Connect your bank account to receive payments. Payout setup must be complete before you can accept jobs.",
       met: r.transfersActive,
       href: "/provider/onboard",
-      action: r.transfersActive ? null : "Connect payouts",
+      action: r.transfersActive ? null : "Connect bank account",
     },
   ];
 }

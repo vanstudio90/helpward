@@ -32,7 +32,7 @@ export default async function ProviderOnboardPage() {
   // "Verify your ID" and "Background check" used to sit in this list
   // marked "Pending Stripe Identity wiring" / "Pending Checkr / Triton
   // wiring" — steps nobody can ever complete, in a checklist headed
-  // "Complete every step to start accepting tasks". So a helper was told
+  // "Complete these steps to start accepting tasks". So a helper was told
   // that finishing an unfinishable list was the condition of working,
   // while the real condition (approved, offering a service, online) might
   // already be met and they might already be taking jobs. Neither check
@@ -54,12 +54,12 @@ export default async function ProviderOnboardPage() {
   // The bio is not a requirement — nothing gates on it — but a customer
   // reads it, so it stays on the list as a step rather than a blocker.
   const steps = [
-    { key: "profile", title: "Basic profile", done: readiness.hasBio },
-    { key: "services", title: "Pick services you offer", done: readiness.serviceCount > 0 },
+    { key: "profile", title: "Complete your profile", done: readiness.hasBio },
+    { key: "services", title: "Select your services", done: readiness.serviceCount > 0 },
     // Started is not done: an account can exist with Stripe still waiting on
     // a document. stripe_transfers_active is the flag that means a
     // destination charge to this helper will actually land.
-    { key: "payouts", title: "Connect a bank account", done: readiness.transfersActive },
+    { key: "payouts", title: "Set up payouts", done: readiness.transfersActive },
   ];
 
   const allStepsDone = steps.every((s) => s.done);

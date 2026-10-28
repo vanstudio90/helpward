@@ -78,7 +78,7 @@ export default async function ProviderDashboardPage() {
       <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
         Welcome, {profile?.full_name?.split(" ")[0] || "there"}
       </h1>
-      <p className="text-sm text-slate-500 mt-1">Your helper control center.</p>
+      <p className="text-sm text-slate-500 mt-1">Your helper dashboard.</p>
 
       {/* Each outstanding requirement, named, with the step that
           actually addresses it. "Finish setting up your account" over a
@@ -91,9 +91,9 @@ export default async function ProviderDashboardPage() {
             <div className="text-sm font-bold text-slate-900">
               {outstanding.length === 1
                 ? outstanding[0].key === "approval"
-                  ? "Your application is being reviewed"
-                  : `One thing left: ${outstanding[0].label.toLowerCase()}`
-                : "A couple of things before you can accept work"}
+                  ? "Your application is under review"
+                  : `One step remaining: ${outstanding[0].label.toLowerCase()}`
+                : "Complete these steps to start accepting jobs"}
             </div>
             <ul className="mt-2 space-y-2">
               {outstanding.map((q) => (

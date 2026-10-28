@@ -79,15 +79,28 @@ export async function updateProviderProfileAction(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not logged in." };
 
+  // Display name lives on profiles, not provider_profiles. A helper had no
+  // way to change it: /settings is the customer surface and the helper nav
+  // never links there, so a name typed once at signup was permanent — it
+  // greets them on their own dashboard and is what customers see.
+  const fullName = String(formData.get("full_name") ?? "").trim();
   const bio = String(formData.get("bio") ?? "").trim() || null;
   const radius = parseInt(String(formData.get("service_radius_km") ?? "20"), 10);
   const languages = String(formData.get("languages") ?? "")
     .split(",").map((s) => s.trim()).filter(Boolean);
 
-  if (radius < 1 || radius > 200) return { error: "Service radius must be 1-200 km." };
-  if (bio && bio.length > 2000) return { error: "Bio is too long (max 2000 chars)." };
-  if (languages.length > 10) return { error: "Too many languages (max 10)." };
-  if (languages.some((l) => l.length > 40)) return { error: "Language names too long." };
+  if (!fullName) return { error: "Your name can't be empty." };
+  if (fullName.length > 80) return { error: "Name is too long (max 80 characters)." };
+  if (radius < 1 || radius > 200) return { error: "Service radius must be between 1 and 200 km." };
+  if (bio && bio.length > 2000) return { error: "Bio is too long (max 2000 characters)." };
+  if (languages.length > 10) return { error: "You can list up to 10 languages." };
+  if (languages.some((l) => l.length > 40)) return { error: "Language names are too long." };
+
+  const { error: nameError } = await supabase
+    .from("profiles")
+    .update({ full_name: fullName, updated_at: new Date().toISOString() })
+    .eq("id", user.id);
+  if (nameError) return { error: nameError.message };
 
   const { error } = await supabase
     .from("provider_profiles")
@@ -96,6 +109,7 @@ export async function updateProviderProfileAction(
 
   if (error) return { error: error.message };
   revalidatePath("/provider/profile");
+  revalidatePath("/provider/dashboard", "layout");
   revalidatePath(`/providers/${user.id}`);
   return { success: "Profile updated." };
 }

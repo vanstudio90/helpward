@@ -152,7 +152,7 @@ export default async function ProviderEarningsPage() {
           href="/api/provider/export/bookings?days=365"
           download
           className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
-          title="Download the last 365 days of bookings as CSV — tax-season ready"
+          title="Download the last 365 days of bookings as a CSV file for your records"
         >
           <Download className="w-3.5 h-3.5" /> Export year CSV
         </a>

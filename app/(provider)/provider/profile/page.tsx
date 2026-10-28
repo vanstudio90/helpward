@@ -47,6 +47,7 @@ export default async function ProviderProfilePage() {
         <TimezoneCard stored={pp?.timezone ?? "UTC"} />
 
         <ProfileForm initial={{
+          full_name: profile?.full_name ?? "",
           bio: pp?.bio ?? "",
           service_radius_km: pp?.service_radius_km ?? 20,
           languages: (pp?.languages ?? []).join(", "),

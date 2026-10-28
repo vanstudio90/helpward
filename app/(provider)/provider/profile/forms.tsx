@@ -63,7 +63,7 @@ export function ProviderAvatarUpload({ avatarUrl, fullName }: { avatarUrl: strin
 
 export function ProfileForm({
   initial,
-}: { initial: { bio: string; service_radius_km: number; languages: string } }) {
+}: { initial: { full_name: string; bio: string; service_radius_km: number; languages: string } }) {
   const [state, formAction, pending] = useActionState(updateProviderProfileAction, undefined);
 
   return (
@@ -82,6 +82,17 @@ export function ProfileForm({
       )}
 
       <form action={formAction} className="space-y-4">
+        <label className="block">
+          <span className="text-xs font-semibold text-slate-700">Your name</span>
+          <input
+            name="full_name"
+            defaultValue={initial.full_name}
+            maxLength={80}
+            required
+            placeholder="The name customers will see"
+            className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+          />
+        </label>
         <label className="block">
           <span className="text-xs font-semibold text-slate-700">About you</span>
           <textarea
