@@ -109,6 +109,18 @@ server disagree about which account they are talking to.
    **rehearsal** and reported success. Add `--dry-run` the first time and
    read the target line.
 
+   After the migrations land, reload PostgREST's schema cache so the new
+   functions are callable:
+
+   ```sql
+   notify pgrst, 'reload schema';
+   ```
+
+   Migration 0069 issues this itself, but a cache that was warm when the
+   migration ran may need it again. Preflight tells you if `whoami_role`
+   is missing from the cache, and blocks rather than skipping the
+   authorisation check.
+
    The runner enforces order and refuses a file whose checksum changed
    after it ran. The remaining **ten** migrations are deploy-coupled —
    they assume the new code is already live — so run them with

@@ -261,37 +261,72 @@ section("1c. Application credentials");
         String(err.message ?? err).slice(0, 160));
     }
 
-    // The SERVICE key must authenticate AND actually hold the elevated
-    // role. A key that authenticates but is not service_role would pass a
-    // naive 200 check and then fail every payment and cron write, so the
-    // role itself is what gets asserted: read a table that RLS hides
-    // from anon entirely.
-    try {
-      const r = await fetch(`${restUrl}/rest/v1/notification_prefs?select=user_id&limit=1`, {
-        headers: { apikey: svc, authorization: `Bearer ${svc}` },
+    /*
+     * The SERVICE key must hold the service_role AUTHORITY, which is a
+     * different question from whether it authenticates.
+     *
+     * My previous version read a table RLS hides from anon and treated
+     * 200 as proof. That does not work: RLS does not REFUSE a hidden
+     * row, it returns 200 with an EMPTY ARRAY. So "anon got []" means
+     * "anon read the table and saw nothing", not "anon was denied" — and
+     * when an audit put the ANON key in the service slot, both requests
+     * returned 200 with [] and this reported "elevated (reads what anon
+     * cannot)". Both requests were the same key.
+     *
+     * EXECUTE privilege is the right instrument. whoami_role (migration
+     * 0069) is granted to service_role alone, so a caller either gets the
+     * role name back or is refused outright — and the returned name is
+     * checked too, not just the status.
+     *
+     * If this cannot be run at all, the result BLOCKS. An unverifiable
+     * authorisation check must not certify anything.
+     */
+    const roleProbe = async (key) => {
+      const res = await fetch(`${restUrl}/rest/v1/rpc/whoami_role`, {
+        method: "POST",
+        headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: "{}",
       });
-      const body = (await r.text()).slice(0, 200);
-      if (r.status !== 200) {
-        block("creds", `service-role key rejected by Supabase (${r.status})`,
-          `${body} — payments, payouts and every cron write use this key.`);
+      return { status: res.status, body: (await res.text()).slice(0, 180) };
+    };
+
+    try {
+      const svcRes = await roleProbe(svc);
+
+      if (svcRes.status === 404) {
+        block("creds", "Cannot verify the service-role key's authority",
+          "whoami_role is not in PostgREST's schema cache. Apply migration 0069 and, " +
+          "if it was just applied, run: notify pgrst, 'reload schema'. Blocking rather " +
+          "than certifying an authorisation check that did not run.");
+      } else if (svcRes.status !== 200) {
+        block("creds", `service-role key lacks service_role authority (${svcRes.status})`,
+          `${svcRes.body} — payments, payouts and every cron write need this role. ` +
+          "An anon or authenticated key in this slot fails exactly here.");
       } else {
-        pass("creds", "service-role key authenticates");
-        // Same request with the anon key must NOT succeed, or the table
-        // is not actually restricted and the probe proves nothing.
-        const a = await fetch(`${restUrl}/rest/v1/notification_prefs?select=user_id&limit=1`, {
-          headers: { apikey: anon, authorization: `Bearer ${anon}` },
-        });
-        const anonRows = a.status === 200 ? JSON.parse((await a.text()) || "[]") : null;
-        if (a.status === 200 && Array.isArray(anonRows) && anonRows.length > 0) {
-          warn("creds", "could not confirm the service key is elevated",
-            "The control table is readable with the anon key too, so a 200 does not " +
-            "distinguish the roles. The key authenticates; its role is unproven here.");
+        let role = null;
+        try { role = JSON.parse(svcRes.body); } catch { /* non-JSON */ }
+        if (role !== "service_role") {
+          block("creds", `service-role key resolves to role "${role}", not service_role`,
+            "It authenticates, but without the authority the application needs.");
         } else {
-          pass("creds", "service-role key is elevated (reads what anon cannot)");
+          pass("creds", "service-role key holds service_role authority");
+
+          // The control that makes the above meaningful: the SAME probe
+          // must be REFUSED for the anon key. If both succeed, the grant
+          // is wrong and the check proves nothing.
+          const anonRes = await roleProbe(anon);
+          if (anonRes.status === 200) {
+            block("creds", "the role probe is not actually restricted",
+              "The anon key can execute whoami_role too, so a 200 does not distinguish " +
+              "the roles and the check above proves nothing. EXECUTE should be revoked " +
+              "from anon and authenticated (migration 0069).");
+          } else {
+            pass("creds", `anon key is refused the service-only probe (${anonRes.status})`);
+          }
         }
       }
     } catch (err) {
-      block("creds", "Could not reach Supabase with the service-role key",
+      block("creds", "Could not run the service-role authority probe",
         String(err.message ?? err).slice(0, 160));
     }
   }

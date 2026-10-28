@@ -365,7 +365,14 @@ if (has("--deploy-coupled")) {
 }
 
 // Every safety check above has passed and we are about to write.
-if (todo.length > 0) await ensureLedger();
+//
+// `!DRY` matters and I left it out: moving the ledger creation here fixed
+// the drift-ordering bug and reintroduced the DDL on a dry run with
+// PENDING migrations. It stayed hidden because the rehearsal database has
+// everything applied, so `todo` is empty there and the call never fires —
+// the regression was invisible in exactly the environment used to test
+// it. A missing-ledger fixture exposed it immediately.
+if (!DRY && todo.length > 0) await ensureLedger();
 
 let failed = null;
 for (const f of todo) {
