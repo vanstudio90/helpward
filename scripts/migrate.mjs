@@ -57,6 +57,10 @@ function classify(file) {
 }
 
 function loadEnv() {
+  // Skipped entirely for a production run — see the target selection
+  // below. Loading .env.rehearsal and then migrating "production" is how
+  // you migrate the wrong database and are told it worked.
+  if (process.argv.includes("--production")) return;
   for (const f of [".env.rehearsal", ".env.local"]) {
     const p = path.resolve(f);
     if (!fs.existsSync(p)) continue;
@@ -75,12 +79,85 @@ const has = (f) => argv.includes(f);
 const val = (f) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : null; };
 
 const DRY = has("--dry-run");
-const url = process.env.REHEARSAL_DATABASE_URL || process.env.DATABASE_URL;
+
+/*
+ * WHICH DATABASE.
+ *
+ * REHEARSAL_DATABASE_URL takes precedence over DATABASE_URL, and loadEnv
+ * reads it out of .env.rehearsal — which is correct and deliberate for
+ * every day of development, and a trap on cutover day. Passing
+ * PRODUCTION_DATABASE_URL on the command line without this would have
+ * been silently ignored: the rehearsal variable wins, the rehearsal
+ * database gets migrated, and the run reports success. You would discover
+ * it when production took no bookings.
+ *
+ * So production is an EXPLICIT mode. It needs --production, it reads only
+ * PRODUCTION_DATABASE_URL, it never loads a dotenv file, and it prints the
+ * host it is about to change so a wrong target is visible before anything
+ * runs.
+ */
+const PROD = has("--production");
+const url = PROD
+  ? process.env.PRODUCTION_DATABASE_URL
+  : (process.env.REHEARSAL_DATABASE_URL || process.env.DATABASE_URL);
 
 if (!url) {
-  console.error("Missing DATABASE_URL (or REHEARSAL_DATABASE_URL).");
-  console.error("Supabase dashboard -> Project Settings -> Database -> Connection string (URI).");
+  if (PROD) {
+    console.error("--production requires PRODUCTION_DATABASE_URL in the environment.");
+    console.error("It is read from the environment only — never from .env.rehearsal or .env.local.");
+  } else {
+    console.error("Missing DATABASE_URL (or REHEARSAL_DATABASE_URL).");
+    console.error("Supabase dashboard -> Project Settings -> Database -> Connection string (URI).");
+  }
   process.exit(1);
+}
+
+/*
+ * Which project a pooler URL points at.
+ *
+ * NOT the host: Supabase's session pooler host is shared by every project
+ * in a region, so two different projects in us-west-1 have an identical
+ * host. The project ref is in the USERNAME ("postgres.<ref>"), so that is
+ * the identity. Comparing hosts would have refused a perfectly good
+ * production migration whenever both projects sat in the same region —
+ * a guard that blocks the correct action is its own kind of broken.
+ *
+ * Returns a printable identity that contains no password.
+ */
+function targetIdentity(connectionString) {
+  try {
+    const u = new URL(connectionString);
+    const ref = /^postgres\.(.+)$/.exec(decodeURIComponent(u.username))?.[1] ?? null;
+    return { ref, host: u.host, label: ref ? `${ref} @ ${u.host}` : u.host };
+  } catch {
+    return { ref: null, host: null, label: "unparseable connection string" };
+  }
+}
+
+if (PROD) {
+  const target = targetIdentity(url);
+  console.log(`\n  PRODUCTION migration target: ${target.label}`);
+
+  const rehearsal = process.env.REHEARSAL_DATABASE_URL
+    ? targetIdentity(process.env.REHEARSAL_DATABASE_URL) : null;
+  if (rehearsal && target.ref && rehearsal.ref === target.ref) {
+    console.error("\n  REFUSING: PRODUCTION_DATABASE_URL points at the SAME PROJECT as");
+    console.error(`  REHEARSAL_DATABASE_URL (${target.ref}). One of them is wrong.\n`);
+    process.exit(1);
+  }
+  if (!target.ref) {
+    console.error("\n  REFUSING: could not read a project ref from PRODUCTION_DATABASE_URL.");
+    console.error("  Expected a Supabase session-pooler URI on port 5432, whose user is");
+    console.error("  postgres.<project-ref>. Transaction mode (6543) cannot run these");
+    console.error("  migrations — they use `set local role`.\n");
+    process.exit(1);
+  }
+  if (target.host && !/:5432$/.test(target.host)) {
+    console.error(`\n  REFUSING: port is not 5432 (${target.host}).`);
+    console.error("  Session mode is required; transaction mode cannot `set local role`.\n");
+    process.exit(1);
+  }
+  console.log("  Reading PRODUCTION_DATABASE_URL only; no dotenv file was loaded.\n");
 }
 
 const files = fs.readdirSync(DIR).filter((f) => f.endsWith(".sql")).sort();

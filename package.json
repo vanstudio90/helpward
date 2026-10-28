@@ -30,7 +30,8 @@
     "verify:webhooks": "node scripts/verify-webhooks.mjs",
     "sql:boundary": "node scripts/run-sql-suite.mjs supabase/tests/boundary_containment.sql",
     "boundaries:load": "node scripts/load-boundaries.mjs",
-    "addresses:backfill": "node scripts/backfill-addresses.mjs"
+    "addresses:backfill": "node scripts/backfill-addresses.mjs",
+    "preflight": "node scripts/preflight.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^7.0.1",

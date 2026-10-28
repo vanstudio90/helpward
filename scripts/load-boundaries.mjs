@@ -82,6 +82,10 @@ const norm = (v) => String(v ?? "")
   .filter((w) => w && !STATUS_WORDS.has(w)).join(" ");
 
 function loadEnvLocal() {
+  // Skipped for --production: reading .env.rehearsal and then loading
+  // "production" boundaries is how the wrong project gets changed while
+  // the run reports success.
+  if (process.argv.includes("--production")) return;
   // .env.rehearsal first, so the isolated project always wins over
   // production whenever both files exist on this machine.
   for (const name of [".env.rehearsal", ".env.local"]) {
@@ -104,9 +108,64 @@ const argv = process.argv.slice(2);
 const flag = (f) => argv.includes(f);
 const val = (f, d = null) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
 
+const PROD = flag("--production");
+
 const URL_ = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!URL_ || !KEY) { console.error("Need NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY"); process.exit(1); }
+
+/*
+ * A URL from one project with a key from another.
+ *
+ * It is the classic cutover slip, and the symptom is a bare 401 that
+ * reads exactly like a revoked key — so the half-hour goes on rotating a
+ * key that was fine. A legacy Supabase service key is a JWT carrying the
+ * project ref, so when we have one we can say which project the KEY
+ * belongs to and compare it to the project in the URL. Newer `sb_secret_`
+ * keys are opaque; we say so rather than implying a check happened.
+ */
+function refFromUrl(u) {
+  return /^https:\/\/([a-z0-9]+)\.supabase\./.exec(u ?? "")?.[1] ?? null;
+}
+function refFromKey(k) {
+  const parts = (k ?? "").split(".");
+  if (parts.length !== 3) return null; // not a JWT — opaque sb_ key
+  try {
+    const body = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    return typeof body.ref === "string" ? body.ref : null;
+  } catch { return null; }
+}
+{
+  const urlRef = refFromUrl(URL_);
+  const keyRef = refFromKey(KEY);
+  if (PROD) console.log(`\n  Target project: ${urlRef ?? URL_}`);
+  if (urlRef && keyRef && urlRef !== keyRef) {
+    console.error(`\n  REFUSING: the URL is project ${urlRef} but the service key belongs`);
+    console.error(`  to project ${keyRef}. Mismatched pairs fail as a bare 401, which`);
+    console.error("  reads like a revoked key and sends you rotating a good one.\n");
+    process.exit(1);
+  }
+  if (PROD) {
+    if (!keyRef) {
+      console.log("  Key is opaque (sb_* format): project match could not be verified.");
+    }
+    const rehearsalRef = refFromUrl(
+      // Read the rehearsal file directly; --production did not load it.
+      (() => {
+        try {
+          const txt = fs.readFileSync(path.resolve(".env.rehearsal"), "utf8");
+          return /^\s*NEXT_PUBLIC_SUPABASE_URL\s*=\s*(.*)$/m.exec(txt)?.[1]
+            ?.trim().replace(/^["']|["']$/g, "") ?? null;
+        } catch { return null; }
+      })(),
+    );
+    if (rehearsalRef && urlRef && rehearsalRef === urlRef) {
+      console.error("\n  REFUSING: --production points at the REHEARSAL project.\n");
+      process.exit(1);
+    }
+    console.log();
+  }
+}
 const H = { apikey: KEY, authorization: `Bearer ${KEY}`, "content-type": "application/json" };
 
 async function sb(q, init = {}) {
