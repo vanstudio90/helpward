@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { validateSlug } from "@/lib/slug";
+import { SERVICE_AREAS, normalizeMunicipality } from "@/lib/service-areas";
 
 type State = { error?: string; success?: string } | undefined;
 
@@ -177,4 +178,58 @@ export async function uploadProviderAvatarAction(
 
   revalidatePath("/", "layout");
   return { success: "Avatar updated." };
+}
+
+// ---------------------------------------------------------------------------
+// Cities a helper accepts work in.
+//
+// Writes go through set_provider_working_cities (migration 0072) rather than
+// a .from("provider_cities") upsert: the RPC validates each name against the
+// ACTIVE boundary dataset, and provider_cities has no insert/update/delete
+// policy, so the RPC is the only write path. A name that no polygon answers
+// to is refused here instead of silently leaving the helper undispatchable.
+//
+// Empty is refused. A helper who wants work everywhere in their area selects
+// every city — an explicit full set, not an empty one. That keeps "no rows"
+// meaning only "never configured", which is the legacy state 0072's
+// compatibility clause is for.
+// ---------------------------------------------------------------------------
+export async function setWorkingCitiesAction(
+  _prev: State,
+  formData: FormData,
+): Promise<State> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not logged in." };
+
+  const areaId = String(formData.get("area_id") ?? "").trim();
+  const area = SERVICE_AREAS.find((a) => a.id === areaId);
+  if (!area) return { error: "Pick the region you work in." };
+
+  // Keep only names this area actually has, compared through the same
+  // normaliser the database uses, so casing or a status word can't slip past.
+  const posted = formData.getAll("city").map((c) => String(c));
+  const cities = area.municipalities.filter((m) =>
+    posted.some((p) => normalizeMunicipality(p) === normalizeMunicipality(m)),
+  );
+
+  if (cities.length === 0) {
+    return { error: "Choose at least one city — or select all of them if you'll go anywhere." };
+  }
+
+  const { data, error } = await supabase.rpc("set_provider_working_cities", {
+    p_area_id: area.id,
+    p_municipalities: cities,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/provider/profile");
+  revalidatePath("/provider/dashboard");
+
+  const n = typeof data === "number" ? data : cities.length;
+  return {
+    success: n === area.municipalities.length
+      ? `Saved — you'll be offered work anywhere in ${area.label}.`
+      : `Saved — ${n} ${n === 1 ? "city" : "cities"}. You won't be offered work outside them.`,
+  };
 }

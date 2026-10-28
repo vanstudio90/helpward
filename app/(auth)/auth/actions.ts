@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { recordReferralAttribution } from "@/lib/data/referrals";
+import { SERVICE_AREAS, normalizeMunicipality } from "@/lib/service-areas";
 
 type ActionState = { error?: string; success?: string } | undefined;
 
@@ -80,6 +81,23 @@ export async function signupAction(
   const country = String(formData.get("country") ?? "US");
   const role = String(formData.get("role") ?? "customer");
 
+  // Where a helper says they will work. The signup form has asked this
+  // since the city cascade shipped, but nothing read it — the answer was
+  // collected and discarded. It now rides in user metadata, and
+  // handle_new_user() (migration 0072) seeds provider_cities from it so
+  // dispatch honours it from the first request.
+  //
+  // Validated against SERVICE_AREAS rather than trusted: this is a posted
+  // form field, and a value that no boundary answers to would leave the
+  // helper configured and permanently undispatchable. "__other__" is the
+  // not-listed sentinel and is not a place, so it is dropped here.
+  const rawRegion = String(formData.get("work_region") ?? "").trim();
+  const rawCity = String(formData.get("work_city") ?? "").trim();
+  const workArea = SERVICE_AREAS.find((a) => a.id === rawRegion && a.country === country);
+  const workCity = workArea?.municipalities.find(
+    (m) => normalizeMunicipality(m) === normalizeMunicipality(rawCity),
+  );
+
   if (!email || !password || !fullName) {
     return { error: "All fields are required." };
   }
@@ -113,6 +131,10 @@ export async function signupAction(
         full_name: fullName,
         role,
         country,
+        // Only ever a real area id and a real municipality name, or absent.
+        ...(role === "provider" && workArea && workCity
+          ? { work_region: workArea.id, work_city: workCity }
+          : {}),
       },
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com"}/auth/callback`,
     },

@@ -3,6 +3,7 @@ import { listServices } from "@/lib/data/services";
 import { ProfileForm, ServicesForm, ProviderAvatarUpload } from "./forms";
 import { SlugForm } from "./slug-form";
 import { TimezoneCard } from "./timezone-card";
+import { CitiesForm } from "./cities-form";
 
 export default async function ProviderProfilePage() {
   const supabase = await createSupabaseServerClient();
@@ -15,6 +16,14 @@ export default async function ProviderProfilePage() {
     listServices(),
     supabase.from("provider_services").select("service_id, custom_price_cents").eq("provider_id", user.id),
   ]);
+
+  // Cities this helper accepts work in. No rows is a real state — every
+  // account created before migration 0072 is in it — and means unrestricted,
+  // so the card says so rather than rendering an ambiguous empty list.
+  const { data: myCities } = await supabase
+    .from("provider_cities")
+    .select("area_id, municipality")
+    .eq("provider_id", user.id);
 
   const myServiceMap = new Map(
     (myServices ?? []).map((r) => [r.service_id, r.custom_price_cents as number | null] as const)
@@ -42,6 +51,11 @@ export default async function ProviderProfilePage() {
           service_radius_km: pp?.service_radius_km ?? 20,
           languages: (pp?.languages ?? []).join(", "),
         }} />
+
+        <CitiesForm
+          areaId={myCities?.[0]?.area_id ?? null}
+          selected={(myCities ?? []).map((c) => c.municipality)}
+        />
 
         <ServicesForm
           allServices={allServices.map((s) => ({
