@@ -70,6 +70,37 @@ succeed**. A route file existing locally is not evidence it ever executed.
 
 ## 1. Stripe: activate the account
 
+**Decided 2026-10-28: Helpward is a US business and the Stripe platform is
+US.** So `acct_1UUsXV8ZAIHcYg7R` is the account to activate — country US,
+settlement USD, and that country is permanent. Activation submits US
+business details: entity, representative, EIN, and a US bank account.
+
+Vancouver bookings are charged in **CAD** against this US platform, which is
+verified working in sandbox: CAD payment intents with the transfer
+destination set to a **Canadian** connected account, and the split
+reconciling exactly (CA$24.50 -> CA$16.00 helper / CA$8.50 platform). A CA
+connected account with `transfers: active` exists there, so cross-border
+payout is proven, not assumed.
+
+**One consequence worth watching once live.** The code does not set
+`on_behalf_of` on the payment intent, so for a Canadian booking the US
+platform is the merchant of record and CAD is only the presentment
+currency. Two practical effects:
+
+- A Canadian customer's bank sees a **foreign** merchant. That can mean a
+  foreign-transaction fee for them and a higher decline rate — the same
+  class of problem already seen on royalkingseeds.au, where USD
+  cross-border declines were traced to the issuer, not to checkout.
+- Helpward settles in USD while charging CAD, so Stripe converts, and the
+  conversion cost comes out of the 20% + $4.50.
+
+Setting `on_behalf_of` to the helper's connected account would make that
+account the merchant of record and settle in CAD, which usually reduces
+both effects — but it moves dispute liability and needs `card_payments`
+active on the connected account. That is a deliberate decision, not a
+default, and it is not required to launch. Watch the Canadian decline rate
+in the first weeks and revisit if it is poor.
+
 In the Stripe Dashboard, with the **test-mode toggle OFF**:
 
 1. **Activate payments** — business details, representative, bank account.
