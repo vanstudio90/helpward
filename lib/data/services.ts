@@ -2,7 +2,27 @@ import { ruleFromRow, type PricingRule } from "@/lib/service-pricing";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import type { Service, ServiceCategory, Country } from "@/lib/supabase/types";
 
-export type ServiceWithCategory = Service & { category: ServiceCategory };
+/* Per-country price overrides travel WITH the service, every time.
+ *
+ * They were added to the database first, and the catalogue kept rendering
+ * services.base_price_cents — so Wait in Line advertised $15 while
+ * price_service_cents charged US$35 / CA$40 at submission. A price the
+ * customer reads must be the price they are charged, so the override comes
+ * back on the same row as the base and there is no query that can forget
+ * it. */
+export const SERVICE_SELECT =
+  "*, category:service_categories(*), country_pricing:service_country_pricing(country, base_price_cents, extra_block_cents)";
+
+export type ServiceCountryPrice = {
+  country: "US" | "CA";
+  base_price_cents: number;
+  extra_block_cents: number | null;
+};
+
+export type ServiceWithCategory = Service & {
+  category: ServiceCategory;
+  country_pricing?: ServiceCountryPrice[] | null;
+};
 
 /* Build-time-safe variants — use service-role client (no cookies()) so they
    can run inside generateStaticParams / static pre-render. The catalog is
@@ -11,7 +31,7 @@ export async function listServicesPublic(): Promise<ServiceWithCategory[]> {
   const supabase = createSupabaseServiceClient();
   const { data, error } = await supabase
     .from("services")
-    .select("*, category:service_categories(*)")
+    .select(SERVICE_SELECT)
     .eq("active", true)
     .order("popular", { ascending: false })
     .order("title");
@@ -40,7 +60,7 @@ export async function getServicePublic(slug: string): Promise<ServiceWithCategor
   const supabase = createSupabaseServiceClient();
   const { data, error } = await supabase
     .from("services")
-    .select("*, category:service_categories(*)")
+    .select(SERVICE_SELECT)
     .eq("id", slug)
     .eq("active", true)
     .maybeSingle();
@@ -62,7 +82,7 @@ export async function listServices(opts?: {
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("services")
-    .select("*, category:service_categories(*)")
+    .select(SERVICE_SELECT)
     .eq("active", true)
     .order("popular", { ascending: false })
     .order("title");
@@ -100,7 +120,7 @@ export async function getService(slug: string): Promise<ServiceWithCategory | nu
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("services")
-    .select("*, category:service_categories(*)")
+    .select(SERVICE_SELECT)
     .eq("id", slug)
     .single();
   if (error) {

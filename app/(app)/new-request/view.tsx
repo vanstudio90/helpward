@@ -26,6 +26,7 @@ import { SERVICE_FEE_CENTS, quoteOneShotCents, dollars } from "@/lib/pricing";
 import { pickInitialSelected } from "@/lib/new-request-selection";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
+import { displayBaseCents, displayExtraBlockCents, type CountryPrice } from "@/lib/country-price";
 
 export type SavedAddressOption = {
   id: string;
@@ -777,7 +778,27 @@ function SummaryCard({ selected, rule, answers, currency, bundle }: {
   // Priced from the customer's answers. The same rules run in SQL at
   // acceptance (price_service_cents, migration 0053); parity across both
   // is asserted by scripts/verify-pricing-parity.mjs.
-  const priced = priceService(selected.base_price_cents, rule, answers);
+  // Derived from the quote currency rather than passed separately, so the
+  // number and the symbol can never disagree: a card reading "CA$" shows
+  // the Canadian price, and both switch together when an address resolves.
+  const quotedCountry = currency === "CAD" ? "CA" : "US";
+
+  // The base the CUSTOMER is quoted must be the base the database charges.
+  // price_service_cents applies the country override server-side; reading
+  // services.base_price_cents here showed $15 for a job billed at CA$40.
+  const quotedBase = displayBaseCents(
+    selected.base_price_cents,
+    (selected.country_pricing ?? undefined) as CountryPrice[] | undefined,
+    quotedCountry,
+  );
+  const quotedRule = rule
+    ? { ...rule, extraBlockCents: displayExtraBlockCents(
+        rule.extraBlockCents,
+        (selected.country_pricing ?? undefined) as CountryPrice[] | undefined,
+        quotedCountry,
+      ) ?? rule.extraBlockCents }
+    : rule;
+  const priced = priceService(quotedBase, quotedRule, answers);
 
   return (
     <div className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
