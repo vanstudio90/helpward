@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
-/* Building blocks for a long legal document.
+/* Building blocks for a long legal document. Shared by /privacy and /terms.
  *
- * A seventeen-section privacy policy rendered as one column of prose is
+ * A twenty-six-section document rendered as one column of prose is
  * technically complete and practically unreadable — nobody finds the
  * retention rule or the deletion steps in it. These give the document
  * structure a reader can navigate: numbered sections to link to, callouts

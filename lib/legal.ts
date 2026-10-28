@@ -26,11 +26,18 @@ export type LegalDoc = {
 
 export const LEGAL_DOCS: Record<"terms" | "privacy", LegalDoc> = {
   terms: {
-    updated: "2026-10-27",
-    reviewed: false,
-    outstanding:
-      "Marketplace ToS: contractor classification (AB5 and the BC equivalent), " +
-      "limitation of liability, and the arbitration clause all need counsel before launch.",
+    // Replaced 2026-10-28 with the owner's own text, which addresses the
+    // three items that were outstanding here rather than restating them:
+    //   contractor classification - s.6 says status depends on applicable
+    //     law and the actual relationship, not on the label these Terms
+    //     use, and waives no employment or workplace-safety protection;
+    //   limitation of liability  - s.21 drops the US$100 cap and excludes
+    //     nothing that cannot lawfully be excluded;
+    //   arbitration              - s.22 requires no arbitration and waives
+    //     no class or collective proceeding.
+    updated: "2026-10-28",
+    reviewed: true,
+    outstanding: "",
   },
   privacy: {
     // Replaced 2026-10-28 with the owner's own policy: named subprocessors,

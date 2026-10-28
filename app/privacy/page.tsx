@@ -5,8 +5,8 @@ import {
 } from "lucide-react";
 import { MarketingShell } from "@/components/MarketingShell";
 import { LEGAL_DOCS, formatLegalDate } from "@/lib/legal";
-import { Section, Sub, Callout, List, Table } from "./sections";
-import { Toc } from "./toc";
+import { Section, Sub, Callout, List, Table } from "@/components/legal/sections";
+import { Toc } from "@/components/legal/toc";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Helpward",
