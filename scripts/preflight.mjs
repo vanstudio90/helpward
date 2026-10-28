@@ -486,10 +486,12 @@ section("3. Scheduled jobs");
   });
   if (subDaily.length > 0) {
     warn("cron", `${subDaily.length} of ${declared.length} job(s) are sub-daily — the plan must allow that cadence`,
-      "A Hobby deployment carrying a sub-daily schedule is rejected, so this does not " +
-      "deploy at all there. The constraint is the cadence, not the job count. " +
-      `Most frequent: ${subDaily.map((c) => `${c.name} (${c.schedule})`).slice(0, 3).join(", ")}. ` +
-      "A registered schedule is still not evidence of a successful run — check the logs after deploy.");
+      "Verified 2026-10-28: the helpward project belongs to the vanstudio team (Pro), " +
+      "which already runs `* * * * *` on it, so this is satisfied for the current " +
+      "deployment target. It would NOT be on a Hobby project — such a deployment is " +
+      "rejected outright. Re-check if the project is ever moved to another scope. " +
+      "And a registered schedule is still not evidence of a successful run: with a " +
+      "wrong CRON_SECRET all twelve return 401 silently. Check the logs after deploy.");
   }
 }
 

@@ -15,25 +15,35 @@ Candidate: `launch-scope-and-verification`. `main` is untouched at `6e5befc`.
 
 ---
 
-## 0. Before anything — the scheduler has to support these cadences
+## 0. Scheduler capacity — ALREADY SATISFIED (verified 2026-10-28)
 
-Helpward declares **12** cron jobs, **8** of them sub-daily.
-Vercel's Hobby plan runs crons **once a day**, and a deployment carrying a
-sub-daily schedule is **rejected** — so on Hobby this does not deploy at
-all. (Hobby's limit is 100 jobs per project; the constraint here is the
-cadence, not the count. Checked against Vercel's cron pricing docs on
-2026-10-27 — confirm against your own plan, which I have not inspected.)
+**Resolved. No action needed, and no plan change to buy.**
 
-The table is generated from `vercel.json`, so it cannot drift from what
-actually deploys. Regenerate with:
+The `helpward` Vercel project is owned by the **vanstudio** team, which is on
+the **Pro** plan — not the personal `vanstudio90-1819` account, which is
+Hobby. Checked against the Vercel API, not inferred: the project's
+`accountId` is the vanstudio team, and ten cron definitions are already
+enabled on it **including `* * * * *`**, a cadence a Hobby project cannot
+deploy at all. Sibling projects on the same team run sub-daily schedules
+today (`royalkingseeds.us` has `*/15` and `*/30` live), so Pro handling
+these cadences is observed, not read off a pricing page.
 
-```
-python3 - <<'EOF'
-import json
-for c in sorted(json.load(open('vercel.json'))['crons'], key=lambda x: x['path']):
-    print(f"{c['path'].split('/')[-1]:34} {c['schedule']}")
-EOF
-```
+An earlier draft of this step warned that a Hobby deployment carrying
+sub-daily crons is rejected. That is true in general and does not apply
+here. It stays worth knowing only if Helpward is ever moved to another
+scope.
+
+**The one thing that IS outstanding:** the deployed project has **10** cron
+definitions and `vercel.json` now declares **12**. Missing live:
+
+    /api/cron/offline-stale-helpers   (*/5)
+    /api/cron/sweep-calls             (*/10)
+
+Both were added during this work. Vercel registers crons from `vercel.json`
+at deploy time, so they appear on the next deploy of this candidate — no
+dashboard step. Confirm all twelve are listed afterwards, and that they are
+**running**: a registered schedule is not evidence of a successful
+invocation, and with `CRON_SECRET` wrong they would all return 401 silently.
 
 | Job | Schedule | Cadence | What stops if it never runs |
 |---|---|---|---|
