@@ -88,3 +88,62 @@ mismatch, and leaves the dataset inactive until `--activate` is passed.
 3. Probe a known **exclave** (e.g. a San Pedro address for Los Angeles) to
    prove MultiPolygon geometry survived the load.
 4. Run the boundary SQL test: `supabase/tests/boundary_containment.sql`.
+
+## Jurisdictions, not municipality names
+
+Coverage is tracked by **jurisdiction id**, defined once in
+`scripts/lib/jurisdictions.mjs` and persisted on every boundary row
+(`service_area_boundaries.jurisdiction_id`, migration 0067).
+
+This matters because two pairs share a display name:
+
+| Display name | Jurisdictions | Area |
+|---|---|---|
+| North Vancouver | `bc-north-vancouver-city` | ~15 km² |
+| North Vancouver | `bc-north-vancouver-district` | ~178 km² |
+| Langley | `bc-langley-city` | ~10 km² |
+| Langley | `bc-langley-township` | ~318 km² |
+
+A dataset holding the City of North Vancouver **twice** has 17 rows and
+15 distinct names, so a name-based check reported full coverage while the
+District — twelve times the city's area — was refused. Four layers now
+make that impossible:
+
+1. a unique index on `(dataset_id, jurisdiction_id)`;
+2. `activate_boundary_dataset` refuses two jurisdictions sharing one
+   polygon (migration 0068) — two municipalities cannot occupy the same
+   ground;
+3. the same function compares the **exact** id set, both directions, so a
+   missing jurisdiction and an unapproved one both refuse;
+4. `npm run preflight` probes a point known to be inside **each**
+   jurisdiction and compares its area to the authoritative figure. This
+   is the layer that catches a right label on a wrong polygon, which no
+   set comparison can see.
+
+A dataset loaded before 0067 has no jurisdiction ids and **cannot be
+activated**. Reload it from source — the ids come from matching source
+features to the approved list, which is provenance, not a guess from a
+display name.
+
+### Regenerating the interior probes
+
+`scripts/lib/jurisdiction-probes.mjs` holds one guaranteed-interior point
+and the area for each jurisdiction, generated from the loaded polygons
+with `ST_PointOnSurface`. After a **deliberate** boundary revision:
+
+```
+node -e '
+import("pg").then(async ({default:pg})=>{
+const c=new pg.Client({connectionString:process.env.REHEARSAL_DATABASE_URL,ssl:{rejectUnauthorized:false}});
+await c.connect();
+const r=await c.query(`select b.area_id, b.jurisdiction_id, b.municipality,
+  round(st_x(st_pointonsurface(b.boundary))::numeric,5) lng,
+  round(st_y(st_pointonsurface(b.boundary))::numeric,5) lat,
+  round((st_area(b.boundary::geography)/1e6)::numeric,1) km2
+  from service_area_boundaries b join service_area_datasets d
+    on d.id=b.dataset_id and d.is_active order by 1,2`);
+console.log(JSON.stringify(r.rows,null,1)); await c.end();})'
+```
+
+Regenerate it only when the boundary change is intended. Doing it to
+silence a preflight failure would delete the check.

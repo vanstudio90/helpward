@@ -32,6 +32,8 @@ import pg from "pg";
 import {
   refFromPostgresUri, refFromRestUrl, refFromKey, assertProductionTarget,
 } from "./lib/target.mjs";
+import { expectedJurisdictionIds, knownAreaIds } from "./lib/jurisdictions.mjs";
+import { JURISDICTION_PROBES } from "./lib/jurisdiction-probes.mjs";
 
 // ---------------------------------------------------------------------
 // env loading — production variables must come from the real environment
@@ -199,15 +201,99 @@ if (!WANT_PROD) {
     ]);
     for (const line of report.verified) pass("identity", line);
     for (const label of report.unverified) {
-      // Opaque sb_* keys cannot be decoded. Say that the check could not
-      // run rather than implying it passed — an authenticated read below
-      // is what actually proves such a key works.
-      warn("identity", `${label}: project could not be verified from the value`,
-        "Newer sb_* keys are opaque. The authenticated read probe below is the real check.");
+      pass("identity", `${label}: opaque (sb_* format) — verified by the read probe below`);
     }
   } catch (err) {
     block("identity", "Production target is not one consistent project",
       String(err.message ?? err).replace(/\n\s*/g, " "));
+  }
+}
+
+// ---------------------------------------------------------------------
+// 1c. The application credentials actually work
+// ---------------------------------------------------------------------
+//
+// Decoding a project ref out of a key proves where it was ISSUED, not
+// that it still works — and newer sb_* keys are opaque, so even that is
+// unavailable. The previous version warned "project could not be verified
+// from the value" and then promised "the authenticated read probe below
+// is the real check". There was no such probe. An audit passed fictional,
+// invalid sb_publishable_ and sb_secret_ keys and got GO, which is the
+// worst possible outcome for a readiness check: a false statement in its
+// own output.
+//
+// So: use each key the way the application does, against the declared
+// project, and require the answer the role should give. A rotated,
+// revoked or mistyped key fails here instead of at a customer's first
+// page load.
+//
+// The SQL connection cannot stand in for this. It authenticates with
+// completely separate database credentials and proves nothing about the
+// API keys the app ships with.
+section("1c. Application credentials");
+{
+  const restUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+
+  const probe = async (label, key, headers = {}) => {
+    const res = await fetch(`${restUrl}/rest/v1/services?select=id&limit=1`, {
+      headers: { apikey: key, authorization: `Bearer ${key}`, ...headers },
+    });
+    return { status: res.status, body: (await res.text()).slice(0, 200) };
+  };
+
+  if (!restUrl || !anon || !svc) {
+    block("creds", "Cannot authenticate: the Supabase URL or a key is missing");
+  } else {
+    // The ANON key must read the public catalogue — that is literally
+    // what every visitor's first request does.
+    try {
+      const r = await probe("anon", anon);
+      if (r.status === 200) {
+        pass("creds", "anon key authenticates and can read the public catalogue");
+      } else {
+        block("creds", `anon key rejected by Supabase (${r.status})`,
+          `${r.body} — every visitor's first request fails this way.`);
+      }
+    } catch (err) {
+      block("creds", "Could not reach Supabase with the anon key",
+        String(err.message ?? err).slice(0, 160));
+    }
+
+    // The SERVICE key must authenticate AND actually hold the elevated
+    // role. A key that authenticates but is not service_role would pass a
+    // naive 200 check and then fail every payment and cron write, so the
+    // role itself is what gets asserted: read a table that RLS hides
+    // from anon entirely.
+    try {
+      const r = await fetch(`${restUrl}/rest/v1/notification_prefs?select=user_id&limit=1`, {
+        headers: { apikey: svc, authorization: `Bearer ${svc}` },
+      });
+      const body = (await r.text()).slice(0, 200);
+      if (r.status !== 200) {
+        block("creds", `service-role key rejected by Supabase (${r.status})`,
+          `${body} — payments, payouts and every cron write use this key.`);
+      } else {
+        pass("creds", "service-role key authenticates");
+        // Same request with the anon key must NOT succeed, or the table
+        // is not actually restricted and the probe proves nothing.
+        const a = await fetch(`${restUrl}/rest/v1/notification_prefs?select=user_id&limit=1`, {
+          headers: { apikey: anon, authorization: `Bearer ${anon}` },
+        });
+        const anonRows = a.status === 200 ? JSON.parse((await a.text()) || "[]") : null;
+        if (a.status === 200 && Array.isArray(anonRows) && anonRows.length > 0) {
+          warn("creds", "could not confirm the service key is elevated",
+            "The control table is readable with the anon key too, so a 200 does not " +
+            "distinguish the roles. The key authenticates; its role is unproven here.");
+        } else {
+          pass("creds", "service-role key is elevated (reads what anon cannot)");
+        }
+      }
+    } catch (err) {
+      block("creds", "Could not reach Supabase with the service-role key",
+        String(err.message ?? err).slice(0, 160));
+    }
   }
 }
 
@@ -418,19 +504,20 @@ if (!dbUrl) {
     // non-empty, the stored feature_count matching the rows, and finally
     // the real function answering correctly for a known point inside
     // each area and one outside all of them.
-    const areaSrc = fs.readFileSync("lib/service-areas.ts", "utf8");
-    const declaredAreas = [];
-    {
-      // Each area block: id, then its municipalities array.
-      const re = /\bid:\s*"([a-z0-9-]+)"[\s\S]*?municipalities:\s*(\[[\s\S]*?\])/g;
-      let m;
-      while ((m = re.exec(areaSrc)) !== null) {
-        const munis = [...m[2].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
-        declaredAreas.push({ id: m[1], municipalities: munis });
-      }
-    }
+    //
+    // Coverage is compared by JURISDICTION ID, not by municipality name.
+    // Two pairs in the Lower Mainland share a display name — North
+    // Vancouver city/district and Langley city/township — and each pair
+    // is two separate municipalities, the larger several times the area
+    // of the smaller. A name-based check saw 15 distinct names and so
+    // approved a dataset holding the City of North Vancouver TWICE,
+    // while the District and the Township silently lost coverage. An
+    // audit built exactly that dataset and this said GO.
+    const declaredAreas = knownAreaIds().map((id) => ({
+      id, jurisdictions: expectedJurisdictionIds(id),
+    }));
     if (declaredAreas.length === 0) {
-      block("db", "Could not read any service area from lib/service-areas.ts",
+      block("db", "Could not read any service area from scripts/lib/jurisdictions.mjs",
         "Everything about coverage below is unchecked.");
     }
 
@@ -438,6 +525,8 @@ if (!dbUrl) {
       select d.id, d.area_id, d.feature_count,
              count(b.id)                                   as rows,
              count(b.boundary)                             as with_geom,
+             count(b.jurisdiction_id)                      as with_jid,
+             count(distinct b.jurisdiction_id)             as distinct_jid,
              count(*) filter (where b.boundary is not null
                                 and not st_isvalid(b.boundary::geometry)) as invalid,
              count(*) filter (where b.boundary is not null
@@ -466,28 +555,40 @@ if (!dbUrl) {
           `${set.invalid} invalid, ${set.empty} empty — st_covers cannot match against these.`);
         continue;
       }
+      if (Number(set.with_jid) !== Number(set.rows)) {
+        block("db", `active dataset for "${area.id}" predates jurisdiction ids`,
+          `${Number(set.rows) - Number(set.with_jid)} row(s) have no jurisdiction_id, so its ` +
+          "coverage cannot be verified by jurisdiction — a duplicated city would be " +
+          "indistinguishable from the real pair. Reload it from source.");
+        continue;
+      }
       if (set.feature_count != null && Number(set.feature_count) !== Number(set.rows)) {
         block("db", `active dataset for "${area.id}" is incomplete`,
           `feature_count says ${set.feature_count} but ${set.rows} boundary rows exist.`);
         continue;
       }
+      if (Number(set.distinct_jid) !== Number(set.rows)) {
+        block("db", `active dataset for "${area.id}" has duplicate jurisdictions`,
+          `${set.rows} rows but only ${set.distinct_jid} distinct jurisdiction ids.`);
+        continue;
+      }
 
-      // Every approved municipality must actually be in the active set.
-      // A dataset missing Surrey is not "Lower Mainland coverage"; it is
-      // a dataset that silently refuses Surrey addresses.
-      const { rows: haveMunis } = await client.query(
-        "select municipality from service_area_boundaries where dataset_id = $1", [set.id]);
-      const norm = (x) => String(x).toLowerCase()
-        .replace(/^(city|district|township|town|village) of /, "")
-        .replace(/ (city|district|township|town|village)$/, "").trim();
-      const present = new Set(haveMunis.map((r) => norm(r.municipality)));
-      const missing = area.municipalities.filter((m) => !present.has(norm(m)));
+      // The exact set, both directions.
+      const { rows: have } = await client.query(
+        "select jurisdiction_id from service_area_boundaries where dataset_id = $1", [set.id]);
+      const present = new Set(have.map((r) => r.jurisdiction_id));
+      const missing = area.jurisdictions.filter((j) => !present.has(j));
+      const extra = [...present].filter((j) => !area.jurisdictions.includes(j));
+
       if (missing.length > 0) {
-        block("db", `active dataset for "${area.id}" is missing ${missing.length} approved municipality(ies)`,
+        block("db", `active dataset for "${area.id}" is missing ${missing.length} required jurisdiction(s)`,
           `${missing.join(", ")} — addresses there are refused while the area reads as covered.`);
+      } else if (extra.length > 0) {
+        block("db", `active dataset for "${area.id}" covers ${extra.length} unapproved jurisdiction(s)`,
+          `${extra.join(", ")} — we would dispatch somewhere nobody approved.`);
       } else {
-        pass("db", `"${area.id}" — active dataset, ${set.rows} polygons, all ` +
-                   `${area.municipalities.length} approved municipality(ies) present`);
+        pass("db", `"${area.id}" — active dataset, ${set.rows} polygons, ` +
+                   `all ${area.jurisdictions.length} required jurisdictions present and distinct`);
       }
     }
 
@@ -498,9 +599,50 @@ if (!dbUrl) {
         "is_point_serviceable, so they can accept bookings in a market that was retired.");
     }
 
-    // --- the real function, on real points -----------------------------
+    // --- every jurisdiction, probed where it is felt ------------------
     //
-    // Everything above is structure. This is the behaviour customers hit.
+    // The check no set comparison can replace. An audit built a dataset
+    // whose District-of-North-Vancouver row held a duplicate CITY
+    // polygon: all 17 ids present and distinct, geometry valid,
+    // feature_count correct — and the District was refused. The label
+    // was right and the territory was wrong.
+    //
+    // So each jurisdiction is probed at a point known to be inside it,
+    // and its area is compared to what the authoritative dataset had.
+    // Migration 0068 refuses two jurisdictions sharing one polygon;
+    // this catches a jurisdiction given the WRONG polygon.
+    for (const p of JURISDICTION_PROBES) {
+      const { rows: [r] } = await client.query(`
+        select is_point_serviceable(
+                 st_setsrid(st_makepoint($1,$2),4326)::geography) as verdict,
+               (select round((st_area(b.boundary::geography)/1e6)::numeric, 1)
+                  from service_area_boundaries b
+                  join service_area_datasets d on d.id = b.dataset_id and d.is_active
+                 where b.jurisdiction_id = $3) as km2`,
+        [p.lng, p.lat, p.jurisdictionId]);
+
+      if (r?.verdict !== "serviceable") {
+        block("db", `${p.jurisdictionId} (${p.name}) is NOT covered`,
+          `A point inside it returns '${r?.verdict ?? "null"}'. The active dataset ` +
+          "claims this jurisdiction but does not cover its territory.");
+        continue;
+      }
+      // A township replaced by its city keeps the city's centre and loses
+      // most of its ground, so the point alone would pass.
+      const km2 = r.km2 == null ? null : Number(r.km2);
+      if (km2 == null) {
+        block("db", `${p.jurisdictionId} has no polygon in the active dataset`);
+      } else if (km2 < p.km2 * 0.6 || km2 > p.km2 * 1.6) {
+        block("db", `${p.jurisdictionId} (${p.name}) covers ${km2} km2, expected about ${p.km2}`,
+          "A jurisdiction whose area has changed this much has been loaded with the " +
+          "wrong polygon. If the boundary genuinely changed, regenerate " +
+          "scripts/lib/jurisdiction-probes.mjs deliberately.");
+      } else {
+        pass("db", `${p.jurisdictionId} covered (${km2} km2)`);
+      }
+    }
+
+    // --- the dispatch function on named landmarks ----------------------
     const PROBES = [
       { name: "Vancouver downtown", lng: -123.1207, lat: 49.2827, expect: "serviceable" },
       { name: "Surrey",             lng: -122.8490, lat: 49.1913, expect: "serviceable" },

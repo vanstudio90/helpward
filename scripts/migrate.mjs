@@ -240,6 +240,9 @@ await connectOrExplain(client, url);
  * An absent ledger simply means nothing has been applied yet, which is
  * exactly what a fresh database should report.
  */
+// READ_ONLY is no longer needed to gate the ledger — ensureLedger() is
+// called immediately before the first write instead — but is kept for
+// clarity in the status/plan path below.
 const READ_ONLY = DRY || has("--status") || !selectFiles();
 
 async function readLedger() {
@@ -255,7 +258,20 @@ async function readLedger() {
   }
 }
 
-if (!READ_ONLY) {
+/*
+ * Creating the ledger is deferred until every check has passed.
+ *
+ * It used to run here, before the ledger was read and before the drift
+ * check — so an ordinary `--production --pre-deploy` against a database
+ * with edited history issued a CREATE TABLE and only then refused. An
+ * audit captured exactly that: one DDL statement before the exit.
+ *
+ * Nothing is read from the ledger that requires it to exist, so the
+ * order is simply wrong: read, check, THEN create.
+ */
+const appliedMap = await readLedger();
+
+async function ensureLedger() {
   await client.query(`
     create table if not exists schema_migrations (
       filename    text primary key,
@@ -265,8 +281,6 @@ if (!READ_ONLY) {
     )
   `);
 }
-
-const appliedMap = await readLedger();
 
 const { createHash } = await import("node:crypto");
 const hash = (s) => createHash("sha256").update(s).digest("hex");
@@ -349,6 +363,9 @@ if (has("--deploy-coupled")) {
   console.log("  NOTE: these are NOT backward compatible. The new application");
   console.log("        must already be deployed before they land.\n");
 }
+
+// Every safety check above has passed and we are about to write.
+if (todo.length > 0) await ensureLedger();
 
 let failed = null;
 for (const f of todo) {

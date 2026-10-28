@@ -25,7 +25,14 @@
  */
 
 import fs from "node:fs";
+import {
+  refFromRestUrl, refFromKey, knownNonProductionRefs,
+  assertProductionTarget, TargetError,
+} from "./lib/target.mjs";
 import path from "node:path";
+import {
+  APPROVED as APPROVED_SHARED, expectedJurisdictionIds,
+} from "./lib/jurisdictions.mjs";
 import crypto from "node:crypto";
 
 // Approved municipalities per area. Mirrors lib/service-areas.ts; the loader
@@ -43,28 +50,8 @@ import crypto from "node:crypto";
 // say); `requireStatus` additionally demands that the source feature's raw
 // name carries that status word, so the two halves of each pair cannot
 // satisfy each other.
-const APPROVED = {
-  "lower-mainland-bc": [
-    { id: "bc-vancouver",          match: "Vancouver" },
-    { id: "bc-burnaby",            match: "Burnaby" },
-    { id: "bc-richmond",           match: "Richmond" },
-    { id: "bc-new-westminster",    match: "New Westminster" },
-    { id: "bc-surrey",             match: "Surrey" },
-    { id: "bc-delta",              match: "Delta" },
-    { id: "bc-white-rock",         match: "White Rock" },
-    { id: "bc-coquitlam",          match: "Coquitlam" },
-    { id: "bc-port-coquitlam",     match: "Port Coquitlam" },
-    { id: "bc-port-moody",         match: "Port Moody" },
-    { id: "bc-pitt-meadows",       match: "Pitt Meadows" },
-    { id: "bc-maple-ridge",        match: "Maple Ridge" },
-    { id: "bc-north-vancouver-city",     match: "North Vancouver", requireStatus: "city" },
-    { id: "bc-north-vancouver-district", match: "North Vancouver", requireStatus: "district" },
-    { id: "bc-west-vancouver",     match: "West Vancouver" },
-    { id: "bc-langley-city",       match: "Langley", requireStatus: "city" },
-    { id: "bc-langley-township",   match: "Langley", requireStatus: "township" },
-  ],
-  "san-diego-ca":   [{ id: "ca-san-diego",   match: "San Diego" }],
-};
+const APPROVED = APPROVED_SHARED;
+
 
 /** Status words present in a raw source name, lowercased. */
 function statusWordsIn(raw) {
@@ -124,46 +111,63 @@ if (!URL_ || !KEY) { console.error("Need NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SER
  * belongs to and compare it to the project in the URL. Newer `sb_secret_`
  * keys are opaque; we say so rather than implying a check happened.
  */
-function refFromUrl(u) {
-  return /^https:\/\/([a-z0-9]+)\.supabase\./.exec(u ?? "")?.[1] ?? null;
-}
-function refFromKey(k) {
-  const parts = (k ?? "").split(".");
-  if (parts.length !== 3) return null; // not a JWT — opaque sb_ key
-  try {
-    const body = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
-    return typeof body.ref === "string" ? body.ref : null;
-  } catch { return null; }
-}
 {
-  const urlRef = refFromUrl(URL_);
+  /*
+   * The DECLARED project, checked with the same module migrate.mjs and
+   * preflight use.
+   *
+   * This file had its own ad-hoc version of this logic: it rejected
+   * rehearsal and rejected a URL/key pair from two different projects,
+   * but it never asked whether the project was the one the operator
+   * DECLARED. An audit set HELPWARD_PRODUCTION_REF to one project,
+   * supplied a self-consistent URL and key for a DIFFERENT one, and the
+   * loader went all the way to the activation RPC and reported success.
+   *
+   * Three near-identical copies of an identity check is how one of them
+   * ends up missing a case. There is one now, and it runs before the
+   * first HTTP request.
+   */
+  const urlRef = refFromRestUrl(URL_);
   const keyRef = refFromKey(KEY);
-  if (PROD) console.log(`\n  Target project: ${urlRef ?? URL_}`);
+
+  // Always: a URL from one project with a key from another fails as a
+  // bare 401, which reads like a revoked key and sends you rotating a
+  // good one.
   if (urlRef && keyRef && urlRef !== keyRef) {
     console.error(`\n  REFUSING: the URL is project ${urlRef} but the service key belongs`);
     console.error(`  to project ${keyRef}. Mismatched pairs fail as a bare 401, which`);
     console.error("  reads like a revoked key and sends you rotating a good one.\n");
     process.exit(1);
   }
+
+  const nonProd = knownNonProductionRefs();
+
   if (PROD) {
-    if (!keyRef) {
-      console.log("  Key is opaque (sb_* format): project match could not be verified.");
-    }
-    const rehearsalRef = refFromUrl(
-      // Read the rehearsal file directly; --production did not load it.
-      (() => {
-        try {
-          const txt = fs.readFileSync(path.resolve(".env.rehearsal"), "utf8");
-          return /^\s*NEXT_PUBLIC_SUPABASE_URL\s*=\s*(.*)$/m.exec(txt)?.[1]
-            ?.trim().replace(/^["']|["']$/g, "") ?? null;
-        } catch { return null; }
-      })(),
-    );
-    if (rehearsalRef && urlRef && rehearsalRef === urlRef) {
-      console.error("\n  REFUSING: --production points at the REHEARSAL project.\n");
+    try {
+      const report = assertProductionTarget([
+        { label: "Supabase URL", ref: urlRef },
+        { label: "service-role key", ref: keyRef },
+      ]);
+      console.log(`\n  PRODUCTION target (declared ${report.expected})`);
+      for (const line of report.verified) console.log(`    ${line}`);
+      for (const label of report.unverified) {
+        console.log(`    ${label}: opaque (sb_* format), project not verifiable from the value`);
+      }
+      console.log();
+    } catch (err) {
+      if (!(err instanceof TargetError)) throw err;
+      console.error(`\n  ${err.message}\n`);
       process.exit(1);
     }
-    console.log();
+  } else if (urlRef && !nonProd.has(urlRef)) {
+    // The mirror of the production guard: without --production, refuse a
+    // target this machine does NOT know to be rehearsal. Loading
+    // boundaries into production by forgetting a flag is the same
+    // accident in the other direction.
+    console.error(`\n  REFUSING: project ${urlRef} is not a known rehearsal project and`);
+    console.error("  --production was not passed. Pass it deliberately, with");
+    console.error("  HELPWARD_PRODUCTION_REF set, or point at the rehearsal project.\n");
+    process.exit(1);
   }
 }
 const H = { apikey: KEY, authorization: `Bearer ${KEY}`, "content-type": "application/json" };
@@ -236,9 +240,9 @@ if (activateId) {
    * require for the area — replacing working coverage with coverage that
    * matches nothing is as bad as an outage and harder to spot.
    */
-  const expected = (APPROVED[area_id] ?? []).map((j) => j.match);
+  const expected = expectedJurisdictionIds(area_id);
   if (expected.length === 0) {
-    console.error(`\n  Unknown area "${area_id}" — cannot state the required municipalities.`);
+    console.error(`\n  Unknown area "${area_id}" — cannot state the required jurisdictions.`);
     console.error("  Refusing: activating without a coverage check is how a partial");
     console.error("  dataset becomes live.\n");
     process.exit(1);
@@ -248,7 +252,9 @@ if (activateId) {
   try {
     result = await sbRpc("activate_boundary_dataset", {
       p_dataset_id: activateId,
-      p_expected_municipalities: expected,
+      // IDs, not names: a dataset holding the City of North Vancouver
+      // twice has 15 distinct names and passes a name check.
+      p_expected_jurisdiction_ids: expected,
     });
   } catch (err) {
     console.error(`\n  ACTIVATION REFUSED: ${err.message}`);
@@ -259,7 +265,7 @@ if (activateId) {
   const r = Array.isArray(result) ? result[0] : result;
   console.log(`\nActivated ${activateId} for ${area_id}.`);
   console.log(`  ${r?.out_boundary_rows ?? "?"} boundary polygons`);
-  console.log(`  required municipalities verified: ${r?.out_coverage_verified ? "yes" : "NO"}`);
+  console.log(`  distinct jurisdictions verified: ${r?.out_jurisdictions ?? "?"}`);
   if (r?.out_deactivated) console.log(`  deactivated: ${r.out_deactivated}`);
   console.log("\nRe-run `npm run preflight` — it probes is_point_serviceable directly.\n");
   process.exit(0);
@@ -371,7 +377,11 @@ for (const m of matched) {
     method: "POST",
     body: JSON.stringify({
       p_dataset_id: datasetId, p_area_id: area,
-      p_municipality: m.canonical, p_geojson: JSON.stringify(m.geometry),
+      p_municipality: m.canonical,
+      // The id, not just the display name. "North Vancouver" is two
+      // municipalities and the name cannot tell them apart.
+      p_jurisdiction_id: m.jurisdictionId,
+      p_geojson: JSON.stringify(m.geometry),
     }),
   });
 }
