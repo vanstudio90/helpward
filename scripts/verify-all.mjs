@@ -7,8 +7,11 @@
 import { execSync } from "node:child_process";
 
 const STEPS = [
-  { name: "type check",            cmd: "npx tsc --noEmit", allowFail: true,
-    note: "36 known diagnostics; this reports the count rather than gating on it" },
+  // Was allowFail with a note saying "36 known diagnostics; this reports
+  // the count rather than gating on it". That is how the count stayed at
+  // 36 through several rounds of review: a step that cannot fail is a
+  // report, not a check. They are fixed, so this gates now.
+  { name: "type check",            cmd: "npx tsc --noEmit" },
   { name: "unit tests",            cmd: "npm test --silent" },
   { name: "production build",      cmd: "npx next build" },
 
