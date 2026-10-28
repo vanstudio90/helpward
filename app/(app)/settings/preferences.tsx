@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Bell, Mail, MessageSquare, MessageCircle } from "lucide-react";
+import { Bell, Mail } from "lucide-react";
 import { setNotificationPrefAction } from "./actions";
 import { cn } from "@/lib/cn";
 
+// Only the preferences something actually reads.
+//
+// push_messages, email_receipts and sms_critical were offered here and
+// saved to the database, and NOTHING consulted any of them: there is no
+// message push, Helpward sends no receipt emails (the Payments page
+// links to Stripe's hosted receipt on demand), and there is no SMS
+// channel at all — no provider, no sender, nothing. Three switches that
+// changed nothing whichever way they were set. The columns remain so
+// nothing is lost when the channels exist.
 type Prefs = {
   push_booking: boolean;
-  push_messages: boolean;
-  email_receipts: boolean;
   email_digest: boolean;
-  sms_critical: boolean;
 };
 
 export function NotificationPrefs({ initial }: { initial: Prefs }) {
@@ -39,25 +45,9 @@ export function NotificationPrefs({ initial }: { initial: Prefs }) {
         <Toggle
           icon={<Bell className="w-4 h-4" />}
           label="Booking updates (push)"
-          sub="Provider accepted, on the way, completed"
+          sub="When a helper accepts, and when a task is about to start"
           on={prefs.push_booking}
           onChange={() => update("push_booking")}
-          disabled={pending}
-        />
-        <Toggle
-          icon={<MessageCircle className="w-4 h-4" />}
-          label="New messages (push)"
-          sub="When your provider sends a message"
-          on={prefs.push_messages}
-          onChange={() => update("push_messages")}
-          disabled={pending}
-        />
-        <Toggle
-          icon={<Mail className="w-4 h-4" />}
-          label="Receipts (email)"
-          sub="Get a copy of every paid receipt"
-          on={prefs.email_receipts}
-          onChange={() => update("email_receipts")}
           disabled={pending}
         />
         <Toggle
@@ -68,17 +58,10 @@ export function NotificationPrefs({ initial }: { initial: Prefs }) {
           onChange={() => update("email_digest")}
           disabled={pending}
         />
-        <Toggle
-          icon={<MessageSquare className="w-4 h-4" />}
-          label="Critical alerts (SMS)"
-          sub="Provider arrival, safety, account locks"
-          on={prefs.sms_critical}
-          onChange={() => update("sms_critical")}
-          disabled={pending}
-        />
       </ul>
       <p className="text-[11px] text-slate-400 mt-3">
-        Push and SMS delivery aren’t switched on yet — these preferences are saved but only email is sent today.
+        Booking push notifications need push switched on for this device, under
+        Push notifications below. Receipts are available any time from Payments.
       </p>
     </div>
   );

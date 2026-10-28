@@ -98,12 +98,12 @@ export async function GET(req: NextRequest) {
         title: "Your task starts soon",
         body: `${payload.service_title} is coming up in ~30 minutes`,
         url: `https://helpward.com/bookings/${b.id}`,
-      }),
+      }, { pref: "push_booking" }),
       sendPushToUser(b.provider_id, {
         title: "You have a task starting soon",
         body: `${payload.service_title} is coming up in ~30 minutes`,
         url: "https://helpward.com/provider/active",
-      }),
+      }, { pref: "push_booking" }),
     ]);
 
     reminded += 1;

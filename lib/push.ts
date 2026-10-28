@@ -43,10 +43,38 @@ export type PushResult =
 // up player_ids via the service-role client (cron / notify call sites are
 // already running with service role anyway), then fires ONE OneSignal POST
 // with the array of include_player_ids.
-export async function sendPushToUser(userId: string, payload: PushPayload): Promise<PushResult> {
+export async function sendPushToUser(
+  userId: string,
+  payload: PushPayload,
+  opts: {
+    /**
+     * The notification_prefs column that governs this push.
+     *
+     * Was not here, and nothing else consulted the preferences either:
+     * the settings screen wrote push_booking to a row that no sender
+     * ever read, so turning it off changed nothing. A switch that saves
+     * a value nobody reads is not a setting, it is a decoration.
+     */
+    pref?: "push_booking";
+  } = {},
+): Promise<PushResult> {
   if (!isPushEnabled()) return { ok: true, skipped: true };
 
   const admin = createSupabaseServiceClient();
+
+  if (opts.pref) {
+    const { data: prefs } = await admin
+      .from("notification_prefs")
+      .select(opts.pref)
+      .eq("user_id", userId)
+      .maybeSingle();
+    // Absent row means defaults, and the default is on. Only an explicit
+    // false silences it.
+    if (prefs && (prefs as Record<string, unknown>)[opts.pref] === false) {
+      return { ok: true, skipped: true };
+    }
+  }
+
   const { data: rows, error } = await admin
     .from("push_subscriptions")
     .select("player_id")

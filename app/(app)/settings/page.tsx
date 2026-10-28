@@ -16,11 +16,10 @@ export default async function SettingsPage() {
   const supabase = await createSupabaseServerClient();
   const { data: prefs } = await supabase
     .from("notification_prefs")
-    .select("push_booking, push_messages, email_receipts, email_digest, sms_critical")
+    .select("push_booking, email_digest")
     .single();
   const prefsInitial = prefs ?? {
-    push_booking: true, push_messages: true, email_receipts: true,
-    email_digest: false, sms_critical: true,
+    push_booking: true, email_digest: false,
   };
 
   // Real TOTP state. The overview used to hardcode "Disabled" with a

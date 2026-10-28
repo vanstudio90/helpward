@@ -10,10 +10,20 @@ type State = { error?: string; success?: string } | undefined;
 const ALLOWED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB
 
+// Only the preferences a sender actually reads. The settings screen
+// offered push_messages, email_receipts and sms_critical, which no
+// sender consulted — and this action would still write them for anyone
+// posting by hand, leaving a stored preference that does nothing and
+// reads, later, as though a channel had been configured.
+export type NotificationPrefKey = "push_booking" | "email_digest";
+
 export async function setNotificationPrefAction(
-  key: "push_booking" | "push_messages" | "email_receipts" | "email_digest" | "sms_critical",
+  key: NotificationPrefKey,
   value: boolean
 ): Promise<{ error?: string } | undefined> {
+  if (key !== "push_booking" && key !== "email_digest") {
+    return { error: "Unknown notification preference." };
+  }
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not logged in." };
