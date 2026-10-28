@@ -15,6 +15,8 @@ import { validateIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service
 import { resolveIntakeAddresses, applyResolvedAddresses } from "@/lib/intake-addresses";
 import { checkTrip } from "@/lib/trip-limits";
 import { resolveAddressStrict } from "@/lib/geocode";
+import { sealIntakeCountry } from "@/lib/country-price";
+import { checkVenue } from "@/lib/venue-gate";
 
 /**
  * Pull the intake answers off the form. Checkbox groups arrive as repeated
@@ -389,6 +391,42 @@ async function createRequestActionInner(
   // handing out the exact endpoint. Computed here, from attested
   // coordinates, never from anything the client sent.
   intake = applyResolvedAddresses(intakeCheck.values, addrCheck.resolved, fromPoint);
+
+  // Venue permission, for the one service where it decides whether the job
+  // is possible at all. A venue we have CHECKED and recorded as refusing
+  // stand-ins blocks the booking: taking the money would be charging for
+  // something already known to be impossible. A venue nobody has checked
+  // proceeds — see lib/venue-gate.ts for why unknown is not refused.
+  if (serviceId === "wait-in-line") {
+    const venueName = String(intakeCheck.values.venue_name ?? "").trim();
+    if (venueName) {
+      const { data: venueRows } = await createSupabaseServiceClient()
+        .rpc("lookup_venue", { p_name: venueName, p_country: guard.area.country });
+      const row = Array.isArray(venueRows) ? venueRows[0] : null;
+      const verdict = checkVenue(
+        row
+          ? {
+              name: row.name,
+              substitutesAllowed: row.substitutes_allowed,
+              customerMayReplace: row.customer_may_replace,
+              fullPartyRequired: row.full_party_required,
+              numbersTransferable: row.numbers_transferable,
+              earlyTurnPolicy: row.early_turn_policy,
+              confirmedAt: row.confirmed_at,
+            }
+          : null,
+        String(intakeCheck.values.handover ?? ""),
+      );
+      if (!verdict.allow) return { error: verdict.reason };
+    }
+  }
+
+  // Stamp the attested country so the database pricer can charge the local
+  // rate. guard.area is the service area the boundary check resolved, so
+  // this is the same authority that decided the address was serviceable at
+  // all — not a form field and not the address text. sealIntakeCountry
+  // deletes any client-supplied value before writing its own.
+  intake = sealIntakeCountry(intake, guard.area.country);
 
   // The authoritative subtotal, from the same rules acceptance will use.
   // Computed in the DATABASE rather than here: a price this action

@@ -565,11 +565,24 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
         { value: "fixed", label: "End at the agreed time" },
       ] },
   ]),
+  // Wait in Line asks more than the other services because more can go
+  // wrong that is nobody's fault: the venue's rules, the length of the
+  // queue and the customer's own travel time all decide whether the job
+  // can work, and all three are unknown to the helper until asked.
   "wait-in-line": {
-    intro: "Your helper holds your place, so they need to know what for.",
+    intro: "Your helper waits in the queue and hands their place to you where the venue allows it. "
+      + "You're booking their time, not a guaranteed place at the front.",
     fields: [
+      // The placeholder used to read "e.g. passport office, concert
+      // tickets". Passport queues are the one example that cannot work:
+      // the US State Department states appointments are non-transferable
+      // and warns about third-party booking services, and walk-in numbers
+      // at passport agencies are issued to a named person. Suggesting it
+      // on the booking form invited a request no helper could legally
+      // fulfil. The examples now name the queues this service is actually
+      // for — ordinary restaurant and retail lines.
       { key: "what_for", label: "What are they queuing for?", required: true,
-        type: "text", placeholder: "e.g. passport office, concert tickets", maxLength: 200 },
+        type: "text", placeholder: "e.g. a restaurant table, a product launch", maxLength: 200 },
       { key: "expected_wait", label: "Expected wait", required: true, type: "duration",
         options: DURATION.options },
       { key: "handover", label: "How does the handover work?", required: true,
@@ -577,9 +590,59 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
           { value: "swap", label: "I arrive and take their place" },
           { value: "collect", label: "They collect something for me" },
         ] },
-      { key: "documents", label: "Do they need anything from you?",
-        hint: "ID, a ticket, a reference number, a form.",
+      // The hint led with "ID", which invited people to type identity
+      // details — or photograph documents — into a free-text field that
+      // every matched helper can read. Ask for the minimum that actually
+      // helps someone hold a place in a line.
+      { key: "documents", label: "Does your helper need anything to join the queue?",
+        hint: "A booking name or reference number is usually enough. Never share ID documents, passwords or account details here.",
         required: false, type: "text", maxLength: 200 },
+
+      // A street address is not a queue. Large venues have several, and a
+      // helper standing in the wrong one has done the whole job wrong
+      // without ever knowing.
+      { key: "venue_name", label: "Which venue?", required: true, type: "text",
+        placeholder: "The business name, as it appears on the door", maxLength: 120 },
+      { key: "which_queue", label: "Which entrance or line should your helper join?",
+        hint: "If there is more than one, say which. 'The one on the north side, under the awning.'",
+        required: true, type: "text", maxLength: 200 },
+
+      // The single most important question on this form. A customer cannot
+      // give Helpward permission to break a venue's rules, so the honest
+      // thing is to ask whether they know, and to treat "not sure" as a
+      // real answer rather than forcing a false yes.
+      { key: "venue_permission", required: true, type: "select",
+        label: "Does the venue allow a stand-in?",
+        hint: "Can someone wait and hand their place over to you? Some queues need everyone "
+          + "present, and some numbers can't be transferred.",
+        options: [
+          { value: "yes", label: "Yes — I've checked with the venue" },
+          { value: "unsure", label: "I'm not sure" },
+        ] },
+
+      // How long the customer needs to get there decides whether an early
+      // turn is recoverable, and the helper has no way to guess it.
+      { key: "notice_needed", label: "How much notice do you need to reach the queue?",
+        required: true, type: "select", options: [
+          { value: "5", label: "5 minutes — I'll be nearby" },
+          { value: "15", label: "15 minutes" },
+          { value: "30", label: "30 minutes" },
+          { value: "60", label: "An hour or more" },
+        ] },
+
+      { key: "party_size", label: "How many people will attend?", required: true,
+        type: "number", min: 1, max: 20,
+        hint: "Some venues won't seat or admit a party until everyone is present.",
+        placeholder: "1" },
+
+      // The outcome this service most often has to handle, decided in
+      // advance instead of by a helper improvising at the counter.
+      { key: "early_turn", label: "What should happen if your turn comes before you arrive?",
+        required: true, type: "select", options: [
+          { value: "hold", label: "Ask the venue to hold it and call me" },
+          { value: "give_up", label: "Give up the place — don't hold anyone up" },
+          { value: "helper_decides", label: "Let my helper use their judgement" },
+        ] },
     ],
   },
 

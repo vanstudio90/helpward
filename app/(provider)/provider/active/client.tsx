@@ -71,8 +71,28 @@ export function OnlineToggle({ initialOnline }: { initialOnline: boolean }) {
   );
 }
 
+/* How a waiting job ended, in the helper's words.
+ *
+ * "Mark complete" is the wrong question for this service: reaching the
+ * front of the queue is not the only acceptable ending, and the endings
+ * are not worth the same money. A venue that refused a stand-in means no
+ * valid waiting was possible, and the customer is not charged for it —
+ * which is a decision only the helper standing there can report.
+ */
+const WAIT_OUTCOMES: { value: string; label: string; detail: string }[] = [
+  { value: "customer_took_over", label: "Customer took over",
+    detail: "They arrived and took your place in the queue." },
+  { value: "booked_period_ended", label: "Booked time ran out",
+    detail: "You waited the whole booked period and they didn't arrive." },
+  { value: "queue_closed", label: "Queue closed or sold out",
+    detail: "You waited, but the line shut or the item ran out before the turn came." },
+  { value: "venue_refused_substitution", label: "Venue refused a stand-in",
+    detail: "They wouldn't let you hold the place. Your customer won't be charged." },
+];
+
 export function BookingActions({
   bookingId, status, paymentStatus, needsReport = false, hasReport = false,
+  serviceId,
 }: {
   bookingId: string;
   status: string;
@@ -82,9 +102,12 @@ export function BookingActions({
   needsReport?: boolean;
   /** Whether that report has actually been sent. */
   hasReport?: boolean;
+  /** Only wait-in-line asks how the job ended; every other service has one ending. */
+  serviceId?: string;
 }) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<string>("");
 
   const action = status === "scheduled" ? "start" : "complete";
 
@@ -109,11 +132,50 @@ export function BookingActions({
       ? "Send the inspection report first — it's what the customer is paying for."
       : null;
 
+  // Asking only where the answer changes something. Every other service
+  // has exactly one way of being finished, and a one-option picker is
+  // just an extra tap.
+  const asksOutcome = action === "complete" && serviceId === "wait-in-line";
+  const outcomeMissing = asksOutcome && !outcome;
+
   const blockedReason = startBlocked ?? completeBlocked;
-  const disabled = pending || !!blockedReason;
+  const disabled = pending || !!blockedReason || outcomeMissing;
 
   return (
     <div>
+      {asksOutcome && (
+        <fieldset className="mb-3">
+          <legend className="text-xs font-semibold text-slate-700 mb-1.5">
+            How did it end?
+          </legend>
+          <div className="space-y-1.5">
+            {WAIT_OUTCOMES.map((o) => (
+              <label
+                key={o.value}
+                className={cn(
+                  "flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer",
+                  outcome === o.value
+                    ? "border-brand-300 bg-brand-50/70"
+                    : "border-slate-200 bg-white hover:bg-slate-50",
+                )}
+              >
+                <input
+                  type="radio"
+                  name={`outcome-${bookingId}`}
+                  value={o.value}
+                  checked={outcome === o.value}
+                  onChange={() => setOutcome(o.value)}
+                  className="mt-0.5 w-4 h-4 shrink-0 text-brand-600 focus:ring-brand-200"
+                />
+                <span className="min-w-0">
+                  <span className="block text-xs font-semibold text-slate-900">{o.label}</span>
+                  <span className="block text-[11px] text-slate-600 leading-snug">{o.detail}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       {err && (
         <div className="mb-2 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
           <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {err}
@@ -126,8 +188,9 @@ export function BookingActions({
         onClick={() => {
           setErr(null);
           start(async () => {
-            const fn = action === "start" ? startBookingAction : completeBookingAction;
-            const r = await fn(bookingId);
+            const r = action === "start"
+              ? await startBookingAction(bookingId)
+              : await completeBookingAction(bookingId, outcome || undefined);
             if (r?.error) setErr(r.error);
           });
         }}
@@ -141,7 +204,12 @@ export function BookingActions({
       >
         {action === "start"
           ? <><Play className="w-4 h-4" aria-hidden="true" /> {pending ? "Starting…" : blockedReason ? "Waiting for payment" : "Start task"}</>
-          : <><CheckCircle2 className="w-4 h-4" aria-hidden="true" /> {pending ? "Completing…" : completeBlocked ? "Report needed first" : "Mark complete"}</>}
+          : <><CheckCircle2 className="w-4 h-4" aria-hidden="true" /> {
+              pending ? "Completing…"
+              : completeBlocked ? "Report needed first"
+              : outcomeMissing ? "Choose how it ended"
+              : asksOutcome ? "Finish this job"
+              : "Mark complete"}</>}
       </button>
       {blockedReason && (
         <p className="mt-1.5 text-[11px] text-slate-500 text-center">{blockedReason}</p>

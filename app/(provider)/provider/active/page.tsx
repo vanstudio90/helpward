@@ -422,6 +422,7 @@ export default async function ProviderActivePage() {
             <BookingActions
               bookingId={booking.id}
               status={booking.status}
+              serviceId={booking.service?.id}
               paymentStatus={booking.payment_status}
               // complete_booking gates on submitted_at, not on the row
               // existing — ensure_inspection_report creates the row up

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { captureBookingPayment, payCrew } from "@/lib/payments";
+import { voidBookingAuthorization, captureBookingPayment, payCrew } from "@/lib/payments";
 import { stripeConfigured } from "@/lib/stripe";
 
 export async function setOnlineAction(isOnline: boolean) {
@@ -47,10 +47,43 @@ export async function startBookingAction(bookingId: string) {
   return { success: "Started." };
 }
 
-export async function completeBookingAction(bookingId: string) {
+export async function completeBookingAction(bookingId: string, outcome?: string) {
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("complete_booking", { p_booking_id: bookingId });
+
+  // complete_booking returns the settlement its outcome requires —
+  // "capture" or "release" — rather than this action deciding. The rule
+  // lives with the outcome, in one place, so the helper's app and any
+  // admin tool cannot drift apart on what a given ending costs.
+  const { data: settlement, error } = await supabase.rpc("complete_booking", {
+    p_booking_id: bookingId,
+    p_outcome: outcome ?? null,
+  });
   if (error) return { error: error.message };
+
+  // A venue that refused a stand-in means no valid waiting was possible.
+  // The customer must not pay for that, so the authorization is released
+  // rather than captured. The helper's travel is a real cost and is NOT
+  // settled here: Helpward has no disclosed travel-compensation policy,
+  // and inventing a charge for one would be worse than leaving it visible.
+  if (settlement === "release") {
+    if (stripeConfigured()) {
+      const voided = await voidBookingAuthorization(bookingId);
+      if (!voided.ok) {
+        console.error("could not release hold for refused venue", bookingId, voided);
+        revalidatePath("/provider", "layout");
+        return {
+          success: "Recorded.",
+          warning:
+            "Recorded that the venue refused. The hold on the customer's card is still "
+            + "releasing — support has been notified if it does not clear.",
+        };
+      }
+    }
+    revalidatePath("/provider", "layout");
+    return {
+      success: "Recorded — the venue refused a stand-in, so your customer hasn't been charged.",
+    };
+  }
 
   // Settle the hold placed at acceptance. The job is done either way, so a
   // capture failure must not un-complete it — the helper has already

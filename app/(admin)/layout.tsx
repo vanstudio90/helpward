@@ -5,8 +5,7 @@ import { logoutAction } from "@/app/(auth)/auth/actions";
 import {
   LayoutDashboard, Users, ShieldCheck, Calendar, AlertOctagon,
   CreditCard, RefreshCw, Sparkles, FileText, LogOut, MessageSquare, Shield,
-  Inbox,
-} from "lucide-react";
+  Inbox, MapPin,} from "lucide-react";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -19,6 +18,7 @@ const NAV = [
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/refunds", label: "Refunds", icon: RefreshCw },
   { href: "/admin/services", label: "Service catalog", icon: Sparkles },
+  { href: "/admin/venues", label: "Venue permissions", icon: MapPin },
   { href: "/admin/data-requests", label: "Data requests", icon: Shield },
   { href: "/admin/audit-log", label: "Audit log", icon: FileText },
 ];
