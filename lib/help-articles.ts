@@ -485,7 +485,10 @@ export const HELP_ARTICLES: HelpArticle[] = [
       "Helpers attach up to 3 photos when wrapping up a task — the doorstep with the groceries, the receipt, the dry-cleaning ticket. You see them on your booking page before the 24-hour review window closes.",
     body: [
       { type: "p", text:
-        "Photo proof is one of the simplest trust signals we have. Most disputes are resolved instantly by a 3-second glance at a photo of the bag on the front porch or the package handed to the doorman. Bookings with at least one proof photo have an ~80% lower dispute rate." },
+        // The "~80% lower dispute rate" that sat at the end of this
+        // paragraph, and its twin on the helper's photo tile, were
+        // invented. There is no dispute data to compute a rate from.
+        "Photo proof is one of the simplest trust signals we have. A question about what was delivered is usually settled by a 3-second glance at a photo of the bag on the front porch or the package handed to the doorman — without anyone having to open a dispute at all." },
       { type: "h2", text: "How it works" },
       { type: "ol", items: [
         "While the task is in progress, the helper sees a \"Proof photos\" tile on their active-task screen.",

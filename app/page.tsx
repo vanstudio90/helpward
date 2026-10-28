@@ -169,12 +169,16 @@ export default async function LandingPage() {
                     <img src="https://i.pravatar.cc/60?img=33" className="absolute top-[38%] left-[20%] w-9 h-9 rounded-full ring-2 ring-white shadow" alt="" loading="lazy" />
                     <img src="https://i.pravatar.cc/60?img=58" className="absolute top-[58%] left-[50%] w-9 h-9 rounded-full ring-2 ring-white shadow" alt="" loading="lazy" />
                   </div>
-                  {/* Helper-on-way badge */}
+                  {/* Illustration of a matched booking. It used to read
+                      "Helper on the way / 2 min away" — a live ETA, which
+                      nothing in the product computes: there is no en-route
+                      state and no helper-position estimate. A mock is still
+                      a picture of what the product does. */}
                   <div className="absolute top-4 left-4 right-4 bg-white rounded-2xl shadow-lg p-3 flex items-center gap-2.5">
                     <img src="https://i.pravatar.cc/40?img=12" className="w-9 h-9 rounded-full" alt="" loading="lazy" />
                     <div className="min-w-0 flex-1">
-                      <div className="text-[11px] text-slate-500">Helper on the way</div>
-                      <div className="text-sm font-bold text-slate-900">2 min away</div>
+                      <div className="text-[11px] text-slate-500">Helper accepted</div>
+                      <div className="text-sm font-bold text-slate-900">Dana R.</div>
                     </div>
                   </div>
                   {/* Bottom task card */}

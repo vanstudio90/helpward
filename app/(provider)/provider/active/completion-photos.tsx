@@ -86,7 +86,7 @@ export function CompletionPhotos({
       </div>
       <p className="text-xs text-slate-500 mb-3 leading-snug">
         Snap one or two quick photos to show the task is done — the doorstep with the bag, the
-        receipt, etc. Customers with photo proof open ~80% fewer disputes.
+        receipt, etc. A photo is the quickest way to settle a question about what was delivered.
       </p>
 
       {err && (

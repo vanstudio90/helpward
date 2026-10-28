@@ -1,4 +1,5 @@
 import type { PricingRule } from "@/lib/service-pricing";
+import { singularize } from "@/lib/units";
 
 /**
  * A price with its currency, as a customer reads it.
@@ -15,20 +16,24 @@ export function formatMoney(cents: number, currency: "USD" | "CAD" | string = "U
   return `${prefix}${amount}`;
 }
 
-/** What the base price buys: "/ 30-minute walk", "/ helper", or nothing. */
+/** What the base price buys: "/ first 30 minutes", "/ first helper". */
 export function unitFor(rule: PricingRule | null | undefined): string {
   if (!rule) return "";
   if (rule.includedMinutes != null) {
+    // Was "/ first 30-minute" — a hyphenated adjective with no noun after
+    // it, so the phrase stopped mid-thought: first 30-minute WHAT. The
+    // duration is the thing being bought, so it reads as a plain noun.
     const mins = rule.includedMinutes;
-    const label = mins >= 60 && mins % 60 === 0
-      ? `${mins / 60}-hour`
-      : `${mins}-minute`;
-    return `/ first ${label}`;
+    if (mins >= 60 && mins % 60 === 0) {
+      const hours = mins / 60;
+      return `/ first ${hours} ${hours === 1 ? "hour" : "hours"}`;
+    }
+    return `/ first ${mins} ${mins === 1 ? "minute" : "minutes"}`;
   }
   if (rule.crewField) return "/ first helper";
   if (rule.unitField) {
-    const noun = rule.unitField.replace(/_count$/, "").replace(/_/g, " ").replace(/s$/, "");
-    return `/ first ${noun}`;
+    const noun = rule.unitField.replace(/_count$/, "").replace(/_/g, " ");
+    return `/ first ${singularize(noun)}`;
   }
   return "";
 }

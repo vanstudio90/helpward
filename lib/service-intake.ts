@@ -1,3 +1,4 @@
+import { formatUnit } from "@/lib/units";
 // What each service needs to know before a helper can actually do it.
 //
 // Every service used to share one form: address, when, free-text notes. That
@@ -704,7 +705,10 @@ export function describeIntake(
     } else if (field.type === "duration") {
       text = field.options?.find((o) => o.value === String(v))?.label ?? `${v} minutes`;
     } else if (field.type === "number" && field.unit) {
-      text = `${v} ${field.unit}`;
+      // Was `${v} ${field.unit}`, with the unit stored in the plural, so
+      // every count of one read "1 dogs" / "1 rooms" / "1 helpers" — and
+      // the spend cap read "20 $".
+      text = formatUnit(v as number | string, field.unit);
     } else {
       text = String(v);
     }

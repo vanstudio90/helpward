@@ -165,7 +165,11 @@ function describeStatus(status: string) {
       };
     case "matched":
       return {
-        heading: "Helper on the way",
+        // Not "on the way": there is no en-route state in the system, so
+        // nothing here knows whether anyone has set off. The sub-line
+        // already said only that the request was accepted, and the two
+        // contradicted each other.
+        heading: "Helper accepted",
         sub: "A helper accepted your request.",
         icon: <CheckCircle2 className="w-8 h-8 text-emerald-600" />,
         iconWrap: "bg-emerald-50",
