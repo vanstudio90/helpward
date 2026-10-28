@@ -115,9 +115,12 @@ function Field({ field, value }: { field: IntakeField; value?: string | string[]
     );
   }
 
-  // text and destination. A destination is still a typed address: it is
-  // geocoded and boundary-checked server-side like the pickup, so it gets a
-  // pin affordance but no special client behaviour.
+  // text and destination. A destination is a typed address that the
+  // server geocodes on submit (lib/intake-addresses.ts), replacing what
+  // was typed with what resolved. It is deliberately NOT contained to the
+  // service area the way the request address is: that one is where a
+  // helper is dispatched, this one is where the job ends, and a job that
+  // ends out of town is a normal booking. No special client behaviour.
   return (
     <label className="block">
       <Label field={field} />

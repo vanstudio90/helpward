@@ -10,7 +10,9 @@ import { collectSubmitted, type SubmittedValues } from "@/lib/request-form";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
 import { reviewResolution } from "@/lib/address-confirmation";
-import { validateIntake, type IntakeValues } from "@/lib/service-intake";
+import { validateIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service-intake";
+import { resolveIntakeAddresses, applyResolvedAddresses } from "@/lib/intake-addresses";
+import { resolveAddressStrict } from "@/lib/geocode";
 
 /**
  * Pull the intake answers off the form. Checkbox groups arrive as repeated
@@ -172,7 +174,25 @@ async function createRequestActionInner(
   const intakeRaw = collectIntake(formData);
   const intakeCheck = validateIntake(serviceId, intakeRaw);
   if (!intakeCheck.ok) return { error: intakeCheck.error };
-  const intake = intakeCheck.values;
+
+  // Address ANSWERS (a drop-off, a delivery destination) are real places
+  // a helper has to drive to, and until now they were stored exactly as
+  // typed — never geocoded, never corrected — while a comment on the form
+  // claimed they were checked server-side. They are resolved here, and
+  // the resolved text replaces the typed text so the helper reads the
+  // same address the booking routes on.
+  //
+  // Drop-offs are NOT contained to the service area: only the collection
+  // point is, because that is where we promise someone will turn up. A
+  // ride that ends out of town is a normal booking.
+  const intakeSpec = SERVICE_INTAKE[serviceId];
+  const addrCheck = await resolveIntakeAddresses(
+    intakeSpec?.fields ?? [],
+    intakeCheck.values,
+    resolveAddressStrict,
+  );
+  if (!addrCheck.ok) return { error: addrCheck.error };
+  const intake = applyResolvedAddresses(intakeCheck.values, addrCheck.resolved);
 
   // Client-supplied coords come from the saved-address chips or the Use my
   // current location button. They are trusted as coordinates, but the guard

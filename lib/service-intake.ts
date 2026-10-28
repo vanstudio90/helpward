@@ -37,6 +37,20 @@ export type IntakeField = {
 export type ServiceIntake = {
   /** One line telling the customer why these questions are being asked. */
   intro?: string;
+  /**
+   * What the REQUEST's own address means for this service, when the
+   * generic "Address" would mislead.
+   *
+   * The request address is the one place the helper is dispatched to, and
+   * it is the only address checked against the service area. For most
+   * services it is plainly "where you are". For a delivery it is the
+   * COLLECTION point, and calling it "Address" invited customers to read
+   * it as their own and put the real collection point in an intake answer
+   * instead — where nothing geocoded it, nothing bounded it, and a
+   * Vancouver booking was accepted asking a helper to collect in Chicago.
+   */
+  addressLabel?: string;
+  addressHint?: string;
   fields: IntakeField[];
 };
 
@@ -237,11 +251,16 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
     ],
   },
   "package-delivery": {
-    intro: "Where to collect from, and what they're carrying.",
+    intro: "Where it goes, and what they're carrying.",
+    // The address above IS the collection point. A separate "Collect
+    // from" question used to sit in here, which meant a delivery had two
+    // collection addresses that could disagree — and they did.
+    addressLabel: "Collect from",
+    addressHint: "Where your helper picks the package up. This is where they are dispatched, so it has to be in a city we serve.",
     fields: [
-      { key: "pickup_from", label: "Collect from", required: true, type: "destination",
-        hint: "The address your helper picks the package up from.",
-        placeholder: "e.g. 200 Granville St, Vancouver", maxLength: 300 },
+      { key: "deliver_to", label: "Deliver to", required: true, type: "destination",
+        hint: "The drop-off address. It can be outside the collection city.",
+        placeholder: "e.g. 1055 Canada Pl, Vancouver", maxLength: 300 },
       { key: "size", label: "Package size", required: true, type: "select",
         options: [
           { value: "envelope", label: "Envelope or document" },

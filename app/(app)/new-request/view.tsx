@@ -492,7 +492,19 @@ export function NewRequestView({
 
             <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 space-y-4">
               <label className="block">
-                <span className="text-xs font-semibold text-slate-700">Address</span>
+                {/* Named for what this address MEANS to the chosen
+                    service. For a delivery it is the collection point,
+                    and calling it "Address" led customers to read it as
+                    their own and put the real collection point in an
+                    intake answer, where nothing checked it. */}
+                <span className="text-xs font-semibold text-slate-700">
+                  {(selected && intakeFor(selected.id)?.addressLabel) || "Address"}
+                </span>
+                {selected && intakeFor(selected.id)?.addressHint && (
+                  <span className="mt-0.5 block text-[11px] text-slate-500">
+                    {intakeFor(selected.id)!.addressHint}
+                  </span>
+                )}
                 {savedAddresses.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {savedAddresses.map((a) => {
