@@ -1,4 +1,5 @@
 import { formatUnit } from "@/lib/units";
+import { describeTrip } from "@/lib/trip-limits";
 // What each service needs to know before a helper can actually do it.
 //
 // Every service used to share one form: address, when, free-text notes. That
@@ -80,11 +81,18 @@ const DURATION: IntakeField = {
 const DESTINATION: IntakeField = {
   key: "destination",
   label: "Where to?",
-  hint: "The drop-off address. Your helper needs this before they accept.",
+  hint: "The drop-off address. Shared with your helper once they accept.",
   required: true,
   type: "destination",
   placeholder: "e.g. 1055 Canada Pl, Vancouver, BC",
   maxLength: 300,
+  // An exact endpoint is withheld from offers, like the pickup already
+  // was. A broadcast offer reaches every candidate helper including all
+  // the ones who decline, and the pickup was hidden from them while the
+  // DESTINATION was printed in full — the same address, the same people,
+  // two different rules. Candidates see the locality and the distance,
+  // which is what they need to judge the trip.
+  sensitive: true,
 };
 
 const ACCESS: IntakeField = {
@@ -260,8 +268,10 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
     addressHint: "Where your helper picks the package up. This is where they are dispatched, so it has to be in a city we serve.",
     fields: [
       { key: "deliver_to", label: "Deliver to", required: true, type: "destination",
-        hint: "The drop-off address. It can be outside the collection city.",
-        placeholder: "e.g. 1055 Canada Pl, Vancouver", maxLength: 300 },
+        hint: "The drop-off address. It can be outside the collection city. Shared with your helper once they accept.",
+        placeholder: "e.g. 1055 Canada Pl, Vancouver", maxLength: 300,
+        // Withheld from offers, same as the pickup — see DESTINATION.
+        sensitive: true },
       { key: "size", label: "Package size", required: true, type: "select",
         options: [
           { value: "envelope", label: "Envelope or document" },
@@ -690,6 +700,22 @@ export function describeIntake(
     // Say that it exists, without saying what it is: a helper deciding
     // whether to accept still needs to know there IS an access procedure.
     if (opts.forOffer && field.sensitive) {
+      // An address is a special case. "Shared once you accept" tells a
+      // candidate nothing about whether the trip is worth taking, and
+      // they are being asked to decide. The locality and the distance
+      // are enough to judge it and do not give away the endpoint.
+      if (field.type === "destination") {
+        const area = values[`${field.key}_area`];
+        const km = Number(values[`${field.key}_km`]);
+        out.push({
+          label: field.label,
+          value: Number.isFinite(km)
+            ? `${describeTrip(km, typeof area === "string" ? area : null)} — exact address shared once you accept`
+            : "Shared once you accept",
+          withheld: true,
+        });
+        continue;
+      }
       out.push({ label: field.label, value: "Shared once you accept", withheld: true });
       continue;
     }

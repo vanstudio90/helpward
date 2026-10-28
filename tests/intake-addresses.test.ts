@@ -114,3 +114,59 @@ test("no _typed duplicate is kept when the geocoder changed nothing", () => {
   );
   assert.equal(values.deliver_to_typed, undefined);
 });
+
+// --- offer-stage privacy ----------------------------------------------
+
+import { describeIntake } from "../lib/service-intake.ts";
+
+test("an offer shows the trip, not the exact destination", () => {
+  // The pickup was already withheld from broadcast offers; the
+  // destination was printed in full to every candidate including the
+  // ones who declined. Same address, same people, two different rules.
+  const shown = describeIntake("package-delivery", {
+    deliver_to: "1055 Canada Pl, Vancouver, BC V6C 0C3",
+    deliver_to_area: "Vancouver, BC",
+    deliver_to_km: "11.4",
+    size: "small",
+  }, { forOffer: true });
+
+  const dest = shown.find((r) => r.label === "Deliver to")!;
+  assert.ok(!dest.value.includes("1055"), "no street address at offer stage");
+  assert.match(dest.value, /Vancouver, BC/, "but enough to judge the trip");
+  assert.match(dest.value, /~11 km away/);
+  assert.equal(dest.withheld, true);
+});
+
+test("the accepted helper sees the exact destination", () => {
+  const shown = describeIntake("package-delivery", {
+    deliver_to: "1055 Canada Pl, Vancouver, BC V6C 0C3",
+    deliver_to_area: "Vancouver, BC",
+    deliver_to_km: "11.4",
+  });
+  const dest = shown.find((r) => r.label === "Deliver to")!;
+  assert.match(dest.value, /1055 Canada Pl/);
+  assert.ok(!dest.withheld);
+});
+
+test("a destination with no stored distance still withholds the address", () => {
+  // Older rows predate the stored trip length. Falling back must never
+  // fall back to showing the address.
+  const shown = describeIntake("package-delivery", {
+    deliver_to: "1055 Canada Pl, Vancouver, BC",
+  }, { forOffer: true });
+  const dest = shown.find((r) => r.label === "Deliver to")!;
+  assert.ok(!dest.value.includes("1055"));
+  assert.equal(dest.value, "Shared once you accept");
+});
+
+test("every address answer in the catalogue is withheld from offers", () => {
+  // A new service with an address question must not reintroduce the leak.
+  for (const [slug, spec] of Object.entries(SERVICE_INTAKE)) {
+    for (const f of spec.fields) {
+      if (f.type === "destination") {
+        assert.equal(f.sensitive, true,
+          `${slug}.${f.key} is an address and must be sensitive`);
+      }
+    }
+  }
+});

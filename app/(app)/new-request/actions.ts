@@ -13,6 +13,7 @@ import { broadcastRequestBestEffort } from "@/lib/broadcast";
 import { reviewResolution } from "@/lib/address-confirmation";
 import { validateIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service-intake";
 import { resolveIntakeAddresses, applyResolvedAddresses } from "@/lib/intake-addresses";
+import { checkTrip } from "@/lib/trip-limits";
 import { resolveAddressStrict } from "@/lib/geocode";
 
 /**
@@ -193,7 +194,10 @@ async function createRequestActionInner(
     resolveAddressStrict,
   );
   if (!addrCheck.ok) return { error: addrCheck.error };
-  const intake = applyResolvedAddresses(intakeCheck.values, addrCheck.resolved);
+  // Resolved now; the trip length is added further down, once the
+  // COLLECTION point has been resolved and attested — distance from an
+  // unverified pickup would be a number about nothing.
+  let intake = applyResolvedAddresses(intakeCheck.values, addrCheck.resolved);
 
   // Client-supplied coords come from the saved-address chips or the Use my
   // current location button. They are trusted as coordinates, but the guard
@@ -366,6 +370,25 @@ async function createRequestActionInner(
   const addr = await insertAttestedAddress(
     createSupabaseServiceClient(), guard.address, user.id);
   if (!addr.ok) return { error: addr.error };
+
+  // HOW FAR the job goes, now that both ends are resolved.
+  //
+  // Drop-offs are not confined to the service area, and should not be —
+  // a trip that ends out of town is normal work. But "not confined" was
+  // taken literally: a Vancouver collection with a Chicago destination
+  // was accepted and quoted at the local base rate, which no helper
+  // could ever deliver. The limit is the length of the TRIP, measured
+  // from the collection point, not the service-area polygon.
+  const fromPoint = { lat: guard.address.lat, lng: guard.address.lng };
+  for (const dest of addrCheck.resolved) {
+    const field = (intakeSpec?.fields ?? []).find((q) => q.key === dest.key);
+    const trip = checkTrip(fromPoint, dest, (field?.label ?? "destination").toLowerCase());
+    if (!trip.ok) return { error: trip.error };
+  }
+  // Store the trip length so an offer can describe the journey without
+  // handing out the exact endpoint. Computed here, from attested
+  // coordinates, never from anything the client sent.
+  intake = applyResolvedAddresses(intakeCheck.values, addrCheck.resolved, fromPoint);
 
   // The authoritative subtotal, from the same rules acceptance will use.
   // Computed in the DATABASE rather than here: a price this action

@@ -25,6 +25,7 @@
 // now, labelled as such.
 
 import type { IntakeField } from "@/lib/service-intake";
+import { distanceKm } from "@/lib/trip-limits";
 
 export type ResolvedIntakeAddress = {
   key: string;
@@ -35,6 +36,12 @@ export type ResolvedIntakeAddress = {
   lat: number;
   lng: number;
   country: string | null;
+  /**
+   * Coarse locality — "Burnaby, BC". Safe to show a candidate helper
+   * while the exact address is still withheld, so they can judge the
+   * trip before accepting without being handed the endpoint.
+   */
+  area: string | null;
 };
 
 export type IntakeAddressOutcome =
@@ -46,9 +53,20 @@ export function addressFields(fields: IntakeField[]): IntakeField[] {
   return fields.filter((f) => f.type === "destination");
 }
 
+type ResolvedShape = {
+  formatted: string; lat: number; lng: number; country: string | null;
+  city?: string | null; region?: string | null;
+};
+
 type MinimalResolve =
-  | { ok: true; address: { formatted: string; lat: number; lng: number; country: string | null } }
-  | { ok: false; reason: string; candidates?: Array<{ formatted: string; lat: number; lng: number; country: string | null }> };
+  | { ok: true; address: ResolvedShape }
+  | { ok: false; reason: string; candidates?: ResolvedShape[] };
+
+/** "Burnaby, BC" from whatever parts the geocoder returned. */
+function areaOf(a: ResolvedShape): string | null {
+  const parts = [a.city, a.region].filter((p): p is string => !!p && p.trim().length > 0);
+  return parts.length > 0 ? parts.join(", ") : null;
+}
 
 /** Resolve every address answer, or explain which one failed and why.
  *
@@ -102,6 +120,7 @@ export async function resolveIntakeAddresses(
       lat: picked.lat,
       lng: picked.lng,
       country: picked.country ?? null,
+      area: areaOf(picked),
     });
   }
 
@@ -118,6 +137,8 @@ export async function resolveIntakeAddresses(
 export function applyResolvedAddresses<T extends Record<string, string | string[]>>(
   values: T,
   resolved: ResolvedIntakeAddress[],
+  /** Where the helper is dispatched, so the trip length can be stored. */
+  from?: { lat: number; lng: number },
 ): T {
   if (resolved.length === 0) return values;
   const next: Record<string, string | string[]> = { ...values };
@@ -126,6 +147,11 @@ export function applyResolvedAddresses<T extends Record<string, string | string[
     if (r.typed !== r.formatted) next[`${r.key}_typed`] = r.typed;
     next[`${r.key}_lat`] = String(r.lat);
     next[`${r.key}_lng`] = String(r.lng);
+    if (r.area) next[`${r.key}_area`] = r.area;
+    // Computed once, server-side, from attested coordinates — so the
+    // offer card can describe the trip without the exact address and
+    // without trusting anything the client sent.
+    if (from) next[`${r.key}_km`] = String(Math.round(distanceKm(from, r) * 10) / 10);
   }
   return next as T;
 }
