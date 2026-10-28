@@ -74,23 +74,21 @@ succeed**. A route file existing locally is not evidence it ever executed.
 US.** Country is permanent and settlement is USD; activation submits US
 business details — entity, representative, EIN, and a US bank account.
 
-**Confirm WHICH account you are activating first.** `acct_1UUsXV8ZAIHcYg7R`
-is the account behind the test keys in `.env.rehearsal`, and the dashboard
-presents it as **"Helpward sandbox"** with Stripe's sandbox banner. A
-sandbox cannot be activated, and its "you've provided all required business
-information" panel is simulated — it grants nothing live.
+**TWO ACCOUNTS, and they look almost identical. Read the id every time.**
 
-Before following any account-scoped link below, leave the sandbox (the
-environment switcher, top-left, where it reads "Helpward sandbox") and open
-the API keys page. Then:
+| | Account id | Use |
+|---|---|---|
+| **LIVE platform** | `acct_1UUsXQ6i5ULJPPDA` | activation, Connect profile, live keys, webhooks |
+| Sandbox | `acct_1UUsXV8ZAIHcYg7R` | the rehearsal keys in `.env.rehearsal` — leave alone |
 
-- publishable key reads `pk_live_51UUsXV8…` -> same account; the
-  `acct_1UUsXV8ZAIHcYg7R` links below are correct.
-- a different id, or no live key at all -> the live platform is a
-  **different account**. Use the unscoped links
-  (`https://dashboard.stripe.com/settings/...`), and the Connect platform
-  profile must be completed on THAT account, not in the sandbox. The
-  rehearsal work still stands; only the account changes.
+Both begin `acct_1UUsX`. The sandbox is a SEPARATE account, not a mode of
+the live one, so an account-scoped dashboard URL carrying the sandbox id
+lands in the sandbox however many times you click it. Everything below is
+scoped to the LIVE id.
+
+Nothing about the rehearsal changes: that sandbox and its test keys remain
+correct for everything already verified, including the CAD work below,
+which was proven there.
 
 Vancouver bookings are charged in **CAD** against this US platform, which is
 verified working in sandbox: CAD payment intents with the transfer
@@ -118,11 +116,32 @@ active on the connected account. That is a deliberate decision, not a
 default, and it is not required to launch. Watch the Canadian decline rate
 in the first weeks and revisit if it is poor.
 
-In the Stripe Dashboard, with the **test-mode toggle OFF**:
+Direct links, all scoped to the LIVE account. Check the id in the address
+bar before acting on any of them — a sandbox-scoped link looks identical
+at a glance and silently puts you in the wrong account.
 
-1. **Activate payments** — business details, representative, bank account.
-   Stripe decides; it is not instant.
-2. **Connect → Settings → Platform profile.** This must be completed or
+| Step | URL |
+|---|---|
+| Account details / phone verification | https://dashboard.stripe.com/acct_1UUsXQ6i5ULJPPDA/settings/account |
+| Activate | https://dashboard.stripe.com/acct_1UUsXQ6i5ULJPPDA/settings/update |
+| **Connect platform profile** | https://dashboard.stripe.com/acct_1UUsXQ6i5ULJPPDA/settings/connect/platform-profile |
+| Connect branding | https://dashboard.stripe.com/acct_1UUsXQ6i5ULJPPDA/settings/connect/onboarding-and-branding |
+| Live API keys | https://dashboard.stripe.com/acct_1UUsXQ6i5ULJPPDA/apikeys |
+| Webhooks | https://dashboard.stripe.com/acct_1UUsXQ6i5ULJPPDA/webhooks |
+
+In the Stripe Dashboard, with no sandbox banner showing:
+
+1. **Verify your phone by SMS.** The live account shows "You must verify
+   your phone number via SMS to process payments from the Dashboard."
+   Settings -> Business -> Account details -> *Verify now*. It gates
+   dashboard-initiated payments, so do it before anything else.
+2. **Activate payments** — business type, legal name, US address, EIN (or
+   SSN for a sole proprietor), representative details, industry, website
+   `https://helpward.com`, and a US bank account for USD settlement.
+   Set the **statement descriptor** to something a customer recognises —
+   `HELPWARD`. An unrecognised descriptor is a direct cause of chargebacks.
+   Stripe reviews; it is not instant.
+3. **Connect → Settings → Platform profile.** This must be completed or
    `accounts.create` is rejected outright. Answer:
    - *Who are your users?* — Service providers.
    - *Does your platform lose money from disputes?* — **Yes.** Helpward's
@@ -131,9 +150,9 @@ In the Stripe Dashboard, with the **test-mode toggle OFF**:
      here would be false and would change the account type Stripe gives
      you.
    - *Who is responsible for collecting requirements?* — Stripe.
-3. **Connect → Settings → set the platform name and support contact.**
+4. **Connect → Settings → set the platform name and support contact.**
    Helpers see these on the Stripe-hosted onboarding page.
-4. **Developers → API keys**, live mode: copy the **secret** key and the
+5. **Developers → API keys**, live mode: copy the **secret** key and the
    **publishable** key. These go into Vercel in step 3 — not into a file
    in this repo, and not into a chat window.
 
