@@ -11,8 +11,8 @@ export default async function SavedProvidersPage() {
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Saved Providers</h1>
-        <p className="text-sm text-slate-500 mt-1">Your trusted providers, saved for faster booking.</p>
+        <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Saved Helpers</h1>
+        <p className="text-sm text-slate-500 mt-1">Your trusted helpers, saved for faster booking.</p>
       </div>
 
       {providers.length === 0 ? (
@@ -20,12 +20,12 @@ export default async function SavedProvidersPage() {
           <span className="inline-flex w-14 h-14 rounded-2xl bg-white items-center justify-center mb-3">
             <Heart className="w-7 h-7 text-rose-500 fill-rose-500" />
           </span>
-          <h2 className="text-lg font-bold text-slate-900">No saved providers yet</h2>
+          <h2 className="text-lg font-bold text-slate-900">No saved helpers yet</h2>
           <p className="mt-1 text-sm text-slate-600 max-w-sm mx-auto">
-            After your first task, save the provider you liked so you can re-book them instantly next time.
+            After your first task, save the helper you liked so you can re-book them instantly next time.
           </p>
           <Link href="/services" className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold">
-            <Sparkles className="w-4 h-4" /> Find a provider
+            <Sparkles className="w-4 h-4" /> Find a helper
           </Link>
         </div>
       ) : (
@@ -47,7 +47,7 @@ export default async function SavedProvidersPage() {
                   {p.status === "approved" && <ShieldCheck className="w-3.5 h-3.5 text-brand-600" />}
                 </Link>
                 <div className="text-xs text-slate-500">
-                  {p.rating_avg ? `★ ${p.rating_avg} (${p.rating_count} reviews)` : "New provider"} · {p.tasks_completed} tasks
+                  {p.rating_avg ? `★ ${p.rating_avg} (${p.rating_count} reviews)` : "New helper"} · {p.tasks_completed} tasks
                 </div>
                 {availability.get(p.user_id) && (
                   <div className="mt-1.5">

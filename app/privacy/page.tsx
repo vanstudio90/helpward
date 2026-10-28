@@ -100,7 +100,7 @@ export default function Privacy() {
                 "Notification and communication settings.",
               ]} />
               <p>
-                Our authentication provider processes what is needed to create your account,
+                Our authentication helper processes what is needed to create your account,
                 verify you at sign-in, and keep the account secure.
               </p>
             </Sub>
@@ -212,7 +212,7 @@ export default function Privacy() {
               "Directly from you — creating an account, completing forms, uploading materials, messaging, or contacting us.",
               "Automatically, when you use the website, location features or calling features.",
               "From other users involved in a request or booking.",
-              "From payment, verification, screening, hosting, communication and other service providers.",
+              "From payment, verification, screening, hosting, communication and other service helpers.",
               "From reports, complaints, disputes and information submitted to protect users or investigate misuse.",
             ]} />
           </Section>
@@ -295,9 +295,9 @@ export default function Privacy() {
             <Sub title="Customers, helpers and other participants">
               <p>What is needed to request, accept, coordinate, perform and document a service, as described above.</p>
             </Sub>
-            <Sub title="Service providers">
+            <Sub title="Service helpers">
               <Table
-                head={["Provider", "What they do for Helpward"]}
+                head={["Helper", "What they do for Helpward"]}
                 rows={[
                   ["Supabase", "Application data, authentication, storage and related infrastructure."],
                   ["Vercel", "Website hosting and delivery."],
@@ -309,7 +309,7 @@ export default function Privacy() {
                 ]}
               />
               <p>
-                Providers receive what is relevant to the work they do. Some also process
+                Helpers receive what is relevant to the work they do. Some also process
                 information for their own legal, security or regulatory obligations under their
                 own privacy notices.
               </p>
@@ -343,7 +343,7 @@ export default function Privacy() {
               payment details to advertisers for their own advertising purposes.
             </Callout>
             <p>
-              Disclosing information to a provider so it can process a payment, deliver a
+              Disclosing information to a helper so it can process a payment, deliver a
               notification or operate the service is a different thing from selling it to an
               advertiser.
             </p>
@@ -357,7 +357,7 @@ export default function Privacy() {
             <p>
               Helpward uses cookies and similar browser storage to keep you signed in, protect
               accounts, remember preferences and support site functionality. Our infrastructure
-              and providers may also use technologies needed to deliver their services, detect
+              and helpers may also use technologies needed to deliver their services, detect
               fraud and maintain security.
             </p>
             <p>
@@ -377,14 +377,14 @@ export default function Privacy() {
             <p>
               Helpward is operated from the United States and serves users in the United States
               and Canada. Personal information may be stored, accessed or processed in those
-              countries and others where our providers operate. Privacy laws and
+              countries and others where our helpers operate. Privacy laws and
               government-access rules differ between countries.
             </p>
             <p>
               We remain responsible for information under our control and use appropriate
-              contractual, organisational and technical measures with providers. Canadian
+              contractual, organisational and technical measures with helpers. Canadian
               guidance explains that an organisation stays accountable for information
-              transferred to a provider for processing — see the{" "}
+              transferred to a helper for processing — see the{" "}
               <a
                 href="https://www.priv.gc.ca/en/privacy-topics/airports-and-borders/gl_dab_090127/"
                 target="_blank" rel="noopener noreferrer"
@@ -551,7 +551,7 @@ export default function Privacy() {
             <p>
               We use technical, organisational and administrative measures designed to protect
               personal information, including access controls and protections provided by our
-              infrastructure and payment providers. Access is limited according to operational
+              infrastructure and payment helpers. Access is limited according to operational
               responsibilities and what the service needs.
             </p>
             <Callout tone="warn">

@@ -12,7 +12,7 @@ const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/inbox", label: "Inbox", icon: Inbox },
   { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/providers", label: "Provider queue", icon: ShieldCheck },
+  { href: "/admin/providers", label: "Helper queue", icon: ShieldCheck },
   { href: "/admin/bookings", label: "Bookings", icon: Calendar },
   { href: "/admin/disputes", label: "Disputes", icon: AlertOctagon },
   { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },

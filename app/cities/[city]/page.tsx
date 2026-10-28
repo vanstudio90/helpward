@@ -114,7 +114,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
                 Find a helper in {city.name} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                href="/signup?role=provider"
+                href="/signup?role=helper"
                 className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl border border-slate-300 text-slate-900 font-semibold hover:bg-slate-50"
               >
                 Become a helper in {city.name}

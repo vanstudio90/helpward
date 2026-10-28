@@ -10,7 +10,7 @@ export default async function MessagesPage() {
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Messages</h1>
-        <p className="text-sm text-slate-500 mt-1">Stay in touch with your providers and get real-time updates.</p>
+        <p className="text-sm text-slate-500 mt-1">Stay in touch with your helpers and get real-time updates.</p>
       </div>
 
       {conversations.length === 0 ? (
@@ -20,7 +20,7 @@ export default async function MessagesPage() {
           </span>
           <h2 className="text-lg font-bold text-slate-900">No messages yet</h2>
           <p className="mt-1 text-sm text-slate-600 max-w-sm mx-auto">
-            When you book a service, you'll be able to chat with your provider in real time right here.
+            When you book a service, you'll be able to chat with your helper in real time right here.
           </p>
           <Link href="/new-request" className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold">
             <Plus className="w-4 h-4" /> Create a request

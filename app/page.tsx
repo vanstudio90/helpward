@@ -486,7 +486,7 @@ export default async function LandingPage() {
                   ["Blog", "/blog"],
                   ["Safety", "/safety"],
                   ["Help center", "/help"],
-                  ["Become a helper", "/signup?role=provider"],
+                  ["Become a helper", "/signup?role=helper"],
                 ].map(([label, href]) => (
                   <li key={href}><Link href={href} className="text-slate-400 hover:text-white transition">{label}</Link></li>
                 ))}

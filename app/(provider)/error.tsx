@@ -15,9 +15,9 @@ export default function ProviderError({
       <span className="inline-flex w-14 h-14 rounded-2xl bg-rose-50 items-center justify-center mb-4">
         <AlertOctagon className="w-7 h-7 text-rose-600" />
       </span>
-      <h1 className="text-xl font-bold text-slate-900">Provider view error</h1>
+      <h1 className="text-xl font-bold text-slate-900">Helper view error</h1>
       <p className="mt-2 text-sm text-slate-600">
-        Couldn&apos;t load this provider page. Your bookings and earnings are safe.
+        Couldn&apos;t load this helper page. Your bookings and earnings are safe.
       </p>
       {error.digest && (
         <p className="mt-2 text-[10px] text-slate-400 font-mono">Error ID: {error.digest}</p>

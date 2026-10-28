@@ -26,7 +26,7 @@ const nav: NavItem[] = [
   { href: "/services", label: "All Services", icon: Grid3x3 },
   { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/bookings", label: "Bookings", icon: Calendar },
-  { href: "/saved-providers", label: "Saved Providers", icon: Heart },
+  { href: "/saved-helpers", label: "Saved Helpers", icon: Heart },
   { href: "/payments", label: "Payments", icon: CreditCard },
   { href: "/favorites", label: "Favorites", icon: Star },
   // "Business Tools" was a nav entry tagged "Soon" leading to a page

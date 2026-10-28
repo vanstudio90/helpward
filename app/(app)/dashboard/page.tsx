@@ -36,8 +36,8 @@ export default async function DashboardPage() {
   // Read onboarded_at off the profile getMe() already loaded (it filters by
   // id). The previous standalone `.from("profiles").select("onboarded_at")
   // .maybeSingle()` had no id filter — and profiles_read (migration 0002)
-  // also exposes every provider row to any authed user, so it matched
-  // 1 + <provider count> rows, errored, and yielded null. That made the
+  // also exposes every helper row to any authed user, so it matched
+  // 1 + <helper count> rows, errored, and yielded null. That made the
   // welcome tour reappear on every visit no matter how often it was
   // dismissed, even though dismissOnboardingAction wrote onboarded_at
   // correctly (HW-19).
@@ -181,7 +181,7 @@ export default async function DashboardPage() {
 }
 
 function InProgressCard({ booking }: { booking: NonNullable<Awaited<ReturnType<typeof getActiveBooking>>> }) {
-  const providerName = booking.provider?.profile?.full_name ?? "Your provider";
+  const providerName = booking.provider?.profile?.full_name ?? "Your helper";
   return (
     <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 lg:p-6">
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] lg:grid-cols-2 gap-4 lg:gap-5">
@@ -210,7 +210,7 @@ function InProgressCard({ booking }: { booking: NonNullable<Awaited<ReturnType<t
                   <span className="text-brand-700 text-xs ml-1">★ {booking.provider.rating_avg}</span>
                 )}
               </div>
-              <div className="text-xs text-slate-500">Your provider</div>
+              <div className="text-xs text-slate-500">Your helper</div>
             </div>
           </div>
 

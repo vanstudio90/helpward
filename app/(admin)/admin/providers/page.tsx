@@ -30,7 +30,7 @@ export default async function AdminProvidersPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Provider approval queue</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Helper approval queue</h1>
       <p className="text-sm text-slate-500 mt-1">
         {pending?.length ?? 0} provider{(pending?.length ?? 0) === 1 ? "" : "s"} waiting for review.
       </p>
@@ -80,7 +80,7 @@ export default async function AdminProvidersPage() {
       </ul>
 
       <p className="mt-8 text-xs text-slate-400 text-center">
-        Approving here sets status='approved' so the provider can go online and start
+        Approving here sets status='approved' so the helper can go online and start
         accepting matches. Stripe Identity + Checkr are not connected, so approvals here are manual and unverified.
       </p>
     </div>

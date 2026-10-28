@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import { toggleFavoriteAction } from "@/app/(app)/favorites/actions";
 
 // Tap to star/un-star a helper. Persists via the existing `favorites` table
-// with kind='provider'. Unauthed taps bounce through /signup with a
+// with kind='helper'. Unauthed taps bounce through /signup with a
 // next-param so the user lands back on the same profile after auth.
 export function FavoriteHelperButton({
   helperId,

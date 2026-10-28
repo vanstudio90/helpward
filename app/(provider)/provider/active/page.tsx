@@ -43,7 +43,7 @@ export default async function ProviderActivePage() {
     .eq("user_id", user.id)
     .single();
 
-  // Find any current scheduled or in_progress booking for this provider
+  // Find any current scheduled or in_progress booking for this helper
   const { data: bookings } = await supabase
     .from("bookings")
     .select(`

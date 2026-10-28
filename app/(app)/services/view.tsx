@@ -409,7 +409,7 @@ function SidePanel({
         {isFavorited ? "Saved to favorites" : "Save for later"}
       </button>
 
-      {/* A "Real-time Availability / 12 nearby providers" panel used to sit
+      {/* A "Real-time Availability / 12 nearby helpers" panel used to sit
           here with a hardcoded count (HW-10). Live supply counts need the
           matching engine to have approved, online helpers to count — until
           then we say nothing rather than invent a number. */}

@@ -34,7 +34,7 @@ export default async function AdminUsersPage({
         <select name="role" defaultValue={params.role ?? ""} className="px-3 py-2 rounded-xl bg-white border border-slate-200">
           <option value="">All roles</option>
           <option value="customer">Customer</option>
-          <option value="provider">Provider</option>
+          <option value="helper">Helper</option>
           <option value="admin">Admin</option>
         </select>
         <select name="country" defaultValue={params.country ?? ""} className="px-3 py-2 rounded-xl bg-white border border-slate-200">

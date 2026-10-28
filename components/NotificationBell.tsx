@@ -286,12 +286,12 @@ function hrefFor(type: string, payload: Record<string, unknown>): string | null 
 function labelFor(type: string) {
   switch (type) {
     case "new_request_offered": return "New task offer";
-    case "booking_accepted": return "A provider accepted your request";
+    case "booking_accepted": return "A helper accepted your request";
     case "booking_cancelled": return "A booking was cancelled";
-    case "booking_auto_cancelled": return "Booking auto-cancelled — provider didn't arrive";
+    case "booking_auto_cancelled": return "Booking auto-cancelled — helper didn't arrive";
     case "booking_no_show": return "You missed a scheduled booking";
     case "booking_auto_completed": return "Your task was auto-completed";
-    case "request_expired": return "Your request expired — no providers available";
+    case "request_expired": return "Your request expired — no helpers available";
     case "task_started": return "Your task has started";
     case "task_completed": return "Your task is complete";
     case "dispute_opened": return "A dispute was opened";

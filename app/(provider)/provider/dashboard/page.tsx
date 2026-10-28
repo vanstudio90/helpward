@@ -78,7 +78,7 @@ export default async function ProviderDashboardPage() {
       <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
         Welcome, {profile?.full_name?.split(" ")[0] || "there"}
       </h1>
-      <p className="text-sm text-slate-500 mt-1">Your provider control center.</p>
+      <p className="text-sm text-slate-500 mt-1">Your helper control center.</p>
 
       {/* Each outstanding requirement, named, with the step that
           actually addresses it. "Finish setting up your account" over a

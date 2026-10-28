@@ -313,7 +313,7 @@ export default function Terms() {
             <p>
               The booking flow shows the price and currency for the selected service and confirmed
               pickup or service location. <strong>US$ means United States dollars. CA$ means
-              Canadian dollars.</strong> Your payment provider may apply its own conversion rate
+              Canadian dollars.</strong> Your payment helper may apply its own conversion rate
               or foreign-transaction fee, separate from Helpward&rsquo;s displayed price.
             </p>
             <p>
@@ -361,7 +361,7 @@ export default function Terms() {
           <Section id="payment" n={10} title="Payment authorisation and charging">
             <p>
               Payments are processed through Stripe. By confirming a booking and its payment
-              details, you authorise Helpward and its payment provider to process the amounts
+              details, you authorise Helpward and its payment helper to process the amounts
               disclosed and agreed for that booking.
             </p>
             <Sub title="When a Helper accepts">
@@ -478,7 +478,7 @@ export default function Terms() {
 
           <Section id="payouts" n={14} title="Helper payouts and taxes">
             <p>
-              Helpers must complete the payout setup and verification the payment provider requires
+              Helpers must complete the payout setup and verification the payment helper requires
               before receiving work that needs an active payout account. Availability and timing may
               depend on successful capture, the connected account&rsquo;s readiness, bank schedules,
               verification requirements, and refunds, disputes, reversals or lawful restrictions.
@@ -493,7 +493,7 @@ export default function Terms() {
             </p>
             <p>
               Helpers are responsible for tax obligations that legally apply to their earnings or
-              business. Helpward or its payment provider will provide tax reporting information
+              business. Helpward or its payment helper will provide tax reporting information
               when legally required; which form applies, and who issues it, depends on the rules
               and the payment arrangement. These Terms do not promise every Helper a particular
               tax form.

@@ -6,7 +6,7 @@ import { AlertOctagon, AlertCircle, ArrowLeft } from "lucide-react";
 import { openDisputeAction } from "./actions";
 
 const CATEGORIES = [
-  { value: "no_show", label: "Provider didn't show up" },
+  { value: "no_show", label: "Helper didn't show up" },
   { value: "quality", label: "Quality of work" },
   { value: "damage", label: "Damage to property" },
   { value: "billing", label: "Billing issue" },

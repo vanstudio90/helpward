@@ -34,7 +34,7 @@ export default async function ProviderInboxPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // match_attempts where the current provider was offered and hasn't responded.
+  // match_attempts where the current helper was offered and hasn't responded.
   // We also pull the customer's full_name (and avatar) when the attempt is
   // flagged preferred so the helper sees who specifically requested them.
   const { data } = await supabase

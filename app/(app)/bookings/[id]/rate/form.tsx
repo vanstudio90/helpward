@@ -23,7 +23,7 @@ export function RateForm({
     return (
       <div className="max-w-md mx-auto py-12 px-4 text-center">
         <h1 className="text-lg font-bold">Booking not yet completed</h1>
-        <p className="text-sm text-slate-500 mt-2">You can rate once the provider marks the task complete.</p>
+        <p className="text-sm text-slate-500 mt-2">You can rate once the helper marks the task complete.</p>
         <Link href="/bookings" className="mt-4 inline-block text-sm font-semibold text-brand-700">← Back to bookings</Link>
       </div>
     );

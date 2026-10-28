@@ -22,7 +22,7 @@ export default async function ProviderProfilePage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto pb-12">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My provider profile</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My helper profile</h1>
       <p className="text-sm text-slate-500 mt-1 mb-6">
         Customers see this on your public profile when matching tasks.
       </p>

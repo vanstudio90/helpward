@@ -5,7 +5,7 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ClientDateTime } from "@/components/ClientDateTime";
 
-// Provider earnings — pulls real completed bookings and aggregates by week.
+// Helper earnings — pulls real completed bookings and aggregates by week.
 // Payout readiness is mirrored from Stripe onto provider_profiles by the
 // account.updated webhook; see migration 0040.
 //
@@ -69,7 +69,7 @@ export default async function ProviderEarningsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // RLS lets a provider read only their own bookings. Pull the 200 most-recent
+  // RLS lets a helper read only their own bookings. Pull the 200 most-recent
   // completed ones — enough for a year of weekly aggregates for active helpers.
   const { data: rows } = await supabase
     .from("bookings")

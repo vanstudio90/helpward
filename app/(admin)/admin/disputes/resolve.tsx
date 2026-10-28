@@ -43,7 +43,7 @@ export function ResolveButton({ disputeId }: { disputeId: string }) {
           value={resolution}
           onChange={(e) => setResolution(e.target.value)}
           rows={3}
-          placeholder="What action was taken? (refund issued, provider warned, no fault found, escalated to legal...)"
+          placeholder="What action was taken? (refund issued, helper warned, no fault found, escalated to legal...)"
           className="mt-1 w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
         />
       </label>

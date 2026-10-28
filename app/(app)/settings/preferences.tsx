@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 // saved to the database, and NOTHING consulted any of them: there is no
 // message push, Helpward sends no receipt emails (the Payments page
 // links to Stripe's hosted receipt on demand), and there is no SMS
-// channel at all — no provider, no sender, nothing. Three switches that
+// channel at all — no helper, no sender, nothing. Three switches that
 // changed nothing whichever way they were set. The columns remain so
 // nothing is lost when the channels exist.
 type Prefs = {
@@ -53,7 +53,7 @@ export function NotificationPrefs({ initial }: { initial: Prefs }) {
         <Toggle
           icon={<Mail className="w-4 h-4" />}
           label="Weekly digest (email)"
-          sub="Tips, top providers, what's new"
+          sub="Tips, top helpers, what's new"
           on={prefs.email_digest}
           onChange={() => update("email_digest")}
           disabled={pending}

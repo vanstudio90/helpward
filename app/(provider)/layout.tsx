@@ -28,7 +28,7 @@ export default async function ProviderLayout({ children }: { children: React.Rea
   // Filtered by id, and the error is read.
   //
   // Without the filter this was an infinite redirect: profiles_read
-  // (migration 0002) exposes every provider row to any authenticated user,
+  // (migration 0002) exposes every helper row to any authenticated user,
   // so .single() matched 1 + <provider count> rows, returned PGRST116, and
   // left `profile` null. A null profile fails the role check below, sending
   // the helper to /dashboard, whose own role gate sends them straight back.
@@ -65,7 +65,7 @@ export default async function ProviderLayout({ children }: { children: React.Rea
           <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">H</div>
           <div>
             <div className="text-base font-bold leading-tight">Helpward</div>
-            <div className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide">For providers</div>
+            <div className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide">For helpers</div>
           </div>
         </Link>
         <nav className="flex-1 px-3 py-4 space-y-1">

@@ -36,7 +36,7 @@ export default async function RateBookingPage({
   return <RateForm
     bookingId={id}
     serviceTitle={one(booking.service)?.title ?? "service"}
-    providerName={one(one(booking.provider)?.profile)?.full_name ?? "your provider"}
+    providerName={one(one(booking.provider)?.profile)?.full_name ?? "your helper"}
     providerAvatar={one(one(booking.provider)?.profile)?.avatar_url ?? null}
     bookingStatus={booking.status}
   />;

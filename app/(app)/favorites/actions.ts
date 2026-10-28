@@ -27,7 +27,7 @@ export async function toggleFavoriteAction(kind: Kind, targetId: string): Promis
       .eq("kind", kind)
       .eq("target_id", targetId);
     revalidatePath("/favorites");
-    revalidatePath("/saved-providers");
+    revalidatePath("/saved-helpers");
     revalidatePath("/services");
     return { saved: false };
   } else {
@@ -35,7 +35,7 @@ export async function toggleFavoriteAction(kind: Kind, targetId: string): Promis
       .from("favorites")
       .insert({ user_id: user.id, kind, target_id: targetId });
     revalidatePath("/favorites");
-    revalidatePath("/saved-providers");
+    revalidatePath("/saved-helpers");
     revalidatePath("/services");
     return { saved: true };
   }

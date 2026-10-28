@@ -101,7 +101,7 @@ export default function Page() {
         </li>
         <li>
           <strong>Resolution within 30 days for straightforward cases.</strong> Payment goes directly to your bank
-          account, to the repair shop on your behalf, or to the medical provider — your choice.
+          account, to the repair shop on your behalf, or to the medical helper — your choice.
         </li>
       </ol>
 

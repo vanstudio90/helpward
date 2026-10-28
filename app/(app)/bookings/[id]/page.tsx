@@ -239,7 +239,7 @@ export default async function BookingDetailPage({
             <div className="text-xs text-slate-500 mt-0.5">Booking #{b.id.slice(0, 8)}</div>
           </div>
 
-          {/* Provider */}
+          {/* Helper */}
           {provider && (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
               {provider.profile?.avatar_url ? (

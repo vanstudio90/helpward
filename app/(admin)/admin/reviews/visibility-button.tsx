@@ -30,7 +30,7 @@ export function ReviewVisibilityButton({
         type="button"
         onClick={toggle}
         disabled={pending}
-        title={visible ? "Hide this review from the public provider page" : "Restore this review to the public page"}
+        title={visible ? "Hide this review from the public helper page" : "Restore this review to the public page"}
         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50 ${
           visible
             ? "border border-rose-200 text-rose-700 hover:bg-rose-50"

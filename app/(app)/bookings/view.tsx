@@ -359,7 +359,7 @@ function EmptyTab({ tab }: { tab: TabKey }) {
     pending: { title: "No pending requests", sub: "Create a new request to start." },
     active: { title: "Nothing in progress", sub: "Your active task will live here with real-time tracking." },
     recurring: { title: "No recurring series yet", sub: "Toggle 'Repeat this task' when you create a request to schedule it weekly, biweekly, or monthly." },
-    completed: { title: "No completed bookings yet", sub: "Once a task wraps up, you can rate the provider here." },
+    completed: { title: "No completed bookings yet", sub: "Once a task wraps up, you can rate the helper here." },
     cancelled: { title: "Nothing cancelled", sub: "Cancelled bookings and requests that expired before a helper accepted show up here." },
   };
   const e = map[tab];

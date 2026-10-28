@@ -110,7 +110,7 @@ export function AvailabilityTable({
   }));
   const upcomingOverrides = overrides.slice(0, 5);
 
-  // If the provider has neither rules nor overrides we hide the table — the
+  // If the helper has neither rules nor overrides we hide the table — the
   // badge already says "open to bookings", showing an empty table is noise.
   if (rules.length === 0 && upcomingOverrides.length === 0) return null;
 
@@ -167,7 +167,7 @@ export function AvailabilityTable({
   );
 }
 
-// Server-side wrapper that fetches + computes — keeps the providers/[id]
+// Server-side wrapper that fetches + computes — keeps the helpers/[id]
 // page simple.
 export async function AvailabilitySection({ providerId }: { providerId: string }) {
   const { rules, overrides, vacation } = await getProviderAvailability(providerId);

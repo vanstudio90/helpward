@@ -20,7 +20,7 @@ export default async function AnalyticsPage() {
           </span>
           <h2 className="text-lg font-bold text-slate-900">Not enough data yet</h2>
           <p className="mt-1 text-sm text-slate-600 max-w-sm mx-auto">
-            Complete a few bookings and your spending, hours saved, top providers and category breakdowns will appear here.
+            Complete a few bookings and your spending, hours saved, top helpers and category breakdowns will appear here.
           </p>
         </div>
       ) : (

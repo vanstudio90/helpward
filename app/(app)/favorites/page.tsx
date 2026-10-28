@@ -34,7 +34,7 @@ export default async function FavoritesPage() {
         <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 flex items-center gap-2">
           <Heart className="w-5 h-5 lg:w-6 lg:h-6 text-rose-500 fill-rose-500" /> Favorites
         </h1>
-        <p className="text-sm text-slate-500 mt-1">Your favorite providers and services for quick access.</p>
+        <p className="text-sm text-slate-500 mt-1">Your favorite helpers and services for quick access.</p>
       </div>
 
       {total === 0 ? (
@@ -184,7 +184,7 @@ function Empty() {
       </span>
       <h2 className="text-lg font-bold text-slate-900">No favorites yet</h2>
       <p className="mt-1 text-sm text-slate-600 max-w-sm mx-auto">
-        Tap the heart on any provider, service, or address to save it here for quick re-booking later.
+        Tap the heart on any helper, service, or address to save it here for quick re-booking later.
       </p>
       <Link href="/services" className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold">
         <Sparkles className="w-4 h-4" /> Browse services

@@ -16,6 +16,15 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "source.unsplash.com" },
     ],
   },
+  // The route was /saved-providers until the worker label was standardised
+  // on "Helper". It was auth-gated and robots-disallowed, so nothing public
+  // pointed at it — but a signed-in customer may have bookmarked it.
+  async redirects() {
+    return [
+      { source: "/saved-providers", destination: "/saved-helpers", permanent: true },
+    ];
+  },
+
   async headers() {
     return [
       {

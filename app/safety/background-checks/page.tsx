@@ -35,7 +35,7 @@ export default function Page() {
         Helpward partners with <strong>Checkr</strong> for U.S. helpers and <strong>Triton Canada</strong> for
         Canadian helpers. Both are FCRA-accredited (US) / PIPEDA-compliant (Canada) and are used by major
         marketplaces including Uber, DoorDash, Instacart, and Airbnb. We don't run our own checks because
-        accredited providers are required by law to give helpers transparency and dispute rights that an in-house
+        accredited helpers are required by law to give helpers transparency and dispute rights that an in-house
         check could not guarantee.
       </p>
 

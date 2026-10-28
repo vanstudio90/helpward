@@ -9,7 +9,7 @@ const PRIVATE_PATHS = [
   "/dashboard",
   "/messages",
   "/bookings",
-  "/saved-providers",
+  "/saved-helpers",
   "/favorites",
   "/payments",
   "/analytics",

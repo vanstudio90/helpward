@@ -59,7 +59,7 @@ export default async function AdminReviewsPage({
         <MessageSquare className="w-6 h-6 text-brand-600" /> Reviews moderation
       </h1>
       <p className="text-sm text-slate-500 mt-1 mb-5">
-        Hide reviews that violate policy. Hidden reviews are kept in the database for the provider&apos;s internal
+        Hide reviews that violate policy. Hidden reviews are kept in the database for the helper&apos;s internal
         rating average and any associated dispute, but disappear from the public provider page.
       </p>
 
