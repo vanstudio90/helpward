@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/slug";
+import { one } from "@/lib/supabase/relation";
 
 export const runtime = "edge";
 export const alt = "Verified helper on Helpward";
@@ -31,7 +32,7 @@ export default async function HelperOgImage({
     .maybeSingle();
 
   const prof = pp && pp.status === "approved"
-    ? (pp as { profile: { full_name: string; avatar_url: string | null; country: string } | null }).profile
+    ? one(pp.profile)
     : null;
   const name = prof?.full_name ?? "Verified helper";
   const rating = (pp as { rating_avg?: number | null } | null)?.rating_avg ?? null;

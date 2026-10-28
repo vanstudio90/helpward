@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Star } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { one } from "@/lib/supabase/relation";
 
 export default async function ProviderReviewsPage() {
   const supabase = await createSupabaseServerClient();
@@ -63,7 +64,7 @@ export default async function ProviderReviewsPage() {
       ) : (
         <ul className="space-y-3">
           {(reviews ?? []).map((r, i) => {
-            const c = (r as { customer: { full_name: string; avatar_url: string | null } | null }).customer;
+            const c = one(r.customer);
             return (
               <li key={i} className="rounded-2xl bg-white border border-slate-100 p-4">
                 <div className="flex items-center gap-3 mb-2">

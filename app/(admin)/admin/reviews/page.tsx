@@ -4,6 +4,7 @@ import { Star, EyeOff, Eye, AlertCircle, MessageSquare } from "lucide-react";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { ReviewVisibilityButton } from "./visibility-button";
+import { one } from "@/lib/supabase/relation";
 
 type Filter = "all" | "visible" | "hidden" | "low";
 
@@ -77,8 +78,8 @@ export default async function AdminReviewsPage({
       ) : (
         <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
           {(rows ?? []).map((r) => {
-            const customer = (r as { customer: { full_name: string; avatar_url: string | null } | null }).customer;
-            const providerProfile = (r as { provider: { profile: { full_name: string; avatar_url: string | null } | null } | null }).provider?.profile;
+            const customer = one(r.customer);
+            const providerProfile = one(one(r.provider)?.profile);
             const lowStar = r.rating <= 2;
             return (
               <li key={r.id} className="p-4">
@@ -111,12 +112,12 @@ export default async function AdminReviewsPage({
                     <div className="text-xs text-slate-500 mt-0.5">
                       Reviewed{" "}
                       <Link
-                        href={`/providers/${(r as { provider_id: string }).provider_id}`}
+                        href={`/providers/${one(r.provider_id)}`}
                         className="font-semibold text-brand-700 hover:underline"
                       >
                         {providerProfile?.full_name ?? "unknown helper"}
                       </Link>{" "}
-                      · booking #{(r as { booking_id: string }).booking_id.slice(0, 8)} ·{" "}
+                      · booking #{one(r.booking_id).slice(0, 8)} ·{" "}
                       <ClientDateTime iso={r.created_at} />
                     </div>
                     {r.comment && (

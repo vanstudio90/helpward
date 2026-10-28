@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { DisputeForm } from "./form";
+import { one } from "@/lib/supabase/relation";
 
 export default async function OpenDisputePage({
   params,
@@ -14,7 +15,7 @@ export default async function OpenDisputePage({
     .single();
 
   if (!booking) notFound();
-  const serviceTitle = (booking as { service: { title: string } | null }).service?.title ?? "this booking";
+  const serviceTitle = one(booking.service)?.title ?? "this booking";
 
   return <DisputeForm bookingId={id} serviceTitle={serviceTitle} />;
 }

@@ -2,6 +2,7 @@ import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/s
 import { redirect } from "next/navigation";
 import { FileText } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { one } from "@/lib/supabase/relation";
 
 export default async function AdminAuditLogPage({
   searchParams,
@@ -72,7 +73,7 @@ export default async function AdminAuditLogPage({
       ) : (
         <ul className="rounded-2xl bg-white border border-slate-100 overflow-hidden divide-y divide-slate-100">
           {(rows ?? []).map((r) => {
-            const actor = (r as { actor: { full_name: string; role: string; avatar_url: string | null } | null }).actor;
+            const actor = one(r.actor);
             return (
               <li key={r.id} className="p-4 flex items-start gap-3">
                 {actor?.avatar_url ? (

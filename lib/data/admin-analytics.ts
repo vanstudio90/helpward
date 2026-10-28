@@ -1,4 +1,5 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { one, type Embed } from "@/lib/supabase/relation";
 
 // Admin analytics aggregations. Service-role because admins read across all
 // tenants; the page itself enforces role === 'admin' before calling these.
@@ -128,8 +129,8 @@ export async function getSignupsSeries(days = DEFAULT_DAYS): Promise<{
   const customers = makeDateKeys(days);
   const providers = makeDateKeys(days);
   for (const r of data ?? []) {
-    const ts = (r as { created_at?: string }).created_at;
-    const role = (r as { role?: string }).role;
+    const ts = one(r.created_at);
+    const role = one(r.role);
     if (typeof ts !== "string") continue;
     const key = ts.slice(0, 10);
     if (role === "provider") {
@@ -226,11 +227,11 @@ export async function getTopServices(days = 7, limit = 5): Promise<TopService[]>
   }
   const map = new Map<string, TopService>();
   for (const row of data ?? []) {
-    const r = row as { service_id: string | null; total_cents: number | null; service: { title: string } | null };
+    const r = row as { service_id: string | null; total_cents: number | null; service: Embed<{ title: string }> };
     const id = r.service_id;
     if (!id) continue;
     const existing = map.get(id) ?? {
-      id, title: r.service?.title ?? id, count: 0, gmvCents: 0,
+      id, title: one(r.service)?.title ?? id, count: 0, gmvCents: 0,
     };
     existing.count += 1;
     existing.gmvCents += r.total_cents ?? 0;
@@ -257,7 +258,7 @@ export async function getDisputeBreakdown(days = 30): Promise<DisputeBreakdown[]
   }
   const map = new Map<string, number>();
   for (const row of data ?? []) {
-    const cat = (row as { category: string | null }).category ?? "other";
+    const cat = one(row.category) ?? "other";
     map.set(cat, (map.get(cat) ?? 0) + 1);
   }
   return Array.from(map.entries())
@@ -336,10 +337,10 @@ export async function getRecentEvents(limit = 10): Promise<RecentEvent[]> {
     });
   }
   for (const row of bookings ?? []) {
-    const b = row as { id: string; status: string; created_at: string; service: { title: string } | null };
+    const b = row as { id: string; status: string; created_at: string; service: Embed<{ title: string }> };
     events.push({
       id: `booking-${b.id}`, kind: "booking",
-      label: `Booking ${b.id.slice(0, 8)} — ${b.service?.title ?? "task"} (${b.status})`,
+      label: `Booking ${b.id.slice(0, 8)} — ${one(b.service)?.title ?? "task"} (${b.status})`,
       href: `/admin/bookings`,
       at: b.created_at,
     });

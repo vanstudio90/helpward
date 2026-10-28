@@ -27,3 +27,14 @@ export function many<T>(relation: T | T[] | null | undefined): T[] {
   if (relation == null) return [];
   return Array.isArray(relation) ? relation : [relation];
 }
+
+/**
+ * An embedded relation as it may actually arrive.
+ *
+ * Declaring an embed as a bare object is what made the casts below it
+ * unsound: the generated row type says `{ title: any }[]`, the cast said
+ * `{ title: string } | null`, and TypeScript rejected the conversion
+ * because neither shape covers the other. Saying "object, or array of
+ * them, or absent" is the truth, and `one()` collapses it.
+ */
+export type Embed<T> = T | T[] | null;

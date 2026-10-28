@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Download, Trash2, Shield, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { one } from "@/lib/supabase/relation";
 
 // Admin queue for CCPA/PIPEDA/GDPR requests. Auto-processing is now wired:
 //   * /api/cron/process-data-exports runs every 30 minutes and flips
@@ -78,7 +79,7 @@ export default async function AdminDataRequestsPage() {
         ) : (
           <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
             {(exports ?? []).map((r) => {
-              const u = (r as { user: { id: string; full_name: string; avatar_url: string | null; role: string } | null }).user;
+              const u = one(r.user);
               return (
                 <li key={r.id} className="p-4 flex items-start gap-3">
                   <Avatar name={u?.full_name} url={u?.avatar_url ?? null} />
@@ -121,7 +122,7 @@ export default async function AdminDataRequestsPage() {
         ) : (
           <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
             {(deletions ?? []).map((r) => {
-              const u = (r as { user: { id: string; full_name: string; avatar_url: string | null; role: string } | null }).user;
+              const u = one(r.user);
               const past = r.status === "pending" && new Date(r.grace_until) <= new Date();
               return (
                 <li key={r.id} className="p-4 flex items-start gap-3">

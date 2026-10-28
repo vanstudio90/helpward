@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { RateForm } from "./form";
+import { one } from "@/lib/supabase/relation";
 
 export default async function RateBookingPage({
   params,
@@ -34,9 +35,9 @@ export default async function RateBookingPage({
 
   return <RateForm
     bookingId={id}
-    serviceTitle={(booking as { service: { title: string } | null }).service?.title ?? "service"}
-    providerName={(booking as { provider: { profile: { full_name: string; avatar_url: string | null } | null } | null }).provider?.profile?.full_name ?? "your provider"}
-    providerAvatar={(booking as { provider: { profile: { full_name: string; avatar_url: string | null } | null } | null }).provider?.profile?.avatar_url ?? null}
+    serviceTitle={one(booking.service)?.title ?? "service"}
+    providerName={one(one(booking.provider)?.profile)?.full_name ?? "your provider"}
+    providerAvatar={one(one(booking.provider)?.profile)?.avatar_url ?? null}
     bookingStatus={booking.status}
   />;
 }

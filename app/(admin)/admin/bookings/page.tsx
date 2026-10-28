@@ -1,4 +1,5 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { one } from "@/lib/supabase/relation";
 
 const STATUS_TONE: Record<string, string> = {
   scheduled: "bg-brand-50 text-brand-700",
@@ -56,16 +57,16 @@ export default async function AdminBookingsPage({
       <div className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
         <ul className="divide-y divide-slate-100">
           {(rows ?? []).map((b) => {
-            const customer = (b as { customer: { full_name: string } | null }).customer;
-            const provider = (b as { provider: { profile: { full_name: string } | null } | null }).provider;
+            const customer = one(b.customer);
+            const provider = one(b.provider);
             return (
               <li key={b.id} className="p-4 flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-slate-900 truncate">
-                    {(b as { service: { title: string } | null }).service?.title ?? "—"}
+                    {one(b.service)?.title ?? "—"}
                   </div>
                   <div className="text-xs text-slate-500 truncate">
-                    {customer?.full_name ?? "?"} → {provider?.profile?.full_name ?? "—"}
+                    {customer?.full_name ?? "?"} → {one(provider?.profile)?.full_name ?? "—"}
                   </div>
                   <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">#{b.id}</div>
                 </div>

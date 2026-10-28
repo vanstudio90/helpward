@@ -1,9 +1,12 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /* Refresh the auth session on every request — required by @supabase/ssr.
    Called from proxy.ts. Returns the response with refreshed cookies +
    the user object so we can do role-based redirects. */
+/** See lib/supabase/server.ts — same shape, same reason. */
+type CookieToSet = { name: string; value: string; options?: CookieOptions };
+
 export async function updateSupabaseSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -15,7 +18,7 @@ export async function updateSupabaseSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { isAuthorizedCron } from "@/lib/cron-auth";
 import { sendPushToUser } from "@/lib/push";
+import { one, type Embed } from "@/lib/supabase/relation";
 
 // Vercel Cron pings this every 15 minutes (see vercel.json).
 // Sends T-30 reminders to BOTH parties on any scheduled booking whose
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
 
   type Row = {
     id: string; customer_id: string; provider_id: string; scheduled_for: string;
-    service: { title: string } | null;
+    service: Embed<{ title: string }>;
   };
   let reminded = 0;
   const failures: { id: string; error: string }[] = [];
@@ -73,7 +74,7 @@ export async function GET(req: NextRequest) {
     const payload = {
       booking_id: b.id,
       scheduled_for: b.scheduled_for,
-      service_title: b.service?.title ?? "your task",
+      service_title: one(b.service)?.title ?? "your task",
     };
     const { error: insErr } = await admin.from("notifications").insert([
       { user_id: b.customer_id, type: "booking_reminder", payload },

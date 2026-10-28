@@ -2,6 +2,7 @@ import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/s
 import { redirect } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { one } from "@/lib/supabase/relation";
 
 const TONE: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700",
@@ -40,8 +41,8 @@ export default async function AdminRefundsPage() {
       ) : (
         <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
           {(data ?? []).map((r) => {
-            const booking = (r as { booking: { id: string; service: { title: string } | null; customer: { full_name: string } | null } | null }).booking;
-            const initiator = (r as { initiator: { full_name: string; role: string } | null }).initiator;
+            const booking = one(r.booking);
+            const initiator = one(r.initiator);
             return (
               <li key={r.id} className="p-4 flex items-start gap-3">
                 <div className="min-w-0 flex-1">
@@ -52,7 +53,7 @@ export default async function AdminRefundsPage() {
                     </span>
                     {booking && (
                       <span className="text-xs text-slate-500">
-                        {booking.service?.title ?? "—"} · {booking.customer?.full_name ?? "?"}
+                        {one(booking.service)?.title ?? "—"} · {one(booking.customer)?.full_name ?? "?"}
                       </span>
                     )}
                   </div>

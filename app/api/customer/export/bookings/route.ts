@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { one, type Embed } from "@/lib/supabase/relation";
 
 // CSV download of the calling customers bookings for a date range. Mirror
 // of /api/provider/export/bookings but flipped to the customer's
@@ -60,8 +61,8 @@ export async function GET(req: NextRequest) {
     base_price_cents: number; service_fee_cents: number; tip_cents: number | null;
     total_cents: number; currency: string;
     completed_at: string | null; created_at: string; scheduled_for: string | null;
-    service: { title: string } | null;
-    provider: { profile: { full_name: string } | null } | null;
+    service: Embed<{ title: string }>;
+    provider: Embed<{ profile: Embed<{ full_name: string }> }>;
   };
   const rows = (data ?? []) as Row[];
 
@@ -82,8 +83,8 @@ export async function GET(req: NextRequest) {
   const lines = rows.map((r) => [
     r.id,
     r.status,
-    csvEscape(r.service?.title ?? ""),
-    csvEscape(firstName(r.provider?.profile?.full_name ?? "")),
+    csvEscape(one(r.service)?.title ?? ""),
+    csvEscape(firstName(one(one(r.provider)?.profile)?.full_name ?? "")),
     r.scheduled_for ?? "",
     r.completed_at ?? "",
     (r.base_price_cents / 100).toFixed(2),

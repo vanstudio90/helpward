@@ -9,6 +9,7 @@ import { getProviderAvailability, computeAvailabilityStatus } from "@/lib/data/a
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 import { isUuid } from "@/lib/slug";
 import { redirect } from "next/navigation";
+import { one } from "@/lib/supabase/relation";
 
 // Per-helper metadata for shareable previews. iMessage/Twitter/Slack all
 // pull these tags when an inbound link is unfurled, so a profile shared
@@ -35,7 +36,7 @@ export async function generateMetadata({
     // to generic Helpward metadata is fine for a 404 path.
     return { title: "Helper — Helpward", robots: { index: false, follow: true } };
   }
-  const prof = (pp as { profile: { full_name: string; country: string } | null }).profile;
+  const prof = one(pp.profile);
   const name = prof?.full_name ?? "Verified helper";
   const ratingFragment = pp.rating_avg
     ? `★ ${pp.rating_avg} (${pp.rating_count} reviews) · `
@@ -121,8 +122,8 @@ export default async function PublicProviderProfile({
     availability.rules, availability.overrides, availability.vacation,
   );
 
-  const prof = (pp as { profile: { full_name: string; avatar_url: string | null; country: string } | null }).profile;
-  const services = (svcs ?? []).map((row) => (row as { services: { id: string; title: string; base_price_cents: number; eta_label: string | null } | null }).services).filter(Boolean);
+  const prof = one(pp.profile);
+  const services = (svcs ?? []).map((row) => one(row.services)).filter(Boolean);
 
   // Has the viewer (if any) already favourited this helper? Lets the heart
   // button render in its filled state on first paint instead of flickering.
@@ -282,7 +283,7 @@ export default async function PublicProviderProfile({
                   <div className="flex items-center gap-2 text-amber-500 text-sm">
                     {Array.from({ length: r.rating }).map((_, j) => <Star key={j} className="w-3.5 h-3.5 fill-amber-400" />)}
                     <span className="text-xs text-slate-500 ml-1">
-                      {(r as { customer: { full_name: string } | null }).customer?.full_name ?? "Anonymous"} · <ClientDateTime iso={r.created_at} mode="date" />
+                      {one(r.customer)?.full_name ?? "Anonymous"} · <ClientDateTime iso={r.created_at} mode="date" />
                     </span>
                   </div>
                   {r.comment && <p className="text-sm text-slate-700 mt-1">{r.comment}</p>}

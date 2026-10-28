@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { one, type Embed } from "@/lib/supabase/relation";
 
 // CSV download of the calling helpers bookings for a date range. RLS
 // already restricts bookings to provider_id = auth.uid() so the route is
@@ -51,8 +52,8 @@ export async function GET(req: NextRequest) {
     id: string; status: string; total_cents: number; payout_cents: number;
     currency: string; completed_at: string | null; created_at: string;
     scheduled_for: string | null; tip_cents: number | null;
-    service: { title: string } | null;
-    customer: { full_name: string } | null;
+    service: Embed<{ title: string }>;
+    customer: Embed<{ full_name: string }>;
   };
   const rows = (data ?? []) as Row[];
 
@@ -72,8 +73,8 @@ export async function GET(req: NextRequest) {
   const lines = rows.map((r) => [
     r.id,
     r.status,
-    csvEscape(r.service?.title ?? ""),
-    csvEscape(firstName(r.customer?.full_name ?? "")),
+    csvEscape(one(r.service)?.title ?? ""),
+    csvEscape(firstName(one(r.customer)?.full_name ?? "")),
     r.scheduled_for ?? "",
     r.completed_at ?? "",
     (r.total_cents / 100).toFixed(2),

@@ -2,6 +2,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { AlertOctagon } from "lucide-react";
 import { ResolveButton } from "./resolve";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { one } from "@/lib/supabase/relation";
 
 const TONE: Record<string, string> = {
   open: "bg-amber-50 text-amber-700",
@@ -47,8 +48,8 @@ export default async function AdminDisputesPage() {
       ) : (
         <ul className="space-y-3">
           {(data ?? []).map((d) => {
-            const booking = (d as { booking: { id: string; service: { title: string } | null; total_cents: number } | null }).booking;
-            const opener = (d as { opener: { full_name: string; avatar_url: string | null } | null }).opener;
+            const booking = one(d.booking);
+            const opener = one(d.opener);
             return (
               <li key={d.id} className="rounded-2xl bg-white border border-slate-100 p-5">
                 <div className="flex items-start justify-between gap-3 mb-3">
@@ -63,7 +64,7 @@ export default async function AdminDisputesPage() {
                       <span className="text-xs text-slate-500"><ClientDateTime iso={d.created_at} /></span>
                     </div>
                     <div className="text-sm font-bold text-slate-900 mt-2">
-                      {booking?.service?.title ?? "—"} · ${((booking?.total_cents ?? 0) / 100).toFixed(2)}
+                      {one(booking?.service)?.title ?? "—"} · ${((booking?.total_cents ?? 0) / 100).toFixed(2)}
                     </div>
                     <div className="text-xs text-slate-500">
                       Opened by {opener?.full_name ?? "?"} · booking #{booking?.id.slice(0, 8) ?? "—"}
