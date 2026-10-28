@@ -34,6 +34,7 @@ import {
 } from "./lib/target.mjs";
 import { expectedJurisdictionIds, knownAreaIds } from "./lib/jurisdictions.mjs";
 import { JURISDICTION_PROBES } from "./lib/jurisdiction-probes.mjs";
+import { classifyAnonControl } from "./lib/role-probe.mjs";
 
 // ---------------------------------------------------------------------
 // env loading — production variables must come from the real environment
@@ -282,12 +283,16 @@ section("1c. Application credentials");
      * authorisation check must not certify anything.
      */
     const roleProbe = async (key) => {
-      const res = await fetch(`${restUrl}/rest/v1/rpc/whoami_role`, {
-        method: "POST",
-        headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: "{}",
-      });
-      return { status: res.status, body: (await res.text()).slice(0, 180) };
+      try {
+        const res = await fetch(`${restUrl}/rest/v1/rpc/whoami_role`, {
+          method: "POST",
+          headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" },
+          body: "{}",
+        });
+        return { status: res.status, body: (await res.text()).slice(0, 300), error: null };
+      } catch (err) {
+        return { status: null, body: null, error: err };
+      }
     };
 
     try {
@@ -311,17 +316,34 @@ section("1c. Application credentials");
         } else {
           pass("creds", "service-role key holds service_role authority");
 
-          // The control that makes the above meaningful: the SAME probe
-          // must be REFUSED for the anon key. If both succeed, the grant
-          // is wrong and the check proves nothing.
+          /*
+           * The control that makes the above mean something: the SAME
+           * probe must be REFUSED for the anon key.
+           *
+           * This was `status !== 200 -> refused`, which treats the
+           * ABSENCE OF SUCCESS as the PRESENCE OF A DENIAL. Those are
+           * different claims, and an audit proved the difference by
+           * injecting an unrelated 500 for the anon request: preflight
+           * printed "anon key is refused" and returned GO. A 404 did the
+           * same. The control had not run and reported a pass.
+           *
+           * classifyAnonControl names the one answer that constitutes
+           * proof — 401/403 carrying SQLSTATE 42501 — and calls
+           * everything else inconclusive, which blocks.
+           */
           const anonRes = await roleProbe(anon);
-          if (anonRes.status === 200) {
-            block("creds", "the role probe is not actually restricted",
-              "The anon key can execute whoami_role too, so a 200 does not distinguish " +
-              "the roles and the check above proves nothing. EXECUTE should be revoked " +
-              "from anon and authenticated (migration 0069).");
+          const verdict = classifyAnonControl(anonRes.status, anonRes.body, anonRes.error);
+
+          if (verdict.verdict === "denied") {
+            pass("creds", `anon key is refused the service-only probe (${verdict.reason})`);
+          } else if (verdict.verdict === "allowed") {
+            block("creds", "the role probe is not actually restricted", verdict.reason +
+              ". EXECUTE should be revoked from anon and authenticated (migration 0069).");
           } else {
-            pass("creds", `anon key is refused the service-only probe (${anonRes.status})`);
+            block("creds", "the anon negative control was inconclusive",
+              `${verdict.reason}. The service key's authority was asserted, but nothing ` +
+              "confirmed the probe is actually restricted — so that assertion is " +
+              "unverified. Blocking rather than reporting a control that did not run.");
           }
         }
       }
