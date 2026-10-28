@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Sparkles, Shield, MapPin, Lock, ArrowRight, Star, HelpCircle, Headphones,
@@ -103,6 +104,17 @@ const WHY_FEATURES = [
   { icon: Clock, tone: "text-rose-600 bg-rose-50", title: "24/7 availability", sub: "Help when you need it." },
   { icon: Smile, tone: "text-violet-600 bg-violet-50", title: "Satisfaction", sub: "Rated 4.9/5 by thousands." },
 ];
+
+/* The homepage shipped with no canonical.
+ *
+ * Every other public page self-canonicalises, so the one URL most likely
+ * to be reached by several spellings — apex vs www, with and without a
+ * trailing slash, with campaign parameters — was the one not declaring
+ * which spelling is authoritative. www now 308s to the apex, which
+ * settles the host; this settles the rest. */
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default async function LandingPage() {
   const [services, categories, pricingRules, visitor, bookingCountsMap] = await Promise.all([

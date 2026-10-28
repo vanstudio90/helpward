@@ -11,25 +11,49 @@ import { COMPETITORS } from "@/lib/competitors";
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
 
+  /* lastModified must mean "when this content last changed".
+   *
+   * Every static route used `now`, so the sitemap told Google that the
+   * terms, the privacy policy and the login page had ALL been revised
+   * on whatever day it happened to be fetched. A date that moves on its
+   * own carries no information, and a crawler that learns the dates are
+   * meaningless stops using them to prioritise — which is the whole
+   * point of sending them.
+   *
+   * These are the dates the pages genuinely last changed. Update the
+   * entry when you edit the page; do not reach for `new Date()`.
+   *
+   * /login and /signup are omitted entirely. They are utility pages with
+   * nothing to rank, and a sitemap is a list of pages worth indexing. */
+  const d = (iso: string) => new Date(iso);
+
+  /* Programmatic pages share one content date.
+   *
+   * Service and city-service pages are generated from the catalogue, so
+   * "when did this page last change" is "when did the catalogue or the
+   * template last change" — 2026-10-28, when four services were activated
+   * and the templates were revised. Bump this deliberately when the
+   * catalogue or the templates change; do not wire it back to new Date(),
+   * which is how every page came to claim it was edited today. */
+  const CATALOGUE_UPDATED = d("2026-10-28");
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${BASE}/`,        lastModified: now, changeFrequency: "weekly",  priority: 1.0 },
-    { url: `${BASE}/about`,   lastModified: now, changeFrequency: "monthly", priority: 0.6 },
-    { url: `${BASE}/safety`,  lastModified: now, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${BASE}/help`,    lastModified: now, changeFrequency: "monthly", priority: 0.5 },
-    { url: `${BASE}/terms`,   lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${BASE}/privacy`, lastModified: now, changeFrequency: "yearly",  priority: 0.3 },
-    { url: `${BASE}/login`,   lastModified: now, changeFrequency: "yearly",  priority: 0.4 },
-    { url: `${BASE}/signup`,  lastModified: now, changeFrequency: "yearly",  priority: 0.5 },
-    { url: `${BASE}/careers`, lastModified: now, changeFrequency: "weekly",  priority: 0.6 },
-    { url: `${BASE}/blog`,    lastModified: now, changeFrequency: "weekly",  priority: 0.6 },
+    { url: `${BASE}/`,            lastModified: d("2026-10-28"), changeFrequency: "weekly",  priority: 1.0 },
+    { url: `${BASE}/cities`,      lastModified: d("2026-10-28"), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE}/about`,       lastModified: d("2026-10-24"), changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE}/safety`,      lastModified: d("2026-10-26"), changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE}/help`,        lastModified: d("2026-10-26"), changeFrequency: "monthly", priority: 0.5 },
+    { url: `${BASE}/terms`,       lastModified: d("2026-10-28"), changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE}/privacy`,     lastModified: d("2026-10-28"), changeFrequency: "yearly",  priority: 0.3 },
+    { url: `${BASE}/careers`,     lastModified: d("2026-10-24"), changeFrequency: "weekly",  priority: 0.6 },
+    { url: `${BASE}/blog`,        lastModified: d("2026-10-24"), changeFrequency: "weekly",  priority: 0.6 },
   ];
+
 
   // Programmatic: one entry per city landing page (/cities/<slug>)
   const cityRoutes: MetadataRoute.Sitemap = CITIES.map((c) => ({
     url: `${BASE}/cities/${c.slug}`,
-    lastModified: now,
+    lastModified: CATALOGUE_UPDATED,
     changeFrequency: "weekly",
     priority: 0.8,
   }));
@@ -43,14 +67,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const services = await listServicesPublic();
     serviceRoutes = services.map((s) => ({
       url: `${BASE}/services/${s.id}`,
-      lastModified: now,
+      lastModified: CATALOGUE_UPDATED,
       changeFrequency: "weekly",
       priority: s.popular ? 0.9 : 0.7,
     }));
     cityServiceRoutes = CITIES.flatMap((c) =>
       services.map((s) => ({
         url: `${BASE}/cities/${c.slug}/${s.id}`,
-        lastModified: now,
+        lastModified: CATALOGUE_UPDATED,
         changeFrequency: "weekly" as const,
         priority: s.popular ? 0.7 : 0.5,
       }))
@@ -91,7 +115,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const safetyRoutes: MetadataRoute.Sitemap = SAFETY_PAGES.map((p) => ({
     url: `${BASE}/safety/${p.slug}`,
-    lastModified: now,
+    lastModified: CATALOGUE_UPDATED,
     changeFrequency: "monthly",
     priority: 0.7,
   }));
@@ -111,13 +135,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const versusRoutes: MetadataRoute.Sitemap = [
-    { url: `${BASE}/vs`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${BASE}/vs/why`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${BASE}/vs/trust`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
-    { url: `${BASE}/vs/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE}/vs`, lastModified: CATALOGUE_UPDATED, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE}/vs/why`, lastModified: CATALOGUE_UPDATED, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE}/vs/trust`, lastModified: CATALOGUE_UPDATED, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${BASE}/vs/pricing`, lastModified: CATALOGUE_UPDATED, changeFrequency: "monthly", priority: 0.7 },
     ...COMPETITORS.map((c) => ({
       url: `${BASE}/vs/${c.slug}`,
-      lastModified: now,
+      lastModified: CATALOGUE_UPDATED,
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
