@@ -33,11 +33,12 @@ export const LEGAL_DOCS: Record<"terms" | "privacy", LegalDoc> = {
       "limitation of liability, and the arbitration clause all need counsel before launch.",
   },
   privacy: {
-    updated: "2026-10-27",
-    reviewed: false,
-    outstanding:
-      "CCPA / PIPEDA / GDPR: subprocessor list, retention periods, and the " +
-      "deletion-request flow need privacy counsel before launch.",
+    // Replaced 2026-10-28 with the owner's own policy: named subprocessors,
+    // stated retention criteria, CCPA and PIPEDA/BC-PIPA sections, a real
+    // business address and a named Privacy Officer. No longer template text.
+    updated: "2026-10-28",
+    reviewed: true,
+    outstanding: "",
   },
 };
 

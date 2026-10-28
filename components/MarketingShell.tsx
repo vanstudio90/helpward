@@ -1,8 +1,19 @@
 import Link from "next/link";
 
 export function MarketingShell({
-  title, subtitle, children,
-}: { title: string; subtitle?: string; children: React.ReactNode }) {
+  title, subtitle, children, width = "narrow", prose = true, hero,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  /** "wide" gives a long document room for a sidebar table of contents. */
+  width?: "narrow" | "wide";
+  /** Off when the page lays out its own sections instead of flowing prose. */
+  prose?: boolean;
+  /** Extra content under the title, inside the hero. */
+  hero?: React.ReactNode;
+}) {
+  const main = width === "wide" ? "max-w-6xl" : "max-w-3xl";
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b border-slate-100">
@@ -18,12 +29,17 @@ export function MarketingShell({
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+      <main className={`${main} mx-auto px-4 sm:px-6 py-10 sm:py-16`}>
         <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">{title}</h1>
         {subtitle && <p className="mt-2 text-slate-600">{subtitle}</p>}
-        <div className="mt-8 prose prose-slate prose-sm sm:prose-base max-w-none prose-headings:font-bold prose-headings:text-slate-900 prose-a:text-brand-700">
-          {children}
-        </div>
+        {hero}
+        {prose ? (
+          <div className="mt-8 prose prose-slate prose-sm sm:prose-base max-w-none prose-headings:font-bold prose-headings:text-slate-900 prose-a:text-brand-700">
+            {children}
+          </div>
+        ) : (
+          <div className="mt-8">{children}</div>
+        )}
       </main>
 
       <footer className="border-t border-slate-100 py-8">
