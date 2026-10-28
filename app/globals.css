@@ -63,3 +63,35 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 
 /* iOS safe area for the sticky mobile CTA — keeps the bar above the home indicator. */
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
+
+/* ---------------------------------------------------------------------
+ * Stop iOS zooming the page when a field is focused.
+ *
+ * Safari on iPhone automatically zooms into any input, select or textarea
+ * whose computed font-size is under 16px — and because it zooms to centre
+ * the field, the whole page appears to slide sideways. Thirty-three of our
+ * form controls use text-sm (14px) or text-xs (12px), so tapping the email
+ * box on /login shifted the layout far enough to clip the logo.
+ *
+ * The fix is the font size, NOT `maximum-scale=1` or `user-scalable=no`.
+ * Those also stop a person pinch-zooming deliberately, which people with
+ * low vision rely on, and WCAG 1.4.4 treats blocking it as a failure. A
+ * 16px field removes the trigger and leaves the gesture alone.
+ *
+ * Only below the sm breakpoint: desktop has no auto-zoom behaviour and the
+ * smaller type is deliberate there.
+ * ------------------------------------------------------------------- */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* A horizontal rubber-band on iOS reads as the page drifting sideways on
+ * its own. overflow-x: hidden above stops content overflowing; this stops
+ * the elastic overscroll that happens even when nothing does. */
+html, body {
+  overscroll-behavior-x: none;
+}

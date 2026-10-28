@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { WhereYouWork } from "./where-you-work";
 import Link from "next/link";
 import { signupAction } from "../auth/actions";
 import { Mail, Lock, User, AlertCircle, Globe } from "lucide-react";
@@ -10,6 +11,9 @@ import { ReferralBanner } from "./referral-banner";
 export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signupAction, undefined);
   const [role, setRole] = useState<"customer" | "provider">("customer");
+  // Mirrored so the "not your city" waitlist can use it without a second ask.
+  const [email, setEmail] = useState("");
+  const [country, setCountry] = useState("US");
 
   return (
     <div className="bg-white rounded-2xl shadow-xl shadow-brand-900/5 border border-slate-100 p-6 sm:p-8">
@@ -74,6 +78,8 @@ export default function SignupPage() {
             <input
               type="email"
               name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
               placeholder="you@example.com"
@@ -104,7 +110,8 @@ export default function SignupPage() {
             <Globe className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <select
               name="country"
-              defaultValue="US"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
               className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400 appearance-none"
             >
               <option value="US">United States</option>
@@ -112,6 +119,12 @@ export default function SignupPage() {
             </select>
           </div>
         </label>
+
+        {/* A helper with no serviceable city would otherwise complete
+            onboarding, connect a Stripe payout account and wait for an
+            approval that leads nowhere. Customers already get this check at
+            booking; helpers did not. */}
+        {role === "provider" && <WhereYouWork country={country} email={email} />}
 
         <button
           type="submit"
