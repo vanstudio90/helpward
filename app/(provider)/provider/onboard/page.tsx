@@ -103,11 +103,42 @@ export default async function ProviderOnboardPage() {
             }`}>
               {s.done ? <Check className="w-4 h-4" /> : i + 1}
             </span>
+            {/* Every step carries its OWN controls.
+                They did not before: steps 1 and 2 were bare titles with
+                nothing to act on, and the services form sat below the
+                whole list, past a paragraph of legal text. So the first
+                thing with any content on a numbered checklist was step 3,
+                and tapping "Select services" on the dashboard landed on a
+                page whose visible content was about bank accounts. */}
             <div className="flex-1 min-w-0">
               <div className="text-sm font-bold text-slate-900">{s.title}</div>
               {s.done && s.key !== "payouts" && (
                 <div className="text-xs text-emerald-700 mt-0.5">Completed</div>
               )}
+
+              {s.key === "profile" && (
+                <div className="mt-1">
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Add your name, a photo and a short description. This is what a
+                    customer reads when deciding who to book.
+                  </p>
+                  <Link
+                    href="/provider/profile"
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-700"
+                  >
+                    {s.done ? "Edit your profile" : "Complete your profile"} →
+                  </Link>
+                </div>
+              )}
+
+              {s.key === "services" && (
+                <ProviderServicesForm
+                  services={services}
+                  initialSelected={selectedServiceIds}
+                  embedded
+                />
+              )}
+
               {s.key === "payouts" && <PayoutStep state={payoutState} />}
             </div>
           </li>
@@ -119,8 +150,6 @@ export default async function ProviderOnboardPage() {
         checks. Applications are read and approved by a person. If that changes,
         you&rsquo;ll be asked for them here before it applies to you.
       </p>
-
-      <ProviderServicesForm services={services} initialSelected={selectedServiceIds} />
 
       <Link
         href="/provider/dashboard"

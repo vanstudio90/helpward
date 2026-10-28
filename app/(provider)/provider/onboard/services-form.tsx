@@ -7,21 +7,31 @@ import type { ServiceWithCategory } from "@/lib/data/services";
 
 // Replaces the checkbox grid that was never wired to anything.
 export function ProviderServicesForm({
-  services, initialSelected,
+  services, initialSelected, embedded = false,
 }: {
   services: ServiceWithCategory[];
   initialSelected: string[];
+  /** Rendered inside its own numbered step, which already has the card and
+   *  the heading. Without this the step showed a card inside a card under a
+   *  second copy of its own title. */
+  embedded?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(saveProviderServicesAction, undefined);
   const selected = new Set(initialSelected);
 
   return (
-    <form action={formAction} className="mt-8 rounded-2xl bg-slate-50 border border-slate-100 p-5">
-      <div className="text-sm font-bold text-slate-900 mb-1">
-        Services you offer ({services.length} available)
-      </div>
+    <form
+      action={formAction}
+      className={embedded ? "mt-2" : "mt-8 rounded-2xl bg-slate-50 border border-slate-100 p-5"}
+    >
+      {!embedded && (
+        <div className="text-sm font-bold text-slate-900 mb-1">
+          Services you offer ({services.length} available)
+        </div>
+      )}
       <p className="text-[11px] text-slate-500 mb-3">
-        You&apos;ll only be offered tasks for the services you tick here. Pick at least one.
+        You&apos;ll only be offered tasks for the services you tick here.
+        Choose at least one of the {services.length} available.
       </p>
 
       {state?.error && (
