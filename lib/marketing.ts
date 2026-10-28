@@ -90,7 +90,7 @@ export function categorySummary(id: string, items: { title: string }[]): string 
     transportation: `Helpward provides same-day transportation help across the U.S. and Canada including ${list}. Helpers are approved by a person at Helpward before they can take work, and payment is only taken after the ride is complete.`,
     home: `Helpward connects you with approved handy-helpers for home tasks: ${list}. Every helper is approved by a person at Helpward before they can take work, and payment is held until you confirm the task is done.`,
     errands: `Helpward errand-runners handle the time-consuming chores you don't want to do — ${list}. Match in under 3 minutes on average, real-time GPS tracking, and a 24-hour dispute window on every booking.`,
-    presence: `Helpward presence-companion services pair you with an approved helper for visits and waiting tasks: ${list}. These services are emotionally important — every helper is background-checked, identity-verified, and reviewed.`,
+    presence: `Helpward presence-companion services pair you with an approved helper for visits and waiting tasks: ${list}. These services are emotionally important, so every helper is read and approved by a person at Helpward before they can take one.`,
     lifestyle: `Helpward lifestyle helpers cover ${list}. Book on-demand or schedule ahead. All helpers are vetted by a human reviewer at Helpward before they take a single task.`,
     business: `Helpward business-services helpers handle ${list} for small businesses and operators. Approved by Helpward, and available for one-off or recurring engagements.`,
   };

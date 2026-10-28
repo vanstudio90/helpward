@@ -260,8 +260,8 @@ export default async function CityServicePage({
                 {[
                   `Approved local helper in ${city.name}`,
                   "Real-time GPS tracking and in-app chat",
-                  "Payment held until you confirm the task is done",
-                  "Payment held until you confirm the task is complete",
+                  "Card held when a helper accepts, charged when they mark it complete",
+                  "Card held when a helper accepts, charged when they mark it complete",
                   "24-hour dispute window with human support review",
                   "24/7 customer support — call, chat, or email",
                 ].map((i) => (

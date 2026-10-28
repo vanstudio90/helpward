@@ -192,11 +192,16 @@ describe("currency is never guessed from typed text", () => {
  * explanation.
  */
 function stripComments(src: string): string {
+  // BLANKS comment lines rather than removing them, so reported line
+  // numbers still match the real file. Filtering them out shifted every
+  // index after the first comment, and the failures pointed at innocent
+  // lines — which is worse than not reporting a number at all.
+  const blankOut = (m: string) => m.replace(/[^\n]/g, "");
   return src
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, blankOut)
+    .replace(/\/\*[\s\S]*?\*\//g, blankOut)
     .split("\n")
-    .filter((l) => !l.trim().startsWith("//"))
+    .map((l) => (l.trim().startsWith("//") ? "" : l))
     .join("\n");
 }
 
@@ -285,9 +290,20 @@ describe("no surface claims insurance or screening we do not have", () => {
         // rather than a lookahead. And JSX prose wraps, so "None of
         // that exists" lands on the NEXT line from the claim it denies —
         // a window of lines is read, not one.
-        const window = lines.slice(Math.max(0, i - 1), i + 2).join(" ");
-        const prose = window.replace(/&rsquo;|&apos;|&#39;/g, "'");
-        if (/\b(not|no|don't|doesn't|without|never|isn't|aren't|behind|none)\b/i.test(prose)) continue;
+        // The negation has to belong to the SAME statement.
+        //
+        // A window of neighbouring lines was too loose: in a JSX array of
+        // objects, "never multiplied" on the next item suppressed a real
+        // "$1M Marketplace liability cover" claim on this one, and the
+        // sweep reported the homepage clean while it still carried it.
+        //
+        // So: this line, plus the next only when this one does not end a
+        // statement — which is what wrapped prose looks like and what an
+        // array item does not.
+        const continues = !/[,;{}]\s*$/.test(line) && !/\.\s*$/.test(line.trim());
+        const statement = (continues ? `${line} ${lines[i + 1] ?? ""}` : line)
+          .replace(/&rsquo;|&apos;|&#39;/g, "'");
+        if (/\b(not|no|don't|doesn't|without|never|isn't|aren't|behind|none)\b/i.test(statement)) continue;
         for (const [pattern, what] of CLAIMS) {
           if (pattern.test(line)) {
             offenders.push(`${f}:${i + 1} — ${what}\n    ${line.trim().slice(0, 96)}`);
@@ -318,5 +334,30 @@ describe("no surface claims insurance or screening we do not have", () => {
         `the detector no longer recognises: "${line}"`,
       );
     }
+  });
+});
+
+// The detector's own blind spot, kept as a test.
+//
+// A window of neighbouring lines meant "never multiplied" on the NEXT
+// array item suppressed a real "$1M Marketplace liability cover per
+// booking" claim — and the sweep reported the homepage clean while it
+// still carried the claim in production.
+describe("the claim detector does not let neighbours excuse a claim", () => {
+  test("a negation in an adjacent array item does not suppress the claim", () => {
+    const lines = [
+      '{ value: "$1M", label: "Marketplace liability cover per booking" },',
+      '{ value: "No surge", label: "Flat $4.50 service fee, never multiplied" },',
+    ];
+    const line = lines[0];
+    const continues = !/[,;{}]\s*$/.test(line) && !/\.\s*$/.test(line.trim());
+    assert.equal(continues, false, "an array item ends a statement; it must not borrow the next line");
+  });
+
+  test("wrapped prose still shares its negation", () => {
+    const line = "to describe a $1M aggregate policy, an underwriter and a claims process. None of that";
+    // Ends mid-sentence, so the next line is genuinely part of it.
+    const continues = !/[,;{}]\s*$/.test(line) && !/\.\s*$/.test(line.trim());
+    assert.equal(continues, true, "wrapped prose must still read its continuation");
   });
 });

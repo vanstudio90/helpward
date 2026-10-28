@@ -1,6 +1,8 @@
 import { CardManager, type CardRow } from "./card-form";
 import { listMyBookings, listMyPaymentMethods, getMe } from "@/lib/data/customer";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { totalsByCurrency, describeTotals } from "@/lib/money-by-currency";
+import { formatMoney } from "@/lib/money";
 import Link from "next/link";
 import { CreditCard, Plus, Wallet, Gift, DollarSign, Download } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
@@ -30,16 +32,29 @@ export default async function PaymentsPage() {
   const netOf = (b: { id: string; total_cents: number }) =>
     Math.max(0, b.total_cents - (refundedByBooking.get(b.id) ?? 0));
 
-  const grossSpentCents = completed.reduce((s, b) => s + b.total_cents, 0);
-  const totalSpentCents = completed.reduce((s, b) => s + netOf(b), 0);
-  const refundedCents = grossSpentCents - totalSpentCents;
-
+  // Grouped by the money it was actually spent in.
+  //
+  // These were raw-cent sums across currencies, so a CA$24.50 booking
+  // and a US$24.50 booking showed as "$49.00" — a number that is not an
+  // amount of anything. There is deliberately no conversion: that needs
+  // a rate and a date, and inventing one turns a visibly wrong figure
+  // into an invisibly wrong one.
   const startOfMonth = new Date();
   startOfMonth.setUTCDate(1);
   startOfMonth.setUTCHours(0, 0, 0, 0);
-  const monthSpentCents = completed
-    .filter((b) => b.completed_at && new Date(b.completed_at) >= startOfMonth)
-    .reduce((s, b) => s + netOf(b), 0);
+
+  const rows = completed.map((b) => ({
+    currency: (b as { currency?: string }).currency ?? "USD",
+    grossCents: b.total_cents,
+    refundedCents: refundedByBooking.get(b.id) ?? 0,
+    completedAt: b.completed_at,
+  }));
+
+  const allTotals = totalsByCurrency(rows);
+  const monthTotals = totalsByCurrency(
+    rows.filter((r) => r.completedAt && new Date(r.completedAt) >= startOfMonth),
+  );
+  const refundedTotal = allTotals.reduce((n, t) => n + t.refundedCents, 0);
 
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
@@ -48,13 +63,13 @@ export default async function PaymentsPage() {
 
       <div className="grid grid-cols-3 gap-3 mb-5">
         <Stat
-          label={refundedCents > 0 ? "Total Spent (net)" : "Total Spent"}
-          value={`$${(totalSpentCents / 100).toFixed(2)}`}
+          label={refundedTotal > 0 ? "Total spent (net)" : "Total spent"}
+          value={describeTotals(allTotals)}
           icon={<CreditCard className="w-5 h-5 text-brand-600" />}
           tint="bg-brand-50"
-          sub={refundedCents > 0 ? `$${(refundedCents / 100).toFixed(2)} refunded` : undefined}
+          sub={refundedTotal > 0 ? `${describeTotals(allTotals, (t) => t.refundedCents)} refunded` : undefined}
         />
-        <Stat label="This Month" value={`$${(monthSpentCents / 100).toFixed(2)}`} icon={<DollarSign className="w-5 h-5 text-emerald-600" />} tint="bg-emerald-50" />
+        <Stat label="This Month" value={describeTotals(monthTotals)} icon={<DollarSign className="w-5 h-5 text-emerald-600" />} tint="bg-emerald-50" />
         <Stat label="Completed" value={String(completed.length)} icon={<CreditCard className="w-5 h-5 text-amber-600" />} tint="bg-amber-50" />
 
       </div>
@@ -80,7 +95,9 @@ export default async function PaymentsPage() {
                 <div className="text-sm font-bold text-slate-900 truncate">{b.service.title}</div>
                 <div className="text-[11px] text-slate-500"><ClientDateTime iso={b.completed_at} mode="date" /></div>
               </div>
-              <div className="text-sm font-bold text-slate-900">${(b.total_cents / 100).toFixed(2)}</div>
+              <div className="text-sm font-bold text-slate-900 tabular-nums">
+                {formatMoney(b.total_cents, (b as { currency?: string }).currency ?? "USD")}
+              </div>
               {/* Was an inert <button>: it rendered, it was clickable,
                   and nothing happened. Now it opens the Stripe-hosted
                   receipt, which already reflects any refunds. */}

@@ -31,7 +31,7 @@ values
 
   -- Home Help
   ('furniture-assembly', 'home-help', 'Furniture Assembly',
-   'A vetted handyperson assembles your flat-pack furniture — IKEA, beds, desks, dressers, shelves. Tools included.',
+   'A handyperson assembles your flat-pack furniture — IKEA, beds, desks, dressers, shelves. Tools included.',
    5000, '30 min', false,
    'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=70', true),
   ('tv-mounting', 'home-help', 'TV Mounting',
@@ -51,7 +51,7 @@ values
    4500, '45 min', false,
    'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=800&q=70', true),
   ('maid-service', 'home-help', 'Maid Service',
-   'Insured cleaner for dusting, vacuuming, kitchens, bathrooms and laundry — same cleaner can be re-booked weekly.',
+   'A cleaner for dusting, vacuuming, kitchens, bathrooms and laundry — the same cleaner can be re-booked weekly.',
    3500, 'Today', false,
    'https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=800&q=70', true),
   ('appliance-repair', 'home-help', 'Appliance Repair',
@@ -91,7 +91,7 @@ values
    1800, 'Tonight', false,
    'https://images.unsplash.com/photo-1455642305367-68834a1da7ab?auto=format&fit=crop&w=800&q=70', true),
   ('elder-assistance', 'presence', 'Elder Assistance',
-   'Background-checked companion for seniors — grocery trips, doctor visits, conversation, light housekeeping.',
+   'A companion for seniors — grocery trips, doctor visits, conversation, light housekeeping.',
    2500, '45 min', false,
    'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=800&q=70', true),
 
@@ -125,7 +125,7 @@ values
    2200, 'Today', false,
    'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=70', true),
   ('dog-walking', 'lifestyle', 'Dog Walking',
-   'Vetted walker takes your dog out for 30 or 60 minutes — fresh water, treats, GPS-tracked route and photo update.',
+   'A walker takes your dog out for 30 or 60 minutes — fresh water, treats, GPS-tracked route and photo update.',
    2000, 'Starts in 15 min', false,
    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=70', true),
 

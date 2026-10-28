@@ -204,7 +204,7 @@ export default async function LandingPage() {
             // average. What remains are commitments we control, not measured
             // statistics we cannot support.
             { icon: ShieldCheck, tint: "bg-emerald-50 text-emerald-600", value: "Every helper", label: "Reviewed and approved by us before taking work" },
-            { icon: DollarSign, tint: "bg-violet-50 text-violet-600", value: "$1M", label: "Marketplace liability cover per booking" },
+            { icon: DollarSign, tint: "bg-violet-50 text-violet-600", value: "80%", label: "Of every booking goes to your helper" },
             { icon: Clock, tint: "bg-brand-50 text-brand-600", value: "No surge", label: "Flat $4.50 service fee, never multiplied" },
             { icon: Headphones, tint: "bg-rose-50 text-rose-600", value: "Pay after", label: "You're charged once the task is complete" },
           ].map((s) => (

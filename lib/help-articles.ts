@@ -173,7 +173,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       ] },
       { type: "h2", text: "Property damage or theft" },
       { type: "p", text:
-        "File a report at safety@helpward.com with photos and your booking ID within 24 hours. Helpward's insurance covers damage up to $1M; you'll be asked for documentation." },
+        "File a report at safety@helpward.com with photos and your booking ID within 24 hours. We'll review it and can refund the booking in full or in part. Helpward doesn't currently carry platform insurance, so damage beyond the booking value isn't covered by us." },
       { type: "h2", text: "Helper no-show" },
       { type: "p", text:
         "Bookings auto-cancel 20 minutes past the scheduled time if the helper hasn't started. You'll receive a notification and your card is not charged." },

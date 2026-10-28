@@ -1,3 +1,4 @@
+import { totalsByCurrency, type CurrencyTotal } from "@/lib/money-by-currency";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // Customer-side "lifetime stats" fetcher — the mirror of helper analytics.
@@ -6,8 +7,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 // in so the caller can short-circuit.
 
 export type CustomerLifetimeStats = {
-  totalSpentCents: number;
-  spent30dCents: number;
+  /** Lifetime spend, split by the money it was spent in. */
+  totalSpent: CurrencyTotal[];
+  spent30d: CurrencyTotal[];
   completedAllTime: number;
   completedLast30Days: number;
   favoriteService: { title: string; bookings: number } | null;
@@ -32,7 +34,7 @@ export async function getCustomerLifetimeStats(): Promise<CustomerLifetimeStats 
     supabase
       .from("bookings")
       .select(`
-        id, status, total_cents, completed_at, created_at, provider_id, service_id,
+        id, status, total_cents, currency, completed_at, created_at, provider_id, service_id,
         service:services(title),
         provider:provider_profiles!bookings_provider_id_fkey(
           user_id, slug,
@@ -57,7 +59,8 @@ export async function getCustomerLifetimeStats(): Promise<CustomerLifetimeStats 
   ]);
 
   type Row = {
-    id: string; total_cents: number; completed_at: string | null; created_at: string;
+    id: string; total_cents: number; currency: string | null;
+    completed_at: string | null; created_at: string;
     provider_id: string; service_id: string;
     service: { title: string } | null;
     provider: {
@@ -67,10 +70,19 @@ export async function getCustomerLifetimeStats(): Promise<CustomerLifetimeStats 
   };
   const completed = (completedRows ?? []) as unknown as Row[];
 
-  const totalSpentCents = completed.reduce((s, b) => s + (b.total_cents ?? 0), 0);
+  // Grouped by currency, not summed across them. Adding CAD cents to USD
+  // cents produces a quantity with no unit — a CA$24.50 booking and a
+  // US$24.50 booking are not $49.00 of anything.
   const since30dIso = since30d.toISOString();
   const last30 = completed.filter((b) => (b.completed_at ?? b.created_at) >= since30dIso);
-  const spent30dCents = last30.reduce((s, b) => s + (b.total_cents ?? 0), 0);
+
+  const toRow = (b: Row) => ({
+    currency: b.currency ?? "USD",
+    grossCents: b.total_cents ?? 0,
+    refundedCents: 0,
+  });
+  const totalSpent = totalsByCurrency(completed.map(toRow));
+  const spent30d = totalsByCurrency(last30.map(toRow));
 
   // Favorite service: count completed bookings per service_id, take the top.
   const svcCount = new Map<string, { title: string; n: number }>();
@@ -124,8 +136,8 @@ export async function getCustomerLifetimeStats(): Promise<CustomerLifetimeStats 
     : null;
 
   return {
-    totalSpentCents,
-    spent30dCents,
+    totalSpent,
+    spent30d,
     completedAllTime: completed.length,
     completedLast30Days: last30.length,
     favoriteService: favoriteService ? { title: favoriteService.title, bookings: favoriteService.n } : null,

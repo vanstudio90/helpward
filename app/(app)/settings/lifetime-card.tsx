@@ -3,11 +3,10 @@ import { Sparkles, DollarSign, CheckCircle2, Heart, Calendar, ArrowRight } from 
 import { Sparkline } from "@/components/charts/Sparkline";
 import type { CustomerLifetimeStats } from "@/lib/data/customer-lifetime";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { describeTotals } from "@/lib/money-by-currency";
 
-function formatMoney(cents: number): string {
-  if (cents >= 100_00) return `$${Math.round(cents / 100).toLocaleString()}`;
-  return `$${(cents / 100).toFixed(2)}`;
-}
+// Lifetime spend is grouped by currency upstream, so this renders a
+// LIST. A bare "$" over mixed CAD and USD was a number with no unit.
 
 // Customer-side mirror of /provider/analytics — compact lifetime-stats card
 // slotted on /settings. Hides itself when there's nothing to show (no
@@ -32,8 +31,8 @@ export function CustomerLifetimeCard({ stats }: { stats: CustomerLifetimeStats }
           icon={<DollarSign className="w-3.5 h-3.5 text-emerald-600" />}
           tint="bg-emerald-50"
           label="Total spent"
-          value={formatMoney(stats.totalSpentCents)}
-          sub={`${formatMoney(stats.spent30dCents)} last 30 days`}
+          value={describeTotals(stats.totalSpent)}
+          sub={`${describeTotals(stats.spent30d)} last 30 days`}
         />
         <Stat
           icon={<CheckCircle2 className="w-3.5 h-3.5 text-brand-600" />}
@@ -61,7 +60,7 @@ export function CustomerLifetimeCard({ stats }: { stats: CustomerLifetimeStats }
         />
       </div>
 
-      {stats.totalSpentCents > 0 && weeklyValues.some((v) => v > 0) && (
+      {stats.totalSpent.some((t) => t.netCents > 0) && weeklyValues.some((v) => v > 0) && (
         <div className="rounded-xl bg-slate-50 p-3 mb-3">
           <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">
             Weekly spend (last 12 weeks)

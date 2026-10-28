@@ -144,14 +144,15 @@ export default async function ServiceDetailPage({
             </p>
 
             <div className="mt-5 flex flex-wrap items-center gap-3 text-xs">
-              <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Helpers available now
-              </span>
+              {/* A pulsing green "Helpers available now" rendered on every
+                  service page whatever the actual supply. A live-status
+                  indicator that is not reading live status is the most
+                  misleading shape a claim can take. */}
               <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full font-semibold">
                 <Clock className="w-3 h-3" /> {service.eta_label ?? "Avg 18 min"}
               </span>
               <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full font-semibold">
-                <Star className="w-3 h-3 fill-amber-500 text-amber-500" /> 4.9 avg rating
+                <Star className="w-3 h-3 fill-amber-500 text-amber-500" /> Rated after every task
               </span>
             </div>
 
@@ -214,7 +215,7 @@ export default async function ServiceDetailPage({
                 {[
                   "Approved local helper in your city",
                   "Real-time GPS tracking and in-app chat",
-                  "Payment held until you confirm the task is done",
+                  "Card held when a helper accepts, charged when they mark it complete",
                   "Payment held until you confirm the task is complete",
                   "24-hour dispute window with human support review",
                   "24/7 customer support — call, chat, or email",
