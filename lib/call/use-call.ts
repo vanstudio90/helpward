@@ -508,9 +508,23 @@ export function useCall(bookingId: string, selfId: string) {
     setMuted(!track.enabled);
   }, []);
 
+  /**
+   * Turn down an incoming call without ever opening the microphone.
+   *
+   * There was no way to do this: an incoming call was answered
+   * automatically on page load, so "not now" was not an option the
+   * interface offered. Declining marks the attempt dead rather than
+   * leaving it ringing until the stale-call sweep gets to it, so the
+   * caller learns immediately instead of listening to silence.
+   */
+  const declineCall = useCallback(async (id: string) => {
+    setPhase("ended");
+    await supabase.current.rpc("abandon_call", { p_call_id: id, p_reason: "declined" });
+  }, []);
+
   return {
     phase, error, muted, seconds, callId,
     remoteAudioRef: remoteAudio,
-    startCall, answerCall, hangUp, toggleMute,
+    startCall, answerCall, declineCall, hangUp, toggleMute,
   };
 }

@@ -3,10 +3,18 @@
 import { useState, useTransition } from "react";
 import { Heart, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { formatMoney } from "@/lib/money";
 import { setTipAction } from "../actions";
 
-// Post-completion tip widget. Shows preset percentages of the base price + a
-// custom field. 100% of the tip goes to the helper — we say so explicitly.
+// Post-completion tip widget. Shows preset percentages of the base price
+// plus a custom field. 100% of the tip goes to the helper — we say so.
+//
+// CHOOSING AN AMOUNT AND SENDING IT ARE TWO SEPARATE ACTIONS. They used
+// to be one: tapping "20%" charged the card there and then. Combined
+// with the (correct) rule below that a sent tip is final, that made a
+// single mis-tap on a five-button grid an irreversible charge on a real
+// card. A tip is the one payment on this page the customer is choosing
+// to make, so it is the last place a stray tap should move money.
 //
 // A SENT TIP IS FINAL, and this component has to say so. It used to keep
 // offering "Update", "Remove tip" and the percentage buttons after a tip
@@ -15,7 +23,7 @@ import { setTipAction } from "../actions";
 // The tip is a separate Stripe charge, so changing it would mean charging
 // a difference or refunding one.
 
-const PRESETS_PCT = [0, 10, 15, 20, 25];
+const PRESETS_PCT = [10, 15, 20, 25];
 
 export function TipCard({
   bookingId, basePriceCents, currentTipCents, currency, helperName,
@@ -30,23 +38,34 @@ export function TipCard({
   // The money has moved. Nothing below may offer to change it.
   const isFinal = currentTipCents > 0;
   const [custom, setCustom] = useState("");
+  // What the customer has CHOSEN. Null until they pick something, and
+  // never enough on its own to charge anything.
+  const [chosenCents, setChosenCents] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const baseDollars = basePriceCents / 100;
-  const currentTipDollars = currentTipCents / 100;
-  const hasTipped = currentTipCents > 0;
 
-  const presets = PRESETS_PCT.map((p) => ({
-    pct: p,
-    label: p === 0 ? "No tip" : `${p}%`,
-    dollars: Math.round((baseDollars * p) / 100 * 100) / 100,
-    selected: p > 0 && Math.abs(currentTipDollars - (baseDollars * p) / 100) < 0.01,
+  const presets = PRESETS_PCT.map((pct) => ({
+    pct,
+    cents: Math.round((basePriceCents * pct) / 100),
   }));
 
-  const submit = (tipDollars: number) => {
+  const customCents = (() => {
+    const n = parseFloat(custom);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return Math.round(n * 100);
+  })();
+
+  const chooseCustom = () => {
+    setErr(null);
+    if (customCents === null) return;
+    setChosenCents(customCents);
+  };
+
+  const sendChosen = () => {
+    if (chosenCents === null || chosenCents <= 0) return;
     setErr(null); setSuccess(null);
     start(async () => {
-      const r = await setTipAction(bookingId, tipDollars);
+      const r = await setTipAction(bookingId, chosenCents / 100);
       if (r?.error) setErr(r.error);
       else if (r?.success) setSuccess(r.success);
     });
@@ -60,11 +79,11 @@ export function TipCard({
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-bold text-slate-900">
-            {hasTipped ? `You tipped ${helperName}` : `Tip ${helperName}?`}
+            {isFinal ? `You tipped ${helperName}` : `Tip ${helperName}?`}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            {hasTipped
-              ? `${currency} $${currentTipDollars.toFixed(2)} added — 100% goes to the helper.`
+            {isFinal
+              ? `${formatMoney(currentTipCents, currency)} added — 100% goes to the helper.`
               : "100% of your tip goes to the helper. Nothing to Helpward."}
           </p>
         </div>
@@ -85,7 +104,7 @@ export function TipCard({
         <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
             <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
-            {currency} ${currentTipDollars.toFixed(2)} sent to {helperName}
+            {formatMoney(currentTipCents, currency)} sent to {helperName}
           </div>
           <p className="text-xs text-emerald-800/80 mt-1">
             Tips are charged straight away and can&rsquo;t be changed or taken back.
@@ -94,64 +113,81 @@ export function TipCard({
           </p>
         </div>
       ) : (
-      <>
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
-        {presets.map((p) => (
-          <button
-            key={p.pct}
-            type="button"
-            disabled={pending}
-            onClick={() => submit(p.dollars)}
-            className={cn(
-              "rounded-xl border py-2 px-1 text-center transition disabled:opacity-50",
-              p.selected
-                ? "border-brand-500 bg-brand-50 text-brand-700"
-                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-            )}
-          >
-            <div className="text-xs font-bold">{p.label}</div>
-            {p.pct > 0 && (
-              <div className="text-[10px] text-slate-500 mt-0.5">${p.dollars.toFixed(2)}</div>
-            )}
-          </button>
-        ))}
-      </div>
+        <>
+          {/* Step 1 — choose. These buttons move no money. */}
+          <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Choose a tip amount">
+            {presets.map((p) => {
+              const selected = chosenCents === p.cents;
+              return (
+                <button
+                  key={p.pct}
+                  type="button"
+                  disabled={pending}
+                  aria-pressed={selected}
+                  onClick={() => { setErr(null); setCustom(""); setChosenCents(p.cents); }}
+                  className={cn(
+                    "rounded-xl border py-2 px-1 text-center transition disabled:opacity-50",
+                    selected
+                      ? "border-brand-500 bg-brand-50 text-brand-700 ring-2 ring-brand-200"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                  )}
+                >
+                  <div className="text-xs font-bold">{p.pct}%</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    {formatMoney(p.cents, currency)}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
-      <div className="mt-3 flex items-center gap-2">
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
-          <input
-            type="number"
-            step="0.50"
-            min="0"
-            max="500"
-            value={custom}
-            onChange={(e) => setCustom(e.target.value)}
-            placeholder="Custom amount"
-            className="w-full pl-6 pr-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
-          />
-        </div>
-        <button
-          type="button"
-          disabled={pending || !custom}
-          onClick={() => submit(parseFloat(custom) || 0)}
-          className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-semibold disabled:opacity-50"
-        >
-          {pending ? "Saving…" : hasTipped ? "Update" : "Send tip"}
-        </button>
-      </div>
+          <div className="mt-3 flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">$</span>
+              <input
+                type="number"
+                step="0.50"
+                min="0"
+                max="500"
+                value={custom}
+                onChange={(e) => { setCustom(e.target.value); setChosenCents(null); }}
+                onBlur={chooseCustom}
+                placeholder="Custom amount"
+                aria-label="Custom tip amount"
+                className="w-full pl-6 pr-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+              />
+            </div>
+            <button
+              type="button"
+              disabled={pending || customCents === null}
+              onClick={chooseCustom}
+              className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 text-sm font-semibold disabled:opacity-50 hover:bg-slate-50"
+            >
+              Use this
+            </button>
+          </div>
 
-      {hasTipped && (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => submit(0)}
-          className="mt-2 text-[11px] text-slate-500 hover:text-slate-700 underline"
-        >
-          Remove tip
-        </button>
-      )}
-      </>
+          {/* Step 2 — send. The only control that charges anything, and
+              it names the amount, the currency and the person, so the
+              confirming tap cannot be a blind one. */}
+          <div className="mt-3 border-t border-slate-100 pt-3">
+            <button
+              type="button"
+              disabled={pending || chosenCents === null || chosenCents <= 0}
+              onClick={sendChosen}
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold disabled:opacity-40"
+            >
+              {pending
+                ? "Sending…"
+                : chosenCents === null
+                  ? "Choose an amount first"
+                  : `Send ${formatMoney(chosenCents, currency)} to ${helperName}`}
+            </button>
+            <p className="mt-1.5 text-[11px] text-slate-500 text-center">
+              Charged to your card straight away, and can&rsquo;t be taken back.
+            </p>
+          </div>
+        </>
       )}
     </div>
   );

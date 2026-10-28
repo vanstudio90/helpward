@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Phone, PhoneOff, Mic, MicOff, AlertCircle, Loader2 } from "lucide-react";
 import { useCall } from "@/lib/call/use-call";
@@ -39,17 +39,20 @@ export function CallPanel({
   // time if the person is reading it.
   const [starting, setStarting] = useState(false);
 
-  // Join a call that is already ringing rather than making the person
-  // press Call and race the other side into a second session.
+  // An incoming call is OFFERED, never taken.
   //
-  // Depending on `call` re-ran this on EVERY render — the hook returns a
-  // fresh object each time — so it fired repeatedly while the connection
-  // was still being set up. Depending on the two stable values it
-  // actually reads is both correct and quiet.
-  const { phase, answerCall } = call;
-  useEffect(() => {
-    if (incomingCallId && phase === "idle") void answerCall(incomingCallId);
-  }, [incomingCallId, phase, answerCall]);
+  // This used to answer automatically the moment the page rendered:
+  //
+  //   if (incomingCallId && phase === "idle") void answerCall(incomingCallId)
+  //
+  // which opened the microphone and connected audio to the other party
+  // without the person agreeing to anything — including when the page
+  // was merely refreshed, or opened in a background tab. Joining the
+  // ringing session rather than racing a second one is still right; doing
+  // it without being asked is not.
+  const { phase, answerCall, declineCall } = call;
+  const [declined, setDeclined] = useState<string | null>(null);
+  const ringingIn = incomingCallId && phase === "idle" && declined !== incomingCallId;
 
   const live = call.phase === "ringing" || call.phase === "connecting" || call.phase === "connected";
 
@@ -115,8 +118,8 @@ export function CallPanel({
                 "Connecting…" covered everything from asking for the
                 microphone to negotiating audio, so a press looked like
                 nothing had happened. */}
-            {call.phase === "idle" && (incomingCallId
-              ? "Incoming call — answering…"
+            {call.phase === "idle" && (ringingIn
+              ? `${counterpartName} is calling.`
               : "This service is delivered by call.")}
             {call.phase === "ringing" && "Calling — waiting for them to pick up…"}
             {call.phase === "connecting" && (incomingCallId
@@ -153,6 +156,23 @@ export function CallPanel({
               <PhoneOff className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
+        ) : ringingIn ? (
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => { setDeclined(incomingCallId!); void declineCall(incomingCallId!); }}
+              className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50"
+            >
+              Decline
+            </button>
+            <button
+              type="button"
+              onClick={() => void answerCall(incomingCallId!)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold"
+            >
+              <Phone className="w-4 h-4" aria-hidden="true" /> Answer
+            </button>
+          </div>
         ) : (
           <button
             type="button"
@@ -178,6 +198,12 @@ export function CallPanel({
         <p className="mt-2.5 text-xs text-rose-700 flex items-start gap-1.5">
           <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" aria-hidden="true" />
           {call.error}
+        </p>
+      )}
+
+      {ringingIn && (
+        <p className="mt-2.5 text-[11px] text-slate-500">
+          Your microphone stays off until you answer.
         </p>
       )}
 
