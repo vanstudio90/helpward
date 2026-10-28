@@ -73,31 +73,7 @@ export function catchUpSince(held: SyncMessage[]): string | null {
   return new Date(t - 1000).toISOString();
 }
 
-export type ConnectionState = "connecting" | "live" | "retrying";
-
-/** Map a Supabase channel status to what the person should be told.
- *
- * SUBSCRIBED is the only status that means messages are actually being
- * delivered. Everything else — an error, a timeout, a closed socket — is
- * the same thing from the reader's point of view: the thread is not
- * updating itself, and the fallback poll has to carry it.
- */
-export function connectionStateFor(status: string): ConnectionState {
-  if (status === "SUBSCRIBED") return "live";
-  if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") return "retrying";
-  return "connecting";
-}
-
-/** How long to wait before the next catch-up poll.
- *
- * Polling exists only to cover the window where the socket is not
- * delivering, so it backs off: a quick first few passes to cover a brief
- * blip, then slower, so a long outage with an open tab does not turn
- * into a steady stream of requests. Bounded at the top rather than
- * unbounded, because a thread that gives up entirely is the bug we are
- * fixing.
- */
-export function nextPollDelayMs(consecutivePolls: number): number {
-  const ladder = [2_000, 2_000, 5_000, 5_000, 10_000, 15_000];
-  return ladder[Math.min(consecutivePolls, ladder.length - 1)] ?? 15_000;
-}
+// The connection/backoff policy is shared with call state — see
+// lib/realtime-recovery.ts. Re-exported so this module stays the one
+// import a message thread needs.
+export { connectionStateFor, nextPollDelayMs, type ConnectionState } from "@/lib/realtime-recovery";

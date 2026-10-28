@@ -1,6 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import {
+  outstandingRequirements, canAcceptWork, type ProviderReadiness,
+} from "@/lib/provider-readiness";
+import {
   AlertCircle, CheckCircle2, ArrowRight, DollarSign, Calendar, Star,
 } from "lucide-react";
 import { HelperNextStepsWidget } from "./next-steps";
@@ -17,16 +20,35 @@ export default async function ProviderDashboardPage() {
     supabase.from("provider_profiles").select("*").eq("user_id", user.id).maybeSingle(),
   ]);
 
-  // Payout readiness means transfers are ACTIVE, not merely that an account
-  // exists: an account can be created with Stripe still waiting on a
-  // document, and a destination charge to it fails at authorization.
-  const needsOnboarding = !pp?.id_verified_at || !pp?.stripe_transfers_active;
+  // Readiness comes from ONE definition shared with the onboarding page,
+  // and that definition mirrors what the database enforces.
+  //
+  // This used to be `!pp?.id_verified_at || !pp?.stripe_transfers_active`.
+  // Nothing writes id_verified_at — Stripe Identity is not wired — so it
+  // is null for every helper who has ever signed up, which made this
+  // banner show for ALL of them permanently. The approved, payable QA
+  // helper that completed three paid jobs was still being told to verify
+  // an ID and pass a background check before it could accept work.
+  const { count: myServiceCount } = await supabase
+    .from("provider_services")
+    .select("service_id", { count: "exact", head: true })
+    .eq("provider_id", user.id);
+
+  const readiness: ProviderReadiness = {
+    status: (pp?.status as string | null) ?? null,
+    isOnline: pp?.is_online === true,
+    serviceCount: myServiceCount ?? 0,
+    transfersActive: pp?.stripe_transfers_active === true,
+    hasBio: !!(pp?.bio && String(pp.bio).trim().length > 0),
+  };
+  const outstanding = outstandingRequirements(readiness);
+  const ready = canAcceptWork(readiness);
 
   // Only fetch the next-steps inputs once we know the helper is past the
   // onboarding wall — pre-onboarding the only valid next step is "finish
   // onboarding" which the banner above already handles.
   let nextSteps: React.ReactNode = null;
-  if (user && !needsOnboarding && pp?.status === "approved") {
+  if (user && ready) {
     const [
       { count: serviceCount },
       { count: weeklyRuleCount },
@@ -58,31 +80,53 @@ export default async function ProviderDashboardPage() {
       </h1>
       <p className="text-sm text-slate-500 mt-1">Your provider control center.</p>
 
-      {needsOnboarding && (
+      {/* Each outstanding requirement, named, with the step that
+          actually addresses it. "Finish setting up your account" over a
+          list of three things — two of which were not requirements —
+          told a helper neither what was wrong nor what to do. */}
+      {outstanding.length > 0 && (
         <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <div className="text-sm font-bold text-slate-900">Finish setting up your account</div>
-            <p className="text-xs text-slate-700 mt-1 leading-relaxed">
-              You need to verify your ID, pass a background check, and connect a bank account before you can accept tasks.
-            </p>
-            <Link
-              href="/provider/onboard"
-              className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold"
-            >
-              Continue onboarding <ArrowRight className="w-4 h-4" />
-            </Link>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold text-slate-900">
+              {outstanding.length === 1
+                ? outstanding[0].key === "approval"
+                  ? "Your application is being reviewed"
+                  : `One thing left: ${outstanding[0].label.toLowerCase()}`
+                : "A couple of things before you can accept work"}
+            </div>
+            <ul className="mt-2 space-y-2">
+              {outstanding.map((q) => (
+                <li key={q.key} className="text-xs text-slate-700 leading-relaxed">
+                  <span className="font-semibold">{q.label}.</span> {q.detail}
+                  {q.href && q.action && (
+                    <Link
+                      href={q.href}
+                      className="ml-1 inline-flex items-center gap-1 font-semibold text-amber-900 underline"
+                    >
+                      {q.action} <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       )}
 
-      {!needsOnboarding && pp?.status === "approved" && (
+      {ready && (
         <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 flex items-start gap-3">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
           <div>
-            <div className="text-sm font-bold text-slate-900">You're approved and ready to work</div>
+            <div className="text-sm font-bold text-slate-900">
+              {readiness.isOnline
+                ? "You're online and receiving requests"
+                : "You're approved and ready to work"}
+            </div>
             <p className="text-xs text-slate-700 mt-1">
-              Toggle yourself online from <Link href="/provider/active" className="text-emerald-700 font-semibold underline">Active task</Link> to start receiving requests.
+              {readiness.isOnline
+                ? <>Offers appear on <Link href="/provider/active" className="text-emerald-700 font-semibold underline">Active task</Link>.</>
+                : <>Toggle yourself online from <Link href="/provider/active" className="text-emerald-700 font-semibold underline">Active task</Link> to start receiving requests.</>}
             </p>
           </div>
         </div>

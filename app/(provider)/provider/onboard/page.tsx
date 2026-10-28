@@ -1,5 +1,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import {
+  outstandingRequirements, canAcceptWork, type ProviderReadiness,
+} from "@/lib/provider-readiness";
 import { listServices } from "@/lib/data/services";
 import { Check } from "lucide-react";
 import { ProviderServicesForm } from "./services-form";
@@ -34,17 +37,33 @@ export default async function ProviderOnboardPage() {
   // while the real condition (approved, offering a service, online) might
   // already be met and they might already be taking jobs. Neither check
   // is wired, so neither is a requirement, so neither belongs here.
+  // Readiness comes from lib/provider-readiness.ts, the same definition
+  // the Dashboard uses, so the two can no longer disagree — which they
+  // did: this page listed the real steps while the Dashboard still
+  // demanded an ID check that nothing enforces or ever completes.
+  const readiness: ProviderReadiness = {
+    status: (pp?.status as string | null) ?? null,
+    isOnline: pp?.is_online === true,
+    serviceCount: providerServiceCount,
+    transfersActive: pp?.stripe_transfers_active === true,
+    hasBio: !!(pp?.bio && String(pp.bio).trim().length > 0),
+  };
+  const outstanding = outstandingRequirements(readiness);
+  const ready = canAcceptWork(readiness);
+
+  // The bio is not a requirement — nothing gates on it — but a customer
+  // reads it, so it stays on the list as a step rather than a blocker.
   const steps = [
-    { key: "profile", title: "Basic profile", done: !!pp?.bio },
-    { key: "services", title: "Pick services you offer", done: providerServiceCount > 0 },
+    { key: "profile", title: "Basic profile", done: readiness.hasBio },
+    { key: "services", title: "Pick services you offer", done: readiness.serviceCount > 0 },
     // Started is not done: an account can exist with Stripe still waiting on
     // a document. stripe_transfers_active is the flag that means a
     // destination charge to this helper will actually land.
-    { key: "payouts", title: "Connect a bank account", done: !!pp?.stripe_transfers_active },
+    { key: "payouts", title: "Connect a bank account", done: readiness.transfersActive },
   ];
 
   const allStepsDone = steps.every((s) => s.done);
-  const approved = pp?.status === "approved";
+  const approved = readiness.status === "approved";
 
   const payoutState: PayoutState = {
     started: !!pp?.stripe_connect_account_id,
@@ -63,13 +82,15 @@ export default async function ProviderOnboardPage() {
           list. Approval is a decision a person at Helpward makes; the
           page used to imply the checklist alone decided it. */}
       <p className="text-sm text-slate-500 mt-1">
-        {approved
+        {ready
           ? allStepsDone
             ? "You're approved and set up. Go online from your dashboard to start receiving offers."
-            : "You're approved. Finish the steps below so offers can reach you and so you can be paid."
-          : allStepsDone
-            ? "Everything on your side is done. A person at Helpward reviews your application before you can accept work — we'll email you when that's decided."
-            : "Finish these steps, then a person at Helpward reviews your application before you can accept work."}
+            : "You can accept work. The unticked step below isn't required — it's what customers see."
+          : approved
+            ? "You're approved. Finish the steps below so offers can reach you and so you can be paid."
+            : outstanding.length === 1
+              ? "Everything on your side is done. A person at Helpward reviews your application before you can accept work — we'll email you when that's decided."
+              : "Finish these steps, then a person at Helpward reviews your application before you can accept work."}
       </p>
 
       <ol className="mt-6 space-y-3">

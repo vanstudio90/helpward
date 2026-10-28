@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { decideSignal } from "@/lib/call/signal-order";
+import { isTerminal, endedMessage } from "@/lib/call/session-events";
 
 // A two-party audio call over WebRTC, signalled through Supabase.
 //
@@ -60,6 +61,15 @@ export function useCall(bookingId: string, selfId: string) {
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  /**
+   * How the call ended, from the authoritative row — not from what this
+   * side did. A caller who was declined and a caller who rang out both
+   * used to read "Call ended."; only one of them should think about
+   * calling straight back.
+   */
+  const [endedAs, setEndedAs] = useState<string | null>(null);
+  /** Whether media ever actually flowed on this attempt. */
+  const everConnected = useRef(false);
 
   const pc = useRef<RTCPeerConnection | null>(null);
   const localStream = useRef<MediaStream | null>(null);
@@ -146,6 +156,7 @@ export function useCall(bookingId: string, selfId: string) {
   // thirty seconds it spent ringing.
   useEffect(() => {
     if (phase !== "connected") return;
+    everConnected.current = true;
     const started = Date.now();
     const t = setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
     return () => clearInterval(t);
@@ -341,6 +352,11 @@ export function useCall(bookingId: string, selfId: string) {
   const join = useCallback(async (id: string, asCaller: boolean, stream: MediaStream) => {
     setCallId(id);
     setError(null);
+    // A fresh attempt carries none of the last one's outcome. Without
+    // this, a second call still reads "Call declined" underneath it.
+    setEndedAs(null);
+    everConnected.current = false;
+    setSeconds(0);
     setPhase(asCaller ? "ringing" : "connecting");
 
     // Everything from here belongs to THIS attempt. A retry bumps the
@@ -490,7 +506,65 @@ export function useCall(bookingId: string, selfId: string) {
     await enter(id, stream);
   }, [enter, acquireMic]);
 
+  /**
+   * Watch the authoritative row for the call we are on.
+   *
+   * The only subscription used to be call_signals for a call already
+   * joined, which cannot carry "the other side never joined and said
+   * no". So a declined caller kept a live microphone, a Mute button, an
+   * End call button and the words "waiting for them to pick up" — while
+   * the database had recorded the decline correctly. The decline reached
+   * nobody.
+   *
+   * A catch-up read runs on subscribe and on tab focus, because the
+   * terminal event is exactly the one that must not be missed.
+   */
+  useEffect(() => {
+    if (!callId) return;
+    if (phase !== "ringing" && phase !== "connecting" && phase !== "connected") return;
+
+    let cancelled = false;
+
+    const applyRow = (row: { status: string; connected_at?: string | null }) => {
+      if (cancelled || !isTerminal(row.status)) return;
+      setEndedAs(row.status);
+      setPhase("ended");
+      // Stop OUR media. A call that is over must not leave a microphone
+      // open, whichever side ended it.
+      teardown();
+    };
+
+    const check = async () => {
+      const { data } = await supabase.current
+        .from("call_sessions")
+        .select("status, connected_at")
+        .eq("id", callId)
+        .maybeSingle();
+      if (data) applyRow(data as { status: string; connected_at: string | null });
+    };
+
+    const watch = supabase.current
+      .channel(`call-session:${callId}`)
+      .on("postgres_changes",
+        { event: "UPDATE", schema: "public", table: "call_sessions", filter: `id=eq.${callId}` },
+        (p) => applyRow(p.new as { status: string; connected_at: string | null }))
+      .subscribe((status) => { if (status === "SUBSCRIBED") void check(); });
+
+    const onFocus = () => { if (document.visibilityState === "visible") void check(); };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onFocus);
+      window.removeEventListener("focus", onFocus);
+      void supabase.current.removeChannel(watch);
+    };
+    // teardown is stable; supabase is a lazy accessor, not a dependency.
+  }, [callId, phase, teardown]);
+
   const hangUp = useCallback(async () => {
+    setEndedAs("ended");
     if (callId) {
       await send(callId, "bye", {});
       await supabase.current.rpc("update_call_status", {
@@ -519,11 +593,21 @@ export function useCall(bookingId: string, selfId: string) {
    */
   const declineCall = useCallback(async (id: string) => {
     setPhase("ended");
-    await supabase.current.rpc("abandon_call", { p_call_id: id, p_reason: "declined" });
+    setEndedAs("declined");
+    // update_call_status, not abandon_call: 'declined' is a real status
+    // in the enum and says something abandon_call's 'missed' does not —
+    // somebody was there and said no. The RPC is participant-guarded,
+    // idempotent once terminal, and records no duration for a call that
+    // never connected.
+    await supabase.current.rpc("update_call_status", {
+      p_call_id: id, p_status: "declined", p_reason: "declined_by_callee",
+    });
   }, []);
 
   return {
     phase, error, muted, seconds, callId,
+    /** "Call declined." / "No answer." / "Call ended." */
+    endedText: endedMessage(endedAs ?? "ended", everConnected.current),
     remoteAudioRef: remoteAudio,
     startCall, answerCall, declineCall, hangUp, toggleMute,
   };

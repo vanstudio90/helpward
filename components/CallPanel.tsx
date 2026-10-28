@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Phone, PhoneOff, Mic, MicOff, AlertCircle, Loader2 } from "lucide-react";
 import { useCall } from "@/lib/call/use-call";
+import { useIncomingCall } from "@/lib/call/use-incoming-call";
 
 // The call itself, for services that ARE a call.
 //
@@ -18,7 +19,9 @@ function clock(seconds: number): string {
 }
 
 export function CallPanel({
-  bookingId, selfId, counterpartName, incomingCallId, awaitingPayment, viewerIs,
+  bookingId, selfId, counterpartName,
+  incomingCallId: incomingCallIdFromServer,
+  awaitingPayment, viewerIs,
 }: {
   bookingId: string;
   selfId: string;
@@ -34,6 +37,13 @@ export function CallPanel({
   viewerIs: "customer" | "helper";
 }) {
   const call = useCall(bookingId, selfId);
+
+  // A call that starts while this page is OPEN has to reach it. The
+  // incoming id used to come only from the server render, so the person
+  // being called sat looking at "Start call" until they reloaded.
+  const { incomingCallId, dismissCall } = useIncomingCall(
+    bookingId, selfId, incomingCallIdFromServer ?? null,
+  );
   // Local to the button, not the call: the call's own phase does not
   // change until the microphone prompt is answered, which can be a long
   // time if the person is reading it.
@@ -51,8 +61,13 @@ export function CallPanel({
   // ringing session rather than racing a second one is still right; doing
   // it without being asked is not.
   const { phase, answerCall, declineCall } = call;
-  const [declined, setDeclined] = useState<string | null>(null);
-  const ringingIn = incomingCallId && phase === "idle" && declined !== incomingCallId;
+
+  // Ring whenever a call is offered and we are not already on one.
+  // Gating on phase === "idle" alone was wrong for the retest's "repeat
+  // after a previous attempt ends" case: once a call had ended the phase
+  // stayed terminal, so the NEXT incoming call could not ring.
+  const onACall = phase === "ringing" || phase === "connecting" || phase === "connected";
+  const ringingIn = !!incomingCallId && !onACall && incomingCallId !== call.callId;
 
   const live = call.phase === "ringing" || call.phase === "connecting" || call.phase === "connected";
 
@@ -118,20 +133,25 @@ export function CallPanel({
                 "Connecting…" covered everything from asking for the
                 microphone to negotiating audio, so a press looked like
                 nothing had happened. */}
-            {call.phase === "idle" && (ringingIn
-              ? `${counterpartName} is calling.`
-              : "This service is delivered by call.")}
-            {call.phase === "ringing" && "Calling — waiting for them to pick up…"}
-            {call.phase === "connecting" && (incomingCallId
-              ? "Connecting audio…"
-              : "Starting call…")}
-            {call.phase === "connected" && clock(call.seconds)}
-            {call.phase === "ended" && "Call ended."}
-            {call.phase === "failed" && "Couldn't connect."}
+            {/* An incoming call outranks whatever the last attempt left
+                behind: after one call ends the phase stays terminal, and
+                keying this off phase alone meant a SECOND incoming call
+                displayed "Call ended." while its own Answer button sat
+                beside it. */}
+            {ringingIn ? `${counterpartName} is calling.` : (<>
+              {call.phase === "idle" && "This service is delivered by call."}
+              {call.phase === "ringing" && "Calling — waiting for them to pick up…"}
+              {call.phase === "connecting" && (incomingCallId
+                ? "Connecting audio…"
+                : "Starting call…")}
+              {call.phase === "connected" && clock(call.seconds)}
+              {call.phase === "ended" && call.endedText}
+              {call.phase === "failed" && "Couldn't connect."}
+            </>)}
           </div>
         </div>
 
-        {live ? (
+        {live && !ringingIn ? (
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
@@ -160,7 +180,7 @@ export function CallPanel({
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => { setDeclined(incomingCallId!); void declineCall(incomingCallId!); }}
+              onClick={() => { dismissCall(incomingCallId!); void declineCall(incomingCallId!); }}
               className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50"
             >
               Decline

@@ -511,4 +511,118 @@ begin
   end;
 end $$;
 
+-- -------------------------------------------------------------------------
+-- Decline: the callee's "no" has to be visible to the CALLER.
+-- -------------------------------------------------------------------------
+-- The caller's screen kept saying "waiting for them to pick up" with a
+-- live microphone while the row said the call was over. The client now
+-- reads the row, so the row has to carry an unambiguous answer.
+
+-- A participant can decline a ringing call, and it records as declined
+-- with no connection and no duration.
+do $$
+declare r record; v_call uuid; v_row record;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by)
+  values (r.booking, r.customer, r.helper, r.helper) returning id into v_call;
+
+  perform pg_temp.become(r.customer, 'customer');
+  perform update_call_status(v_call, 'declined', 'declined_by_callee');
+
+  perform pg_temp.become_service();
+  select * into v_row from call_sessions where id = v_call;
+  if v_row.status::text <> 'declined' then
+    raise exception 'FAIL L22 decline did not record as declined: %', v_row.status;
+  end if;
+  if v_row.connected_at is not null then
+    raise exception 'FAIL L22 a declined call recorded a connection time';
+  end if;
+  if coalesce(v_row.duration_sec, 0) <> 0 then
+    raise exception 'FAIL L22 a declined call recorded a duration: %', v_row.duration_sec;
+  end if;
+  if v_row.ended_at is null then
+    raise exception 'FAIL L22 a declined call has no end time';
+  end if;
+  raise notice 'PASS L22 decline records declined, no connection, no duration';
+end $$;
+
+-- 'declined' is terminal: the caller hanging up afterwards must not
+-- rewrite how it ended, or the callee's reason would be lost.
+do $$
+declare r record; v_call uuid; v_status text;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by)
+  values (r.booking, r.customer, r.helper, r.helper) returning id into v_call;
+
+  perform pg_temp.become(r.customer, 'customer');
+  perform update_call_status(v_call, 'declined', 'declined_by_callee');
+  perform pg_temp.become(r.helper, 'provider');
+  perform update_call_status(v_call, 'ended', 'hung_up');
+
+  perform pg_temp.become_service();
+  select status::text into v_status from call_sessions where id = v_call;
+  if v_status <> 'declined' then
+    raise exception 'FAIL L23 a declined call was overwritten as %', v_status;
+  end if;
+  raise notice 'PASS L23 declined is terminal and survives a later hang-up';
+end $$;
+
+-- A stranger cannot decline a call they are not on.
+do $$
+declare r record; v_call uuid; v_status text;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by)
+  values (r.booking, r.customer, r.helper, r.helper) returning id into v_call;
+
+  perform pg_temp.become(r.other, 'provider');
+  begin
+    perform update_call_status(v_call, 'declined', 'hijack');
+    perform pg_temp.become_service();
+    select status::text into v_status from call_sessions where id = v_call;
+    if v_status <> 'ringing' then
+      raise exception 'FAIL L24 a stranger declined someone else''s call';
+    end if;
+    raise notice 'PASS L24 a stranger cannot decline a call they are not on';
+  exception when others then
+    if sqlerrm like 'FAIL %' then raise; end if;
+    perform pg_temp.become_service();
+    raise notice 'PASS L24 a stranger is refused outright: %', left(sqlerrm, 40);
+  end;
+end $$;
+
+-- Both participants can SELECT the row. This is what Supabase realtime
+-- evaluates before delivering an UPDATE, so if either side cannot read
+-- it, that side silently never learns the call ended.
+do $$
+declare r record; v_call uuid; v_seen int;
+begin
+  perform pg_temp.become_service(); select * into r from cl;
+  insert into call_sessions (booking_id, customer_id, provider_id, started_by)
+  values (r.booking, r.customer, r.helper, r.helper) returning id into v_call;
+
+  perform pg_temp.become(r.customer, 'customer');
+  select count(*) into v_seen from call_sessions where id = v_call;
+  if v_seen <> 1 then
+    raise exception 'FAIL L25 the customer cannot read the call row';
+  end if;
+
+  perform pg_temp.become(r.helper, 'provider');
+  select count(*) into v_seen from call_sessions where id = v_call;
+  if v_seen <> 1 then
+    raise exception 'FAIL L25 the helper cannot read the call row';
+  end if;
+
+  perform pg_temp.become(r.other, 'provider');
+  select count(*) into v_seen from call_sessions where id = v_call;
+  if v_seen <> 0 then
+    raise exception 'FAIL L25 a stranger can read a call row';
+  end if;
+
+  perform pg_temp.become_service();
+  raise notice 'PASS L25 both participants (and only they) can read the call row';
+end $$;
+
 rollback;
