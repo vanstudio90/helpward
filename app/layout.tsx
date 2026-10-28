@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { ScrollReset } from "@/components/scroll-reset";
+import { NavProgress } from "@/components/nav-progress";
 
 export const metadata: Metadata = {
   title: "Helpward — Real humans. Real help. Right now.",
@@ -106,6 +107,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ScrollReset />
+        <NavProgress />
         {children}
       </body>
     </html>

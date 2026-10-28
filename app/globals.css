@@ -95,3 +95,87 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 html, body {
   overscroll-behavior-x: none;
 }
+
+/* -------------------------------------------------------------------
+ * Tap feedback.
+ *
+ * Tapping "Select services" or "Connect bank account" did not feel like
+ * anything had happened: the target page is server-rendered behind an auth
+ * check, so there was a pause with no acknowledgement, and a tap that
+ * produces nothing reads as a tap that missed.
+ *
+ * Two separate problems, and this is the first: the press itself was
+ * invisible. Mobile Safari suppresses its default tap highlight on
+ * elements that set their own background, which is most of ours.
+ *
+ * Opacity rather than a transform: it cannot shift layout, it reads
+ * identically on a text link and on a filled button, and it costs nothing
+ * on an element that is already animating something else.
+ * ------------------------------------------------------------------- */
+a, button, [role="button"], summary, select,
+input[type="checkbox"], input[type="radio"] {
+  -webkit-tap-highlight-color: rgb(99 102 241 / 0.18);
+}
+
+a:active,
+summary:active,
+[role="button"]:active,
+button:not(:disabled):active {
+  opacity: 0.68;
+}
+
+/* Deliberately NO base `transition` on these elements. The shorthand sets
+ * transition-property, which would replace Tailwind's `transition-colors`
+ * wherever this rule won, silently killing hover transitions across the
+ * site to animate a press that is better off instant anyway. */
+
+/* Anything disabled must not look pressable. */
+button:disabled, [aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* -------------------------------------------------------------------
+ * Navigation progress bar — the second half of the same problem.
+ *
+ * A press state answers "did it register?" but not "is it working?".
+ * Server-rendered pages behind auth take long enough that an instant
+ * press alone still leaves the screen looking frozen.
+ * ------------------------------------------------------------------- */
+#nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, rgb(99 102 241), rgb(139 92 246));
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+#nav-progress[data-active="true"] {
+  opacity: 1;
+  /* Creeps toward 90% and waits there: the remaining 10% is the server,
+   * and a bar that completes before the page does is a lie. */
+  animation: nav-progress-creep 10s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+#nav-progress[data-active="done"] {
+  opacity: 0;
+  transform: scaleX(1);
+  transition: transform 120ms ease-out, opacity 220ms ease-out 120ms;
+}
+
+@keyframes nav-progress-creep {
+  0%   { transform: scaleX(0); }
+  40%  { transform: scaleX(0.55); }
+  75%  { transform: scaleX(0.8); }
+  100% { transform: scaleX(0.9); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #nav-progress[data-active="true"] { animation: none; transform: scaleX(0.4); }
+  #nav-progress[data-active="done"] { transition: opacity 120ms ease-out; }
+}

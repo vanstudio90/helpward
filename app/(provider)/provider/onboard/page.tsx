@@ -11,18 +11,18 @@ import { PayoutStep, type PayoutState } from "./payout-step";
 export default async function ProviderOnboardPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: pp } = await supabase
-    .from("provider_profiles")
-    .select("*")
-    .eq("user_id", user?.id ?? "")
-    .maybeSingle();
-  const services = await listServices();
-  const { data: myServiceRows } = user
-    ? await supabase
-        .from("provider_services")
-        .select("service_id")
-        .eq("provider_id", user.id)
-    : { data: [] };
+  // These three were awaited one after another. None depends on the result
+  // of another — only on user.id — so the page cost four sequential round
+  // trips to us-west-1 before it could render anything. The page is
+  // reached by tapping a link that gives no feedback, so that latency was
+  // the whole of the "did my tap register?" problem.
+  const [{ data: pp }, services, { data: myServiceRows }] = await Promise.all([
+    supabase.from("provider_profiles").select("*").eq("user_id", user?.id ?? "").maybeSingle(),
+    listServices(),
+    user
+      ? supabase.from("provider_services").select("service_id").eq("provider_id", user.id)
+      : Promise.resolve({ data: [] as { service_id: string }[] }),
+  ]);
   const selectedServiceIds = (myServiceRows ?? []).map((r) => r.service_id as string);
   const providerServiceCount = selectedServiceIds.length;
 
