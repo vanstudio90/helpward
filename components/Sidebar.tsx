@@ -38,7 +38,9 @@ const nav: NavItem[] = [
 export function Sidebar({
   user,
 }: {
-  user?: { full_name: string; avatar_url: string | null; wallet_balance_cents: number } | null;
+  // No wallet_balance_cents: the sidebar shows no balance, and a prop
+  // for a number nothing can change is how the card would come back.
+  user?: { full_name: string; avatar_url: string | null } | null;
 }) {
   const pathname = usePathname();
   return (
@@ -100,17 +102,13 @@ export function Sidebar({
           </Link>
         )}
 
-        {user && (
-          <div className="rounded-2xl bg-slate-50 p-3">
-            <div className="text-xs text-slate-500">Your Balance</div>
-            <div className="text-lg font-bold text-slate-900">
-              ${(user.wallet_balance_cents / 100).toFixed(2)}
-            </div>
-            <Link href="/payments" className="mt-2 block text-center text-xs font-semibold text-brand-700 bg-white border border-slate-200 rounded-lg py-2 hover:bg-brand-50 transition">
-              Add Credits +
-            </Link>
-          </div>
-        )}
+        {/* A wallet card sat here showing "Your Balance $0.00" and an
+            "Add Credits +" button. There is no wallet: nothing credits
+            the balance, nothing spends it, and the button led to the
+            Payments page, which funds nothing. It read as an account
+            feature that was merely empty rather than one that does not
+            exist. Saved cards under Payments are the real, working
+            payment surface. */}
 
         <form action={logoutAction}>
           <button className="w-full inline-flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg py-2 hover:bg-slate-50">

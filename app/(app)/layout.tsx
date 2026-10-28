@@ -9,7 +9,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? {
         full_name: me.profile.full_name,
         avatar_url: me.profile.avatar_url,
-        wallet_balance_cents: me.customer?.wallet_balance_cents ?? 0,
       }
     : null;
 

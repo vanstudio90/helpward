@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { ChatThread } from "./thread";
 import Link from "next/link";
-import { ArrowLeft, Phone, MoreHorizontal, ClipboardList } from "lucide-react";
+import { ArrowLeft, ClipboardList } from "lucide-react";
 
 export default async function ConversationPage({
   params,
@@ -63,12 +63,13 @@ export default async function ConversationPage({
             </div>
           )}
         </div>
-        <button aria-label="Call" className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 shrink-0">
-          <Phone className="w-4 h-4 text-brand-600" />
-        </button>
-        <button aria-label="More" className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 shrink-0">
-          <MoreHorizontal className="w-4 h-4 text-slate-500" />
-        </button>
+        {/* A Call button and a "More" menu sat here. Neither did
+            anything: the Call button had no handler and no call route,
+            and the menu had no items. A control that looks live and is
+            not costs more trust than a missing feature does, because
+            the person concludes the product is broken rather than
+            unfinished. Audio calling exists on the BOOKING page, which
+            is where there is a session to join. */}
       </div>
 
       <ChatThread
