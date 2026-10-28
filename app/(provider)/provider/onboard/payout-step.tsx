@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { describeDisabledReason } from "@/lib/stripe-disabled-reason";
 import { AlertTriangle, ExternalLink, RefreshCw } from "lucide-react";
 import { startPayoutSetupAction, refreshPayoutStatusAction } from "./actions";
 
@@ -58,12 +59,23 @@ export function PayoutStep({ state }: { state: PayoutState }) {
     );
   }
 
+  const disabled = describeDisabledReason(state.disabledReason);
+
   return (
     <div className="mt-2 space-y-2">
-      {state.disabledReason && (
-        <p className="text-xs text-rose-700 flex items-start gap-1.5">
+      {/* Not every disabled_reason is a problem.
+          This block used to render "Stripe has paused this account.
+          Contact support@helpward.com." for ANY non-null reason — including
+          requirements.past_due, which is simply what Stripe calls an
+          account whose onboarding form was never finished. A helper who had
+          not yet typed their date of birth was told their account had been
+          paused, and sent to support for it. */}
+      {disabled && (
+        <p className={`text-xs flex items-start gap-1.5 ${
+          disabled.serious ? "text-rose-700" : "text-amber-700"
+        }`}>
           <AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" aria-hidden="true" />
-          Stripe has paused this account. Contact support@helpward.com.
+          {disabled.message}
         </p>
       )}
 
