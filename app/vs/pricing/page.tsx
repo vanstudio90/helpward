@@ -66,9 +66,9 @@ export default function PricingPage() {
       <ul>
         <li>
           <strong>Base service price.</strong> Set per-service on our catalog. You see it on the
-          service tile before you book. For a one-shot booking, this is whatever the catalog says
-          for that service in your city. For a multi-task bundle, it&apos;s the sum of every stop&apos;s
-          base price.
+          service tile before you book — whatever the catalog says for that service in your city.
+          Where a service is priced by duration or quantity, the questions you answer when booking
+          move this number, and the quote shows it before you commit.
         </li>
         <li>
           <strong>Flat $4.50 service fee per booking.</strong> One fee per booking, regardless of how
@@ -107,9 +107,8 @@ export default function PricingPage() {
           you book the same service in the same city next week, the line items will be the same.
         </li>
         <li>
-          <strong>No per-stop fees on bundles.</strong> Five stops in one trip is one $4.50 fee,
-          not five. The bundle is genuinely cheaper than booking five one-shots — that&apos;s the
-          whole point of the bundling feature.
+          <strong>No booking minimums or bundles you have to buy into.</strong> One $9 dog walk
+          is a complete booking. There is no basket to fill and no tier to reach.
         </li>
         <li>
           <strong>No platform-fee hikes during demand spikes.</strong> If supply tightens, helpers
@@ -126,17 +125,19 @@ export default function PricingPage() {
         </li>
       </ul>
 
-      <h2>The bundling math</h2>
+      <h2>Multi-stop trips</h2>
       <p>
-        Concrete example. Three errands on the same Saturday: grocery pickup ($18 base), dry-cleaning
-        return ($8 base), pharmacy run ($12 base). Booked as three separate one-shot requests, you
-        pay the $4.50 service fee on each: $38 base + $13.50 in fees = <strong>$51.50</strong>
-        before tip.
+        Bundling several errands into one trip, with a single service fee instead of one per stop,
+        is built but not switched on. It currently skips the questions each service asks — how many
+        dogs, which address, how long — so a helper would accept a priced job without the brief
+        needed to do it. Rather than ship a cheaper price attached to a worse job, it stays off.
       </p>
       <p>
-        Booked as one three-stop bundle, you pay the $4.50 service fee once: $38 base + $4.50 fee
-        = <strong>$42.50</strong> before tip. Same three errands, $9 cheaper, AND one helper does all
-        three on one trip so you tip one person instead of three.
+        Until it ships, each task is its own request and carries its own service fee. Three errands
+        on a Saturday — grocery pickup ($18 base), dry-cleaning return ($8), pharmacy run ($12) —
+        come to $38 in base prices plus $4.50 on each, <strong>$51.50</strong> before tip. That is
+        the real number today, and this page would rather quote it than a discount you cannot
+        currently get.
       </p>
 
       <h2>Why we don&apos;t publish competitor prices on the matrix pages</h2>

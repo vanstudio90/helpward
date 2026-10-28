@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { createSeriesAction } from "@/app/(app)/bookings/series/actions";
 import { MAX_BUNDLE_ITEMS } from "@/lib/bundle-pure";
+import { BUNDLING_ENABLED } from "@/lib/feature-flags";
 import { quoteOneShotCents, quoteBundleCents } from "@/lib/pricing";
 import { collectSubmitted, type SubmittedValues } from "@/lib/request-form";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
@@ -223,6 +224,17 @@ async function createRequestActionInner(
   // Validation: every stop must reference an active service; total capped at
   // MAX_BUNDLE_ITEMS to keep helper trips reasonable.
   const bundleItems = formData.get("is_bundle") === "1" ? parseBundleItems(formData) : null;
+
+  // Hiding the picker does not close the path — this action takes a form
+  // post, and a form post can be made without the picker. Bundling is
+  // refused here, at the only place that can actually create one.
+  if (bundleItems && !BUNDLING_ENABLED) {
+    return {
+      error: "Multi-stop bundles aren't available yet. Please book each task " +
+             "separately — every service is available on its own.",
+    };
+  }
+
   if (bundleItems) {
     if (bundleItems.length < 2) return { error: "A bundle needs at least 2 stops." };
     if (bundleItems.length > MAX_BUNDLE_ITEMS) return { error: `Bundles are capped at ${MAX_BUNDLE_ITEMS} stops.` };

@@ -6,7 +6,7 @@ import { COMPETITORS } from "@/lib/competitors";
 
 export const metadata: Metadata = {
   title: "Helpward comparisons — vs TaskRabbit, Instacart, DoorDash, Dolly, Bellhop, Rover, Wag, Care.com",
-  description: "Honest side-by-side comparisons. Real-time GPS, photo proof, multi-task bundles, recurring bookings, favorite-helper routing — see how Helpward stacks against the apps you already use.",
+  description: "Honest side-by-side comparisons. Real-time GPS, photo proof, recurring bookings, favorite-helper routing — see how Helpward stacks against the apps you already use.",
   alternates: { canonical: "/vs" },
 };
 
@@ -63,7 +63,7 @@ export default function VersusIndexPage() {
 
       <p className="lead">
         Most gig apps own a single vertical — groceries, restaurants, moving, handyman tasks. Helpward
-        does all of those AND lets one helper bundle up to 5 stops across categories in a single trip.
+        covers all of those in one place, so you aren&apos;t choosing which app the task belongs to.
         Below is a fair, feature-by-feature look at how we line up against the apps you probably
         already have on your phone. For the long-form arguments, read{" "}
         <Link href="/vs/why" className="font-semibold text-brand-700 hover:underline">why we built Helpward</Link>,{" "}

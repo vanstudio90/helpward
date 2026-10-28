@@ -439,8 +439,14 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "bookings",
     title: "Bundling multiple tasks in one trip",
     summary:
-      "Stack up to 5 tasks into a single request and pay one service fee. The helper completes each stop in order and you watch progress live as each item is marked done.",
+      "Not available yet. How bundling will work when it ships, and what to do instead today: book each task as its own request.",
     body: [
+      // Bundling is switched off (lib/feature-flags.ts). The article stays
+      // up because people ask whether it exists, but it opens by saying it
+      // does not: an article that walks someone through tapping a control
+      // that is not on their screen is worse than no article.
+      { type: "note", text:
+        "Bundling isn't available yet. Every service can be booked on its own in the meantime — create one request per task. This article describes how bundling will work when it ships." },
       { type: "p", text:
         "Bundling lets you put several related tasks — say, a grocery pickup, a pharmacy stop, and a dry-cleaning return — into one booking handled by one helper. You pay for each task plus a single flat service fee for the whole trip, not one fee per stop." },
       { type: "h2", text: "When bundling is worth it" },
@@ -449,7 +455,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         "All stops fit inside roughly the same time window (an hour or two).",
         "Each task is small enough that paying a full service fee for it on its own would feel wasteful.",
       ] },
-      { type: "h2", text: "How to create a bundle" },
+      { type: "h2", text: "How it will work" },
       { type: "ol", items: [
         "Open /new-request and pick the first service.",
         "Tick the \"Bundle multiple tasks in one trip\" box just below the recurrence options.",

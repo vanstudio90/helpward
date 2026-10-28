@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import { createRequestAction } from "./actions";
 import { RecurrencePicker } from "./recurrence-picker";
 import { BundlePicker } from "./bundle-picker";
+import { BUNDLING_ENABLED } from "@/lib/feature-flags";
 import { UseCurrentLocationButton } from "./use-current-location";
 import { MissingFieldsNotice, friendlyLabel, type MissingField } from "./missing-fields";
 import { priceService, type PricingRule } from "@/lib/service-pricing";
@@ -679,14 +680,21 @@ export function NewRequestView({
                 />
               )}
 
-              <BundlePicker
-                services={services}
-                enabled={bundleEnabled}
-                onEnabledChange={setBundleEnabled}
-                items={bundleItems}
-                onItemsChange={setBundleItems}
-                onPrimaryServiceChange={setSelected}
-              />
+              {/* Bundling is off for launch — it skips per-service intake
+                  and prices every stop at base rate. See lib/feature-flags.ts
+                  for what has to be true before it comes back. The picker is
+                  kept, not deleted, so turning it on is a flag flip plus the
+                  intake work. */}
+              {BUNDLING_ENABLED && (
+                <BundlePicker
+                  services={services}
+                  enabled={bundleEnabled}
+                  onEnabledChange={setBundleEnabled}
+                  items={bundleItems}
+                  onItemsChange={setBundleItems}
+                  onPrimaryServiceChange={setSelected}
+                />
+              )}
               <RecurrencePicker />
             </div>
           </div>

@@ -24,7 +24,7 @@ const ld = {
       "@type": "Article",
       "@id": "https://helpward.com/vs/why#article",
       headline: "Why we built Helpward",
-      description: "The case against single-vertical task apps and the multi-task-bundle alternative.",
+      description: "The case against single-vertical task apps, and the one-catalogue alternative.",
       author: { "@type": "Organization", name: "Helpward" },
       publisher: { "@type": "Organization", name: "Helpward" },
       datePublished: "2026-06-06",
@@ -93,9 +93,12 @@ export default function WhyPage() {
       </p>
       <ol>
         <li>
-          <strong>Multi-task bundles.</strong> Up to 5 stops in a single request. We invented the
-          bundling layer because none of the single-vertical apps offered it natively — they would
-          have had to step outside their category.
+          <strong>One catalogue instead of six apps.</strong> A ride, a grocery run, a dog walk
+          and furniture assembly are all requests on the same account, with the same helpers,
+          payment and dispute process behind them. Multi-stop bundling — one helper doing several
+          of them on a single trip — is built but not switched on yet: it skips the per-task
+          questions each service asks, so it would hand a helper a priced job with no brief.
+          Today each task is its own request.
         </li>
         <li>
           <strong>Save-favorite + preferred routing.</strong> Star Maya and her next-Saturday
