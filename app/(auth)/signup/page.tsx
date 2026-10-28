@@ -49,7 +49,19 @@ export default function SignupPage() {
       {state?.error && (
         <div className="mt-5 flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>{state.error}</span>
+          <div className="min-w-0">
+            <span>{state.error}</span>
+            {state.accountExists && (
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                <Link href="/login" className="text-xs font-semibold text-rose-800 underline underline-offset-2 hover:text-rose-900">
+                  Log in
+                </Link>
+                <Link href="/forgot-password" className="text-xs font-semibold text-rose-800 underline underline-offset-2 hover:text-rose-900">
+                  Reset my password
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

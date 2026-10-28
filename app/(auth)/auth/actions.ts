@@ -7,7 +7,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { recordReferralAttribution } from "@/lib/data/referrals";
 import { SERVICE_AREAS, normalizeMunicipality } from "@/lib/service-areas";
 
-type ActionState = { error?: string; success?: string } | undefined;
+type ActionState = {
+  error?: string;
+  success?: string;
+  /** Set when the refusal was an unconfirmed address: the login form offers to resend. */
+  resendEmail?: string;
+  /** Set when signup hit an address that is already registered: the form links to login. */
+  accountExists?: boolean;
+} | undefined;
 
 export async function loginAction(
   _prev: ActionState,
@@ -24,6 +31,18 @@ export async function loginAction(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    // Supabase refuses an unconfirmed account with the bare string "Email
+    // not confirmed", which reads like a system fault rather than something
+    // the person can act on. Say what to do, and offer to send it again —
+    // the first link expires, and "check your inbox" is useless advice when
+    // the message is a week old or never arrived.
+    if (error.code === "email_not_confirmed") {
+      return {
+        error: "Please confirm your email first — we sent you a link when you signed up. "
+          + "Check your inbox and your spam folder.",
+        resendEmail: email,
+      };
+    }
     return { error: error.message };
   }
 
@@ -144,6 +163,26 @@ export async function signupAction(
     return { error: error.message };
   }
 
+  // An email that is already registered comes back as SUCCESS with an empty
+  // identities array — Supabase does this deliberately so a signup form
+  // cannot be used to discover who has an account. We were taking it at
+  // face value and showing "Check your inbox — we sent a confirmation
+  // link", for a link that was never sent. Someone with an existing account
+  // then waits for mail that is not coming.
+  //
+  // This does tell a visitor that an address is registered, which is the
+  // enumeration Supabase's silence avoids. It is the right trade here: the
+  // address is one the person just typed, the alternative is lying to every
+  // returning user about an email we did not send, and the practical value
+  // to an attacker is small next to that cost.
+  if (data.user && (data.user.identities?.length ?? 0) === 0) {
+    return {
+      error: "You already have a Helpward account with that email. Log in instead — "
+        + "or reset your password if you don't remember it.",
+      accountExists: true,
+    };
+  }
+
   // Best-effort referral attribution. If the visitor was carrying an hw_ref
   // cookie (set by proxy.ts when they landed via ?ref=CODE), we record an
   // attribution row now. Failures here don't block signup — referrals are a
@@ -247,4 +286,39 @@ export async function resetPasswordAction(
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: error.message };
   return { success: "Password updated. You can now log in." };
+}
+
+
+// Re-send the signup confirmation link. Offered from the login form when a
+// sign-in is refused for an unconfirmed address.
+//
+// Always reports success, even for an address with no account: this one is
+// reachable by anyone who can type, with no prior step that already
+// revealed the address, so it would be a genuine enumeration oracle.
+// Supabase rate-limits resends on its own side.
+export async function resendConfirmationAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Enter the email you signed up with." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com"}/auth/callback`,
+    },
+  });
+
+  // A rate-limit is worth surfacing — it is the one case where trying again
+  // immediately cannot work, and silence would just produce another click.
+  if (error && /rate|too many|seconds/i.test(error.message)) {
+    return { error: "That was just sent. Give it a minute before asking again." };
+  }
+
+  return { success: `Sent. Check ${email} — and your spam folder.` };
 }

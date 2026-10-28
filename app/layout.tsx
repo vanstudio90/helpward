@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { ScrollReset } from "@/components/scroll-reset";
 
 export const metadata: Metadata = {
   title: "Helpward — Real humans. Real help. Right now.",
@@ -103,7 +104,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_LD) }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <ScrollReset />
+        {children}
+      </body>
     </html>
   );
 }
