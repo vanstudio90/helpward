@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Phone, PhoneOff, Mic, MicOff, AlertCircle, Loader2 } from "lucide-react";
 import { useCall } from "@/lib/call/use-call";
 import { useIncomingCall } from "@/lib/call/use-incoming-call";
+import { callDisplay } from "@/lib/call/display";
 
 // The call itself, for services that ARE a call.
 //
@@ -12,11 +13,6 @@ import { useIncomingCall } from "@/lib/call/use-incoming-call";
 // session; the other joins the same one, because start_call returns the
 // live call rather than opening a second.
 
-function clock(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
 
 export function CallPanel({
   bookingId, selfId, counterpartName,
@@ -60,16 +56,21 @@ export function CallPanel({
   // was merely refreshed, or opened in a background tab. Joining the
   // ringing session rather than racing a second one is still right; doing
   // it without being asked is not.
-  const { phase, answerCall, declineCall } = call;
+  const { answerCall, declineCall } = call;
 
-  // Ring whenever a call is offered and we are not already on one.
-  // Gating on phase === "idle" alone was wrong for the retest's "repeat
-  // after a previous attempt ends" case: once a call had ended the phase
-  // stayed terminal, so the NEXT incoming call could not ring.
-  const onACall = phase === "ringing" || phase === "connecting" || phase === "connected";
-  const ringingIn = !!incomingCallId && !onACall && incomingCallId !== call.callId;
+  // ONE derivation of what this panel says and shows — see
+  // lib/call/display.ts. Three JSX expressions used to each re-test the
+  // same conditions, so "the ringing label wins" was a property of how
+  // they happened to be ordered rather than something stated once.
+  const view = callDisplay({
+    phase: call.phase,
+    incomingCallId,
+    currentCallId: call.callId,
+    endedText: call.endedText,
+    counterpartName,
+    seconds: call.seconds,
+  });
 
-  const live = call.phase === "ringing" || call.phase === "connecting" || call.phase === "connected";
 
   // Before the hold exists there is nothing to say about microphones or
   // ringing — there is one thing to do, and only one person can do it.
@@ -112,12 +113,17 @@ export function CallPanel({
       <audio ref={call.remoteAudioRef} autoPlay playsInline className="hidden" />
 
       <div className="flex items-center gap-3">
+        {/* The icon follows the same derived state as the words. An
+            incoming ring counts as activity even though `phase` is
+            whatever the last call left behind. */}
         <span
           className={`w-10 h-10 rounded-xl inline-flex items-center justify-center shrink-0 ${
-            call.phase === "connected" ? "bg-emerald-50 text-emerald-600" : "bg-brand-50 text-brand-600"
+            call.phase === "connected" ? "bg-emerald-50 text-emerald-600"
+            : view.ringingIn ? "bg-emerald-50 text-emerald-600"
+            : "bg-brand-50 text-brand-600"
           }`}
         >
-          {call.phase === "connecting" || call.phase === "ringing" ? (
+          {view.ringingIn || call.phase === "connecting" || call.phase === "ringing" ? (
             <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
           ) : (
             <Phone className="w-5 h-5" aria-hidden="true" />
@@ -125,33 +131,11 @@ export function CallPanel({
         </span>
 
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-slate-900 truncate">
-            {call.phase === "connected" ? `On a call with ${counterpartName}` : counterpartName}
-          </div>
-          <div className="text-xs text-slate-500" aria-live="polite">
-            {/* Each state says what is happening and whose turn it is.
-                "Connecting…" covered everything from asking for the
-                microphone to negotiating audio, so a press looked like
-                nothing had happened. */}
-            {/* An incoming call outranks whatever the last attempt left
-                behind: after one call ends the phase stays terminal, and
-                keying this off phase alone meant a SECOND incoming call
-                displayed "Call ended." while its own Answer button sat
-                beside it. */}
-            {ringingIn ? `${counterpartName} is calling.` : (<>
-              {call.phase === "idle" && "This service is delivered by call."}
-              {call.phase === "ringing" && "Calling — waiting for them to pick up…"}
-              {call.phase === "connecting" && (incomingCallId
-                ? "Connecting audio…"
-                : "Starting call…")}
-              {call.phase === "connected" && clock(call.seconds)}
-              {call.phase === "ended" && call.endedText}
-              {call.phase === "failed" && "Couldn't connect."}
-            </>)}
-          </div>
+          <div className="text-sm font-bold text-slate-900 truncate">{view.heading}</div>
+          <div className="text-xs text-slate-500" aria-live="polite">{view.status}</div>
         </div>
 
-        {live && !ringingIn ? (
+        {view.controls === "in-call" ? (
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
@@ -176,7 +160,7 @@ export function CallPanel({
               <PhoneOff className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
-        ) : ringingIn ? (
+        ) : view.controls === "answer-decline" ? (
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
@@ -221,7 +205,7 @@ export function CallPanel({
         </p>
       )}
 
-      {ringingIn && (
+      {view.showMicReassurance && (
         <p className="mt-2.5 text-[11px] text-slate-500">
           Your microphone stays off until you answer.
         </p>
