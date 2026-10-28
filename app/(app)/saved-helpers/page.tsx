@@ -2,7 +2,7 @@ import { listSavedProviders } from "@/lib/data/customer";
 import { getBatchAvailabilityStatus } from "@/lib/data/availability";
 import Link from "next/link";
 import { Heart, Sparkles, MessageSquare, Phone, ShieldCheck } from "lucide-react";
-import { AvailabilityBadge } from "@/app/providers/[id]/availability";
+import { AvailabilityBadge } from "@/app/helpers/[id]/availability";
 
 export default async function SavedProvidersPage() {
   const providers = await listSavedProviders();
@@ -32,7 +32,7 @@ export default async function SavedProvidersPage() {
         <ul className="space-y-3">
           {providers.map((p) => (
             <li key={p.user_id} className="rounded-2xl bg-white border border-slate-100 p-4 flex items-center gap-4">
-              <Link href={`/providers/${p.slug ?? p.user_id}`} className="shrink-0">
+              <Link href={`/helpers/${p.slug ?? p.user_id}`} className="shrink-0">
                 {p.profile.avatar_url ? (
                   <img src={p.profile.avatar_url} className="w-12 h-12 rounded-full" alt="" />
                 ) : (
@@ -42,7 +42,7 @@ export default async function SavedProvidersPage() {
                 )}
               </Link>
               <div className="min-w-0 flex-1">
-                <Link href={`/providers/${p.slug ?? p.user_id}`} className="text-sm font-bold text-slate-900 truncate flex items-center gap-1 hover:underline">
+                <Link href={`/helpers/${p.slug ?? p.user_id}`} className="text-sm font-bold text-slate-900 truncate flex items-center gap-1 hover:underline">
                   {p.profile.full_name}
                   {p.status === "approved" && <ShieldCheck className="w-3.5 h-3.5 text-brand-600" />}
                 </Link>

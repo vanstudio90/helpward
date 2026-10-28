@@ -17,7 +17,7 @@ export function SlugForm({ initial }: { initial: string | null }) {
         <Link2 className="w-4 h-4 text-brand-600" /> Public profile URL
       </h2>
       <p className="text-xs text-slate-500 mb-3 leading-relaxed">
-        Your shareable profile lives at <code className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">helpward.com/providers/&lt;your-slug&gt;</code>.
+        Your shareable profile lives at <code className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">helpward.com/helpers/&lt;your-slug&gt;</code>.
         Pick something memorable — customers will see it on every shared link.
       </p>
 
@@ -33,7 +33,7 @@ export function SlugForm({ initial }: { initial: string | null }) {
       )}
 
       <label className="flex items-center gap-0 rounded-lg overflow-hidden border border-slate-200 focus-within:ring-4 focus-within:ring-brand-100 focus-within:border-brand-400">
-        <span className="px-3 py-2 bg-slate-50 text-xs text-slate-500 font-mono shrink-0">/providers/</span>
+        <span className="px-3 py-2 bg-slate-50 text-xs text-slate-500 font-mono shrink-0">/helpers/</span>
         <input
           type="text"
           name="slug"

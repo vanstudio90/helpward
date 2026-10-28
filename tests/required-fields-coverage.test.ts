@@ -210,7 +210,7 @@ describe("trust claims match what the system can actually do", () => {
     "app/page.tsx",
     "app/layout.tsx",
     "app/opengraph-image.tsx",
-    "app/providers/[id]/opengraph-image.tsx",
+    "app/helpers/[id]/opengraph-image.tsx",
     "app/(app)/new-request/view.tsx",
     "app/(app)/services/view.tsx",
     "app/(app)/dashboard/onboarding-tour.tsx",

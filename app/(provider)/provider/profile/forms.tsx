@@ -4,11 +4,31 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { AlertCircle, CheckCircle2, Edit3, Camera } from "lucide-react";
 import { updateProviderProfileAction, setProviderServicesAction, uploadProviderAvatarAction } from "./actions";
 import { cn } from "@/lib/cn";
+import { AvatarEditor } from "./avatar-editor";
 
 export function ProviderAvatarUpload({ avatarUrl, fullName }: { avatarUrl: string | null; fullName: string }) {
   const [state, formAction, pending] = useActionState(uploadProviderAvatarAction, undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Picking a file used to upload it immediately, and CSS object-cover
+  // cropped it to the centre — which takes the top off a portrait photo of
+  // a face, with nothing the person could do about it. The file is now held
+  // here until they have positioned it.
+  const [picked, setPicked] = useState<File | null>(null);
+
+  // The cropped result is submitted through the same form and the same
+  // server action, so every validation it already performs still applies.
+  const submitCropped = (cropped: File) => {
+    const input = fileInputRef.current;
+    const form = formRef.current;
+    if (!input || !form) return;
+    const dt = new DataTransfer();
+    dt.items.add(cropped);
+    input.files = dt.files;
+    setPicked(null);
+    form.requestSubmit();
+  };
 
   return (
     <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
@@ -48,7 +68,15 @@ export function ProviderAvatarUpload({ avatarUrl, fullName }: { avatarUrl: strin
               name="avatar"
               accept="image/jpeg,image/png,image/webp,image/gif"
               className="hidden"
-              onChange={() => formRef.current?.requestSubmit()}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                // A GIF may be animated, and flattening one to a still
+                // frame without saying so would be worse than uploading it
+                // as it is. Everything else goes through the editor.
+                if (!f) return;
+                if (f.type === "image/gif") { formRef.current?.requestSubmit(); return; }
+                setPicked(f);
+              }}
             />
           </form>
         </div>
@@ -57,6 +85,19 @@ export function ProviderAvatarUpload({ avatarUrl, fullName }: { avatarUrl: strin
           <span className="text-xs text-slate-400">JPEG/PNG/WEBP/GIF, up to 5 MB.</span>
         </div>
       </div>
+
+      {picked && (
+        <div className="mt-4">
+          <AvatarEditor
+            file={picked}
+            onCancel={() => {
+              setPicked(null);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            }}
+            onConfirm={submitCropped}
+          />
+        </div>
+      )}
     </div>
   );
 }

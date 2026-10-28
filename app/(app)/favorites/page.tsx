@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Heart, Plus, Sparkles, ArrowRight, ExternalLink } from "lucide-react";
 import { UnfavoriteServiceButton } from "./unfavorite-button";
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
-import { AvailabilityBadge } from "@/app/providers/[id]/availability";
+import { AvailabilityBadge } from "@/app/helpers/[id]/availability";
 
 export default async function FavoritesPage() {
   // saved_addresses, NOT addresses. `addresses` is one row per request —
@@ -47,7 +47,7 @@ export default async function FavoritesPage() {
                 {providers.map((p) => (
                   <li key={p.user_id} className="rounded-2xl bg-white border border-slate-100 p-4">
                     <div className="flex items-center gap-3">
-                      <Link href={`/providers/${p.slug ?? p.user_id}`} className="shrink-0">
+                      <Link href={`/helpers/${p.slug ?? p.user_id}`} className="shrink-0">
                         {p.profile.avatar_url ? (
                           <img src={p.profile.avatar_url} className="w-14 h-14 rounded-full" alt="" />
                         ) : (
@@ -57,7 +57,7 @@ export default async function FavoritesPage() {
                         )}
                       </Link>
                       <div className="min-w-0 flex-1">
-                        <Link href={`/providers/${p.slug ?? p.user_id}`} className="text-sm font-bold text-slate-900 truncate hover:underline block">
+                        <Link href={`/helpers/${p.slug ?? p.user_id}`} className="text-sm font-bold text-slate-900 truncate hover:underline block">
                           {p.profile.full_name}
                         </Link>
                         <div className="text-xs text-slate-500 mt-0.5">
@@ -90,7 +90,7 @@ export default async function FavoritesPage() {
                         Book again <ArrowRight className="w-3 h-3" />
                       </Link>
                       <Link
-                        href={`/providers/${p.slug ?? p.user_id}`}
+                        href={`/helpers/${p.slug ?? p.user_id}`}
                         className="inline-flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50"
                       >
                         View profile <ExternalLink className="w-3 h-3" />

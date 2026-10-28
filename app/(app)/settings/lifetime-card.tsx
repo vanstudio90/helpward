@@ -55,7 +55,7 @@ export function CustomerLifetimeCard({ stats }: { stats: CustomerLifetimeStats }
           label="Top helper"
           value={stats.topHelper?.fullName ?? "—"}
           sub={stats.topHelper ? `${stats.topHelper.bookings} bookings together` : "Book the same helper twice"}
-          href={stats.topHelper ? `/providers/${stats.topHelper.slug ?? stats.topHelper.userId}` : undefined}
+          href={stats.topHelper ? `/helpers/${stats.topHelper.slug ?? stats.topHelper.userId}` : undefined}
           truncate
         />
       </div>

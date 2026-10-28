@@ -57,7 +57,7 @@ export async function saveWeeklyRulesAction(
   }
 
   revalidatePath("/provider/schedule");
-  revalidatePath(`/providers/${user.id}`);
+  revalidatePath(`/helpers/${user.id}`);
   return { success: `Schedule saved — ${rules.length} shift${rules.length === 1 ? "" : "s"} per week.` };
 }
 
@@ -121,7 +121,7 @@ export async function addOverrideAction(
   }
 
   revalidatePath("/provider/schedule");
-  revalidatePath(`/providers/${user.id}`);
+  revalidatePath(`/helpers/${user.id}`);
   return { success: isUnavailable ? "Time-off added." : "Extra shift added." };
 }
 
@@ -189,7 +189,7 @@ export async function addOverrideRangeAction(
   }
 
   revalidatePath("/provider/schedule");
-  revalidatePath(`/providers/${user.id}`);
+  revalidatePath(`/helpers/${user.id}`);
   return {
     success: skipped > 0
       ? `Added ${added} day${added === 1 ? "" : "s"} off (${skipped} already had time-off).`
@@ -213,7 +213,7 @@ export async function removeOverrideAction(overrideId: string): Promise<State> {
   if (error) return { error: error.message };
 
   revalidatePath("/provider/schedule");
-  revalidatePath(`/providers/${user.id}`);
+  revalidatePath(`/helpers/${user.id}`);
   return { success: "Removed." };
 }
 
@@ -241,6 +241,6 @@ export async function setVacationModeAction(
   if (error) return { error: error.message };
 
   revalidatePath("/provider/schedule");
-  revalidatePath(`/providers/${user.id}`);
+  revalidatePath(`/helpers/${user.id}`);
   return { success: on ? "Vacation mode on — you won't appear as available." : "Vacation mode off." };
 }

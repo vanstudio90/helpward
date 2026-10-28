@@ -556,7 +556,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         "Most customers settle on a small handful of helpers they trust — the one who always nails the grocery list, the one who's great with the dog, the one who's been at three of their kids' birthdays. Saved helpers turn that recurring trust into a single tap." },
       { type: "h2", text: "How to save a helper" },
       { type: "ul", items: [
-        "From any helper's public profile (/providers/[id]): tap the \"Save helper\" pill under their name.",
+        "From any helper's public profile (/helpers/[id]): tap the \"Save helper\" pill under their name.",
         "From your booking page (/bookings/[id]): tap the heart icon on the helper row.",
         "Hearts turn rose-pink when saved. Tap again to un-save.",
       ] },
@@ -586,7 +586,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
       { type: "ol", items: [
         "Open /provider/portfolio from the nav.",
         "You'll see every proof photo from every booking you've ever completed.",
-        "Tap \"Feature on profile\" on any photo. It instantly appears on your public /providers/[id] profile under \"Recent work\".",
+        "Tap \"Feature on profile\" on any photo. It instantly appears on your public /helpers/[id] profile under \"Recent work\".",
         "Optionally rewrite the caption — the original is customer-facing (\"left at side door\") but for portfolio it's better to describe the work (\"mulched + edged 200 sqft front yard, 2 hrs\").",
         "Tap \"Hide from profile\" any time to pull a photo back to private.",
       ] },
@@ -605,7 +605,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     faqs: [
       { q: "Do I need to ask the customer before featuring a photo?", a: "Not in advance — you can feature any photo you took on a completed booking. The customer gets visibility on every photo you've featured via their booking page and can revoke any of them instantly. We send them a notification when you feature a photo from their booking so they're never surprised." },
       { q: "Can I feature photos from in-progress bookings?", a: "No. Only photos from bookings that have hit 'completed' status are eligible. The RLS policy on the database enforces this — you can't accidentally feature a half-done task." },
-      { q: "What happens to my portfolio if I take a break and pause my account?", a: "Auto-hidden. The public-read RLS policy checks your provider_profiles.status = 'approved' on every read, so the moment you pause, your portfolio vanishes from /providers/[id]. When you come back online, it re-appears — no manual re-flagging needed." },
+      { q: "What happens to my portfolio if I take a break and pause my account?", a: "Auto-hidden. The public-read RLS policy checks your provider_profiles.status = 'approved' on every read, so the moment you pause, your portfolio vanishes from /helpers/[id]. When you come back online, it re-appears — no manual re-flagging needed." },
       { q: "How many photos can I feature?", a: "No hard cap, but we render the 12 most recent on your profile. Older featured photos still count as portfolio content (and remain on individual booking pages) — we just don't surface more than 12 in the gallery to keep it scannable." },
     ],
     updatedAt: "2026-06-01",

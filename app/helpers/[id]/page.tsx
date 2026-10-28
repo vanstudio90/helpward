@@ -45,7 +45,7 @@ export async function generateMetadata({
   const description = pp.bio?.trim()
     || `${ratingFragment}${pp.tasks_completed ?? 0} tasks completed. Approved by Helpward, ready to help across ${countryLabel}.`;
 
-  const canonical = `/providers/${pp.slug ?? pp.user_id}`;
+  const canonical = `/helpers/${pp.slug ?? pp.user_id}`;
   return {
     title: `${name} — Verified helper on Helpward`,
     description: description.slice(0, 200),
@@ -94,7 +94,7 @@ export default async function PublicProviderProfile({
   // Keeps inbound links from /favorites + /bookings + bookmarks alive while
   // teaching crawlers about the canonical form.
   if (isUuidParam && pp.slug && pp.slug !== raw) {
-    redirect(`/providers/${pp.slug}`);
+    redirect(`/helpers/${pp.slug}`);
   }
 
   // Once we've resolved the row, everything downstream queries by user_id —
@@ -197,7 +197,7 @@ export default async function PublicProviderProfile({
               helperId={id}
               initialSaved={initialSaved}
               isAuthed={!!user}
-              signupNext={`/providers/${id}`}
+              signupNext={`/helpers/${id}`}
               variant="pill"
             />
           </div>

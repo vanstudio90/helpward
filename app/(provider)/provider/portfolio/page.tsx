@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // Helper-facing portfolio admin. Lists every completion photo the helper
 // has ever uploaded across all their completed bookings, with a per-photo
-// "Feature on profile" toggle. Public-side render is on /providers/[id].
+// "Feature on profile" toggle. Public-side render is on /helpers/[id].
 export default async function ProviderPortfolioPage() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

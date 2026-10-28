@@ -97,7 +97,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Prefer slug URL when present — the loader 301s UUID → slug anyway,
     // so emitting the canonical form keeps Google from chasing redirects.
     providerRoutes = (providers ?? []).map((p) => ({
-      url: `${BASE}/providers/${p.slug ?? p.user_id}`,
+      url: `${BASE}/helpers/${p.slug ?? p.user_id}`,
       lastModified: new Date(p.created_at),
       changeFrequency: "weekly",
       priority: 0.7,

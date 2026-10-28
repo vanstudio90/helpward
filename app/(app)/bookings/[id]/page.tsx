@@ -111,7 +111,7 @@ export default async function BookingDetailPage({
         .eq("report_id", inspectionRow.id)
         .order("position")
     : { data: null };
-  const providerHref = provider ? `/providers/${provider.slug ?? provider.user_id}` : null;
+  const providerHref = provider ? `/helpers/${provider.slug ?? provider.user_id}` : null;
   const service = (b as { service: { id: string; title: string; image_url: string | null } | null }).service;
 
   const { data: callService } = await supabase

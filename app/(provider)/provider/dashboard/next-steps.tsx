@@ -114,7 +114,7 @@ function pickSteps(input: HelperNextStepsInput): Step[] {
       icon: <Link2 className="w-5 h-5 text-rose-600" />,
       tint: "bg-rose-50",
       title: "Customize your profile URL",
-      body: `Your current URL is /providers/${input.slug}. Pick something memorable customers can actually remember.`,
+      body: `Your current URL is /helpers/${input.slug}. Pick something memorable customers can actually remember.`,
       cta: "Edit URL",
       href: "/provider/profile",
     });

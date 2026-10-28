@@ -85,7 +85,7 @@ export async function setPortfolioPhotoAction(
 
   revalidatePath("/provider/portfolio");
   // Public profile may be cached server-side; bust it so the change shows up.
-  revalidatePath("/providers/[id]", "page");
+  revalidatePath("/helpers/[id]", "page");
   return { success: typeof next.isPortfolio === "boolean"
     ? (next.isPortfolio ? "Added to portfolio." : "Removed from portfolio.")
     : "Caption updated." };
@@ -108,6 +108,6 @@ export async function revokePortfolioConsentAction(
   if (error) return { error: error.message };
 
   revalidatePath("/bookings");
-  revalidatePath("/providers/[id]", "page");
+  revalidatePath("/helpers/[id]", "page");
   return { success: "Photo removed from your helper's public portfolio." };
 }

@@ -67,8 +67,8 @@ export async function setProviderSlugAction(
   }
 
   revalidatePath("/provider/profile");
-  revalidatePath(`/providers/${raw}`);
-  return { success: `Your profile URL is now /providers/${raw}.` };
+  revalidatePath(`/helpers/${raw}`);
+  return { success: `Your profile URL is now /helpers/${raw}.` };
 }
 
 export async function updateProviderProfileAction(
@@ -110,7 +110,7 @@ export async function updateProviderProfileAction(
   if (error) return { error: error.message };
   revalidatePath("/provider/profile");
   revalidatePath("/provider/dashboard", "layout");
-  revalidatePath(`/providers/${user.id}`);
+  revalidatePath(`/helpers/${user.id}`);
   return { success: "Profile updated." };
 }
 
@@ -154,7 +154,7 @@ export async function setProviderServicesAction(
 
   revalidatePath("/provider/profile");
   revalidatePath("/provider/onboard");
-  revalidatePath(`/providers/${user.id}`);
+  revalidatePath(`/helpers/${user.id}`);
   return { success: `Saved ${services.length} service${services.length === 1 ? "" : "s"}.` };
 }
 

@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth/admin";
 
 // Hide a review from public listings. The row is kept (we need it for the
 // provider's internal stats + dispute trails) but customer_visible flips to
-// false, so it disappears from /providers/[id] and the provider's review tab.
+// false, so it disappears from /helpers/[id] and the provider's review tab.
 export async function setReviewVisibilityAction(reviewId: string, visible: boolean) {
   await requireAdmin();
   const supabase = createSupabaseServiceClient();
@@ -35,6 +35,6 @@ export async function setReviewVisibilityAction(reviewId: string, visible: boole
   });
 
   revalidatePath("/admin/reviews");
-  if (review?.provider_id) revalidatePath(`/providers/${review.provider_id}`);
+  if (review?.provider_id) revalidatePath(`/helpers/${review.provider_id}`);
   return { success: visible ? "Review restored." : "Review hidden." };
 }
