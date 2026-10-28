@@ -72,12 +72,16 @@ export function OnlineToggle({ initialOnline }: { initialOnline: boolean }) {
 }
 
 export function BookingActions({
-  bookingId, status, paymentStatus,
+  bookingId, status, paymentStatus, needsReport = false, hasReport = false,
 }: {
   bookingId: string;
   status: string;
   /** From the booking. start_booking refuses anything but authorized/captured. */
   paymentStatus: string;
+  /** service_completion_requirements.requires_report for this service. */
+  needsReport?: boolean;
+  /** Whether that report has actually been sent. */
+  hasReport?: boolean;
 }) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -89,12 +93,23 @@ export function BookingActions({
   // to discover the job was not startable was to press it and read an
   // error. A control that cannot succeed should not look like it can.
   const held = paymentStatus === "authorized" || paymentStatus === "captured";
-  const blockedReason =
+  const startBlocked =
     action !== "start" || held
       ? null
       : paymentStatus === "failed"
         ? "The customer's card was declined — don't start work."
         : "Waiting for the customer to confirm their payment.";
+
+  // Same shape, same reason: complete_booking (migration 0056) refuses to
+  // complete an inspection with no report — correctly, since the report
+  // IS what the customer paid for — but the button stayed enabled, so the
+  // only way to find out was to press it and read the refusal.
+  const completeBlocked =
+    action === "complete" && needsReport && !hasReport
+      ? "Send the inspection report first — it's what the customer is paying for."
+      : null;
+
+  const blockedReason = startBlocked ?? completeBlocked;
   const disabled = pending || !!blockedReason;
 
   return (
@@ -126,7 +141,7 @@ export function BookingActions({
       >
         {action === "start"
           ? <><Play className="w-4 h-4" aria-hidden="true" /> {pending ? "Starting…" : blockedReason ? "Waiting for payment" : "Start task"}</>
-          : <><CheckCircle2 className="w-4 h-4" aria-hidden="true" /> {pending ? "Completing…" : "Mark complete"}</>}
+          : <><CheckCircle2 className="w-4 h-4" aria-hidden="true" /> {pending ? "Completing…" : completeBlocked ? "Report needed first" : "Mark complete"}</>}
       </button>
       {blockedReason && (
         <p className="mt-1.5 text-[11px] text-slate-500 text-center">{blockedReason}</p>

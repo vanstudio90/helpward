@@ -363,11 +363,17 @@ export default async function ProviderActivePage() {
               <BundleChecklist items={bundleItems} />
             )}
 
-            <div className="relative rounded-xl overflow-hidden h-44 bg-slate-100">
-              <MapBackdrop />
-            </div>
+            {/* Neither of these means anything for a service delivered by
+                call: there is no journey to draw a map of, and no "after"
+                to photograph. Showing them asks a helper on a listening
+                call to photograph proof of a conversation. */}
+            {!deliveredByCall && (
+              <div className="relative rounded-xl overflow-hidden h-44 bg-slate-100">
+                <MapBackdrop />
+              </div>
+            )}
 
-            {booking.status === "in_progress" && (
+            {!deliveredByCall && booking.status === "in_progress" && (
               <CompletionPhotos bookingId={booking.id} initial={completionPhotos} />
             )}
 
@@ -417,6 +423,11 @@ export default async function ProviderActivePage() {
               bookingId={booking.id}
               status={booking.status}
               paymentStatus={booking.payment_status}
+              // complete_booking gates on submitted_at, not on the row
+              // existing — ensure_inspection_report creates the row up
+              // front, so "has a report" has to mean "has SENT one".
+              needsReport={inspection !== null}
+              hasReport={inspection?.submittedAt != null}
             />
           </div>
         </div>

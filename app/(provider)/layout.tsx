@@ -101,7 +101,11 @@ export default async function ProviderLayout({ children }: { children: React.Rea
             }`}>
               <div className="font-bold capitalize">{pp.status}</div>
               <div className="mt-0.5 leading-snug">
-                {pp.status === "pending" && "Complete onboarding to start accepting tasks."}
+                {/* Not "complete onboarding": approval is a decision a
+                    person at Helpward makes, and a helper who has done
+                    everything on their side was still told to go and
+                    finish something. */}
+                {pp.status === "pending" && "Your application is with us for review. Finish anything outstanding on the onboarding page in the meantime."}
                 {pp.status === "approved" && "You can accept tasks."}
                 {pp.status === "suspended" && "Contact support to restore access."}
               </div>

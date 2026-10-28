@@ -119,8 +119,11 @@ export default async function BookingDetailPage({
     .select("delivered_by_call")
     .eq("service_id", service?.id ?? "")
     .maybeSingle();
+  // Whether the SERVICE is delivered by call, independent of status —
+  // used to suppress surfaces that assume someone travels somewhere.
+  const isCallService = callService?.delivered_by_call === true;
   const deliveredByCall =
-    callService?.delivered_by_call === true &&
+    isCallService &&
     (b.status === "scheduled" || b.status === "in_progress");
 
   const { data: liveCall } = deliveredByCall
@@ -418,8 +421,12 @@ export default async function BookingDetailPage({
             </div>
           )}
 
-          {/* Live tracking (if in_progress) */}
-          {b.status === "in_progress" && provider && (
+          {/* Live tracking (if in_progress).
+              Not for a service delivered by call: there is no journey,
+              and the helper is wherever they live. Putting a pin on that
+              and calling it tracking would publish a home address to
+              serve no purpose. */}
+          {b.status === "in_progress" && provider && !isCallService && (
             <div>
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Live tracking</div>
               <LiveProviderMap
