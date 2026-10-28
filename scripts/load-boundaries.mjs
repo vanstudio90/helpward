@@ -168,6 +168,20 @@ function refFromKey(k) {
 }
 const H = { apikey: KEY, authorization: `Bearer ${KEY}`, "content-type": "application/json" };
 
+/** POST to a Postgres function. Throws with the database's own message. */
+async function sbRpc(fn, args) {
+  const r = await fetch(`${URL_}/rest/v1/rpc/${fn}`, {
+    method: "POST", headers: H, body: JSON.stringify(args),
+  });
+  const text = await r.text();
+  if (!r.ok) {
+    let msg = text;
+    try { msg = JSON.parse(text).message ?? text; } catch { /* keep raw */ }
+    throw new Error(msg);
+  }
+  return text ? JSON.parse(text) : null;
+}
+
 async function sb(q, init = {}) {
   const r = await fetch(`${URL_}/rest/v1/${q}`, { ...init, headers: { ...H, ...(init.headers ?? {}) } });
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
@@ -175,28 +189,85 @@ async function sb(q, init = {}) {
 }
 
 // --activate <id>
+/*
+ * --dry-run has to be known HERE.
+ *
+ * It used to be declared below this block, so during activation it was
+ * not an ignored flag — it was not yet a variable. An audit ran
+ * `--activate X --dry-run` and counted two PATCH writes under a flag
+ * whose entire purpose is to issue none.
+ */
+const DRY = flag("--dry-run");
+
 const activateId = val("--activate");
 if (activateId) {
+  if (DRY) {
+    // Refused rather than silently ignored. Activation is validated and
+    // performed by one database function, so there is no partial form of
+    // it to preview; "what would happen" is "the checks in
+    // activate_boundary_dataset run, then the swap, or neither".
+    console.error("\n  --activate cannot be combined with --dry-run.");
+    console.error("  Activation is a single validated transaction: the dataset is checked");
+    console.error("  for completeness, geometry validity and required municipalities, and");
+    console.error("  swapped in only if all of that passes. Run it without --dry-run, or");
+    console.error("  inspect the dataset first with --list.\n");
+    process.exit(1);
+  }
+
   const ds = await sb(`service_area_datasets?id=eq.${activateId}&select=id,area_id,feature_count`);
   if (!ds?.length) { console.error(`No dataset ${activateId}`); process.exit(1); }
   const { area_id } = ds[0];
-  // One active dataset per area — deactivate siblings first so the unique
-  // partial index never rejects the swap.
-  await sb(`service_area_datasets?area_id=eq.${area_id}&is_active=is.true`, {
-    method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ is_active: false }),
-  });
-  await sb(`service_area_datasets?id=eq.${activateId}`, {
-    method: "PATCH", headers: { prefer: "return=minimal" }, body: JSON.stringify({ is_active: true }),
-  });
-  console.log(`Activated ${activateId} for ${area_id}.`);
-  console.log("Re-run scripts/verify-migration-state.mjs and the boundary probes.");
+
+  /*
+   * ONE call, not two PATCHes.
+   *
+   * This used to deactivate the area's current dataset and then activate
+   * the new one in two separate HTTP requests. Between them the area has
+   * NO active dataset, and is_point_serviceable fail-closes to
+   * 'no_dataset' — so every address in that market is refused. If the
+   * second request failed it stayed that way: a boundary replacement
+   * turning into a silent market outage. An audit injected exactly that
+   * and the previous dataset remained deactivated.
+   *
+   * activate_boundary_dataset (migration 0066) validates and swaps inside
+   * one transaction, so the outcome is complete or nothing. It also
+   * refuses a dataset whose rows do not match its feature_count, whose
+   * geometry is invalid or empty, or which is missing any municipality we
+   * require for the area — replacing working coverage with coverage that
+   * matches nothing is as bad as an outage and harder to spot.
+   */
+  const expected = (APPROVED[area_id] ?? []).map((j) => j.match);
+  if (expected.length === 0) {
+    console.error(`\n  Unknown area "${area_id}" — cannot state the required municipalities.`);
+    console.error("  Refusing: activating without a coverage check is how a partial");
+    console.error("  dataset becomes live.\n");
+    process.exit(1);
+  }
+
+  let result;
+  try {
+    result = await sbRpc("activate_boundary_dataset", {
+      p_dataset_id: activateId,
+      p_expected_municipalities: expected,
+    });
+  } catch (err) {
+    console.error(`\n  ACTIVATION REFUSED: ${err.message}`);
+    console.error("\n  Nothing changed — the previously active dataset is still active.\n");
+    process.exit(1);
+  }
+
+  const r = Array.isArray(result) ? result[0] : result;
+  console.log(`\nActivated ${activateId} for ${area_id}.`);
+  console.log(`  ${r?.out_boundary_rows ?? "?"} boundary polygons`);
+  console.log(`  required municipalities verified: ${r?.out_coverage_verified ? "yes" : "NO"}`);
+  if (r?.out_deactivated) console.log(`  deactivated: ${r.out_deactivated}`);
+  console.log("\nRe-run `npm run preflight` — it probes is_point_serviceable directly.\n");
   process.exit(0);
 }
 
 const area = val("--area");
 const file = val("--file");
 const nameProp = val("--name-property");
-const DRY = flag("--dry-run");
 const required = { "--area": area, "--file": file, "--source-name": val("--source-name"),
   "--source-url": val("--source-url"), "--source-version": val("--source-version"),
   "--license": val("--license") };

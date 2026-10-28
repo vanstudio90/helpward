@@ -31,6 +31,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import pg from "pg";
+import {
+  refFromPostgresUri, assertProductionTarget, TargetError,
+} from "./lib/target.mjs";
 
 const DIR = path.resolve("supabase/migrations");
 
@@ -112,52 +115,48 @@ if (!url) {
   process.exit(1);
 }
 
-/*
- * Which project a pooler URL points at.
- *
- * NOT the host: Supabase's session pooler host is shared by every project
- * in a region, so two different projects in us-west-1 have an identical
- * host. The project ref is in the USERNAME ("postgres.<ref>"), so that is
- * the identity. Comparing hosts would have refused a perfectly good
- * production migration whenever both projects sat in the same region —
- * a guard that blocks the correct action is its own kind of broken.
- *
- * Returns a printable identity that contains no password.
- */
-function targetIdentity(connectionString) {
-  try {
-    const u = new URL(connectionString);
-    const ref = /^postgres\.(.+)$/.exec(decodeURIComponent(u.username))?.[1] ?? null;
-    return { ref, host: u.host, label: ref ? `${ref} @ ${u.host}` : u.host };
-  } catch {
-    return { ref: null, host: null, label: "unparseable connection string" };
-  }
-}
-
 if (PROD) {
-  const target = targetIdentity(url);
-  console.log(`\n  PRODUCTION migration target: ${target.label}`);
+  /*
+   * The identity check lives in scripts/lib/target.mjs and is shared with
+   * preflight and the boundary loader.
+   *
+   * My first version of this compared the target against
+   * REHEARSAL_DATABASE_URL — which --production deliberately does NOT
+   * load, so in the mode that matters the comparison had nothing to
+   * compare against and silently passed. An audit pointed --production at
+   * the rehearsal URI with that variable unexported and reached the
+   * connection attempt.
+   *
+   * Now the expected project is DECLARED (HELPWARD_PRODUCTION_REF) and
+   * the rehearsal ref is read from the .env.rehearsal FILE, so it is
+   * known whether or not anything was exported. A target is correct
+   * because it matches what you declared.
+   */
+  const { ref, host, port } = refFromPostgresUri(url);
 
-  const rehearsal = process.env.REHEARSAL_DATABASE_URL
-    ? targetIdentity(process.env.REHEARSAL_DATABASE_URL) : null;
-  if (rehearsal && target.ref && rehearsal.ref === target.ref) {
-    console.error("\n  REFUSING: PRODUCTION_DATABASE_URL points at the SAME PROJECT as");
-    console.error(`  REHEARSAL_DATABASE_URL (${target.ref}). One of them is wrong.\n`);
-    process.exit(1);
-  }
-  if (!target.ref) {
+  if (!ref) {
     console.error("\n  REFUSING: could not read a project ref from PRODUCTION_DATABASE_URL.");
-    console.error("  Expected a Supabase session-pooler URI on port 5432, whose user is");
-    console.error("  postgres.<project-ref>. Transaction mode (6543) cannot run these");
-    console.error("  migrations — they use `set local role`.\n");
+    console.error("  Expected a Supabase session-pooler URI whose user is postgres.<ref>.\n");
     process.exit(1);
   }
-  if (target.host && !/:5432$/.test(target.host)) {
-    console.error(`\n  REFUSING: port is not 5432 (${target.host}).`);
-    console.error("  Session mode is required; transaction mode cannot `set local role`.\n");
+  if (port !== "5432") {
+    console.error(`\n  REFUSING: port is ${port}, not 5432 (${host}).`);
+    console.error("  Session mode is required; transaction mode cannot `set local role`,");
+    console.error("  which these migrations and the SQL suites both use.\n");
     process.exit(1);
   }
-  console.log("  Reading PRODUCTION_DATABASE_URL only; no dotenv file was loaded.\n");
+
+  try {
+    const report = assertProductionTarget([{ label: "SQL connection", ref }]);
+    console.log(`\n  PRODUCTION target (declared ${report.expected})`);
+    for (const line of report.verified) console.log(`    ${line}`);
+    console.log(`    host: ${host}`);
+    console.log("  No dotenv file was loaded.\n");
+  } catch (err) {
+    if (!(err instanceof TargetError)) throw err;
+    console.error(`\n  ${err.message}\n`);
+    process.exit(1);
+  }
 }
 
 const files = fs.readdirSync(DIR).filter((f) => f.endsWith(".sql")).sort();
@@ -230,19 +229,44 @@ const client = new pg.Client({
 
 await connectOrExplain(client, url);
 
-await client.query(`
-  create table if not exists schema_migrations (
-    filename    text primary key,
-    sha256      text not null,
-    applied_at  timestamptz not null default now(),
-    duration_ms int
-  )
-`);
+/*
+ * The ledger is created only when we are actually going to write to it.
+ *
+ * This used to run unconditionally, so `--status` and `--dry-run` issued
+ * a CREATE TABLE while printing "Nothing written" — a read-only command
+ * that performed DDL, and on a fresh database one that left a table
+ * behind after a run that claimed to change nothing.
+ *
+ * An absent ledger simply means nothing has been applied yet, which is
+ * exactly what a fresh database should report.
+ */
+const READ_ONLY = DRY || has("--status") || !selectFiles();
 
-const { rows: applied } = await client.query(
-  "select filename, sha256 from schema_migrations order by filename",
-);
-const appliedMap = new Map(applied.map((r) => [r.filename, r.sha256]));
+async function readLedger() {
+  try {
+    const { rows } = await client.query(
+      "select filename, sha256 from schema_migrations order by filename",
+    );
+    return new Map(rows.map((r) => [r.filename, r.sha256]));
+  } catch (err) {
+    // 42P01 = undefined_table. Anything else is a real problem.
+    if (err?.code === "42P01") return new Map();
+    throw err;
+  }
+}
+
+if (!READ_ONLY) {
+  await client.query(`
+    create table if not exists schema_migrations (
+      filename    text primary key,
+      sha256      text not null,
+      applied_at  timestamptz not null default now(),
+      duration_ms int
+    )
+  `);
+}
+
+const appliedMap = await readLedger();
 
 const { createHash } = await import("node:crypto");
 const hash = (s) => createHash("sha256").update(s).digest("hex");
@@ -285,6 +309,36 @@ const changed = (f) => {
   const was = appliedMap.get(f);
   return was != null && was !== hash(fs.readFileSync(path.join(DIR, f), "utf8"));
 };
+/*
+ * Drift is a refusal, not a skip.
+ *
+ * An applied migration whose file has since been edited means the
+ * database does not match the file that built it. Without --redo those
+ * files quietly landed in `skipped`, the run exited 0, and the operator
+ * was told "N to apply, M already applied" with no hint that M included
+ * history that no longer matches. docs/CUTOVER.md claimed the runner
+ * refused drift; it did not, so the document was describing a guard that
+ * was not there.
+ *
+ * Checked across EVERY migration, not just the selected subset: drift in
+ * a pre-deploy file is just as wrong when you are applying the
+ * deploy-coupled ones.
+ */
+{
+  const drifted = files.filter((f) => changed(f));
+  if (drifted.length > 0 && !REDO) {
+    console.error(`\n  REFUSING: ${drifted.length} applied migration(s) have been edited`);
+    console.error("  since they ran, so this database does not match the files that\n  built it:\n");
+    for (const f of drifted) console.error(`    ${f}`);
+    console.error("\n  Correct a mistake with a NEW migration. Editing applied history");
+    console.error("  means two environments can share a version number and differ.");
+    console.error("\n  --redo re-applies them instead (every migration here is written");
+    console.error("  to be idempotent), but that is a deliberate choice, not a default.\n");
+    await client.end();
+    process.exit(1);
+  }
+}
+
 const todo = selectFiles().filter((f) => !appliedMap.has(f) || (REDO && changed(f)));
 const skipped = selectFiles().filter((f) => !todo.includes(f));
 

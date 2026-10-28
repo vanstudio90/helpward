@@ -29,6 +29,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import pg from "pg";
+import {
+  refFromPostgresUri, refFromRestUrl, refFromKey, assertProductionTarget,
+} from "./lib/target.mjs";
 
 // ---------------------------------------------------------------------
 // env loading — production variables must come from the real environment
@@ -75,6 +78,14 @@ function section(title) {
 // 1. Environment variables, grouped by what silently breaks without them
 // ---------------------------------------------------------------------
 const ENV_SPEC = [
+  // Production-only, and checked FIRST because the identity and origin
+  // checks below are what make a GO mean anything.
+  { key: "HELPWARD_PRODUCTION_REF", level: WANT_PROD ? "block" : "warn",
+    breaks: "Nothing can verify WHICH project is being checked, so GO would mean " +
+            "\"these variables are individually present\", not \"this is the right environment\"." },
+  { key: "HELPWARD_PRODUCTION_ORIGIN", level: WANT_PROD ? "block" : "warn",
+    breaks: "NEXT_PUBLIC_SITE_URL cannot be checked against the intended launch host, " +
+            "so a preview origin would pass and send every reset link to a throwaway deployment." },
   { key: "NEXT_PUBLIC_SUPABASE_URL", level: "block",
     breaks: "Nothing works. The app cannot reach its database." },
   { key: "NEXT_PUBLIC_SUPABASE_ANON_KEY", level: "block",
@@ -99,12 +110,32 @@ const ENV_SPEC = [
     breaks: "All 12 scheduled jobs return 401 and do nothing. Silent: no error anywhere." },
   { key: "NEXT_PUBLIC_SITE_URL", level: "block",
     breaks: "Password-reset and onboarding return links point at the wrong host.",
-    // A rehearsal environment is SUPPOSED to be a vercel.app or localhost
-    // host, so the real-origin rule only applies to production. The
-    // whitespace rule applies everywhere: a trailing newline in this one
-    // produced unusable password-reset links on two sibling sites before.
-    expect: (v) => !WANT_PROD || (/^https:\/\//.test(v) && !/vercel\.app$/.test(v.trim())),
-    expectMsg: "in production this must be the real https:// origin, not a *.vercel.app host" },
+    /*
+     * In production this must be the DECLARED origin, parsed as a URL.
+     *
+     * The previous rule only rejected a hostname ENDING in "vercel.app",
+     * so https://preview.vercel.app/ passed — a preview origin, which
+     * sends every password-reset link to a deployment that will be
+     * replaced. Substring rules on URLs keep failing this way, so this
+     * parses the URL and compares the hostname to HELPWARD_PRODUCTION_ORIGIN.
+     *
+     * The whitespace rule applies everywhere: a trailing newline in this
+     * variable produced unusable reset links on two sibling sites.
+     */
+    expect: (v) => {
+      if (!WANT_PROD) return true;
+      let u;
+      try { u = new URL(v); } catch { return false; }
+      if (u.protocol !== "https:") return false;
+      const want = (process.env.HELPWARD_PRODUCTION_ORIGIN ?? "").trim();
+      if (!want) return false;
+      let wantHost;
+      try { wantHost = new URL(want).hostname; } catch { wantHost = want; }
+      return u.hostname.toLowerCase() === wantHost.toLowerCase();
+    },
+    expectMsg: "in production this must parse as https:// and its hostname must equal " +
+               "HELPWARD_PRODUCTION_ORIGIN (set that to the real launch origin). " +
+               "A preview or *.vercel.app host sends every reset link to a deployment that will be replaced." },
   { key: "RESEND_API_KEY", level: "warn",
     breaks: "No email is sent: no receipts, no reset links, no order confirmations. The app still works." },
   { key: "HELPWARD_EMAIL_FROM", level: "warn",
@@ -141,9 +172,50 @@ for (const spec of ENV_SPEC) {
 }
 
 // ---------------------------------------------------------------------
-// 2. Stripe mode — test keys cannot take real money
+// 1b. One identity — the SQL connection, the REST URL and the keys must
+//     all be the same project
 // ---------------------------------------------------------------------
-section("2. Stripe mode");
+//
+// GO used to be reachable with the SQL connection aimed at one project
+// and the app's URL and service key aimed at another. Every individual
+// check passed because each looked at its own variable in isolation;
+// nothing asked whether they described the SAME environment. A
+// production app reading one database while migrations ran against
+// another is a configuration that cannot be detected after the fact.
+section("1b. Project identity");
+if (!WANT_PROD) {
+  pass("identity", "skipped outside --production (rehearsal values are expected to differ)");
+} else {
+  const sqlRef = refFromPostgresUri(process.env.PRODUCTION_DATABASE_URL ?? "").ref;
+  const restRef = refFromRestUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const anonRef = refFromKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const svcRef = refFromKey(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  try {
+    const report = assertProductionTarget([
+      { label: "SQL connection (PRODUCTION_DATABASE_URL)", ref: sqlRef },
+      { label: "app REST URL (NEXT_PUBLIC_SUPABASE_URL)", ref: restRef },
+      { label: "anon key", ref: anonRef },
+      { label: "service-role key", ref: svcRef },
+    ]);
+    for (const line of report.verified) pass("identity", line);
+    for (const label of report.unverified) {
+      // Opaque sb_* keys cannot be decoded. Say that the check could not
+      // run rather than implying it passed — an authenticated read below
+      // is what actually proves such a key works.
+      warn("identity", `${label}: project could not be verified from the value`,
+        "Newer sb_* keys are opaque. The authenticated read probe below is the real check.");
+    }
+  } catch (err) {
+    block("identity", "Production target is not one consistent project",
+      String(err.message ?? err).replace(/\n\s*/g, " "));
+  }
+}
+
+// ---------------------------------------------------------------------
+// 2. Stripe — mode, key agreement, and whether the account can actually
+//    take money
+// ---------------------------------------------------------------------
+section("2. Stripe");
 {
   const sk = process.env.STRIPE_SECRET_KEY ?? "";
   const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
@@ -158,13 +230,73 @@ section("2. Stripe mode");
       "The card form and the server would disagree about which account they are talking to.");
   } else if (!skLive && WANT_PROD) {
     block("stripe", "Stripe is in TEST mode while --production was requested",
-      "Real customers' cards cannot be charged with a test key. Activate the account and swap both keys.");
-  } else if (!skLive) {
-    pass("stripe", "Stripe in test mode (correct for rehearsal)");
+      "Real customers' cards cannot be charged with a test key.");
   } else {
-    pass("stripe", "Stripe in live mode");
-    warn("stripe", "Live mode: every charge below is real money",
-      "Do the first production booking yourself, at the lowest-priced service, and refund it.");
+    pass("stripe", `keys agree: ${skLive ? "live" : "test"} mode`);
+
+    /*
+     * A key prefix is not activation.
+     *
+     * `sk_live_…` only means a live key exists. It says nothing about
+     * whether Stripe has finished reviewing the business, and a live key
+     * on an unactivated account fails at the first charge — after a
+     * customer has entered their card. The account object is the
+     * authority, so ask it.
+     */
+    try {
+      const res = await fetch("https://api.stripe.com/v1/account", {
+        headers: { authorization: `Bearer ${sk}` },
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        block("stripe", `Stripe rejected the secret key (${res.status})`,
+          body.slice(0, 180));
+      } else {
+        const acct = await res.json();
+
+        /*
+         * charges_enabled is the authority IN PRODUCTION, and only there.
+         *
+         * A Stripe SANDBOX account reports charges_enabled:false while
+         * test charges work perfectly — rehearsal has captured real test
+         * holds against exactly this account. So blocking on it outside
+         * production would fail a healthy rehearsal, which is a guard
+         * refusing the correct state.
+         *
+         * In production it is the thing a key prefix cannot tell you:
+         * `sk_live_…` only means a live key exists, not that Stripe has
+         * finished reviewing the business. A live key on an unactivated
+         * account fails at the first charge — after a customer has
+         * entered their card.
+         */
+        if (acct.charges_enabled === true) {
+          pass("stripe", "account charges_enabled");
+        } else if (WANT_PROD) {
+          block("stripe", "Stripe account cannot accept charges yet",
+            "charges_enabled is false: activation is incomplete or Stripe is still " +
+            "reviewing. A live key alone does not mean the account can take money.");
+        } else {
+          pass("stripe", "charges_enabled is false, which is normal for a sandbox",
+            "Test charges still work; this is only a blocker under --production.");
+        }
+
+        if (acct.payouts_enabled === true) {
+          pass("stripe", "account payouts_enabled");
+        } else if (WANT_PROD) {
+          block("stripe", "Stripe account payouts are not enabled",
+            "Helpward could collect but never be paid out. Usually a missing bank account.");
+        } else {
+          pass("stripe", "payouts_enabled is false (normal for a sandbox)");
+        }
+        if (skLive) {
+          warn("stripe", "LIVE mode: every charge is real money",
+            "Do the first production booking yourself, on the cheapest service, and refund it.");
+        }
+      }
+    } catch (err) {
+      block("stripe", "Could not reach Stripe to confirm the account is active",
+        String(err.message ?? err).slice(0, 160));
+    }
   }
 }
 
@@ -195,17 +327,26 @@ section("3. Scheduled jobs");
     pass("cron", `all ${declared.length} scheduled jobs declared and present`);
   }
 
-  // Vercel's Hobby plan runs crons once a day, at most two of them. Every
-  // sub-daily schedule here needs Pro. Getting this wrong is invisible:
-  // the deploy succeeds and the jobs simply never fire.
+  /*
+   * Sub-daily schedules need a plan that supports them.
+   *
+   * My first version of this said "on Hobby, crons run once a day and
+   * only two are allowed; the rest never fire and nothing reports it."
+   * Two of those three claims were wrong: Hobby allows 100 jobs per
+   * project, and a deployment carrying a sub-daily schedule is REJECTED
+   * rather than silently degraded. Loud is better, but the warning was
+   * describing a failure mode that does not happen.
+   */
   const subDaily = declared.filter((c) => {
     const [min, hr] = c.schedule.split(/\s+/);
     return min.includes("*") || min.includes("/") || hr.includes("*") || hr.includes("/");
   });
   if (subDaily.length > 0) {
-    warn("cron", `${subDaily.length} job(s) run more often than daily — needs a Vercel plan that allows it`,
-      "On Hobby, crons run once a day and only two are allowed; the rest never fire and nothing reports it. " +
-      `Most frequent: ${subDaily.map((c) => `${c.name} (${c.schedule})`).slice(0, 3).join(", ")}`);
+    warn("cron", `${subDaily.length} of ${declared.length} job(s) are sub-daily — the plan must allow that cadence`,
+      "A Hobby deployment carrying a sub-daily schedule is rejected, so this does not " +
+      "deploy at all there. The constraint is the cadence, not the job count. " +
+      `Most frequent: ${subDaily.map((c) => `${c.name} (${c.schedule})`).slice(0, 3).join(", ")}. ` +
+      "A registered schedule is still not evidence of a successful run — check the logs after deploy.");
   }
 }
 
@@ -263,55 +404,165 @@ if (!dbUrl) {
       pass("db", "no applied migration has been edited since it ran");
     }
 
-    // --- service areas and their boundaries ---
+    // --- service areas: ACTIVE datasets, coverage, geometry, dispatch ---
     //
-    // The areas themselves are declared in lib/service-areas.ts; the
-    // database holds their POLYGONS. Both halves have to be present, and
-    // the failure mode when the polygons are missing is total: the
-    // dispatch guard refuses every address, so no booking can be made at
-    // all. That is the single most likely way a fresh production
-    // database looks healthy and takes no orders.
-    const declaredAreas = [...fs.readFileSync("lib/service-areas.ts", "utf8")
-      .matchAll(/^\s*id:\s*"([a-z0-9-]+)"/gm)].map((m) => m[1]);
-
-    const { rows: loaded } = await client.query(`
-      select area_id,
-             count(*) as rows,
-             count(boundary) as with_geom
-        from service_area_boundaries
-       group by area_id order by area_id`);
-    const byArea = new Map(loaded.map((r) => [r.area_id, r]));
-
-    if (declaredAreas.length === 0) {
-      block("db", "Could not read any service area from lib/service-areas.ts");
-    }
-    for (const id of declaredAreas) {
-      const row = byArea.get(id);
-      if (!row || Number(row.with_geom) === 0) {
-        block("db", `service area "${id}" has no boundary polygon loaded`,
-          "The dispatch guard refuses EVERY address in it, so no booking can be created. " +
-          "Run: node scripts/load-boundaries.mjs");
-      } else {
-        pass("db", `service area "${id}" — ${row.with_geom} boundary polygon(s)`);
+    // Counting polygons was not a coverage check. is_point_serviceable
+    // (migration 0033) joins service_area_datasets ON is_active, and
+    // returns 'no_dataset' — fail-closed — when no dataset is active at
+    // all. So a database holding a pile of INACTIVE polygons dispatches
+    // nothing while a row count looks healthy. An audit got GO out of
+    // exactly that state.
+    //
+    // What is checked now: an ACTIVE dataset per declared area, every
+    // approved municipality present in it, geometry that is valid and
+    // non-empty, the stored feature_count matching the rows, and finally
+    // the real function answering correctly for a known point inside
+    // each area and one outside all of them.
+    const areaSrc = fs.readFileSync("lib/service-areas.ts", "utf8");
+    const declaredAreas = [];
+    {
+      // Each area block: id, then its municipalities array.
+      const re = /\bid:\s*"([a-z0-9-]+)"[\s\S]*?municipalities:\s*(\[[\s\S]*?\])/g;
+      let m;
+      while ((m = re.exec(areaSrc)) !== null) {
+        const munis = [...m[2].matchAll(/"([^"]+)"/g)].map((x) => x[1]);
+        declaredAreas.push({ id: m[1], municipalities: munis });
       }
     }
-    const orphans = loaded.filter((r) => !declaredAreas.includes(r.area_id));
-    if (orphans.length) {
-      warn("db", `${orphans.length} boundary set(s) for area(s) the code no longer declares`,
-        `${orphans.map((r) => r.area_id).join(", ")} — harmless, but they will never be matched against.`);
+    if (declaredAreas.length === 0) {
+      block("db", "Could not read any service area from lib/service-areas.ts",
+        "Everything about coverage below is unchecked.");
     }
 
-    // --- catalogue ---
-    const { rows: [cat] } = await client.query(`
-      select count(*) filter (where active) as active,
-             count(*) filter (where active and base_price_cents <= 0) as unpriced
-        from services`);
-    if (Number(cat.active) === 0) {
-      block("db", "No active services", "There is nothing for a customer to book.");
-    } else if (Number(cat.unpriced) > 0) {
-      block("db", `${cat.unpriced} active service(s) priced at zero`);
+    const { rows: activeSets } = await client.query(`
+      select d.id, d.area_id, d.feature_count,
+             count(b.id)                                   as rows,
+             count(b.boundary)                             as with_geom,
+             count(*) filter (where b.boundary is not null
+                                and not st_isvalid(b.boundary::geometry)) as invalid,
+             count(*) filter (where b.boundary is not null
+                                and st_isempty(b.boundary::geometry))     as empty
+        from service_area_datasets d
+        left join service_area_boundaries b on b.dataset_id = d.id
+       where d.is_active
+       group by d.id, d.area_id, d.feature_count`);
+    const activeByArea = new Map(activeSets.map((r) => [r.area_id, r]));
+
+    for (const area of declaredAreas) {
+      const set = activeByArea.get(area.id);
+      if (!set) {
+        block("db", `service area "${area.id}" has NO ACTIVE boundary dataset`,
+          "is_point_serviceable returns 'no_dataset' and the dispatch guard refuses " +
+          "EVERY address, so no booking can be created. Inactive polygons do not count. " +
+          "Load and then --activate a dataset (docs/BOUNDARY-DATASETS.md).");
+        continue;
+      }
+      if (Number(set.with_geom) === 0) {
+        block("db", `active dataset for "${area.id}" has no geometry`, `dataset ${set.id}`);
+        continue;
+      }
+      if (Number(set.invalid) > 0 || Number(set.empty) > 0) {
+        block("db", `active dataset for "${area.id}" has unusable geometry`,
+          `${set.invalid} invalid, ${set.empty} empty — st_covers cannot match against these.`);
+        continue;
+      }
+      if (set.feature_count != null && Number(set.feature_count) !== Number(set.rows)) {
+        block("db", `active dataset for "${area.id}" is incomplete`,
+          `feature_count says ${set.feature_count} but ${set.rows} boundary rows exist.`);
+        continue;
+      }
+
+      // Every approved municipality must actually be in the active set.
+      // A dataset missing Surrey is not "Lower Mainland coverage"; it is
+      // a dataset that silently refuses Surrey addresses.
+      const { rows: haveMunis } = await client.query(
+        "select municipality from service_area_boundaries where dataset_id = $1", [set.id]);
+      const norm = (x) => String(x).toLowerCase()
+        .replace(/^(city|district|township|town|village) of /, "")
+        .replace(/ (city|district|township|town|village)$/, "").trim();
+      const present = new Set(haveMunis.map((r) => norm(r.municipality)));
+      const missing = area.municipalities.filter((m) => !present.has(norm(m)));
+      if (missing.length > 0) {
+        block("db", `active dataset for "${area.id}" is missing ${missing.length} approved municipality(ies)`,
+          `${missing.join(", ")} — addresses there are refused while the area reads as covered.`);
+      } else {
+        pass("db", `"${area.id}" — active dataset, ${set.rows} polygons, all ` +
+                   `${area.municipalities.length} approved municipality(ies) present`);
+      }
+    }
+
+    const orphans = activeSets.filter((r) => !declaredAreas.some((a) => a.id === r.area_id));
+    if (orphans.length) {
+      warn("db", `${orphans.length} ACTIVE dataset(s) for area(s) the code no longer declares`,
+        `${orphans.map((r) => r.area_id).join(", ")} — these still match addresses in ` +
+        "is_point_serviceable, so they can accept bookings in a market that was retired.");
+    }
+
+    // --- the real function, on real points -----------------------------
+    //
+    // Everything above is structure. This is the behaviour customers hit.
+    const PROBES = [
+      { name: "Vancouver downtown", lng: -123.1207, lat: 49.2827, expect: "serviceable" },
+      { name: "Surrey",             lng: -122.8490, lat: 49.1913, expect: "serviceable" },
+      { name: "San Diego downtown", lng: -117.1611, lat: 32.7157, expect: "serviceable" },
+      { name: "Chicago",            lng:  -87.6298, lat: 41.8781, expect: "outside_boundary" },
+      { name: "Los Angeles (retired market)", lng: -118.2437, lat: 34.0522, expect: "outside_boundary" },
+    ];
+    for (const p of PROBES) {
+      const { rows: [r] } = await client.query(
+        "select is_point_serviceable(st_setsrid(st_makepoint($1,$2),4326)::geography) as verdict",
+        [p.lng, p.lat]);
+      const verdict = r?.verdict ?? "(null)";
+      if (verdict === p.expect) {
+        pass("db", `dispatch probe: ${p.name} -> ${verdict}`);
+      } else {
+        block("db", `dispatch probe: ${p.name} -> ${verdict}, expected ${p.expect}`,
+          verdict === "no_dataset"
+            ? "No active dataset covers anything: every booking is refused."
+            : "Coverage does not match the declared launch areas.");
+      }
+    }
+
+    // --- catalogue: the expected launch set, by id ---
+    //
+    // A positive count is not a catalogue check. A database with ONE
+    // active service passed, because "more than zero" was the whole
+    // test — and a launch missing twenty-six services is not a launch.
+    // The expected set is the seed catalogue in the repo, which is the
+    // only written-down statement of what Helpward offers.
+    const seedSql = fs.readFileSync("supabase/migrations/0003_seed_catalog.sql", "utf8");
+    const expectedIds = [...seedSql.matchAll(/^\s*\('([a-z0-9-]+)',\s*'[a-z-]+',/gm)]
+      .map((m) => m[1]);
+
+    const { rows: liveServices } = await client.query(
+      "select id, base_price_cents from services where active order by id");
+    const liveIds = new Set(liveServices.map((r) => r.id));
+
+    if (expectedIds.length === 0) {
+      warn("db", "Could not read the expected service ids from 0003_seed_catalog.sql",
+        `Falling back to a count check: ${liveIds.size} active services.`);
+      if (liveIds.size === 0) block("db", "No active services");
     } else {
-      pass("db", `${cat.active} active services, all priced`);
+      const missing = expectedIds.filter((id) => !liveIds.has(id));
+      const extra = [...liveIds].filter((id) => !expectedIds.includes(id));
+      if (missing.length > 0) {
+        block("db", `${missing.length} of ${expectedIds.length} launch service(s) are not active`,
+          `${missing.slice(0, 8).join(", ")}${missing.length > 8 ? ", …" : ""}`);
+      } else {
+        pass("db", `all ${expectedIds.length} launch services active`);
+      }
+      if (extra.length > 0) {
+        warn("db", `${extra.length} active service(s) not in the seed catalogue`,
+          `${extra.join(", ")} — bookable but never reviewed as part of the launch set.`);
+      }
+    }
+
+    const unpriced = liveServices.filter((r) => Number(r.base_price_cents) <= 0);
+    if (unpriced.length > 0) {
+      block("db", `${unpriced.length} active service(s) priced at zero`,
+        unpriced.map((r) => r.id).join(", "));
+    } else if (liveServices.length > 0) {
+      pass("db", "every active service has a price");
     }
 
     // --- claims guard (0065) ---

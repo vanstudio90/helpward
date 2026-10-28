@@ -15,10 +15,60 @@
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 
-const env = Object.fromEntries(
-  readFileSync(".env.rehearsal", "utf8").split("\n")
-    .filter((l) => l.includes("=") && !l.trim().startsWith("#"))
-    .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]));
+/*
+ * WHICH ENVIRONMENT.
+ *
+ * This read .env.rehearsal unconditionally and used that object instead
+ * of process.env, so exporting production credentials changed nothing:
+ * the runbook told an operator to reconcile production holds and the
+ * script reconciled REHEARSAL, reporting "zero stranded holds" about the
+ * wrong database. A rehearsal success presented as production evidence is
+ * worse than no check.
+ *
+ * --production reads ONLY the real environment, never a dotenv file, and
+ * asserts the declared project identity before touching anything.
+ */
+const PROD = process.argv.includes("--production");
+
+const env = PROD
+  ? process.env
+  : Object.fromEntries(
+      readFileSync(".env.rehearsal", "utf8").split("\n")
+        .filter((l) => l.includes("=") && !l.trim().startsWith("#"))
+        .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]));
+
+if (PROD) {
+  const { refFromRestUrl, refFromKey, assertProductionTarget, TargetError } =
+    await import("./lib/target.mjs");
+  const missing = ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "STRIPE_SECRET_KEY"]
+    .filter((k) => !env[k]);
+  if (missing.length) {
+    console.error(`\n  --production requires ${missing.join(", ")} in the environment.`);
+    console.error("  It will not fall back to a dotenv file.\n");
+    process.exit(1);
+  }
+  try {
+    const report = assertProductionTarget([
+      { label: "Supabase URL", ref: refFromRestUrl(env.NEXT_PUBLIC_SUPABASE_URL) },
+      { label: "service-role key", ref: refFromKey(env.SUPABASE_SERVICE_ROLE_KEY) },
+    ]);
+    console.log(`\n  PRODUCTION target (declared ${report.expected})`);
+    for (const line of report.verified) console.log(`    ${line}`);
+    for (const label of report.unverified) console.log(`    ${label}: opaque, not verifiable`);
+    const live = String(env.STRIPE_SECRET_KEY).startsWith("sk_live_")
+              || String(env.STRIPE_SECRET_KEY).startsWith("rk_live_");
+    console.log(`    Stripe: ${live ? "live" : "TEST"} mode`);
+    if (!live) {
+      console.error("\n  REFUSING: --production with a Stripe TEST key. The holds it would");
+      console.error("  reconcile are not the ones real customers have.\n");
+      process.exit(1);
+    }
+  } catch (err) {
+    if (!(err instanceof TargetError)) throw err;
+    console.error(`\n  ${err.message}\n`);
+    process.exit(1);
+  }
+}
 
 const APPLY = process.argv.includes("--apply");
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY,

@@ -4,7 +4,8 @@ Everything here needs credentials or an account decision, which is why it
 is the part no rehearsal can close. Work top to bottom; each step says how
 to tell it worked, because most of these fail **silently** when they fail.
 
-Run `npm run preflight` after step 3 and again after step 5. It checks
+Run `npm run preflight -- --production` after step 3 and again after
+step 5. Without `--production` it checks REHEARSAL and tells you so. It checks
 every environment variable, the Stripe mode, all twelve scheduled jobs,
 the migration state, the boundary polygons, the catalogue, and whether
 rehearsal accounts have leaked into production. It is read-only and prints
@@ -14,27 +15,48 @@ Candidate: `launch-scope-and-verification`. `main` is untouched at `6e5befc`.
 
 ---
 
-## 0. Before anything — one decision that silently breaks eight jobs
+## 0. Before anything — the scheduler has to support these cadences
 
-**Vercel plan.** Hobby runs cron jobs *once a day*, and at most two of
-them. Helpward declares twelve, and eight run more often than daily:
+Helpward declares **12** cron jobs, **8** of them sub-daily.
+Vercel's Hobby plan runs crons **once a day**, and a deployment carrying a
+sub-daily schedule is **rejected** — so on Hobby this does not deploy at
+all. (Hobby's limit is 100 jobs per project; the constraint here is the
+cadence, not the count. Checked against Vercel's cron pricing docs on
+2026-10-27 — confirm against your own plan, which I have not inspected.)
 
-| Job | Schedule | What stops if it never runs |
-|---|---|---|
-| `expand-preferred-broadcasts` | every minute | A request routed to a favourite helper never opens to everyone else. It expires instead. |
-| `expire-stale-requests` | every 15 min | Requests nobody accepted sit in `matching` forever. |
-| `auto-cancel-no-shows` | every 15 min | A helper who never turns up keeps the booking and the hold. |
-| `send-booking-reminders` | every 15 min | No T-30 reminder to either party. |
-| `sweep-calls` | every 15 min | Abandoned ringing calls never clear, so the next call glares. |
-| `offline-stale-helpers` | every 15 min | Helpers who closed the tab keep receiving offers they cannot see. |
-| `complete-stale-in-progress` | hourly | Bookings left in progress are never closed, so money is never captured. |
-| `process-data-exports` | every 30 min | A customer's data-export request is never fulfilled (a GDPR/PIPEDA obligation). |
+The table is generated from `vercel.json`, so it cannot drift from what
+actually deploys. Regenerate with:
 
-A Hobby deploy **succeeds** and these simply never fire. Nothing reports
-it. Confirm the plan allows the schedules in `vercel.json` before step 5,
-or decide explicitly which of the above you are launching without.
+```
+python3 - <<'EOF'
+import json
+for c in sorted(json.load(open('vercel.json'))['crons'], key=lambda x: x['path']):
+    print(f"{c['path'].split('/')[-1]:34} {c['schedule']}")
+EOF
+```
 
----
+| Job | Schedule | Cadence | What stops if it never runs |
+|---|---|---|---|
+| `auto-cancel-no-shows` | `*/15 * * * *` | sub-daily | A helper who never turns up keeps the booking and the customer keeps the hold. |
+| `complete-stale-in-progress` | `0 * * * *` | sub-daily | Bookings left in progress are never closed, so the money is never captured. |
+| `execute-account-deletions` | `0 5 * * *` | daily | Deletion requests never execute after their 30-day grace period. |
+| `expand-preferred-broadcasts` | `* * * * *` | sub-daily | A request routed to a favourite helper never opens to the wider pool. It expires instead. |
+| `expire-old-overrides` | `0 3 * * *` | daily | One-off availability overrides never expire. |
+| `expire-stale-requests` | `*/15 * * * *` | sub-daily | Requests nobody accepted sit in `matching` forever. |
+| `materialize-series-occurrences` | `0 4 * * *` | daily | Recurring series stop producing bookings. |
+| `offline-stale-helpers` | `*/5 * * * *` | sub-daily | Helpers who closed the tab keep receiving offers they cannot see, so requests go unanswered. |
+| `process-data-exports` | `*/30 * * * *` | sub-daily | A customer's data-export request is never fulfilled — a GDPR/PIPEDA obligation. |
+| `send-booking-reminders` | `*/15 * * * *` | sub-daily | No T-30 reminder reaches either party. |
+| `send-email-digests` | `0 13 * * *` | daily | No weekly digest to anyone who opted in. |
+| `sweep-calls` | `*/10 * * * *` | sub-daily | Abandoned ringing calls never clear, so the next call to that booking glares. |
+
+Pick hosting (or an external scheduler hitting these authenticated routes)
+that supports the actual expressions. Do **not** stretch expiry, payment
+recovery or privacy processing to daily just to fit a plan — capture,
+no-show cancellation and data-export fulfilment all depend on them.
+
+After deploying, confirm the schedules are registered **and that runs
+succeed**. A route file existing locally is not evidence it ever executed.
 
 ## 1. Stripe: activate the account
 
@@ -133,6 +155,8 @@ so a missing value is a silent outage rather than an error:
 
 | Variable | Missing means |
 |---|---|
+| `HELPWARD_PRODUCTION_REF` | Nothing can verify *which* project is being used, so a GO would only mean "these variables are present", not "this is the right environment". Set it to the Supabase project ref. Needed by preflight, `migrate.mjs --production` and `reconcile-holds.mjs --production`. |
+| `HELPWARD_PRODUCTION_ORIGIN` | `NEXT_PUBLIC_SITE_URL` cannot be checked against the intended launch host, so a preview origin passes and reset links go to a throwaway deployment. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Nothing works. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Nobody can sign in. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Payments, payouts and all crons fail. |
@@ -163,9 +187,11 @@ Two endpoints, both in live mode, both pointing at the production host:
 | Path | Events |
 |---|---|
 | `/api/webhooks/stripe` | `payment_intent.succeeded`, `payment_intent.amount_capturable_updated`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded` |
-| `/api/webhooks/stripe-connect` | `account.updated` |
+| `/api/webhooks/stripe-connect` | `account.updated`, `payout.paid`, `payout.failed` |
 
-Subscribe to exactly those events. The list is what the handlers actually
+Subscribe to exactly those events. The Connect endpoint handles
+`payout.paid` and `payout.failed` as well as `account.updated`; omitting
+them leaves helper payout records without the events the code expects. The list is what the handlers actually
 switch on — `payment_intent.amount_capturable_updated` is the one that
 confirms a hold is in place, so omitting it leaves bookings stuck waiting
 for a payment they already have. Do **not** add
@@ -177,8 +203,15 @@ Copy each signing secret into the matching variable from step 3. They are
 different secrets; swapping them makes both endpoints reject every event
 with a signature error.
 
-**Verify:** `npm run verify:webhooks`, then send a test event from the
-Stripe dashboard and confirm a 200.
+**Verify:** send a test event from the Stripe dashboard (Developers →
+Webhooks → the endpoint → Send test webhook) and confirm a 200 in that
+endpoint's own delivery log.
+
+Do **not** use `npm run verify:webhooks` for this. It forges signed
+events to prove signature checking, replay rejection and idempotency work
+— correct against a local server, and the wrong thing to aim at a live
+site, because it would inject invented payment events into real data. It
+now refuses any non-localhost target.
 
 ---
 
@@ -212,7 +245,17 @@ Rehearsal proves the code. It cannot prove there is anyone to do the work.
 3. Place one real booking yourself in each region, on the cheapest
    service, through the real customer flow. Let it complete and capture.
    Then refund it.
-4. Reconcile: `npm run verify:holds` should report zero stranded holds.
+4. Reconcile against production, read-only:
+   ```
+   HELPWARD_PRODUCTION_REF='<ref>' NEXT_PUBLIC_SUPABASE_URL='…' \
+   SUPABASE_SERVICE_ROLE_KEY='…' STRIPE_SECRET_KEY='sk_live_…' \
+   node scripts/reconcile-holds.mjs --production
+   ```
+   It should report zero stranded holds. `npm run verify:holds` without
+   `--production` reads `.env.rehearsal` and reconciles REHEARSAL — it
+   would have reported "zero stranded holds" about the wrong database.
+   `--production` reads only the real environment, verifies the declared
+   project, and refuses a Stripe test key. Add `--apply` only to write.
 
 Only after both regions pass should the site be advertised anywhere.
 

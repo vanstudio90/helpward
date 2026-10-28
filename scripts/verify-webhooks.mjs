@@ -17,7 +17,38 @@ const env = Object.fromEntries(
     .filter((l) => l.includes("=") && !l.trim().startsWith("#"))
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]));
 
+/*
+ * THIS IS A SANDBOX MECHANICS TEST, AND IT MUST STAY ONE.
+ *
+ * It FORGES Stripe events — signs synthetic payloads with the local
+ * webhook secret and posts them at the app — to prove signature
+ * verification, replay rejection and idempotency work. That is exactly
+ * the right way to test the mechanics and exactly the wrong thing to aim
+ * at a live site: it would inject invented payment events into a system
+ * holding real customers' money.
+ *
+ * The runbook used to list this under production verification, with the
+ * env read from .env.rehearsal and BASE defaulting to localhost — so it
+ * reported on rehearsal while appearing to verify production. It is
+ * refused against anything non-local now, and the runbook sends a real
+ * test event from the Stripe dashboard instead, then reads the delivery
+ * record. That proves the production endpoint without forging anything.
+ */
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
+{
+  let host;
+  try { host = new URL(BASE).hostname; } catch { host = null; }
+  const local = host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+  if (!local) {
+    console.error(`\n  REFUSING: BASE_URL is ${BASE}.`);
+    console.error("  This test posts FORGED Stripe events. Running it against a deployed");
+    console.error("  site would inject invented payment events into real data.\n");
+    console.error("  To verify a deployed webhook endpoint: send a test event from the");
+    console.error("  Stripe dashboard (Developers -> Webhooks -> your endpoint -> Send");
+    console.error("  test webhook) and confirm a 200 in that endpoint's delivery log.\n");
+    process.exit(1);
+  }
+}
 let pass = 0, fail = 0;
 const ok = (label, cond, detail = "") => {
   if (cond) { console.log(`  \x1b[32mPASS\x1b[0m ${label}`); pass++; }
