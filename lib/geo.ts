@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { CITIES, type City } from "@/lib/marketing";
+import { SERVICE_AREAS, normalizeMunicipality } from "@/lib/service-areas";
 
 // Vercel attaches edge geolocation headers to every request — no API call,
 // no third-party dep, free at any scale. Headers exist only on deployed
@@ -65,24 +66,38 @@ function matchToHelpwardCity(
       if (n.length >= 4 || country === c.country) return c;
     }
   }
-  // 4. Country+region heuristic: if user is in BC/Canada → Vancouver, ON/Canada → Toronto
-  if (country && region) {
-    const fallback = COUNTRY_REGION_FALLBACK[`${country}-${region}`];
-    if (fallback) return CITIES.find((c) => c.slug === fallback) ?? null;
+  // 4. Municipality match against the ACTUAL service areas.
+  //
+  // This replaced a country+region table that mapped CA-BC -> Vancouver and
+  // US-CA -> San Francisco, plus seven other entries pointing at cities
+  // retired on 2026-10-26. Eight of the nine resolved to null, so the code
+  // described markets that no longer existed.
+  //
+  // The surviving entry was the worse problem: province-wide snapping told
+  // a visitor in Victoria or Prince George "Get real human help in
+  // Vancouver", several hundred kilometres outside anywhere a helper can be
+  // dispatched. lib/service-areas.ts already lists the exact municipalities
+  // each area covers — the same list the dispatch guard enforces — so a
+  // visitor is personalised only where a booking could actually be filled.
+  if (region && country) {
+    const area = SERVICE_AREAS.find((a) =>
+      a.country === country &&
+      a.regions.some((r) => r.toLowerCase() === region.toLowerCase()) &&
+      a.municipalities.some((m) => normalizeMunicipality(m) === normalizeMunicipality(target)),
+    );
+    if (area) {
+      // Area ids and marketing slugs differ: "lower-mainland-bc" is the
+      // dispatch area, "vancouver" is the page a visitor reads.
+      const slug = AREA_TO_CITY_SLUG[area.id];
+      if (slug) return CITIES.find((c) => c.slug === slug) ?? null;
+    }
   }
   return null;
 }
 
-// When we know the country/region but the city name didn't match, snap to the
-// nearest Helpward market in that region. Better than no personalisation at all.
-const COUNTRY_REGION_FALLBACK: Record<string, string> = {
-  "CA-BC": "vancouver",
-  "CA-ON": "toronto",
-  "CA-QC": "montreal",
-  "US-WA": "seattle",
-  "US-CA": "san-francisco", // closest of LA/SF — could refine with lat/lng
-  "US-TX": "austin",
-  "US-IL": "chicago",
-  "US-NY": "new-york",
-  "US-FL": "miami",
+/** Dispatch area id -> the marketing city page that represents it. */
+const AREA_TO_CITY_SLUG: Record<string, string> = {
+  "lower-mainland-bc": "vancouver",
+  "san-diego-ca": "san-diego",
 };
+
