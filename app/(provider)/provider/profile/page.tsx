@@ -29,6 +29,12 @@ export default async function ProviderProfilePage() {
   // Cities this helper accepts work in. No rows is a real state — every
   // account created before migration 0072 is in it — and means unrestricted,
   // so the card says so rather than rendering an ambiguous empty list.
+  const { data: contact } = await supabase
+    .from("profile_contacts")
+    .select("phone")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   const { data: myCities } = await supabase
     .from("provider_cities")
     .select("area_id, municipality")
@@ -89,6 +95,8 @@ export default async function ProviderProfilePage() {
 
         <ProfileForm initial={{
           full_name: profile?.full_name ?? "",
+          phone: contact?.phone ?? "",
+          base_address: pp?.base_address ?? "",
           bio: pp?.bio ?? "",
           service_radius_km: pp?.service_radius_km ?? 20,
           languages: (pp?.languages ?? []).join(", "),

@@ -120,3 +120,40 @@ test("where 'done' leads depends on whether setup is finished", () => {
   assert.match(page, /Back to your setup steps/);
   assert.match(page, /Back to dashboard/);
 });
+
+/* ------------------------------------------------- helper contact details */
+
+test("a helper can record a phone number and where they are based", () => {
+  // set_my_phone has existed since migration 0061, but the only page that
+  // called it was /settings — in the CUSTOMER route group, absent from the
+  // helper nav. Same gap that made the display name uneditable.
+  const actions = readFileSync(`${DIR}/actions.ts`, "utf8");
+  const forms = readFileSync(`${DIR}/forms.tsx`, "utf8");
+  const page = readFileSync(`${DIR}/page.tsx`, "utf8");
+
+  assert.match(actions, /rpc\("set_my_phone", \{ p_phone: phone \|\| null \}\)/);
+  assert.match(actions, /base_address: baseAddress \|\| null/);
+  assert.match(forms, /name="phone"/);
+  assert.match(forms, /name="base_address"/);
+  assert.match(page, /from\("profile_contacts"\)/);
+});
+
+test("the base address is not sold as the thing that gets you work", () => {
+  // Matching uses current_location, the live reported point. An address
+  // presented as controlling dispatch would be a lie a helper plans around.
+  const forms = readFileSync(`${DIR}/forms.tsx`, "utf8");
+  assert.match(forms, /Jobs reach you from your live location, not this/);
+});
+
+test("a failed admin query never renders as an empty table", () => {
+  // profiles.phone was dropped by migration 0051 while the admin users
+  // page still selected it, so PostgREST rejected the query, data came
+  // back null, and 94 users rendered as "No users match those filters".
+  const users = readFileSync("app/(admin)/admin/users/page.tsx", "utf8");
+  assert.match(users, /const \{ data: rows, error \} = await q;/);
+  assert.match(users, /Could not load users: \{error\.message\}/);
+  // And it must no longer ask profiles for a column that is gone.
+  const select = users.slice(users.indexOf('.select('), users.indexOf('.order('));
+  assert.doesNotMatch(select, /\bphone\b(?!\))/, "still selecting profiles.phone");
+  assert.match(select, /profile_contacts\(phone\)/);
+});

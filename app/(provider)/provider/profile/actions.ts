@@ -102,9 +102,22 @@ export async function updateProviderProfileAction(
     .eq("id", user.id);
   if (nameError) return { error: nameError.message };
 
+  // Phone goes through set_my_phone (migration 0061), the same RPC the
+  // customer settings page uses — a helper had no route to it because
+  // /settings is in the customer route group and is not in their nav.
+  const phone = String(formData.get("phone") ?? "").trim();
+  if (phone.length > 30) return { error: "That phone number is too long." };
+  const { error: phoneError } = await supabase.rpc("set_my_phone", { p_phone: phone || null });
+  if (phoneError) return { error: phoneError.message };
+
+  // Base address is for records and support. Matching uses the live
+  // location a helper reports while online, never this.
+  const baseAddress = String(formData.get("base_address") ?? "").trim();
+  if (baseAddress.length > 200) return { error: "That address is too long." };
+
   const { error } = await supabase
     .from("provider_profiles")
-    .update({ bio, service_radius_km: radius, languages })
+    .update({ bio, service_radius_km: radius, languages, base_address: baseAddress || null })
     .eq("user_id", user.id);
 
   if (error) return { error: error.message };
@@ -121,6 +134,8 @@ export async function updateProviderProfileAction(
   const saved = [
     fullName,
     `${radius} km radius`,
+    phone ? "phone saved" : null,
+    baseAddress ? "base address saved" : null,
     languages.length
       ? `${languages.length === 1 ? "speaks" : "speaks"} ${languages.join(", ")}`
       : null,

@@ -137,7 +137,8 @@ function SaveResult({ state }: { state?: { error?: string; success?: string } })
 
 export function ProfileForm({
   initial,
-}: { initial: { full_name: string; bio: string; service_radius_km: number; languages: string } }) {
+}: { initial: { full_name: string; phone: string; base_address: string;
+                bio: string; service_radius_km: number; languages: string } }) {
   const [state, formAction, pending] = useActionState(updateProviderProfileAction, undefined);
 
   return (
@@ -156,6 +157,33 @@ export function ProfileForm({
             className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
         </label>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-700">Phone number</span>
+            <input
+              name="phone"
+              type="tel"
+              defaultValue={initial.phone}
+              maxLength={30}
+              placeholder="+1 604 555 0123"
+              className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+            />
+            <p className="text-[11px] text-slate-500 mt-1">So we can reach you about a booking.</p>
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-700">Where you&rsquo;re based</span>
+            <input
+              name="base_address"
+              defaultValue={initial.base_address}
+              maxLength={200}
+              placeholder="Street and city"
+              className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+            />
+            <p className="text-[11px] text-slate-500 mt-1">
+              For our records. Jobs reach you from your live location, not this.
+            </p>
+          </label>
+        </div>
         <label className="block">
           <span className="text-xs font-semibold text-slate-700">About you</span>
           <textarea
