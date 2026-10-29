@@ -7,6 +7,8 @@ import {
   Power, Sun, SunDim, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Toggle } from "@/components/provider/Toggle";
+import { WaitingMap } from "@/components/provider/WaitingMap";
 
 /* The waiting screen.
  *
@@ -48,32 +50,6 @@ function playChime() {
   } catch {
     /* Audio is a courtesy. A browser that refuses it must not break the page. */
   }
-}
-
-function Toggle({ on, onChange, label, busy }: {
-  on: boolean; onChange: (v: boolean) => void; label: string; busy?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      disabled={busy}
-      onClick={() => onChange(!on)}
-      className={cn(
-        "relative w-[52px] h-[31px] rounded-full shrink-0 transition-colors disabled:opacity-50",
-        on ? "bg-brand-600" : "bg-slate-200",
-      )}
-    >
-      <span
-        className={cn(
-          "absolute top-[3px] w-[25px] h-[25px] rounded-full bg-white shadow-sm transition-all",
-          on ? "left-[24px]" : "left-[3px]",
-        )}
-      />
-    </button>
-  );
 }
 
 function Row({ icon: Icon, title, sub, children, href }: {
@@ -230,18 +206,8 @@ export function ReadyPanel({
       {/* The radar. It animates ONLY while online, so the page cannot look
           busy while nothing is happening — the single most misleading
           thing a waiting screen can do. */}
-      <div className="relative rounded-panel overflow-hidden bg-brand-50/70 border border-brand-100/60 h-[260px] lg:h-[320px]">
-        <div aria-hidden="true" className="absolute inset-0 opacity-[0.55]"
-          style={{
-            backgroundImage:
-              "linear-gradient(90deg, rgba(255,255,255,.9) 2px, transparent 2px), " +
-              "linear-gradient(0deg, rgba(255,255,255,.9) 2px, transparent 2px), " +
-              "linear-gradient(90deg, rgba(255,255,255,.55) 1px, transparent 1px), " +
-              "linear-gradient(0deg, rgba(255,255,255,.55) 1px, transparent 1px)",
-            backgroundSize: "96px 96px, 96px 96px, 32px 32px, 32px 32px",
-            backgroundPosition: "-14px -30px, -14px -30px, 0 0, 0 0",
-          }}
-        />
+      <div className="relative rounded-panel overflow-hidden bg-brand-50 border border-brand-100/60 h-[260px] lg:h-[320px]">
+        <WaitingMap />
         <div className="absolute inset-0 flex items-center justify-center">
           {searching && [0, 1, 2].map((i) => (
             <span

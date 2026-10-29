@@ -11,6 +11,7 @@ import { SERVICE_AREAS } from "@/lib/service-areas";
 import { canAcceptWork, type ProviderReadiness } from "@/lib/provider-readiness";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { PageHeader } from "@/components/provider/ui";
 
 export default async function ProviderProfilePage() {
   const supabase = await createSupabaseServerClient();
@@ -66,7 +67,7 @@ export default async function ProviderProfilePage() {
 
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto pb-12">
+    <div className="space-y-5">
       {/* There was no way back from this page — not to the setup steps, not
           to the dashboard. A helper who arrived from "Complete your
           profile" on step 1, filled it in and saved was simply stranded. */}
@@ -78,10 +79,7 @@ export default async function ProviderProfilePage() {
         {stillSettingUp ? "Setup steps" : "Dashboard"}
       </Link>
 
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My helper profile</h1>
-      <p className="text-sm text-slate-500 mt-1 mb-6">
-        Customers see this on your public profile when matching tasks.
-      </p>
+      <PageHeader title="My profile" subtitle="Customers see this when matching tasks." />
 
       <div className="space-y-5">
         <ProviderAvatarUpload

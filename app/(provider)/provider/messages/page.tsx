@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { PageHeader } from "@/components/provider/ui";
 
 export default async function ProviderMessagesPage() {
   const supabase = await createSupabaseServerClient();
@@ -22,9 +23,8 @@ export default async function ProviderMessagesPage() {
   }>;
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Messages</h1>
-      <p className="text-sm text-slate-500 mt-1 mb-6">Customers you&apos;re talking to.</p>
+    <div className="space-y-5">
+      <PageHeader title="Messages" subtitle="Your customer conversations." />
 
       {conversations.length === 0 ? (
         <div className="rounded-2xl bg-white border border-slate-100 p-8 sm:p-12 text-center">

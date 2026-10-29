@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Calendar, Info } from "lucide-react";
 import { getMyAvailability } from "@/lib/data/availability";
 import { ScheduleEditor } from "./editor";
+import { PageHeader } from "@/components/provider/ui";
 
 export const metadata = {
   title: "Schedule — Helpward",
@@ -13,10 +14,8 @@ export default async function ProviderSchedulePage() {
   if (!data) return null;
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto pb-12">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 inline-flex items-center gap-2">
-        <Calendar className="w-6 h-6 text-brand-600" /> Schedule
-      </h1>
+    <div className="space-y-5">
+      <PageHeader title="Availability" subtitle="When you can work." />
       <p className="text-sm text-slate-500 mt-1 mb-5">
         Tell customers when you&apos;re typically available. You can still go online or offline manually any time —
         the schedule shapes the &ldquo;Available now&rdquo; badge on your public profile.

@@ -50,16 +50,25 @@ test("Menu reaches everything the tabs do not", () => {
 });
 
 test("the content clears the fixed tab bar", () => {
-  // A fixed bar over the last element hides whatever sits at the bottom of
-  // the page — usually the save button.
-  assert.match(layout, /pb-20 lg:pb-0/);
+  // A fixed bar over the last element hides whatever sits at the bottom
+  // of the page — usually the save button. The bar is about 64px plus
+  // the home-indicator inset, so the pad has to beat it; pinning the
+  // exact class made this fail on a spacing change that kept the
+  // clearance, which told us nothing.
+  // Anchored to <main>: an unanchored search found the sidebar's own
+  // pb-4 first and failed on a padding that was never the one in question.
+  const main = layout.match(/<main className="([^"]*)"/);
+  assert.ok(main, "no <main> in the provider layout");
+  const pad = main[1].match(/pb-(\d+)/);
+  assert.ok(pad, "main has no bottom padding");
+  assert.ok(Number(pad[1]) >= 20, `bottom pad pb-${pad[1]} is under the tab bar height`);
 });
 
 test("both navigations show where you are", () => {
   assert.match(tabBar, /aria-current=\{active \? "page" : undefined\}/);
   assert.match(sideNav, /aria-current=\{active \? "page" : undefined\}/);
   // The sidebar previously rendered every link identically.
-  assert.match(sideNav, /bg-emerald-50 text-emerald-900/);
+  assert.match(sideNav, /bg-brand-50 text-brand-900|bg-emerald-50 text-emerald-900/);
 });
 
 test("back goes somewhere that was actually visited", () => {

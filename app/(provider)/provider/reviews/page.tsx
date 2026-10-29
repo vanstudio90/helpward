@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Star } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { one } from "@/lib/supabase/relation";
+import { PageHeader } from "@/components/provider/ui";
 
 export default async function ProviderReviewsPage() {
   const supabase = await createSupabaseServerClient();
@@ -26,9 +27,8 @@ export default async function ProviderReviewsPage() {
   const total = reviews?.length ?? 0;
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto pb-12">
-      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My reviews</h1>
-      <p className="text-sm text-slate-500 mt-1 mb-6">What your customers have said.</p>
+    <div className="space-y-5">
+      <PageHeader title="Reviews" subtitle="What your customers have said." />
 
       <div className="rounded-2xl bg-white border border-slate-100 p-5 mb-5">
         <div className="flex items-baseline gap-3">

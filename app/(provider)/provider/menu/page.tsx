@@ -2,10 +2,14 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import {
-  ChevronRight, HelpCircle, ShieldCheck, Settings, Calendar, MessageCircle,
+  HelpCircle, ShieldCheck, Settings, Calendar, MessageCircle,
   Star, GalleryHorizontal, BarChart3, DollarSign, CreditCard, UserCircle,
   MapPin, Sparkles, FileText, Lock, LogOut, CheckCircle2, Clock,
+  ListChecks, ChevronRight,
 } from "lucide-react";
+import {
+  PageHeader, SectionLabel, Card, CircleChip, RowGroup, Row, TextAction,
+} from "@/components/provider/ui";
 import { canAcceptWork, type ProviderReadiness } from "@/lib/provider-readiness";
 
 /* Everything that does not fit in five tabs.
@@ -43,11 +47,12 @@ export default async function ProviderMenuPage() {
   const ready = canAcceptWork(readiness);
 
   const WORK: Row[] = [
-    { href: "/provider/schedule", label: "Schedule", icon: Calendar, sub: "When you're available" },
-    { href: "/provider/messages", label: "Messages", icon: MessageCircle, sub: "Customers you're working with" },
-    { href: "/provider/reviews", label: "Reviews", icon: Star, sub: "What customers said" },
-    { href: "/provider/portfolio", label: "Portfolio", icon: GalleryHorizontal, sub: "Photos of work you've done" },
-    { href: "/provider/analytics", label: "Analytics", icon: BarChart3, sub: "How you're doing over time" },
+    { href: "/provider/profile", label: "My services", icon: ListChecks, sub: "What you offer" },
+    { href: "/provider/schedule", label: "Availability", icon: Calendar, sub: "When you can work" },
+    { href: "/provider/messages", label: "Messages", icon: MessageCircle, sub: "Your customer conversations" },
+    { href: "/provider/reviews", label: "Reviews", icon: Star },
+    { href: "/provider/portfolio", label: "Portfolio", icon: GalleryHorizontal },
+    { href: "/provider/analytics", label: "Insights", icon: BarChart3, sub: "Your work over time" },
   ];
   const MONEY: Row[] = [
     { href: "/provider/earnings", label: "Earnings", icon: DollarSign, sub: "What you've been paid" },
@@ -66,106 +71,100 @@ export default async function ProviderMenuPage() {
   ];
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-8 max-w-3xl mx-auto pb-28 lg:pb-12">
-      {/* Who you are, and whether you can work — the two things worth
-          seeing before any link. */}
-      <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-        <div className="flex items-center gap-3.5">
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="w-14 h-14 rounded-full object-cover" />
-          ) : (
-            <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl font-bold">
-              {profile?.full_name?.[0] ?? "?"}
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="text-lg font-bold text-slate-900 truncate">{profile?.full_name}</div>
-            <div className={`mt-0.5 inline-flex items-center gap-1.5 text-xs font-semibold ${
-              ready ? "text-emerald-700" : "text-amber-700"
-            }`}>
-              {ready
-                ? <><CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" /> Ready to accept work</>
-                : <><Clock className="w-3.5 h-3.5" aria-hidden="true" /> Setup not finished</>}
-            </div>
+    <div className="space-y-5">
+      <PageHeader title="Menu" />
+
+      {/* Who you are and whether you can be sent work — the two things
+          people open this screen to check. */}
+      <Card className="p-4 flex items-center gap-4">
+        <span className="w-16 h-16 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-[20px] font-extrabold shrink-0">
+          {initials(profile?.full_name)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[20px] font-extrabold text-slate-900 truncate leading-tight">
+            {profile?.full_name ?? "Your profile"}
+          </div>
+          <div className="mt-1 flex items-center gap-1.5 text-[15px] font-bold">
+            {ready ? (
+              <>
+                <CheckCircle2 className="w-[18px] h-[18px] text-emerald-600 shrink-0" aria-hidden="true" />
+                <span className="text-emerald-700">Ready to accept work</span>
+              </>
+            ) : (
+              <>
+                <Clock className="w-[18px] h-[18px] text-amber-600 shrink-0" aria-hidden="true" />
+                <span className="text-amber-700">Setup unfinished</span>
+              </>
+            )}
           </div>
         </div>
+        <span className="shrink-0"><TextAction href="/provider/profile">Edit profile</TextAction></span>
+      </Card>
 
-        {!ready && (
-          <Link
-            href="/provider/onboard"
-            className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-amber-50 border border-amber-100 px-3.5 py-3"
-          >
-            <span className="text-sm font-semibold text-amber-900">Finish your setup</span>
-            <ChevronRight className="w-4 h-4 text-amber-700 shrink-0" aria-hidden="true" />
-          </Link>
-        )}
-      </div>
-
-      {/* The three a helper reaches for mid-job, big enough to hit without
-          looking. */}
-      <div className="mt-3 grid grid-cols-3 gap-3">
+      {/* Three things people reach for often enough to deserve a tap of
+          their own rather than a line in a list. */}
+      <div className="grid grid-cols-3 gap-3">
         {[
           { href: "/help", label: "Help", icon: HelpCircle },
           { href: "/safety", label: "Safety", icon: ShieldCheck },
           { href: "/provider/profile", label: "Settings", icon: Settings },
-        ].map((t) => {
-          const Icon = t.icon;
-          return (
-            <Link
-              key={t.label}
-              href={t.href}
-              className="flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-white border border-slate-100 py-4 hover:bg-slate-50 transition-colors"
-            >
-              <Icon className="w-5 h-5 text-slate-500" aria-hidden="true" />
-              <span className="text-xs font-semibold text-slate-800">{t.label}</span>
-            </Link>
-          );
-        })}
+        ].map((t) => (
+          <Link
+            key={t.label}
+            href={t.href}
+            className="bg-white rounded-card border border-slate-100 shadow-soft py-5 flex flex-col items-center gap-2.5"
+          >
+            <CircleChip icon={t.icon} />
+            <span className="text-[16px] font-extrabold text-slate-900">{t.label}</span>
+          </Link>
+        ))}
       </div>
 
-      {[
-        { title: "Your work", rows: WORK },
-        { title: "Money", rows: MONEY },
-        { title: "Account", rows: ACCOUNT },
-        { title: "Help & legal", rows: HELP },
-      ].map((group) => (
-        <section key={group.title} className="mt-6">
-          <h2 className="px-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-            {group.title}
-          </h2>
-          <div className="mt-2 rounded-2xl bg-white border border-slate-100 overflow-hidden">
-            {group.rows.map((r, i) => {
-              const Icon = r.icon;
-              return (
-                <Link
-                  key={`${r.href}-${r.label}`}
-                  href={r.href}
-                  className={`flex items-center gap-3.5 px-4 py-3.5 hover:bg-slate-50 transition-colors ${
-                    i > 0 ? "border-t border-slate-100" : ""
-                  }`}
-                >
-                  <Icon className="w-[18px] h-[18px] text-slate-400 shrink-0" aria-hidden="true" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-slate-900">{r.label}</span>
-                    {r.sub && <span className="block text-xs text-slate-500 leading-snug">{r.sub}</span>}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" aria-hidden="true" />
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      <section>
+        <SectionLabel>Your work</SectionLabel>
+        <RowGroup>
+          {WORK.map((r) => <Row key={r.label} href={r.href} icon={r.icon} title={r.label} sub={r.sub} />)}
+        </RowGroup>
+      </section>
 
-      <form action={logoutAction} className="mt-6">
-        <button className="w-full flex items-center justify-center gap-2 rounded-2xl bg-white border border-slate-200 py-3.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors">
-          <LogOut className="w-4 h-4" aria-hidden="true" /> Log out
+      <section>
+        <SectionLabel>Money</SectionLabel>
+        <RowGroup>
+          {MONEY.map((r) => <Row key={r.label} href={r.href} icon={r.icon} title={r.label} sub={r.sub} />)}
+        </RowGroup>
+      </section>
+
+      <section>
+        <SectionLabel>Account</SectionLabel>
+        <RowGroup>
+          {ACCOUNT.map((r) => <Row key={r.label} href={r.href} icon={r.icon} title={r.label} sub={r.sub} />)}
+        </RowGroup>
+      </section>
+
+      <section>
+        <SectionLabel>Help &amp; legal</SectionLabel>
+        <RowGroup>
+          {HELP.map((r) => <Row key={r.label} href={r.href} icon={r.icon} title={r.label} sub={r.sub} />)}
+        </RowGroup>
+      </section>
+
+      <form action={logoutAction}>
+        <button
+          type="submit"
+          className="w-full flex items-center gap-3.5 p-4 min-h-[68px] bg-white rounded-card border border-slate-100 shadow-soft text-left"
+        >
+          <LogOut className="w-[21px] h-[21px] text-slate-400 shrink-0 ml-2.5" aria-hidden="true" />
+          <span className="flex-1 text-[16px] font-bold text-slate-500">Sign out</span>
+          <ChevronRight className="w-5 h-5 text-slate-300 shrink-0" aria-hidden="true" />
         </button>
       </form>
-
-      <p className="mt-4 text-center text-[11px] text-slate-400">
-        Helpward for helpers · <a href="mailto:support@helpward.com" className="underline underline-offset-2">support@helpward.com</a>
-      </p>
     </div>
   );
+}
+
+/** First letters of the first and last word — "Rodolf Bugaci" -> "RB". */
+function initials(name: string | null | undefined): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return ((parts[0]![0] ?? "") + (parts.length > 1 ? parts[parts.length - 1]![0] : "")).toUpperCase();
 }

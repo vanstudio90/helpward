@@ -60,14 +60,14 @@ export default async function ProviderLayout({ children }: { children: React.Rea
   // (status='pending' AND no approved_at means they haven't submitted KYC yet)
 
   return (
-    <div className="min-h-screen lg:flex bg-slate-50">
+    <div className="min-h-screen lg:flex bg-app">
       {/* Sidebar */}
       <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
         <Link href="/" className="flex items-center gap-2 px-6 h-16 border-b border-slate-100">
           <Logo size={32} />
           <div>
             <div className="text-base font-bold leading-tight">Helpward</div>
-            <div className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide">For helpers</div>
+            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.18em]">Helper</div>
           </div>
         </Link>
         <ProviderSideNav offerCount={offerCount ?? 0} />
@@ -109,7 +109,9 @@ export default async function ProviderLayout({ children }: { children: React.Rea
           do repeatedly, and Menu holds the rest. */}
       <div className="flex-1 min-w-0 flex flex-col">
         <ProviderTopBar name={profile?.full_name ?? null} />
-        <main className="flex-1 min-w-0 pb-20 lg:pb-0">{children}</main>
+        <main className="flex-1 min-w-0 pb-24 lg:pb-10">
+          <div className="px-4 pt-1 pb-2 lg:px-8 lg:pt-8 max-w-5xl">{children}</div>
+        </main>
       </div>
 
       <ProviderTabBar offerCount={offerCount ?? 0} />

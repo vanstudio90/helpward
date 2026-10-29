@@ -72,17 +72,17 @@ export function ProviderSideNav({ offerCount = 0 }: { offerCount?: number }) {
                   className={cn(
                     "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
                     active
-                      ? "bg-emerald-50 text-emerald-900"
+                      ? "bg-brand-50 text-brand-900"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
                   )}
                 >
                   {active && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-emerald-600" aria-hidden="true" />
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r-full bg-brand-600" aria-hidden="true" />
                   )}
-                  <Icon className={cn("w-5 h-5 shrink-0", active ? "text-emerald-600" : "text-slate-400")} aria-hidden="true" />
+                  <Icon className={cn("w-5 h-5 shrink-0", active ? "text-brand-600" : "text-slate-400")} aria-hidden="true" />
                   <span className="flex-1 truncate">{item.label}</span>
                   {item.href === "/provider/inbox" && offerCount > 0 && (
-                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-600 text-white text-[11px] font-bold flex items-center justify-center">
+                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-brand-600 text-white text-[11px] font-bold flex items-center justify-center">
                       {offerCount > 9 ? "9+" : offerCount}
                     </span>
                   )}

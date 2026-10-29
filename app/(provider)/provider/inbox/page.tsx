@@ -1,8 +1,15 @@
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { one } from "@/lib/supabase/relation";
 import { payoutFromEstimateCents, dollars } from "@/lib/pricing";
 import { describeIntake } from "@/lib/service-intake";
-import { Inbox, Check, X, MapPin, Clock, DollarSign, Heart } from "lucide-react";
+import {
+  Inbox, MapPin, Clock, DollarSign, Heart, ListChecks, Calendar, Volume2,
+} from "lucide-react";
+import {
+  PageHeader, Card, Action, EmptyState, Hint,
+} from "@/components/provider/ui";
+import { cn } from "@/lib/cn";
 import { InboxRow } from "./row";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { ProviderInboxRealtimeRefresh } from "./realtime-refresh";
@@ -34,6 +41,13 @@ export default async function ProviderInboxPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // Whether offers can reach this helper at all is the first question
+  // this screen has to answer — an empty list means something completely
+  // different when you are offline.
+  const { data: pp } = await supabase
+    .from("provider_profiles").select("is_online").eq("user_id", user.id).maybeSingle();
+  const online = pp?.is_online === true;
+
   // match_attempts where the current helper was offered and hasn't responded.
   // We also pull the customer's full_name (and avatar) when the attempt is
   // flagged preferred so the helper sees who specifically requested them.
@@ -59,27 +73,50 @@ export default async function ProviderInboxPage() {
   });
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto">
-      <ProviderInboxRealtimeRefresh userId={user.id} />
-      <div className="flex items-center gap-3 mb-1">
-        <Inbox className="w-6 h-6 text-brand-600" />
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Inbox</h1>
-      </div>
-      <p className="text-sm text-slate-500 mb-6">
-        {offers.length === 0 ? "No open task offers right now." : `${offers.length} open offer${offers.length === 1 ? "" : "s"} — first to accept wins.`}
-      </p>
+    <div className="space-y-4">
+      <PageHeader
+        title="Offers"
+        subtitle={offers.length === 0
+          ? "New work, ready for you to review."
+          : `${offers.length} open offer${offers.length === 1 ? "" : "s"} — first to accept wins.`}
+      />
+
+      {/* Online state and connection state, side by side. They answer
+          different halves of "why is this empty": nothing is being sent
+          to me, or nothing is reaching me. */}
+      <Card className="flex items-center gap-3 p-4">
+        <span className={cn("w-3 h-3 rounded-full shrink-0", online ? "bg-emerald-500" : "bg-slate-300")} />
+        <span className="flex-1 text-[17px] font-extrabold text-slate-900">
+          {online ? "You're online" : "You're offline"}
+        </span>
+        <ProviderInboxRealtimeRefresh userId={user.id} inline />
+      </Card>
 
       {offers.length === 0 ? (
-        <div className="rounded-2xl bg-white border border-slate-100 p-8 sm:p-12 text-center">
-          <span className="inline-flex w-14 h-14 rounded-2xl bg-slate-50 items-center justify-center mb-3">
-            <Inbox className="w-7 h-7 text-slate-400" />
-          </span>
-          <h2 className="text-lg font-bold text-slate-900">All quiet</h2>
-          <p className="mt-1 text-sm text-slate-500 max-w-sm mx-auto">
-            New task offers will appear here when customers request a service you offer near you.
-            Make sure you're <strong>online</strong> from the Active task page.
+        <>
+          <EmptyState
+            icon={Inbox}
+            title={online ? "No offers right now" : "You're offline, so nothing is being sent"}
+            body={online
+              ? "Offers for your selected services will appear here when customers nearby request help."
+              : "Go online from Active and offers for your selected services will appear here."}
+          >
+            <Action href="/provider/profile" icon={ListChecks} trailingChevron>Manage my services</Action>
+            <Action href="/provider/schedule" icon={Calendar} variant="quiet">View availability</Action>
+          </EmptyState>
+
+          <Hint icon={Volume2}>
+            <strong className="font-bold text-slate-800">Keep an ear out.</strong>{" "}
+            You&rsquo;ll hear a ping when a new offer arrives, if sound is enabled on Active.
+          </Hint>
+
+          <p className="text-center text-[14px] text-slate-500 pt-1">
+            Accepted a request?{" "}
+            <Link href="/provider/active" className="font-bold text-brand-700 underline underline-offset-2">
+              Find it in Active.
+            </Link>
           </p>
-        </div>
+        </>
       ) : (
         <ul className="space-y-3">
           {offers.map((row) => {

@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/provider/ui";
 import { ArrowLeft, GalleryHorizontal } from "lucide-react";
 import Link from "next/link";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
@@ -60,7 +61,7 @@ export default async function ProviderPortfolioPage() {
     .filter((p) => p.signedUrl);
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-5xl mx-auto pb-12">
+    <div className="space-y-5">
       <Link
         href="/provider/earnings"
         className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 mb-4 hover:text-brand-800"
@@ -68,15 +69,10 @@ export default async function ProviderPortfolioPage() {
         <ArrowLeft className="w-3.5 h-3.5" /> Back
       </Link>
 
-      <div className="flex items-center gap-3 mb-1">
-        <GalleryHorizontal className="w-6 h-6 text-amber-600" />
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Portfolio</h1>
-      </div>
-      <p className="text-sm text-slate-500 mb-6 max-w-2xl">
-        Feature your best completion photos on your public profile so prospective customers can see real work.
-        Customers can opt-out individual photos from their booking page — we don&apos;t feature anything they
-        revoke.
-      </p>
+      <PageHeader
+        title="Portfolio"
+        subtitle="Feature your best completion photos on your public profile. Customers can opt a photo out from their booking, and anything they revoke is never shown."
+      />
 
       <PortfolioGrid initial={photos} />
     </div>

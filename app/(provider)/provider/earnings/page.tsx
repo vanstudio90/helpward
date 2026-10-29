@@ -1,7 +1,12 @@
 import Link from "next/link";
 import {
-  DollarSign, TrendingUp, Calendar, Heart, ArrowRight, Download, Info, Clock,
+  Heart, Download, Info, Wallet, Landmark, CheckCircle2, Receipt,
+  List as ListIcon,
 } from "lucide-react";
+import {
+  PageHeader, SectionLabel, Card, IconChip, StatCard, StatusPill,
+  RowGroup, Row, Action, EmptyState,
+} from "@/components/provider/ui";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ClientDateTime } from "@/components/ClientDateTime";
 
@@ -136,131 +141,105 @@ export default async function ProviderEarningsPage() {
   const payoutsPending = payable && payoutState?.stripe_payouts_enabled !== true;
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-5xl mx-auto pb-12">
-      <div className="flex items-start justify-between gap-3 flex-wrap mb-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 inline-flex items-center gap-2">
-            <DollarSign className="w-6 h-6 text-emerald-600" /> Earnings
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            You keep 80% of the service price, plus 100% of any tip. The flat
-            $4.50 service fee customers pay goes to Helpward and is never taken
-            out of your share. Payout scheduling is not live yet.
-          </p>
-        </div>
-        <a
-          href="/api/provider/export/bookings?days=365"
-          download
-          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
-          title="Download the last 365 days of bookings as a CSV file for your records"
-        >
-          <Download className="w-3.5 h-3.5" /> Export year CSV
-        </a>
-      </div>
+    <div className="space-y-5">
+      <PageHeader title="Earnings" />
 
-      {/* Summary strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <Stat
-          icon={<Calendar className="w-5 h-5" />}
-          tone="bg-brand-50 text-brand-600"
-          label="This week so far"
-          value={thisWeek ? formatMoney(thisWeek.totalCents, currency) : formatMoney(0, currency)}
-          sub={thisWeek ? `${thisWeek.count} task${thisWeek.count === 1 ? "" : "s"}` : "No earnings yet"}
-        />
-        {/* Read from the helper's actual Stripe state.
-            This used to show a computed next-Monday date under the words
-            "Once Stripe Connect is wired" — a payout date promised by a
-            page that simultaneously said payouts did not work. Connect IS
-            wired; what varies is whether THIS helper has finished
-            onboarding, which is what the card now reports. */}
-        <Stat
-          icon={<Clock className="w-5 h-5" />}
-          tone={payable && !payoutsPending
-            ? "bg-emerald-50 text-emerald-600"
-            : "bg-amber-50 text-amber-600"}
-          label="Payouts"
-          value={payable ? (payoutsPending ? "In review" : "Active") : "Not set up"}
-          sub={
-            !payable
-              ? "Finish payout setup to get paid"
-              : payoutsPending
-                ? "Earnings are safe; bank transfers start once Stripe finishes checking your details"
-                : "Stripe pays out on its own schedule"
-          }
-        />
-        <Stat
-          icon={<Heart className="w-5 h-5" />}
-          tone="bg-rose-50 text-rose-600"
-          label="Lifetime tips"
-          value={formatMoney(lifetimeTips, currency)}
-          sub="100% kept"
-        />
-        <Stat
-          icon={<TrendingUp className="w-5 h-5" />}
-          tone="bg-emerald-50 text-emerald-600"
-          label="Lifetime earnings"
-          value={formatMoney(lifetime, currency)}
-          sub={`${completed.length} task${completed.length === 1 ? "" : "s"} completed`}
-        />
-      </div>
-
-      {/* This said "Real payouts ship once Stripe Connect is wired" while
-          the card above it said payouts were Active — two statements on
-          one screen that could not both be true. Connect IS wired; what
-          varies is whether THIS helper has finished their own setup. */}
-      {payoutsPending && (
-        <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4 mb-6 flex items-start gap-3">
-          <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
-          <div className="text-sm text-amber-800">
-            <div className="font-semibold">Stripe is still checking your details.</div>
-            <div className="text-xs mt-0.5">
-              You can keep taking jobs — your earnings are being held safely in your Stripe
-              balance. Bank transfers begin as soon as the check clears. Nothing is lost in the
-              meantime.
+      {/* The week, given the room it deserves. Everything else on this
+          screen is context for this number. */}
+      <Card className="p-5">
+        <div className="flex items-start gap-3.5">
+          <IconChip icon={Wallet} />
+          <div className="min-w-0">
+            <div className="text-[12px] font-extrabold uppercase tracking-[0.09em] text-slate-400">This week</div>
+            <div className="text-[34px] leading-none font-extrabold text-slate-900 tabular-nums mt-1.5">
+              {formatMoney(thisWeek?.totalCents ?? 0, currency)}
             </div>
+            <p className="mt-2 text-[14px] text-slate-500 leading-snug">
+              Your earnings after Helpward&rsquo;s commission.
+            </p>
           </div>
         </div>
-      )}
+        <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-4">
+          <span className="inline-flex items-center gap-2 text-[15px] text-slate-600">
+            <ListIcon className="w-[18px] h-[18px] text-slate-400" aria-hidden="true" />
+            <span className="font-bold text-slate-900 tabular-nums">{thisWeek?.count ?? 0}</span> tasks
+          </span>
+          <span className="w-px h-5 bg-slate-200" aria-hidden="true" />
+          <span className="inline-flex items-center gap-2 text-[15px] text-slate-600">
+            <Heart className="w-[18px] h-[18px] text-rose-400" aria-hidden="true" />
+            <span className="font-bold text-slate-900 tabular-nums">{formatMoney(thisWeek?.tipsCents ?? 0, currency)}</span> tips included
+          </span>
+        </div>
+      </Card>
 
-      {!payable && (
-        <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4 mb-6 flex items-start gap-3">
-          <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-          <div className="text-sm text-amber-800">
-            <div className="font-semibold">You can&apos;t be paid yet.</div>
-            <div className="text-xs mt-0.5">
-              Your earnings below are tallied from completed bookings, but Stripe still needs your
-              bank and tax details before any of it can reach you.
-              <Link href="/provider/onboard" className="ml-1 font-semibold underline">Finish payout setup</Link>.
+      {/* Whether money can actually reach a bank account, read from this
+          helper's own Stripe state rather than asserted. */}
+      <Card className="p-4">
+        <div className="flex items-start gap-3.5">
+          <IconChip icon={Landmark} tone={payable && !payoutsPending ? "emerald" : "amber"} />
+          <div className="min-w-0 flex-1">
+            <div className="text-[17px] font-extrabold text-slate-900 leading-tight">Payouts</div>
+            <div className="mt-1.5">
+              <StatusPill tone={payable && !payoutsPending ? "good" : "warn"}>
+                {payable && !payoutsPending
+                  ? <><CheckCircle2 className="w-4 h-4" aria-hidden="true" /> Active</>
+                  : payable ? "In review" : "Not set up"}
+              </StatusPill>
             </div>
+            <p className="mt-2 text-[14px] text-slate-500 leading-snug">
+              {!payable
+                ? "Stripe needs your bank and tax details before any of this can reach you."
+                : payoutsPending
+                  ? "Your earnings are held safely in your Stripe balance. Bank transfers begin once Stripe finishes checking your details."
+                  : "Stripe manages your payout schedule."}
+            </p>
+            {!payable && (
+              <Link href="/provider/onboard" className="inline-block mt-2.5 text-[14px] font-bold text-brand-700 underline underline-offset-2">
+                Finish payout setup
+              </Link>
+            )}
           </div>
         </div>
-      )}
+      </Card>
+
+      <section>
+        <SectionLabel>Lifetime</SectionLabel>
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard icon={Wallet} label="Earnings" value={formatMoney(lifetime, currency)}
+            note={`${completed.length} task${completed.length === 1 ? "" : "s"}`} />
+          <StatCard icon={Heart} tone="rose" label="Tips" value={formatMoney(lifetimeTips, currency)} note="100% yours" />
+        </div>
+      </section>
+
+      <RowGroup>
+        <Row
+          icon={Info}
+          href="/help"
+          title="How earnings work"
+          sub="You keep 80% of the service price, plus all tips. The customer's service fee goes to Helpward and never comes out of your share."
+        />
+      </RowGroup>
 
       {/* Weekly breakdown */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold text-slate-900">Week-by-week</h2>
-          <button
-            disabled
-            title="CSV export ships in the same release as Stripe Connect"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 px-3 py-1.5 rounded-lg border border-slate-200 cursor-not-allowed"
+      <section>
+        <div className="flex items-center justify-between gap-3 mb-2.5 px-1">
+          <h2 className="text-[20px] font-extrabold tracking-[-0.01em] text-slate-900">Recent earnings</h2>
+          <a
+            href="/api/provider/export/bookings?days=365"
+            download
+            className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-slate-200 bg-white text-[13px] font-bold text-slate-700"
           >
-            <Download className="w-3 h-3" /> Export CSV
-          </button>
+            <Download className="w-[15px] h-[15px]" aria-hidden="true" /> Export CSV
+          </a>
         </div>
         {weeks.length === 0 ? (
-          <div className="rounded-2xl bg-white border border-slate-100 p-12 text-center">
-            <p className="text-sm font-semibold text-slate-700">No earnings yet</p>
-            <p className="text-xs text-slate-500 mt-1">
-              Once you complete your first task, weekly aggregates land here automatically.
-            </p>
-            <Link
-              href="/provider/active"
-              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold"
-            >
-              Go online <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+          <EmptyState
+            icon={Receipt}
+            title="Your first task starts here"
+            body="Completed tasks and tips will appear here, grouped by week."
+          >
+            <Action href="/provider/inbox">View offers</Action>
+          </EmptyState>
         ) : (
           <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
             {weeks.map((w) => (
@@ -346,20 +325,6 @@ export default async function ProviderEarningsPage() {
   );
 }
 
-function Stat({ icon, tone, label, value, sub }: {
-  icon: React.ReactNode; tone: string; label: string; value: string; sub: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-white border border-slate-100 p-4">
-      <span className={`inline-flex w-10 h-10 rounded-full ${tone} items-center justify-center mb-2`}>
-        {icon}
-      </span>
-      <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="text-lg sm:text-xl font-bold text-slate-900 leading-tight mt-1">{value}</div>
-      <div className="text-[11px] text-slate-500 mt-0.5">{sub}</div>
-    </div>
-  );
-}
 
 function formatMoney(cents: number, currency: string): string {
   const dollars = (cents ?? 0) / 100;

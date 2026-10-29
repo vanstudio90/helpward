@@ -6,6 +6,7 @@ import { MapBackdrop } from "@/components/MapBackdrop";
 import { Activity, MessageSquare, Phone, CheckCircle2, Play } from "lucide-react";
 import { OnlineToggle, BookingActions } from "./client";
 import { ReadyLive } from "./ready-live";
+import { PageHeader } from "@/components/provider/ui";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { BundleChecklist, type BundleChecklistItem } from "./bundle-checklist";
 import { CompletionPhotos, type CompletionPhoto } from "./completion-photos";
@@ -287,7 +288,7 @@ export default async function ProviderActivePage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto">
+    <div className="space-y-5">
       {pp?.offline_reason === "location_stale" && (
         <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" role="status">
           <div className="text-sm font-bold text-amber-950">
@@ -341,18 +342,11 @@ export default async function ProviderActivePage() {
         </div>
       ) : (
         <>
-        <div className="flex items-center justify-between gap-3 mb-5">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2">
-              <Activity className="w-6 h-6 text-emerald-600" />
-              Active task
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Keep this page open until the job is finished.
-            </p>
-          </div>
-          <OnlineToggle initialOnline={pp?.is_online ?? false} />
-        </div>
+        <PageHeader
+          title="Active task"
+          subtitle="Keep this page open until the job is finished."
+          action={<OnlineToggle initialOnline={pp?.is_online ?? false} />}
+        />
         <div className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
           {booking.service?.image_url && (
             <div className="h-40 bg-slate-100 relative">
