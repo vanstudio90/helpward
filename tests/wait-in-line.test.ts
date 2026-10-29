@@ -156,3 +156,17 @@ test("every service query carries the overrides", () => {
   // Through one shared select, so no query can forget them.
   assert.equal((src.match(/\.select\(SERVICE_SELECT\)/g) ?? []).length >= 4, true);
 });
+
+test("the static service page shows both markets' prices", () => {
+  // force-static + ISR: built once, served to San Diego and Vancouver
+  // alike. There is no request to read a country from, so a single figure
+  // would be wrong for half the visitors.
+  const src = readFileSync("app/services/[slug]/page.tsx", "utf8");
+  assert.match(src, /staticPriceLabel/);
+  assert.match(src, /differsByCountry/);
+  // And no price may be derived straight from base_price_cents any more.
+  assert.doesNotMatch(src, /\$\$\{\(service\.base_price_cents/);
+  // The structured data must not advertise one currency to everyone.
+  assert.match(src, /priceCurrency: o\.currency/);
+  assert.match(src, /eligibleRegion/);
+});

@@ -91,3 +91,29 @@ export function displayExtraBlockCents(
   const row = overrides.find((o) => o.country === country);
   return row?.extra_block_cents ?? ruleExtraCents;
 }
+
+/**
+ * How a price reads on a page that cannot know who is looking.
+ *
+ * The public service pages are force-static with ISR, so they are built
+ * once and served to San Diego and Vancouver alike — there is no request to
+ * take a country from. A service priced differently in the two markets
+ * therefore has to show both, because picking one and hoping would mean
+ * advertising a number half the visitors will not be charged.
+ *
+ * Services with no overrides — every service but one today — are unchanged:
+ * a single figure, exactly as before.
+ */
+export function staticPriceLabel(
+  serviceBaseCents: number,
+  overrides: CountryPrice[] | null | undefined,
+  format: (cents: number, currency: string) => string,
+): string {
+  const us = overrides?.find((o) => o.country === "US");
+  const ca = overrides?.find((o) => o.country === "CA");
+  if (!us && !ca) return format(serviceBaseCents, "USD");
+
+  const usCents = us?.base_price_cents ?? serviceBaseCents;
+  const caCents = ca?.base_price_cents ?? serviceBaseCents;
+  return `${format(usCents, "USD")} · ${format(caCents, "CAD")}`;
+}
