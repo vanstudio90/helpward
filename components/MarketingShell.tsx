@@ -46,6 +46,11 @@ export function MarketingShell({
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <span>© {new Date().getFullYear()} Helpward</span>
           <nav className="flex items-center gap-5 flex-wrap justify-center">
+            {/* The directories lead; the rest is about the company. A
+                service page reachable only from the sitemap is reachable
+                only by a crawler that already knows about it. */}
+            <Link href="/our-services" className="hover:text-slate-900">Services</Link>
+            <Link href="/cities" className="hover:text-slate-900">Where we work</Link>
             <Link href="/about" className="hover:text-slate-900">About</Link>
             <Link href="/careers" className="hover:text-slate-900">Careers</Link>
             <Link href="/blog" className="hover:text-slate-900">Blog</Link>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, CheckCircle2, Clock, ShieldCheck, Star, Users, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, ShieldCheck, Star, Users, Sparkles, XCircle} from "lucide-react";
 import type { Metadata } from "next";
 import { listServicesPublic, listCategoriesPublic, getServicePublic } from "@/lib/data/services";
 import { ServiceIcon } from "@/components/ServiceIcon";
@@ -8,6 +8,7 @@ import { LandingHeader } from "../../_landing-header";
 import { CITIES } from "@/lib/marketing";
 import { formatMoney } from "@/lib/money";
 import { staticPriceLabel } from "@/lib/country-price";
+import { serviceCopy, UNIVERSAL_FAQS } from "@/lib/service-copy";
 
 // One landing page per active service. Each emits Service + FAQPage +
 // BreadcrumbList JSON-LD so AI engines and Google can rank the page for
@@ -66,6 +67,7 @@ export default async function ServiceDetailPage({
     ?? service.base_price_cents;
   const caCents = service.country_pricing?.find((c) => c.country === "CA")?.base_price_cents
     ?? service.base_price_cents;
+  const copy = serviceCopy(service.id);
   const bothPrices = staticPriceLabel(service.base_price_cents, service.country_pricing, formatMoney);
   const differsByCountry = usCents !== caCents;
 
@@ -100,25 +102,30 @@ export default async function ServiceDetailPage({
     })),
   };
 
+  // Service-specific first, then the three that are true of every booking.
+  //
+  // What was here claimed an "average response time ... around 18 minutes"
+  // and that you could "track their ETA live". There have been no completed
+  // bookings, so there is no average, and a figure invented for a FAQ is
+  // the kind of promise a customer later holds you to. Removed rather than
+  // softened.
   const SERVICE_FAQS = [
     {
       q: `What is ${service.title.toLowerCase()} on Helpward?`,
-      a: `${service.blurb} Helpward matches your request with a nearby helper who has been reviewed and approved by a person at Helpward before they can take work.`,
+      a: `${service.blurb} Your request is offered to nearby helpers who offer this service, and one of them has to `
+        + `accept it before there is a booking.`,
     },
     {
       q: `How much does ${service.title.toLowerCase()} cost?`,
       a: differsByCountry
-        ? `Base price for ${service.title} on Helpward is ${formatMoney(usCents, "USD")} in the United States and ${formatMoney(caCents, "CAD")} in Canada. A flat ${formatMoney(450, "USD")} service fee is added. Final pricing depends on how long the task takes and any tip you add. You're only charged after the helper marks the task complete.`
-        : `Base price for ${service.title} on Helpward is ${formatMoney(usCents, "USD")}. A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. Final pricing depends on distance, time, and any tip you add. You're only charged after the helper marks the task complete.`,
+        ? `${formatMoney(usCents, "USD")} in San Diego and ${formatMoney(caCents, "CAD")} in the Lower Mainland, plus a `
+          + `flat ${formatMoney(450, "USD")} service fee. What you pay depends on what you ask for — longer bookings, `
+          + `extra quantities and larger crews change the price, and the total is shown before you submit.`
+        : `${formatMoney(usCents, "USD")} plus a flat ${formatMoney(450, "USD")} service fee. What you pay depends on `
+          + `what you ask for, and the total is shown before you submit.`,
     },
-    {
-      q: `How fast can a helper arrive?`,
-      a: `Average response time for ${service.title} is ${service.eta_label ?? "around 18 minutes"} during normal hours. The matching engine notifies all nearby qualified helpers at once; the first to accept becomes yours and you can track their ETA live.`,
-    },
-    {
-      q: `Are Helpward helpers verified?`,
-      a: `Every helper is reviewed and approved by a person at Helpward before they can take a task, and no unapproved helper is ever offered work. Automated ID verification and background checks are not running yet — we will say so here when they are, rather than before. Helpward does not currently carry platform insurance.`,
-    },
+    ...(copy?.faqs ?? []),
+    ...UNIVERSAL_FAQS,
   ];
 
   const FAQ_LD = {
@@ -251,37 +258,48 @@ export default async function ServiceDetailPage({
           </aside>
         </section>
 
-        {/* What's included */}
-        <section className="bg-slate-50 border-y border-slate-100 py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-8 lg:gap-12">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">What&apos;s included</h2>
-              <ul className="mt-4 space-y-3 text-sm text-slate-700">
-                {[
-                  "Approved local helper in your city",
-                  "Real-time GPS tracking and in-app chat",
-                  "Card held when a helper accepts, charged when they mark it complete",
-                  "Payment held until you confirm the task is complete",
-                  "24-hour dispute window with human support review",
-                  "24/7 customer support — call, chat, or email",
-                ].map((i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> {i}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Why Helpward</h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-                <Trust icon={Users} title="Approved helpers" sub="Reviewed by a person at Helpward before taking work" />
-                <Trust icon={ShieldCheck} title="Pay after completion" sub="Your card is held, not charged, until the task is done" />
-                <Trust icon={Clock} title="Fast matching" sub="Average match in 2m 14s" />
-                <Trust icon={Sparkles} title="Transparent pricing" sub="No surge, no hidden fees" />
+        {/* What this booking actually is.
+            These three blocks used to be one generic list repeated on every
+            service page — "approved local helper", "GPS tracking", "24/7
+            support" — which is why two different services measured 78%
+            identical word for word. They are now written per service, and
+            the second column is what the booking does NOT cover: most bad
+            bookings come from an assumption nobody contradicted. */}
+        {copy && (
+          <section className="bg-slate-50 border-y border-slate-100 py-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <h2 className="text-2xl font-bold text-slate-900">
+                What to include in your {service.title.toLowerCase()} request
+              </h2>
+              <p className="mt-3 text-sm text-slate-700 leading-relaxed max-w-3xl">{copy.brief}</p>
+
+              <div className="mt-8 grid md:grid-cols-2 gap-8 lg:gap-12">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">What the booking covers</h3>
+                  <ul className="mt-3 space-y-2.5 text-sm text-slate-700">
+                    {copy.includes.map((i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
+                        <span>{i}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">What it does not cover</h3>
+                  <ul className="mt-3 space-y-2.5 text-sm text-slate-700">
+                    {copy.excludes.map((i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <XCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" aria-hidden="true" />
+                        <span>{i}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Where it's available */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

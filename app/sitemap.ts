@@ -32,14 +32,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    *
    * Service and city-service pages are generated from the catalogue, so
    * "when did this page last change" is "when did the catalogue or the
-   * template last change" — 2026-10-28, when four services were activated
-   * and the templates were revised. Bump this deliberately when the
+   * template last change" — 2026-10-29, when every service and
+   * city-service page gained service-specific editorial content in place
+   * of the shared block that made two different services read 78%
+   * identical. Bump this deliberately when the
    * catalogue or the templates change; do not wire it back to new Date(),
    * which is how every page came to claim it was edited today. */
-  const CATALOGUE_UPDATED = d("2026-10-28");
+  const CATALOGUE_UPDATED = d("2026-10-29");
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE}/`,            lastModified: d("2026-10-28"), changeFrequency: "weekly",  priority: 1.0 },
     { url: `${BASE}/cities`,      lastModified: d("2026-10-28"), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE}/our-services`, lastModified: d("2026-10-29"), changeFrequency: "monthly", priority: 0.9 },
     { url: `${BASE}/about`,       lastModified: d("2026-10-24"), changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE}/safety`,      lastModified: d("2026-10-26"), changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/help`,        lastModified: d("2026-10-26"), changeFrequency: "monthly", priority: 0.5 },

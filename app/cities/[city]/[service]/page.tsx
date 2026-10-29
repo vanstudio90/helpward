@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowRight, CheckCircle2, Clock, ShieldCheck, Star, MapPin, Users, Sparkles,
-} from "lucide-react";
+  ArrowRight, CheckCircle2, Clock, ShieldCheck, Star, MapPin, Users, Sparkles, XCircle } from "lucide-react";
 import type { Metadata } from "next";
 import { listServicesPublic, listCategoriesPublic, getServicePublic } from "@/lib/data/services";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../../_landing-header";
 import { CITIES, getCity } from "@/lib/marketing";
+import { serviceCopy, UNIVERSAL_FAQS } from "@/lib/service-copy";
+import { formatMoney } from "@/lib/money";
+import { displayBaseCents } from "@/lib/country-price";
 
 // 270 programmatic landing pages (10 cities × 27 services) — each ranks for
 // the long-tail query "<service> in <city>". Generated at build time with
@@ -47,6 +49,7 @@ export default async function CityServicePage({
   params,
 }: { params: Promise<{ city: string; service: string }> }) {
   const { city: citySlug, service: serviceSlug } = await params;
+
   const city = getCity(citySlug);
   if (!city) notFound();
 
@@ -56,6 +59,8 @@ export default async function CityServicePage({
     listCategoriesPublic(),
   ]);
   if (!service) notFound();
+
+  const copy = serviceCopy(service.id);
 
   const related = allServices
     .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
@@ -107,23 +112,45 @@ export default async function CityServicePage({
     openingHours: "Mo-Su 00:00-23:59",
   };
 
+  // The local price, from the country rule the database actually charges.
+  //
+  // What was here read service.base_price_cents and labelled it "(CAD)" on
+  // the Vancouver pages — the US number with a Canadian label. It also
+  // claimed an average response time and that this city "typically matches
+  // faster than the platform-wide average". There are no completed
+  // bookings, so there is no average and no comparison; both are removed
+  // rather than softened.
+  const localCents = displayBaseCents(
+    service.base_price_cents,
+    service.country_pricing ?? undefined,
+    city.country,
+  );
+  const localCurrency = city.country === "CA" ? "CAD" : "USD";
+
   const FAQS = [
     {
       q: `How do I book ${service.title.toLowerCase()} in ${city.name}?`,
-      a: `Tap "Find a helper" on Helpward, pick ${service.title}, enter your ${city.name} address, and submit. The matching engine notifies nearby verified helpers in ${city.metro ?? city.name} in real time — the first to accept becomes yours and you can track their ETA live.`,
-    },
-    {
-      q: `How fast can a helper arrive in ${city.name}?`,
-      a: `Average response time for ${service.title} in ${city.name} is ${service.eta_label ?? "around 18 minutes"} during normal hours. Helper supply is densest in ${city.metro ?? city.name} so ${city.name}-based requests typically match faster than the platform-wide average.`,
+      a: `Choose ${service.title}, enter the ${city.name} address where you need help, and submit the request. `
+        + `It is offered to nearby helpers who offer this service; one of them has to accept it before there is a `
+        + `booking, and the request page shows its current status.`,
     },
     {
       q: `How much does ${service.title.toLowerCase()} cost in ${city.name}?`,
-      a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)} (${city.country === "CA" ? "CAD" : "USD"}). A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. Pricing is the same across ${city.name} — no surge fees, no per-block markup. You're only charged after the helper marks the task complete.`,
+      a: `${formatMoney(localCents, localCurrency)} plus a flat ${formatMoney(450, localCurrency)} service fee, so `
+        + `${formatMoney(localCents + 450, localCurrency)} before any optional tip. What you pay depends on what you `
+        + `ask for — longer bookings and larger quantities change the price — and the total is shown before you submit.`,
     },
     {
-      q: `Are Helpward helpers in ${city.name} approved?`,
-      a: `Every ${city.name} helper is reviewed and approved by a person at Helpward before they can take a task, and an unapproved helper is never offered work. Automated ID verification and background checks are not running yet, and Helpward does not currently carry platform insurance — we'll say so here when that changes.`,
+      q: `Which addresses does this page cover?`,
+      a: city.country === "CA"
+        ? `Addresses in ${city.metro ?? city.name}. Helpward checks the exact address when you submit, and a request `
+          + `outside the area is refused before you are charged. Bookings here are priced and charged in Canadian dollars.`
+        : `Addresses inside the City of ${city.name} itself, not the wider county. Helpward checks the exact address `
+          + `when you submit, and a request outside the area is refused before you are charged. Bookings here are priced `
+          + `and charged in US dollars.`,
     },
+    ...(copy?.faqs ?? []),
+    ...UNIVERSAL_FAQS,
   ];
 
   const FAQ_LD = {
@@ -252,34 +279,70 @@ export default async function CityServicePage({
         </section>
 
         {/* What's included + Why Helpward */}
-        <section className="bg-slate-50 border-y border-slate-100 py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-8 lg:gap-12">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">What&apos;s included for every {city.name} booking</h2>
-              <ul className="mt-4 space-y-3 text-sm text-slate-700">
-                {[
-                  `Approved local helper in ${city.name}`,
-                  "Real-time GPS tracking and in-app chat",
-                  "Card held when a helper accepts, charged when they mark it complete",
-                  "Card held when a helper accepts, charged when they mark it complete",
-                  "24-hour dispute window with human support review",
-                  "24/7 customer support — call, chat, or email",
-                ].map((i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> {i}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Why Helpward in {city.name}</h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-                <Trust icon={Users} title="Local helpers" sub={`Verified humans in ${city.metro ?? city.name}`} />
-                <Trust icon={ShieldCheck} title="Approved helpers" sub="Reviewed by a person at Helpward before taking work" />
-                <Trust icon={Clock} title="Fast matching" sub="Average match in 2m 14s" />
-                <Trust icon={Sparkles} title="Transparent pricing" sub="No surge, no hidden fees" />
+        {/* The service, then the city — in that order, because the service
+            is what the reader came for and the city is what makes this page
+            different from the other one about the same service.
+
+            What was here was a generic list of platform features repeated
+            on all 52 city-service pages, which is why the same service in
+            two cities measured 87% identical. It also listed the card-hold
+            bullet twice, and asserted a matching speed with no bookings
+            behind it. */}
+        {copy && (
+          <section className="bg-slate-50 border-y border-slate-100 py-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <h2 className="text-2xl font-bold text-slate-900">
+                What to include in your {city.name} request
+              </h2>
+              <p className="mt-3 text-sm text-slate-700 leading-relaxed max-w-3xl">{copy.brief}</p>
+
+              <div className="mt-8 grid md:grid-cols-2 gap-8 lg:gap-12">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">What the booking covers</h3>
+                  <ul className="mt-3 space-y-2.5 text-sm text-slate-700">
+                    {copy.includes.map((i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
+                        <span>{i}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">What it does not cover</h3>
+                  <ul className="mt-3 space-y-2.5 text-sm text-slate-700">
+                    {copy.excludes.map((i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <XCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" aria-hidden="true" />
+                        <span>{i}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
+          </section>
+        )}
+
+        {/* The part that is genuinely about this city: where the boundary
+            actually runs, and which currency you will be charged in. Both
+            are facts a reader cannot get from the global service page. */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <h2 className="text-2xl font-bold text-slate-900">
+            Booking {service.title.toLowerCase()} in {city.name}
+          </h2>
+          <div className="mt-3 max-w-3xl space-y-3 text-sm text-slate-700 leading-relaxed">
+            <p>
+              This page covers addresses in {city.metro ?? city.name}. Helpward checks the exact
+              collection address against that area when you submit, so enter the real address rather
+              than a nearby landmark — a request outside the area is refused before you are charged,
+              not after a helper has travelled.
+            </p>
+            <p>
+              {city.country === "CA"
+                ? "Bookings here are priced and charged in Canadian dollars. The confirmed address decides the currency, not your account or your card."
+                : "Bookings here are priced and charged in US dollars, and cover the City of San Diego itself rather than the wider county. The confirmed address decides the currency, not your account or your card."}
+            </p>
           </div>
         </section>
 
