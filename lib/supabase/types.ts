@@ -6,7 +6,7 @@ export type UserRole = "customer" | "provider" | "admin";
 export type Country = "US" | "CA";
 export type RequestStatus = "draft" | "matching" | "matched" | "cancelled" | "expired";
 export type BookingStatus = "scheduled" | "in_progress" | "completed" | "cancelled" | "disputed";
-export type ProviderStatus = "pending" | "approved" | "suspended" | "banned";
+export type HelperStatus = "pending" | "approved" | "suspended" | "banned";
 export type PaymentStatus = "pending" | "authorized" | "captured" | "refunded" | "partial_refund" | "failed";
 
 export type Profile = {
@@ -35,9 +35,9 @@ export type CustomerProfile = {
   referral_code: string | null;
 };
 
-export type ProviderProfile = {
+export type HelperProfile = {
   user_id: string;
-  status: ProviderStatus;
+  status: HelperStatus;
   bio: string | null;
   languages: string[];
   service_radius_km: number;

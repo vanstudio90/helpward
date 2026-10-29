@@ -1,0 +1,33 @@
+"use client";
+
+import { useEffect } from "react";
+import { AlertOctagon, RefreshCw } from "lucide-react";
+
+export default function HelperError({
+  error, reset,
+}: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  return (
+    <div className="px-4 lg:px-8 py-12 max-w-2xl mx-auto text-center">
+      <span className="inline-flex w-14 h-14 rounded-card bg-rose-50 items-center justify-center mb-4">
+        <AlertOctagon className="w-7 h-7 text-rose-600" />
+      </span>
+      <h1 className="text-xl font-bold text-slate-900">Helper view error</h1>
+      <p className="mt-2 text-[15px] text-slate-600">
+        Couldn&apos;t load this helper page. Your bookings and earnings are safe.
+      </p>
+      {error.digest && (
+        <p className="mt-2 text-[12px] text-slate-400 font-mono">Error ID: {error.digest}</p>
+      )}
+      <button
+        onClick={reset}
+        className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-field bg-slate-900 text-white text-[15px] font-semibold"
+      >
+        <RefreshCw className="w-4 h-4" /> Try again
+      </button>
+    </div>
+  );
+}

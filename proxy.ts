@@ -4,6 +4,7 @@ import {
   isRetiredCityPath, retiredCityHtml,
   isRetiredSafetyPath, retiredSafetyHtml,
 } from "@/lib/retired-pages";
+import { isHelperRole, canUseHelperArea } from "@/lib/roles";
 
 const PUBLIC_PATHS = new Set([
   "/", "/login", "/signup", "/forgot-password", "/verify-email",
@@ -14,16 +15,24 @@ const PUBLIC_PATHS = new Set([
 // but NOT /services exact (that's the auth-gated customer browse).
 const PUBLIC_PREFIXES = [
   "/auth/", "/_next/", "/api/public/", "/api/webhooks/",
-  "/providers/", "/services/", "/cities/",
+  // /api/v1/* is the native app's surface. It authenticates itself from
+  // an Authorization: Bearer header rather than the session cookie, the
+  // same way /api/webhooks/* authenticates from a signature — so it opts
+  // out of the cookie gate here and enforces its own in withBearerAuth.
+  // Listed explicitly rather than relying on it falling through, so that
+  // adding a path prefix later cannot accidentally start redirecting the
+  // app's API calls to /login.
+  "/api/v1/",
+  "/helpers/", "/services/", "/cities/",
 ];
 
 const CUSTOMER_PREFIXES = [
   "/dashboard", "/services", "/new-request", "/messages",
-  "/bookings", "/saved-providers", "/favorites", "/payments",
+  "/bookings", "/saved-helpers", "/favorites", "/payments",
   "/analytics", "/settings", "/business", "/referrals",
 ];
 
-const PROVIDER_PREFIXES = ["/provider"];
+const HELPER_PREFIXES = ["/helper"];
 const ADMIN_PREFIXES = ["/admin"];
 
 function startsWithAny(pathname: string, prefixes: string[]) {
@@ -95,10 +104,10 @@ export async function proxy(request: NextRequest) {
   if (PUBLIC_PATHS.has(pathname)) return response;
 
   const isCustomerArea = startsWithAny(pathname, CUSTOMER_PREFIXES);
-  const isProviderArea = startsWithAny(pathname, PROVIDER_PREFIXES);
+  const isHelperArea = startsWithAny(pathname, HELPER_PREFIXES);
   const isAdminArea    = startsWithAny(pathname, ADMIN_PREFIXES);
 
-  const needsAuth = isCustomerArea || isProviderArea || isAdminArea;
+  const needsAuth = isCustomerArea || isHelperArea || isAdminArea;
 
   if (!needsAuth) return response;
 
@@ -125,13 +134,13 @@ export async function proxy(request: NextRequest) {
   const role = (user.app_metadata?.role as string | undefined) ?? "customer";
 
   if (isAdminArea && role !== "admin") {
-    return NextResponse.redirect(new URL(role === "provider" ? "/provider/dashboard" : "/dashboard", request.url));
+    return NextResponse.redirect(new URL(isHelperRole(role) ? "/helper/dashboard" : "/dashboard", request.url));
   }
-  if (isProviderArea && role !== "provider" && role !== "admin") {
+  if (isHelperArea && !canUseHelperArea(role)) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
-  if (isCustomerArea && role === "provider") {
-    return NextResponse.redirect(new URL("/provider/dashboard", request.url));
+  if (isCustomerArea && isHelperRole(role)) {
+    return NextResponse.redirect(new URL("/helper/dashboard", request.url));
   }
 
   return response;

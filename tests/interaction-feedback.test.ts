@@ -10,8 +10,8 @@ import { readFileSync } from "node:fs";
 const css = readFileSync("app/globals.css", "utf8");
 const layout = readFileSync("app/layout.tsx", "utf8");
 const bar = readFileSync("components/nav-progress.tsx", "utf8");
-const onboard = readFileSync("app/(provider)/provider/onboard/page.tsx", "utf8");
-const providerLayout = readFileSync("app/(provider)/layout.tsx", "utf8");
+const onboard = readFileSync("app/(helper)/helper/onboard/page.tsx", "utf8");
+const providerLayout = readFileSync("app/(helper)/layout.tsx", "utf8");
 
 test("a press is visible the moment it happens", () => {
   assert.match(css, /-webkit-tap-highlight-color/);

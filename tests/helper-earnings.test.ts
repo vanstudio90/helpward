@@ -4,9 +4,9 @@ import { readFileSync } from "node:fs";
 import { priceTask, SERVICE_FEE_CENTS } from "../lib/pricing.ts";
 import { displayBaseCents } from "../lib/country-price.ts";
 
-const forms = readFileSync("app/(provider)/provider/profile/forms.tsx", "utf8");
-const actions = readFileSync("app/(provider)/provider/profile/actions.ts", "utf8");
-const page = readFileSync("app/(provider)/provider/profile/page.tsx", "utf8");
+const forms = readFileSync("app/(helper)/helper/profile/forms.tsx", "utf8");
+const actions = readFileSync("app/(helper)/helper/profile/actions.ts", "utf8");
+const page = readFileSync("app/(helper)/helper/profile/page.tsx", "utf8");
 
 /* A control that silently does nothing is worse than no control.
  *

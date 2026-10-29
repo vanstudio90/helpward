@@ -16,7 +16,7 @@ export type { WeeklyRule, DateOverride, AvailabilityStatus } from "@/lib/availab
 export { computeAvailabilityStatus, totalWeeklyHours } from "@/lib/availability-pure";
 
 // Provider's own rules — auth client respects RLS so it only returns the
-// caller's rows. Used by /provider/schedule editor.
+// caller's rows. Used by /helper/schedule editor.
 export async function getMyAvailability(): Promise<{ rules: WeeklyRule[]; overrides: DateOverride[]; vacation: { on: boolean; returnsOn: string | null } } | null> {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

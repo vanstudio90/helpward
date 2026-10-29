@@ -6,7 +6,7 @@ import { RefreshCw, Radio } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 // Customer-side realtime refresh for /bookings/[id]. Closes the loop
-// symmetrically with /provider/active: when the helper flips the booking
+// symmetrically with /helper/active: when the helper flips the booking
 // status (start → in_progress → completed) or uploads a proof photo, the
 // customer's open booking page re-renders without manual reload.
 //

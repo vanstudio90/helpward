@@ -48,7 +48,7 @@ export async function finishPaymentConfirmationAction(bookingId: string) {
 
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/bookings");
-  revalidatePath("/provider/active");
+  revalidatePath("/helper/active");
 
   return confirmed.authorized
     ? { success: "Payment confirmed. Your helper can get started." }

@@ -116,7 +116,7 @@ test("only the venue-refused outcome escapes a charge", () => {
   // disagree, a customer is billed for a job the venue made impossible.
   const sql = readFileSync("supabase/migrations/0074_wait_in_line.sql", "utf8");
   assert.match(sql, /<> 'venue_refused_substitution'/);
-  const client = readFileSync("app/(provider)/provider/active/client.tsx", "utf8");
+  const client = readFileSync("app/(helper)/helper/active/client.tsx", "utf8");
   for (const o of ["customer_took_over", "booked_period_ended", "queue_closed",
                    "venue_refused_substitution"]) {
     assert.ok(client.includes(o), `the helper cannot report "${o}"`);
@@ -124,7 +124,7 @@ test("only the venue-refused outcome escapes a charge", () => {
 });
 
 test("a refused venue releases the hold rather than capturing it", () => {
-  const actions = readFileSync("app/(provider)/provider/active/actions.ts", "utf8");
+  const actions = readFileSync("app/(helper)/helper/active/actions.ts", "utf8");
   assert.match(actions, /settlement === "release"/);
   assert.match(actions, /voidBookingAuthorization/);
 });

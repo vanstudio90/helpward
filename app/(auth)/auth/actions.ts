@@ -6,6 +6,7 @@ import { cookies, headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { recordReferralAttribution } from "@/lib/data/referrals";
 import { SERVICE_AREAS, normalizeMunicipality } from "@/lib/service-areas";
+import { isHelperRole } from "@/lib/roles";
 
 type ActionState = {
   error?: string;
@@ -63,7 +64,7 @@ export async function loginAction(
       ? await supabase.from("profiles").select("role").eq("id", mfaUser.id).maybeSingle()
       : { data: null };
     const destination =
-      profile?.role === "provider" ? "/provider/dashboard"
+      isHelperRole(profile?.role) ? "/helper/dashboard"
       : profile?.role === "admin" ? "/admin"
       : "/dashboard";
     redirect(`/login/mfa?next=${encodeURIComponent(destination)}`);
@@ -82,8 +83,8 @@ export async function loginAction(
 
   revalidatePath("/", "layout");
 
-  if (profile?.role === "provider") {
-    redirect("/provider/dashboard");
+  if (isHelperRole(profile?.role)) {
+    redirect("/helper/dashboard");
   } else if (profile?.role === "admin") {
     redirect("/admin");
   }

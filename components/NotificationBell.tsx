@@ -224,16 +224,16 @@ function hrefFor(type: string, payload: Record<string, unknown>): string | null 
     // Helper-side: new offer lands them on their inbox where the full
     // offer card with accept/decline lives.
     case "new_request_offered":
-      return "/provider/inbox";
+      return "/helper/inbox";
 
     // Helper-side: their active-task screen is the right landing for both
     // reminders (about to start) and no-show notices (about what just
-    // happened). Reviews live on the dedicated /provider/reviews page.
+    // happened). Reviews live on the dedicated /helper/reviews page.
     case "helper_booking_reminder":
     case "booking_no_show":
-      return "/provider/active";
+      return "/helper/active";
     case "review_received":
-      return "/provider/reviews";
+      return "/helper/reviews";
 
     // Customer-side: T-30 reminder lands on the booking detail page where
     // they can message the helper or open dispute if something's off.
@@ -262,7 +262,7 @@ function hrefFor(type: string, payload: Record<string, unknown>): string | null 
       return "/new-request";
 
     case "provider_approved":
-      return "/provider/dashboard";
+      return "/helper/dashboard";
 
     case "data_export_ready":
       // /settings/data auto-surfaces the most recent ready archive with a

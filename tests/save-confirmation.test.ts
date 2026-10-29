@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
  *     right values landed.
  */
 
-const DIR = "app/(provider)/provider/profile";
+const DIR = "app/(helper)/helper/profile";
 const forms = readFileSync(`${DIR}/forms.tsx`, "utf8");
 const slug = readFileSync(`${DIR}/slug-form.tsx`, "utf8");
 const cities = readFileSync(`${DIR}/cities-form.tsx`, "utf8");
@@ -48,7 +48,7 @@ function cardsIn(src: string): [string, string][] {
 }
 
 test("every card confirms where its own button is", () => {
-  // Cards that save something. ProviderAvatarUpload submits on pick and is
+  // Cards that save something. HelperAvatarUpload submits on pick and is
   // covered by the avatar editor instead.
   const saving = new Set(["ProfileForm", "ServicesForm"]);
   const checked: string[] = [];
@@ -101,10 +101,10 @@ test("the profile page is not a dead end", () => {
   // dashboard. A helper who arrived from "Complete your profile" on step 1,
   // filled it in and saved had nowhere to go.
   const page = readFileSync(`${DIR}/page.tsx`, "utf8");
-  assert.match(page, /href=\{stillSettingUp \? "\/provider\/onboard" : "\/provider\/dashboard"\}/);
+  assert.match(page, /href=\{stillSettingUp \? "\/helper\/onboard" : "\/helper\/dashboard"\}/);
   // Top and bottom: the top for someone who changed their mind, the bottom
   // for someone who has just saved the last card.
-  assert.equal((page.match(/\/provider\/onboard" : "\/provider\/dashboard/g) ?? []).length, 2);
+  assert.equal((page.match(/\/helper\/onboard" : "\/helper\/dashboard/g) ?? []).length, 2);
 });
 
 test("the way out is navigation, not a fifth save button", () => {

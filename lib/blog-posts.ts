@@ -113,7 +113,7 @@ export const BLOG_POSTS: BlogPost[] = [
         "Once the background check clears, helpers link a bank account through Stripe Connect's onboarding flow. This is the lightest step procedurally but the most important for the helper economically — we don't activate the account until payouts can land." },
       { type: "h2", text: "Step 6: final human approval" },
       { type: "p", text:
-        "A senior reviewer reads the complete application — profile, ID-verification status, background-check adjudication result, bank-link status — and either approves or declines with a written reason the helper can read and (if applicable) appeal. Approval flips the helper's status to 'approved' and they can go online from /provider/active." },
+        "A senior reviewer reads the complete application — profile, ID-verification status, background-check adjudication result, bank-link status — and either approves or declines with a written reason the helper can read and (if applicable) appeal. Approval flips the helper's status to 'approved' and they can go online from /helper/active." },
       { type: "h2", text: "Re-screening" },
       { type: "ul", items: [
         "Annual full re-check on the anniversary of approval.",

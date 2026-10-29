@@ -56,7 +56,7 @@ export function stripeIsLive(): boolean {
 
    So helpers get Stripe-hosted onboarding (same screens, same KYC, same
    1099 handling) and no Stripe-hosted dashboard. Helpward renders earnings
-   itself at /provider/earnings, which it already did.
+   itself at /helper/earnings, which it already did.
 
    UPDATE, later the same day: completing the Connect platform profile in
    the dashboard changed what the API allows. `type: "express"` now creates
@@ -94,7 +94,7 @@ export function stripeIsLive(): boolean {
    two, since an account keeps its controller for life.
 
    Helpers keep self-service without the Express dashboard: earnings
-   render at /provider/earnings, and bank details are changed by
+   render at /helper/earnings, and bank details are changed by
    re-issuing an account_onboarding link, which startPayoutSetupAction()
    already does (account_update links are rejected for this shape).
 
@@ -160,7 +160,7 @@ export function readConnectReadiness(account: Stripe.Account): ConnectReadiness 
  * in their Stripe balance and pay out when verification clears. Refusing
  * them work for days while Stripe reviews a document helps nobody. What
  * they need instead is to be TOLD — see payoutsPending() and the banner
- * on /provider/earnings.
+ * on /helper/earnings.
  */
 export function canReceiveTransfers(account: Stripe.Account): boolean {
   return account.capabilities?.transfers === "active";

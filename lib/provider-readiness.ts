@@ -27,7 +27,7 @@
 // ever wired, they become requirements HERE, once, and all three surfaces
 // follow — which is the point of this file.
 
-export type ProviderReadiness = {
+export type HelperReadiness = {
   /** provider_profiles.status */
   status: string | null;
   /** provider_profiles.is_online */
@@ -55,7 +55,7 @@ export type Requirement = {
  * Everything standing between this helper and paid work, in the order it
  * has to happen, each either met or not.
  */
-export function providerRequirements(r: ProviderReadiness): Requirement[] {
+export function providerRequirements(r: HelperReadiness): Requirement[] {
   const approved = r.status === "approved";
   return [
     {
@@ -79,7 +79,7 @@ export function providerRequirements(r: ProviderReadiness): Requirement[] {
         ? `You currently offer ${r.serviceCount} ${r.serviceCount === 1 ? "service" : "services"}.`
         : "Choose at least one service you provide to receive relevant job offers.",
       met: r.serviceCount > 0,
-      href: "/provider/onboard",
+      href: "/helper/onboard",
       action: r.serviceCount > 0 ? "Update services" : "Select services",
     },
     {
@@ -89,14 +89,14 @@ export function providerRequirements(r: ProviderReadiness): Requirement[] {
         ? "Your payout account is active."
         : "Connect your bank account to receive payments. Payout setup must be complete before you can accept jobs.",
       met: r.transfersActive,
-      href: "/provider/onboard",
+      href: "/helper/onboard",
       action: r.transfersActive ? null : "Connect bank account",
     },
   ];
 }
 
 /** The requirements not yet met. */
-export function outstandingRequirements(r: ProviderReadiness): Requirement[] {
+export function outstandingRequirements(r: HelperReadiness): Requirement[] {
   return providerRequirements(r).filter((q) => !q.met);
 }
 
@@ -108,11 +108,11 @@ export function outstandingRequirements(r: ProviderReadiness): Requirement[] {
  * someone their account is unfinished because they clocked off is the
  * same class of error as the ID check.
  */
-export function canAcceptWork(r: ProviderReadiness): boolean {
+export function canAcceptWork(r: HelperReadiness): boolean {
   return r.status === "approved" && r.serviceCount > 0 && r.transfersActive;
 }
 
 /** Ready, but not currently receiving offers because they're offline. */
-export function isReadyButOffline(r: ProviderReadiness): boolean {
+export function isReadyButOffline(r: HelperReadiness): boolean {
   return canAcceptWork(r) && !r.isOnline;
 }

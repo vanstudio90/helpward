@@ -8,7 +8,7 @@ import { describeTotals } from "@/lib/money-by-currency";
 // Lifetime spend is grouped by currency upstream, so this renders a
 // LIST. A bare "$" over mixed CAD and USD was a number with no unit.
 
-// Customer-side mirror of /provider/analytics — compact lifetime-stats card
+// Customer-side mirror of /helper/analytics — compact lifetime-stats card
 // slotted on /settings. Hides itself when there's nothing to show (no
 // completed bookings yet) since "0 tasks, $0 spent" reads as the empty
 // state of the empty state.

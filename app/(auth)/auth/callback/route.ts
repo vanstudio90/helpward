@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isHelperRole } from "@/lib/roles";
 
 /* Handles the Supabase email-confirm OAuth-style callback.
    Supabase appends ?code=... — we exchange it for a session, then redirect. */
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
         ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
         : { data: null };
       const target =
-        profile?.role === "provider" ? "/provider/dashboard"
+        isHelperRole(profile?.role) ? "/helper/dashboard"
         : profile?.role === "admin"   ? "/admin"
         : next;
       return NextResponse.redirect(`${origin}${target}`);

@@ -70,12 +70,12 @@ test("a platform setup failure does not tell the helper to try again", () => {
 });
 
 test("requirement labels cover the keys Stripe actually returns", async () => {
-  const { describeRequirements } = await import("../app/(provider)/provider/onboard/payout-step.tsx")
+  const { describeRequirements } = await import("../app/(helper)/helper/onboard/payout-step.tsx")
     .catch(() => ({ describeRequirements: null as unknown as (k: string[]) => string[] }));
   // The component is JSX and cannot be imported by the runner, so assert on
   // source: only individual.* was mapped while Stripe returns
   // representative.*, which is why the list read "Day" and "Month".
-  const step = readFileSync("app/(provider)/provider/onboard/payout-step.tsx", "utf8");
+  const step = readFileSync("app/(helper)/helper/onboard/payout-step.tsx", "utf8");
   assert.match(step, /representative\|company\|owners\?/);
   assert.match(step, /"dob\.day": "Your date of birth"/);
   assert.match(step, /"dob\.month": "Your date of birth"/);

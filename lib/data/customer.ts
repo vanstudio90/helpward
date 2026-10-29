@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
-  Profile, CustomerProfile, ProviderProfile, Booking, Conversation,
+  Profile, CustomerProfile, HelperProfile, Booking, Conversation,
   Message, BookingStatus,
 } from "@/lib/supabase/types";
 

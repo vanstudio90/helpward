@@ -48,7 +48,7 @@ test("each unmet requirement is named specifically, not as 'finish setup'", () =
   assert.equal(noPayouts.length, 1);
   assert.equal(noPayouts[0].key, "payouts");
   assert.match(noPayouts[0].detail, /bank account/i);
-  assert.equal(noPayouts[0].href, "/provider/onboard");
+  assert.equal(noPayouts[0].href, "/helper/onboard");
   assert.ok(noPayouts[0].action, "an unmet requirement needs a working next step");
 });
 

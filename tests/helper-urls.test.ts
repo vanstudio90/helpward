@@ -22,7 +22,7 @@ test("the public profile lives at the helper path", () => {
 test("nothing still links to the old path", () => {
   for (const f of [
     "app/sitemap.ts",
-    "app/(provider)/provider/profile/slug-form.tsx",
+    "app/(helper)/helper/profile/slug-form.tsx",
     "app/(app)/favorites/page.tsx",
     "app/(admin)/admin/reviews/page.tsx",
   ]) {
@@ -40,8 +40,8 @@ test("links already shared keep working", () => {
 });
 
 test("the helper's own dashboard is untouched by the rename", () => {
-  // /provider/* is a different route group — the helper's private area —
+  // /helper/* is a different route group — the helper's private area —
   // and a careless search-and-replace would have taken it too.
-  assert.ok(existsSync("app/(provider)/provider/dashboard/page.tsx"));
-  assert.match(readFileSync("app/(provider)/layout.tsx", "utf8"), /\/provider\/dashboard/);
+  assert.ok(existsSync("app/(helper)/helper/dashboard/page.tsx"));
+  assert.match(readFileSync("app/(helper)/layout.tsx", "utf8"), /\/helper\/dashboard/);
 });

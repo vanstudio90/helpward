@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { EyeOff, Star, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
-import { revokePortfolioConsentAction } from "@/app/(provider)/provider/portfolio/actions";
+import { revokePortfolioConsentAction } from "@/app/(helper)/helper/portfolio/actions";
 
 // Customer-side affordance shown under a proof photo that the helper has
 // flagged is_portfolio=true. Tapping it calls revokePortfolioConsentAction

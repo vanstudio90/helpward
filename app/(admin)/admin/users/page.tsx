@@ -1,6 +1,7 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { Shield } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { isHelperRole } from "@/lib/roles";
 
 export default async function AdminUsersPage({
   searchParams,
@@ -80,7 +81,7 @@ export default async function AdminUsersPage({
               </div>
               <span className={
                 r.role === "admin" ? "inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full w-fit"
-                : r.role === "provider" ? "inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full w-fit"
+                : isHelperRole(r.role) ? "inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full w-fit"
                 : "inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full w-fit"
               }>
                 {r.role === "admin" && <Shield className="w-3 h-3" />}
