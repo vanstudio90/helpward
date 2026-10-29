@@ -9,6 +9,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { logoutAction } from "@/app/(auth)/auth/actions";
+import { Logo } from "@/components/Logo";
 
 // A badge is optional. Every item that carried one has been
 // removed, so without this TypeScript narrows `tag` out of the
@@ -46,7 +47,7 @@ export function Sidebar({
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
       <Link href="/" className="flex items-center gap-2 px-6 h-16 border-b border-slate-100">
-        <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">H</div>
+        <Logo size={32} />
         <span className="text-lg font-bold tracking-tight">Helpward</span>
       </Link>
 

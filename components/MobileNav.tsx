@@ -11,6 +11,7 @@ import {
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import { NotificationBell } from "@/components/NotificationBell";
 import { cn } from "@/lib/cn";
+import { Logo } from "@/components/Logo";
 
 // `badge` stays in the type so a real unread count can be dropped in once
 // it is derived per-account, but no item carries one today (HW-18).
@@ -68,7 +69,7 @@ export function MobileTopBar({
           <Menu className="w-5 h-5" />
         </button>
         <Link href="/" className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center font-bold text-sm">H</div>
+          <Logo size={28} />
           <span className="text-base font-bold truncate">Helpward</span>
         </Link>
         <Link href="/messages" aria-label="Messages" className="p-2 rounded-lg hover:bg-slate-100">
@@ -156,7 +157,7 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
       >
         <div className="flex items-center justify-between px-5 h-14 border-b border-slate-100">
           <Link href="/" className="flex items-center gap-2" onClick={onClose}>
-            <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center font-bold text-sm">H</div>
+            <Logo size={28} />
             <span className="text-base font-bold">Helpward</span>
           </Link>
           <button onClick={onClose} className="p-2 -mr-2 rounded-lg hover:bg-slate-100" aria-label="Close menu">

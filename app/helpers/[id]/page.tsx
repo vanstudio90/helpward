@@ -10,6 +10,7 @@ import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 import { isUuid } from "@/lib/slug";
 import { redirect } from "next/navigation";
 import { one } from "@/lib/supabase/relation";
+import { Logo } from "@/components/Logo";
 
 // Per-helper metadata for shareable previews. iMessage/Twitter/Slack all
 // pull these tags when an inbound link is unfurled, so a profile shared
@@ -173,7 +174,7 @@ export default async function PublicProviderProfile({
       <header className="bg-white border-b border-slate-100">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center font-bold text-sm">H</div>
+            <Logo size={28} />
             <span className="text-base font-bold">Helpward</span>
           </Link>
         </div>

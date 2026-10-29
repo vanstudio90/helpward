@@ -14,6 +14,7 @@ import { CITIES, categoryImage } from "@/lib/marketing";
 import { getVisitor } from "@/lib/geo";
 import { getBookingCountsByService } from "@/lib/data/service-stats";
 import { MobileStickyCTA, HeroSentinel } from "@/components/MobileStickyCTA";
+import { Logo } from "@/components/Logo";
 
 // Homepage reads Vercel edge geo headers per request so the hero / activity
 // section can address the visitor's city by name. Forces dynamic rendering;
@@ -484,7 +485,7 @@ export default async function LandingPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-10">
             <div className="col-span-2 lg:col-span-2">
               <Link href="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">H</div>
+                <Logo size={32} tone="light" />
                 <span className="text-lg font-bold text-white">Helpward</span>
               </Link>
               <p className="mt-3 text-xs text-slate-400 max-w-xs leading-relaxed">

@@ -23,7 +23,6 @@ export const metadata: Metadata = {
     description:
       "On-demand verified humans for anything you need in the real world.",
   },
-  icons: { icon: "/favicon.svg" },
 };
 
 export const viewport = {
@@ -48,7 +47,7 @@ const ORG_LD = {
   url: "https://helpward.com",
   logo: {
     "@type": "ImageObject",
-    url: "https://helpward.com/favicon.svg",
+    url: "https://helpward.com/logo-512.png",
     width: 512,
     height: 512,
   },

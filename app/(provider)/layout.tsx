@@ -9,6 +9,7 @@ import {
 import { ProviderTopBar } from "@/components/provider/ProviderTopBar";
 import { ProviderTabBar } from "@/components/provider/ProviderTabBar";
 import { ProviderSideNav } from "@/components/provider/ProviderSideNav";
+import { Logo } from "@/components/Logo";
 
 
 export default async function ProviderLayout({ children }: { children: React.ReactNode }) {
@@ -63,7 +64,7 @@ export default async function ProviderLayout({ children }: { children: React.Rea
       {/* Sidebar */}
       <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white">
         <Link href="/" className="flex items-center gap-2 px-6 h-16 border-b border-slate-100">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">H</div>
+          <Logo size={32} />
           <div>
             <div className="text-base font-bold leading-tight">Helpward</div>
             <div className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide">For helpers</div>

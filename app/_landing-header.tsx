@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Globe, ChevronDown, Menu, X } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 const NAV_LINKS: [string, string][] = [
   ["#how", "How it works"],
@@ -20,7 +21,7 @@ export function LandingHeader() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">H</div>
+            <Logo size={32} />
             <span className="text-lg font-bold tracking-tight">Helpward</span>
           </Link>
 

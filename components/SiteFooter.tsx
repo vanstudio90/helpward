@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mail } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 /* A footer for the pages that had none.
  *
@@ -18,7 +19,7 @@ export function SiteFooter() {
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
           <div>
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-brand-600 text-white flex items-center justify-center text-sm font-bold">H</div>
+              <Logo size={28} tone="light" />
               <span className="font-bold text-white">Helpward</span>
             </Link>
             <a

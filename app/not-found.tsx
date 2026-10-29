@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Compass, Home } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export default function NotFound() {
   return (
@@ -7,7 +8,7 @@ export default function NotFound() {
       <header className="border-b border-slate-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">H</div>
+            <Logo size={32} />
             <span className="text-lg font-bold tracking-tight">Helpward</span>
           </Link>
         </div>

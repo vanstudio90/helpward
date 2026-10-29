@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 /* A header for the phone, where there was none.
  *
@@ -72,9 +73,7 @@ export function ProviderTopBar({ name }: { name?: string | null }) {
              people with both accounts get wrong. */
           <>
             <Link href="/provider/dashboard" className="flex items-center gap-2 pl-0.5" aria-label="Helpward">
-              <span className="w-8 h-8 rounded-field bg-brand-600 text-white flex items-center justify-center text-[15px] font-extrabold">
-                H
-              </span>
+              <Logo size={30} />
               <span className="text-[17px] font-extrabold tracking-tight text-slate-900">Helpward</span>
             </Link>
             <span className="px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 text-[10px] font-extrabold tracking-[0.08em]">
