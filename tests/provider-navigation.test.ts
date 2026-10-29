@@ -16,7 +16,10 @@ const sideNav = readFileSync("components/provider/ProviderSideNav.tsx", "utf8");
 
 test("the phone has navigation", () => {
   assert.match(layout, /<ProviderTabBar/);
-  assert.match(layout, /<ProviderTopBar \/>/);
+  // Matches the tag however it is called. Pinning `<ProviderTopBar />`
+  // exactly made this fail the moment the bar took a prop, which told us
+  // nothing about navigation — the thing the test is here to protect.
+  assert.match(layout, /<ProviderTopBar[\s/>]/);
   // And it must be hidden where the sidebar takes over, or both show at once.
   assert.match(tabBar, /lg:hidden/);
   assert.match(topBar, /lg:hidden/);

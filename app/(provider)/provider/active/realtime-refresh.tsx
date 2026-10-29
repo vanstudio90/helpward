@@ -30,6 +30,10 @@ export function ProviderActiveRealtimeRefresh({ userId }: { userId: string }) {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         setRefreshing(true);
+        // Announce it as well as refreshing. The chime lives in the
+        // waiting panel, which has no business reaching into the realtime
+        // subscription — and a later banner or badge can listen too.
+        try { window.dispatchEvent(new CustomEvent("helpward:offer")); } catch {}
         router.refresh();
         setTimeout(() => {
           setRefreshing(false);

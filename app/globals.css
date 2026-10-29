@@ -273,3 +273,27 @@ h1 { letter-spacing: -0.032em; }
 @media (prefers-reduced-motion: reduce) {
   button:active, [role="button"]:active, a:active { transform: none !important; }
 }
+
+/* -------------------------------------------------------------------
+ * The waiting radar.
+ *
+ * Three rings on a staggered loop. It animates ONLY while a helper is
+ * online — a page that looks busy while nothing is happening is the most
+ * misleading thing a waiting screen can do, and this screen is looked at
+ * for long stretches.
+ * ----------------------------------------------------------------- */
+@keyframes hw-radar-pulse {
+  0%   { transform: scale(0.45); opacity: 0.85; }
+  70%  { opacity: 0.12; }
+  100% { transform: scale(2.3);  opacity: 0; }
+}
+.hw-radar {
+  animation: hw-radar-pulse 3.3s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+
+/* Someone who asked for less motion should not be given a pulsing
+   beacon. The rings hold still at a readable size instead of vanishing,
+   so the shape of the screen is unchanged. */
+@media (prefers-reduced-motion: reduce) {
+  .hw-radar { animation: none; transform: scale(1); opacity: 0.18; }
+}

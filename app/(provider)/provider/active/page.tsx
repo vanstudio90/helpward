@@ -1,9 +1,11 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
+import Link from "next/link";
 import { one } from "@/lib/supabase/relation";
 import { describeIntake } from "@/lib/service-intake";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { Activity, MessageSquare, Phone, CheckCircle2, Play } from "lucide-react";
 import { OnlineToggle, BookingActions } from "./client";
+import { ReadyLive } from "./ready-live";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { BundleChecklist, type BundleChecklistItem } from "./bundle-checklist";
 import { CompletionPhotos, type CompletionPhoto } from "./completion-photos";
@@ -241,34 +243,51 @@ export default async function ProviderActivePage() {
       )}
 
       <ProviderActiveRealtimeRefresh userId={user.id} />
-      <div className="flex items-center justify-between gap-3 mb-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2">
-            <Activity className="w-6 h-6 text-emerald-600" />
-            Active task
-          </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {pp?.status === "approved"
-              ? "Toggle yourself online to start receiving task offers."
-              : "Finish onboarding to unlock task offers."}
-          </p>
-        </div>
-        {pp?.status === "approved" && <OnlineToggle initialOnline={pp?.is_online ?? false} />}
-      </div>
 
-      {!booking ? (
-        <div className="rounded-2xl bg-white border border-slate-100 p-8 sm:p-12 text-center">
-          <span className="inline-flex w-14 h-14 rounded-2xl bg-slate-50 items-center justify-center mb-3">
+      {/* Three states, not two.
+       *
+       * With a task in hand this is a work screen and the job fills it.
+       * With no task and an approved account it is a WAITING screen, which
+       * is what a helper actually stares at — so it gets the online
+       * control, a live "still looking" signal and the settings they reach
+       * for while waiting, instead of the old empty "No active task" card
+       * that looked identical to a page that had died.
+       *
+       * Not yet approved, there is nothing to toggle: say so plainly and
+       * point at onboarding rather than offering a switch that refuses. */}
+      {!booking && pp?.status === "approved" ? (
+        <ReadyLive initialOnline={pp?.is_online ?? false} />
+      ) : !booking ? (
+        <div className="rounded-panel bg-white border border-slate-100 p-8 sm:p-12 text-center shadow-soft">
+          <span className="inline-flex w-14 h-14 rounded-field bg-slate-50 items-center justify-center mb-3">
             <Activity className="w-7 h-7 text-slate-400" />
           </span>
-          <h2 className="text-lg font-bold text-slate-900">No active task</h2>
-          <p className="mt-1 text-sm text-slate-500 max-w-sm mx-auto">
-            {pp?.is_online
-              ? "Waiting for an offer. Check your inbox for new task requests as they come in."
-              : "You're currently offline. Toggle yourself online above to start receiving requests."}
+          <h2 className="text-lg font-bold text-slate-900">No task offers yet</h2>
+          <p className="mt-1.5 text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
+            Finish setting up your profile and we&rsquo;ll start sending you work in
+            the cities you picked.
           </p>
+          <Link
+            href="/provider/dashboard"
+            className="mt-5 inline-flex items-center justify-center rounded-btn bg-brand-600 px-5 py-3 text-[15px] font-bold text-white"
+          >
+            Finish setting up
+          </Link>
         </div>
       ) : (
+        <>
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-2">
+              <Activity className="w-6 h-6 text-emerald-600" />
+              Active task
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Keep this page open until the job is finished.
+            </p>
+          </div>
+          <OnlineToggle initialOnline={pp?.is_online ?? false} />
+        </div>
         <div className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
           {booking.service?.image_url && (
             <div className="h-40 bg-slate-100 relative">
@@ -432,6 +451,7 @@ export default async function ProviderActivePage() {
             />
           </div>
         </div>
+        </>
       )}
     </div>
   );

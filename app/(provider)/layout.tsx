@@ -107,7 +107,7 @@ export default async function ProviderLayout({ children }: { children: React.Rea
           bar says where you are, a tab bar gets you to the five things you
           do repeatedly, and Menu holds the rest. */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <ProviderTopBar />
+        <ProviderTopBar name={profile?.full_name ?? null} />
         <main className="flex-1 min-w-0 pb-20 lg:pb-0">{children}</main>
       </div>
 

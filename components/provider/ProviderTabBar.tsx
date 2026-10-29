@@ -48,25 +48,38 @@ export function ProviderTabBar({ offerCount = 0 }: { offerCount?: number }) {
                 href={t.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-2.5 relative",
-                  active ? "text-emerald-700" : "text-slate-500",
+                  "flex flex-col items-center justify-center gap-1 pt-2 pb-1.5",
+                  active ? "text-brand-700" : "text-slate-400",
                 )}
               >
-                <span className="relative">
-                  <Icon className="w-[22px] h-[22px]" aria-hidden="true" />
+                {/* The lit tab carries a filled pill rather than the hairline
+                    rail it used to. A 2px line above a 22px icon is most of
+                    nothing on a phone held at arm's length; a pill is
+                    readable in peripheral vision, which is how a tab bar is
+                    actually read. */}
+                <span
+                  className={cn(
+                    "relative flex items-center justify-center h-8 px-4 rounded-full transition-colors",
+                    active ? "bg-brand-50" : "bg-transparent",
+                  )}
+                >
+                  <Icon
+                    className="w-[22px] h-[22px]"
+                    strokeWidth={active ? 2.4 : 2}
+                    aria-hidden="true"
+                  />
                   {t.href === "/provider/inbox" && offerCount > 0 && (
                     <span
-                      className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center"
+                      className="absolute top-0 right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white"
                       aria-label={`${offerCount} waiting`}
                     >
                       {offerCount > 9 ? "9+" : offerCount}
                     </span>
                   )}
                 </span>
-                <span className="text-[11px] font-semibold leading-none">{t.label}</span>
-                {active && (
-                  <span className="absolute top-0 inset-x-5 h-0.5 rounded-full bg-emerald-600" aria-hidden="true" />
-                )}
+                <span className={cn("text-[11px] leading-none", active ? "font-extrabold" : "font-semibold")}>
+                  {t.label}
+                </span>
               </Link>
             </li>
           );
