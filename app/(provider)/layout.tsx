@@ -10,28 +10,6 @@ import { ProviderTopBar } from "@/components/provider/ProviderTopBar";
 import { ProviderTabBar } from "@/components/provider/ProviderTabBar";
 import { ProviderSideNav } from "@/components/provider/ProviderSideNav";
 
-/* Grouped so the sidebar and the phone's Menu page describe the same app.
-   A flat list of ten is a list you read every time instead of recognising. */
-const NAV_GROUPS: { title: string | null; items: { href: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
-  { title: null, items: [
-    { href: "/provider/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/provider/inbox", label: "Offers", icon: Inbox },
-    { href: "/provider/active", label: "Active task", icon: Activity },
-  ]},
-  { title: "Your work", items: [
-    { href: "/provider/schedule", label: "Schedule", icon: Calendar },
-    { href: "/provider/messages", label: "Messages", icon: MessageCircle },
-    { href: "/provider/reviews", label: "Reviews", icon: Star },
-    { href: "/provider/portfolio", label: "Portfolio", icon: GalleryHorizontal },
-    { href: "/provider/analytics", label: "Analytics", icon: BarChart3 },
-  ]},
-  { title: "Money", items: [
-    { href: "/provider/earnings", label: "Earnings", icon: DollarSign },
-  ]},
-  { title: "Account", items: [
-    { href: "/provider/profile", label: "My profile", icon: UserCircle },
-  ]},
-];
 
 export default async function ProviderLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
@@ -91,7 +69,7 @@ export default async function ProviderLayout({ children }: { children: React.Rea
             <div className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide">For helpers</div>
           </div>
         </Link>
-        <ProviderSideNav groups={NAV_GROUPS} offerCount={offerCount ?? 0} />
+        <ProviderSideNav offerCount={offerCount ?? 0} />
         <div className="px-3 pb-4 space-y-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-3">
             <div className="text-xs text-slate-500">Logged in as</div>

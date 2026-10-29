@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
-import type { LucideIcon } from "lucide-react";
+import {
+  LayoutDashboard, Inbox, Activity, Calendar, MessageCircle,
+  Star, GalleryHorizontal, BarChart3, DollarSign, UserCircle,
+} from "lucide-react";
 
 /* The desktop sidebar, with an active state.
  *
@@ -15,16 +18,38 @@ import type { LucideIcon } from "lucide-react";
  * same app rather than two different ones.
  */
 
-export type NavItem = { href: string; label: string; icon: LucideIcon };
+/* The nav lives HERE, not in the layout.
+ *
+ * It was defined in the Server Component and passed down as a prop — but
+ * the items carry icon COMPONENTS, and a React component is a function.
+ * Functions cannot cross the server/client boundary, so every provider
+ * page returned a 500. TypeScript cannot catch it: the types are correct,
+ * the serialisation is not. Keeping the list on this side removes the
+ * boundary entirely, which is also what ProviderTabBar already does. */
+const GROUPS = [
+  { title: null, items: [
+    { href: "/provider/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/provider/inbox", label: "Offers", icon: Inbox },
+    { href: "/provider/active", label: "Active task", icon: Activity },
+  ]},
+  { title: "Your work", items: [
+    { href: "/provider/schedule", label: "Schedule", icon: Calendar },
+    { href: "/provider/messages", label: "Messages", icon: MessageCircle },
+    { href: "/provider/reviews", label: "Reviews", icon: Star },
+    { href: "/provider/portfolio", label: "Portfolio", icon: GalleryHorizontal },
+    { href: "/provider/analytics", label: "Analytics", icon: BarChart3 },
+  ]},
+  { title: "Money", items: [
+    { href: "/provider/earnings", label: "Earnings", icon: DollarSign },
+  ]},
+  { title: "Account", items: [
+    { href: "/provider/profile", label: "My profile", icon: UserCircle },
+  ]},
+];
 
-export function ProviderSideNav({
-  groups,
-  offerCount = 0,
-}: {
-  groups: { title: string | null; items: NavItem[] }[];
-  offerCount?: number;
-}) {
+export function ProviderSideNav({ offerCount = 0 }: { offerCount?: number }) {
   const pathname = usePathname();
+  const groups = GROUPS;
 
   return (
     <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">

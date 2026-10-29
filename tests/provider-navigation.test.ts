@@ -65,3 +65,27 @@ test("back goes somewhere that was actually visited", () => {
   assert.match(topBar, /VIA_MENU/);
   assert.match(topBar, /"\/provider\/menu" : base/);
 });
+
+test("no icon components cross the server/client boundary", () => {
+  /* This shipped a 500 on every provider page.
+   *
+   * NAV_GROUPS was defined in the Server Component layout and passed to
+   * ProviderSideNav, a Client Component. The items carry icon COMPONENTS,
+   * and a React component is a function — functions cannot be serialised
+   * across that boundary. TypeScript cannot see it: the types are correct
+   * and the serialisation is not, so tsc, the build and every existing
+   * test all passed while the live page threw.
+   *
+   * The rule that prevents it: a client nav owns its own list. */
+  assert.doesNotMatch(layout, /NAV_GROUPS/,
+    "the layout defines a nav list again — keep it inside the client component");
+  assert.doesNotMatch(layout, /<ProviderSideNav[^>]*groups=/,
+    "icon components are being passed from a Server Component again");
+
+  // Each client nav must declare its own items.
+  assert.match(sideNav, /^const GROUPS = \[/m);
+  assert.match(tabBar, /^const TABS = \[/m);
+  // And both must import their icons directly rather than receive them.
+  assert.match(sideNav, /from "lucide-react"/);
+  assert.match(tabBar, /from "lucide-react"/);
+});
