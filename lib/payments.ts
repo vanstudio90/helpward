@@ -222,6 +222,35 @@ export async function startHelperOnboarding(
     });
     return { ok: true, url: link.url, accountId };
   } catch (err) {
+    // Record what Stripe actually said.
+    //
+    // fromStripeError deliberately replaces Stripe's text with something a
+    // helper can read, and console.error only reaches a log nobody can
+    // retrieve after the fact. That left "Stripe refused that request" as
+    // the ONLY evidence of a failure that is blocking onboarding — not
+    // enough to diagnose anything. The code, the param and the request id
+    // are developer-facing but not secret, and without them the next
+    // attempt is a guess.
+    const e = err as Stripe.errors.StripeError;
+    try {
+      await admin.from("audit_log").insert({
+        actor_id: providerId,
+        action: "connect.onboarding_failed",
+        target_table: "provider_profiles",
+        target_id: providerId,
+        payload: {
+          account_id: accountId,
+          type: e?.type ?? null,
+          code: e?.code ?? null,
+          param: (e as { param?: string })?.param ?? null,
+          message: e?.message ?? String(err),
+          request_id: (e as { requestId?: string })?.requestId ?? null,
+          statusCode: (e as { statusCode?: number })?.statusCode ?? null,
+        },
+      });
+    } catch (logErr) {
+      console.error("could not record connect failure", logErr);
+    }
     return fromStripeError(err);
   }
 }
