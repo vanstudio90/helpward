@@ -137,22 +137,58 @@ async function readAuthEmail(userId: string): Promise<string | undefined> {
 async function connectAccountIsUsable(
   stripe: Stripe,
   accountId: string,
-): Promise<boolean> {
+): Promise<{ usable: boolean; account?: Stripe.Account }> {
   try {
-    await stripe.accounts.retrieve(accountId);
-    return true;
+    const account = await stripe.accounts.retrieve(accountId);
+    return { usable: true, account };
   } catch (err) {
     const e = err as Stripe.errors.StripeError;
     const gone =
       e?.code === "resource_missing" ||
       e?.type === "StripePermissionError" ||
       (e?.type === "StripeInvalidRequestError" && /no such account/i.test(e?.message ?? ""));
-    if (gone) return false;
+    if (gone) return { usable: false };
     // Anything else: assume the account is fine and let the real call
     // report the real problem.
     console.error("could not verify connect account", accountId, e?.message);
-    return true;
+    return { usable: true };
   }
+}
+
+/**
+ * Which country this helper's Connect account must be created in.
+ *
+ * The cities they ticked outrank profiles.country. Someone who chose Lower
+ * Mainland municipalities works in Canada, and that was a deliberate choice
+ * about where they will physically go — whereas profiles.country took the
+ * column default for every account created before migration 0078, which is
+ * why 93 of 94 profiles said US.
+ *
+ * This matters more than most defaults because **a Connect account's
+ * country cannot be changed afterwards**. Getting it wrong hands a
+ * Canadian helper a form asking for a Social Security number, and the only
+ * remedy is a different account.
+ */
+async function connectCountryFor(
+  admin: ReturnType<typeof createSupabaseServiceClient>,
+  providerId: string,
+): Promise<"US" | "CA"> {
+  const { data: cities } = await admin
+    .from("provider_cities")
+    .select("area_id")
+    .eq("provider_id", providerId)
+    .limit(1);
+
+  const areaId = cities?.[0]?.area_id as string | undefined;
+  if (areaId === "lower-mainland-bc") return "CA";
+  if (areaId === "san-diego-ca") return "US";
+
+  const { data: person } = await admin
+    .from("profiles")
+    .select("country")
+    .eq("id", providerId)
+    .single();
+  return person?.country === "CA" ? "CA" : "US";
 }
 
 export async function startHelperOnboarding(
@@ -179,8 +215,27 @@ export async function startHelperOnboarding(
     // cannot read, so there is nothing to lose by replacing it — but the
     // derived flags must go too, or the dashboard keeps reporting the dead
     // account's requirements against the new one.
-    if (accountId && !(await connectAccountIsUsable(stripe, accountId))) {
-      console.warn("replacing unusable connect account", accountId, "for", providerId);
+    const wantCountry = await connectCountryFor(admin, providerId);
+
+    let replaceReason: string | null = null;
+    if (accountId) {
+      const check = await connectAccountIsUsable(stripe, accountId);
+      if (!check.usable) {
+        replaceReason = "unusable";
+      } else if (
+        check.account &&
+        check.account.country !== wantCountry &&
+        // Only when NOTHING has been entered. An account with submitted
+        // details may hold verification documents and a bank account, and
+        // throwing that away to fix a country is not ours to decide.
+        check.account.details_submitted === false
+      ) {
+        replaceReason = `wrong country (${check.account.country}, needs ${wantCountry})`;
+      }
+    }
+
+    if (replaceReason) {
+      console.warn("replacing connect account", accountId, replaceReason, "for", providerId);
       const { error } = await admin
         .from("provider_profiles")
         .update({
@@ -199,14 +254,8 @@ export async function startHelperOnboarding(
     }
 
     if (!accountId) {
-      const { data: person } = await admin
-        .from("profiles")
-        .select("country")
-        .eq("id", providerId)
-        .single();
-
       const account = await stripe.accounts.create({
-        country: person?.country === "CA" ? "CA" : "US",
+        country: wantCountry,
         email: await readAuthEmail(providerId),
         controller: CONNECTED_ACCOUNT_CONTROLLER,
         capabilities: CONNECTED_ACCOUNT_CAPABILITIES,

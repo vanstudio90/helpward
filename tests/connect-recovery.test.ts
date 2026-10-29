@@ -32,8 +32,14 @@ test("only a missing account counts as missing", () => {
   assert.match(fn, /resource_missing/);
   assert.match(fn, /StripePermissionError/);
   assert.match(fn, /no such account/i);
-  // The default on an unrecognised error is to keep the account.
-  assert.match(fn, /return true;[\s\S]*?\}\n\}/);
+  // The default on an unrecognised error is to KEEP the account, so a rate
+  // limit or a network blip never reads as "this account is gone". The
+  // not-usable return must be guarded by `gone`, and the usable one must
+  // come after it as the fallthrough.
+  const notUsable = fn.indexOf("if (gone) return { usable: false };");
+  const usable = fn.indexOf("return { usable: true };", notUsable);
+  assert.ok(notUsable > -1, "the missing-account branch is gone");
+  assert.ok(usable > notUsable, "an unrecognised error must fall through to keeping the account");
 });
 
 test("the failure message no longer claims support was notified", () => {
@@ -79,4 +85,42 @@ test("requirement labels cover the keys Stripe actually returns", async () => {
   assert.match(step, /export function describeRequirements/);
   assert.match(step, /if \(seen\.has\(label\)\) continue;/);
   void describeRequirements;
+});
+
+/* ------------------------------------------------------------- country */
+
+test("the Connect account country follows where the helper works", () => {
+  // A Connect account's country CANNOT be changed afterwards, so this is
+  // one of the few defaults where being wrong needs a whole new account.
+  // profiles.country took the column default for every account created
+  // before migration 0078 — 93 of 94 said US — so the cities a helper
+  // deliberately ticked are the stronger signal.
+  const fn = code.slice(code.indexOf("async function connectCountryFor"));
+  assert.match(fn, /from\("provider_cities"\)/);
+  assert.match(fn, /lower-mainland-bc"\) return "CA"/);
+  assert.match(fn, /san-diego-ca"\) return "US"/);
+  // profiles.country remains the fallback, not the first answer.
+  assert.ok(fn.indexOf('provider_cities') < fn.indexOf('from("profiles")'),
+    "profiles.country must only be the fallback");
+  assert.match(code, /country: wantCountry/);
+});
+
+test("a wrong-country account is replaced only when it is empty", () => {
+  // An account with submitted details may hold verification documents and
+  // a bank account. Discarding that to correct a country is not ours to
+  // decide, however wrong the country is.
+  assert.match(code, /check\.account\.country !== wantCountry/);
+  assert.match(code, /check\.account\.details_submitted === false/);
+  assert.match(code, /wrong country \(\$\{check\.account\.country\}/);
+});
+
+test("signup persists the country it was given", () => {
+  // handle_new_user built the profile from metadata but never read
+  // `country`, so every signup took the column default.
+  const mig = readFileSync("supabase/migrations/0078_profile_country.sql", "utf8");
+  assert.match(mig, /raw_user_meta_data->>'country'/);
+  assert.match(mig, /insert into public\.profiles \(id, role, full_name, avatar_url, country\)/);
+  // And the migration proves it rather than assuming: it inserts a CA
+  // signup, reads the profile back, and fails if the country was dropped.
+  assert.match(mig, /handle_new_user still drops the country/);
 });
