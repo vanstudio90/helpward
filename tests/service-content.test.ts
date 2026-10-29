@@ -190,3 +190,20 @@ test("professional-cuddler is not published anywhere public", () => {
       `${f} names a service that must not be published`);
   }
 });
+
+test("every public page offers a way to contact a person", () => {
+  // The service pages and both city templates ended with no footer at all,
+  // so 78 public pages had no contact address, no route back to the
+  // directories and no legal links. support@helpward.com was printed on
+  // Stripe receipts and both legal pages and nowhere a visitor would look.
+  const footer = readFileSync("components/SiteFooter.tsx", "utf8");
+  assert.match(footer, /mailto:support@helpward\.com/);
+  for (const f of ["app/services/[slug]/page.tsx",
+                   "app/cities/[city]/page.tsx",
+                   "app/cities/[city]/[service]/page.tsx"]) {
+    assert.match(readFileSync(f, "utf8"), /<SiteFooter \/>/, `${f} has no footer`);
+  }
+  // And the two shells that already had footers carry it too.
+  assert.match(readFileSync("components/MarketingShell.tsx", "utf8"), /support@helpward\.com/);
+  assert.match(readFileSync("app/page.tsx", "utf8"), /support@helpward\.com/);
+});

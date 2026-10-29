@@ -124,3 +124,19 @@ test("signup persists the country it was given", () => {
   // signup, reads the profile back, and fails if the country was dropped.
   assert.match(mig, /handle_new_user still drops the country/);
 });
+
+test("clearing an account never nulls a NOT NULL column", () => {
+  // stripe_requirements_due is NOT NULL jsonb. Setting it to null failed
+  // the entire update with a 23502, so the account was never cleared and
+  // the helper got "Could not restart payout setup" on every attempt.
+  const block = code.slice(code.indexOf("stripe_connect_account_id: null"),
+                           code.indexOf("if (error) {", code.indexOf("stripe_connect_account_id: null")));
+  assert.match(block, /stripe_requirements_due: \[\]/);
+  assert.doesNotMatch(block, /stripe_requirements_due: null/);
+  // The other NOT NULL booleans must be reset too, not left describing the
+  // discarded account.
+  for (const f of ["stripe_charges_enabled: false", "stripe_payouts_enabled: false",
+                   "stripe_details_submitted: false", "stripe_transfers_active: false"]) {
+    assert.ok(block.includes(f), `${f} missing when the account is replaced`);
+  }
+});

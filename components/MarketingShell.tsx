@@ -44,7 +44,15 @@ export function MarketingShell({
 
       <footer className="border-t border-slate-100 py-8">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <span>© {new Date().getFullYear()} Helpward</span>
+          <span className="flex flex-col sm:flex-row items-center gap-x-3 gap-y-1">
+            <span>© {new Date().getFullYear()} Helpward</span>
+            {/* The one address a customer or helper can reach a person at.
+                It was printed on Stripe receipts and both legal pages but
+                appeared nowhere a visitor would actually look. */}
+            <a href="mailto:support@helpward.com" className="hover:text-slate-900 underline underline-offset-2">
+              support@helpward.com
+            </a>
+          </span>
           <nav className="flex items-center gap-5 flex-wrap justify-center">
             {/* The directories lead; the rest is about the company. A
                 service page reachable only from the sitemap is reachable

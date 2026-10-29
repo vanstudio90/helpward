@@ -3,8 +3,7 @@ import Link from "next/link";
 import {
   Sparkles, Shield, MapPin, Lock, ArrowRight, Star, HelpCircle, Headphones,
   Users, Clock, ShieldCheck, DollarSign, CheckCircle, Activity, Zap, MessageSquare,
-  Smile, Apple, Play,
-} from "lucide-react";
+  Smile, Apple, Play, Mail } from "lucide-react";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "./_landing-header";
@@ -503,6 +502,16 @@ export default async function LandingPage() {
                   <li key={href}><Link href={href} className="text-slate-400 hover:text-white transition">{label}</Link></li>
                 ))}
               </ul>
+              {/* Somewhere a real person can be reached. This address is on
+                  Stripe receipts and both legal pages, and appeared nowhere
+                  a customer or helper would actually look for it. */}
+              <a
+                href="mailto:support@helpward.com"
+                className="mt-4 inline-flex items-center gap-1.5 text-xs text-slate-300 hover:text-white transition"
+              >
+                <Mail className="w-3.5 h-3.5" aria-hidden="true" />
+                support@helpward.com
+              </a>
             </div>
 
             <FooterCol

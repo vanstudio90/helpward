@@ -242,8 +242,15 @@ export async function startHelperOnboarding(
           stripe_connect_account_id: null,
           stripe_details_submitted: false,
           stripe_transfers_active: false,
-          stripe_requirements_due: null,
+          stripe_charges_enabled: false,
+          stripe_payouts_enabled: false,
+          // NOT NULL jsonb. Setting it to null failed the whole update with
+          // a 23502, so the account could never actually be cleared and the
+          // helper saw "Could not restart payout setup" for ever. An empty
+          // list is what "no outstanding requirements" means here.
+          stripe_requirements_due: [],
           stripe_disabled_reason: null,
+          stripe_onboarded_at: null,
         })
         .eq("user_id", providerId);
       if (error) {

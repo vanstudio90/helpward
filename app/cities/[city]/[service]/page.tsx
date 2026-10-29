@@ -10,6 +10,7 @@ import { CITIES, getCity } from "@/lib/marketing";
 import { serviceCopy, cityLocal, UNIVERSAL_FAQS } from "@/lib/service-copy";
 import { formatMoney } from "@/lib/money";
 import { displayBaseCents } from "@/lib/country-price";
+import { SiteFooter } from "@/components/SiteFooter";
 
 // 270 programmatic landing pages (10 cities × 27 services) — each ranks for
 // the long-tail query "<service> in <city>". Generated at build time with
@@ -480,6 +481,7 @@ function Trust({ icon: Icon, title, sub }: { icon: React.ComponentType<{ classNa
       <Icon className="w-4 h-4 text-brand-600 mb-1.5" />
       <div className="font-bold text-slate-900">{title}</div>
       <div className="text-slate-500 mt-0.5 leading-snug">{sub}</div>
+      <SiteFooter />
     </div>
   );
 }

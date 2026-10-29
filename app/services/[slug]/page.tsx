@@ -9,6 +9,7 @@ import { CITIES } from "@/lib/marketing";
 import { formatMoney } from "@/lib/money";
 import { staticPriceLabel } from "@/lib/country-price";
 import { serviceCopy, UNIVERSAL_FAQS } from "@/lib/service-copy";
+import { SiteFooter } from "@/components/SiteFooter";
 
 // One landing page per active service. Each emits Service + FAQPage +
 // BreadcrumbList JSON-LD so AI engines and Google can rank the page for
@@ -400,6 +401,7 @@ function Trust({ icon: Icon, title, sub }: { icon: React.ComponentType<{ classNa
       <Icon className="w-4 h-4 text-brand-600 mb-1.5" />
       <div className="font-bold text-slate-900">{title}</div>
       <div className="text-slate-500 mt-0.5 leading-snug">{sub}</div>
+      <SiteFooter />
     </div>
   );
 }
