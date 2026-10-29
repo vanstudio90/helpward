@@ -7,9 +7,20 @@ import { listServices } from "@/lib/data/services";
 import { Check } from "lucide-react";
 import { ProviderServicesForm } from "./services-form";
 import { PayoutStep, type PayoutState } from "./payout-step";
+import { refreshHelperPayoutState } from "@/lib/payments";
 
-export default async function ProviderOnboardPage() {
+export default async function ProviderOnboardPage({
+  searchParams,
+}: { searchParams: Promise<{ payouts?: string }> }) {
   const supabase = await createSupabaseServerClient();
+
+  // Coming back from Stripe with ?payouts=done means they just finished the
+  // form. Stripe's account.updated webhook normally flips the flags within
+  // seconds, but a webhook is a thing that can be late, retried or
+  // misconfigured — and the helper is standing here NOW, looking at a step
+  // that still says unfinished. Ask Stripe directly before rendering, so
+  // what they see is the truth rather than whatever arrived in time.
+  const { payouts } = await searchParams;
   const { data: { user } } = await supabase.auth.getUser();
   // These three were awaited one after another. None depends on the result
   // of another — only on user.id — so the page cost four sequential round
@@ -25,6 +36,16 @@ export default async function ProviderOnboardPage() {
   ]);
   const selectedServiceIds = (myServiceRows ?? []).map((r) => r.service_id as string);
   const providerServiceCount = selectedServiceIds.length;
+
+  if (payouts === "done" && pp?.stripe_connect_account_id) {
+    // Best-effort: a failure here must not break the page. The "Check
+    // status" button remains as the manual path.
+    try {
+      await refreshHelperPayoutState(pp.stripe_connect_account_id);
+    } catch (e) {
+      console.error("could not refresh payout state on return", e);
+    }
+  }
 
   // ONLY the steps a helper can actually finish, and that actually bear on
   // whether they can work.
