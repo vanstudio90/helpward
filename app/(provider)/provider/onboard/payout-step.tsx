@@ -17,26 +17,62 @@ export type PayoutState = {
 
 // Stripe's requirement keys are API identifiers. Shown raw they read as
 // gibberish to a helper trying to work out what is missing.
+/* Stripe's requirement keys, in words.
+ *
+ * Only `individual.*` was mapped, but Stripe returns `representative.*`
+ * for the accounts this platform creates — so a helper was shown the raw
+ * tail of each key and the list read "Day", "Month", "Business type".
+ * "Day" is not a thing anyone can go and supply.
+ *
+ * Both prefixes map to the same labels, because they mean the same thing
+ * to the person reading them.
+ */
 const REQUIREMENT_LABELS: Record<string, string> = {
-  "individual.verification.document": "A photo of your ID",
-  "individual.id_number": "Your full SSN or SIN",
-  "individual.ssn_last_4": "The last 4 digits of your SSN",
-  "individual.dob.day": "Your date of birth",
-  "individual.address.line1": "Your home address",
-  "individual.first_name": "Your legal first name",
-  "individual.last_name": "Your legal last name",
-  "individual.email": "Your email address",
-  "individual.phone": "Your phone number",
+  "verification.document": "A photo of your ID",
+  "id_number": "Your full SSN or SIN",
+  "ssn_last_4": "The last 4 digits of your SSN",
+  "dob.day": "Your date of birth",
+  "dob.month": "Your date of birth",
+  "dob.year": "Your date of birth",
+  "address.line1": "Your home address",
+  "address.city": "Your home address",
+  "address.postal_code": "Your home address",
+  "first_name": "Your legal first name",
+  "last_name": "Your legal last name",
+  "email": "Your email address",
+  "phone": "Your phone number",
+};
+
+const FLAT_LABELS: Record<string, string> = {
   external_account: "A bank account to be paid into",
+  business_type: "Whether you work as an individual or a business",
   "business_profile.url": "A website or profile link",
   "business_profile.mcc": "What kind of work you do",
+  "business_profile.support_phone": "A phone number customers can reach you on",
   "tos_acceptance.date": "Accepting Stripe's terms",
+  "tos_acceptance.ip": "Accepting Stripe's terms",
 };
 
 function describeRequirement(key: string): string {
-  if (REQUIREMENT_LABELS[key]) return REQUIREMENT_LABELS[key];
+  if (FLAT_LABELS[key]) return FLAT_LABELS[key];
+  // individual.dob.day and representative.dob.day mean the same thing.
+  const withoutPerson = key.replace(/^(individual|representative|company|owners?)\./, "");
+  if (REQUIREMENT_LABELS[withoutPerson]) return REQUIREMENT_LABELS[withoutPerson];
   // Fall back to something readable rather than the raw key.
-  return key.split(".").pop()!.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+  return withoutPerson.split(".").pop()!.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+/** The same requirement can arrive as three keys; show it once. */
+export function describeRequirements(keys: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const k of keys) {
+    const label = describeRequirement(k);
+    if (seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+  }
+  return out;
 }
 
 export function PayoutStep({ state }: { state: PayoutState }) {
@@ -83,8 +119,8 @@ export function PayoutStep({ state }: { state: PayoutState }) {
         <div className="text-xs text-slate-600">
           <p className="font-semibold text-slate-700">Stripe still needs:</p>
           <ul className="mt-1 space-y-0.5 list-disc list-inside">
-            {state.requirementsDue.slice(0, 6).map((r) => (
-              <li key={r}>{describeRequirement(r)}</li>
+            {describeRequirements(state.requirementsDue).slice(0, 6).map((r) => (
+              <li key={r}>{r}</li>
             ))}
           </ul>
         </div>

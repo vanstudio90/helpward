@@ -50,3 +50,33 @@ test("a replacement cannot be handed out before it is recorded", () => {
   assert.match(code, /could not persist connect account/);
   assert.match(code, /return fail\("persist_failed"/);
 });
+
+test("a platform setup failure does not tell the helper to try again", () => {
+  // The real error was: "You cannot create livemode account sessions or
+  // account links until you have supplied URLs at .../connect/site-links".
+  // That fails identically every time and the fault is not the helper's —
+  // "try again" is advice that cannot work.
+  assert.match(code, /platform_not_configured/);
+  assert.match(code, /site-links\|livemode account/);
+  const branch = code.slice(code.indexOf("if (platformSetup)"), code.indexOf("invalid_request\","));
+  assert.match(branch, /not\s*\n?\s*\+?\s*"?yours|setup problem on our side/);
+  assert.doesNotMatch(branch, /Try again/);
+});
+
+test("requirement labels cover the keys Stripe actually returns", async () => {
+  const { describeRequirements } = await import("../app/(provider)/provider/onboard/payout-step.tsx")
+    .catch(() => ({ describeRequirements: null as unknown as (k: string[]) => string[] }));
+  // The component is JSX and cannot be imported by the runner, so assert on
+  // source: only individual.* was mapped while Stripe returns
+  // representative.*, which is why the list read "Day" and "Month".
+  const step = readFileSync("app/(provider)/provider/onboard/payout-step.tsx", "utf8");
+  assert.match(step, /representative\|company\|owners\?/);
+  assert.match(step, /"dob\.day": "Your date of birth"/);
+  assert.match(step, /"dob\.month": "Your date of birth"/);
+  assert.match(step, /business_type:/);
+  assert.match(step, /support_phone/);
+  // And the three dob keys must collapse to one line.
+  assert.match(step, /export function describeRequirements/);
+  assert.match(step, /if \(seen\.has\(label\)\) continue;/);
+  void describeRequirements;
+});

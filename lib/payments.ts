@@ -49,9 +49,27 @@ function fromStripeError(err: unknown): PaymentFailure {
   }
   if (e?.type === "StripeInvalidRequestError") {
     console.error("stripe invalid request:", e.message);
-    // "Support has been notified" was not true: nothing notifies support,
-    // and until MX records exist the address it would use bounces. Say what
-    // is actually known and what the person can do.
+    // Distinguish the two reasons Stripe rejects a request, because they
+    // need opposite advice.
+    //
+    // A PLATFORM configuration gap — the live Connect settings are
+    // incomplete — fails identically on every attempt. Telling someone to
+    // try again is telling them to do something that cannot work, and the
+    // fault is not theirs. The real one here was: "You cannot create
+    // livemode account sessions or account links until you have supplied
+    // URLs at .../settings/connect/site-links", which no amount of
+    // retrying resolves.
+    const msg = e?.message ?? "";
+    const platformSetup =
+      /site-links|livemode account (sessions|links)|platform.*(profile|settings).*(incomplete|complete)/i.test(msg);
+
+    if (platformSetup) {
+      return fail("platform_not_configured",
+        "We couldn't open your secure payout setup — this is a setup problem on our side, not "
+        + "yours. Nothing you entered is lost. We've recorded it and will have it working shortly; "
+        + "no need to keep trying.");
+    }
+
     return fail("invalid_request",
       "Stripe refused that request. Try again — if it keeps happening, email support@helpward.com "
       + "and quote the time it occurred.");
