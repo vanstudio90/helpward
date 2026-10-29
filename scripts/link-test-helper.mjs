@@ -4,7 +4,7 @@
 // account.updated webhook uses.
 //
 // WHAT THIS DOES NOT DO: exercise helper onboarding. The production path
-// is /provider/onboard -> startPayoutSetupAction -> Stripe-hosted
+// is /helper/onboard -> startPayoutSetupAction -> Stripe-hosted
 // onboarding -> account.updated. This skips straight to the end state, so
 // it proves money can move to a helper; it does not prove a helper can get
 // themselves into that state. Walk the real path before rollout.
@@ -125,6 +125,6 @@ console.log(`    transfers_active: ${check.stripe_transfers_active}  status: ${c
 const { rows: [counts] } = await db.query(
   `select count(*) filter (where stripe_transfers_active) payable, count(*) total from provider_profiles`);
 console.log(`\n  ${counts.payable}/${counts.total} helper profiles can now be paid.`);
-console.log(`\n  NOT PROVEN: that a helper can reach this state through /provider/onboard.`);
+console.log(`\n  NOT PROVEN: that a helper can reach this state through /helper/onboard.`);
 console.log(`  That path is Stripe-hosted and needs a person. Walk it before rollout.\n`);
 await db.end();

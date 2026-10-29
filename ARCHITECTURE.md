@@ -473,7 +473,7 @@ create policy locations_for_active_customer on provider_locations
 Middleware (`proxy.ts`) redirect rules:
 - Unauth user hitting `/(app)`, `/(provider)`, `/(admin)` → `/login?next=…`
 - Customer hitting `/(provider)` or `/(admin)` → `/dashboard`
-- Provider hitting `/(app)` or `/(admin)` → `/provider/dashboard`
+- Provider hitting `/(app)` or `/(admin)` → `/helper/dashboard`
 - Admin can hit any route (super-user)
 
 ---
@@ -603,7 +603,7 @@ User can opt out per channel per event type in Settings → Notifications.
 ## 10. Provider mobile app
 
 ### Phase 0: PWA (ships in ~1 week)
-- Same Next.js codebase, served under `/provider/*`
+- Same Next.js codebase, served under `/helper/*`
 - `manifest.json` + service worker (next-pwa)
 - Add to home screen on iOS/Android
 - **GPS in background**: limited on iOS PWA (only foreground), works on Android with proper permissions
@@ -628,7 +628,7 @@ Built as a Next.js route group `/admin/*` with strict role gating.
 |---|---|
 | `/admin` | KPIs: active providers / open bookings / today's revenue / disputes count |
 | `/admin/users` | Search/filter/suspend any user |
-| `/admin/providers` | Approval queue — review uploaded ID, background check status, approve / reject / request more info |
+| `/admin/helpers` | Approval queue — review uploaded ID, background check status, approve / reject / request more info |
 | `/admin/bookings` | Live map of all in-progress bookings (Mapbox heatmap + markers) |
 | `/admin/disputes` | Open disputes queue with both parties' messages, evidence, action buttons (refund / favor provider / escalate) |
 | `/admin/payments` | Stripe charges + payouts mirror; can issue refunds |
