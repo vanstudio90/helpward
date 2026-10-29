@@ -263,3 +263,30 @@ test("the page renders the problem-led title and situations", () => {
   assert.match(page, /copy\.situations\.map/);
   assert.match(page, /copy\.chooseBetween/);
 });
+
+test("each page renders exactly one footer", () => {
+  /* Four footers shipped on all 78 service and city pages.
+   *
+   * SiteFooter was inserted by a regex that matched the LAST
+   * `</div>…);}` in each file — which was the `Trust` helper at the
+   * bottom, not the page component. Trust renders four times, so the
+   * footer did too, repeating the whole boilerplate block through the
+   * middle of the content.
+   *
+   * My own check missed it because `grep -c` counts matching LINES and
+   * the HTML is minified: four footers on one line counted as one. Count
+   * occurrences, never lines. */
+  for (const f of ["app/services/[slug]/page.tsx",
+                   "app/cities/[city]/page.tsx",
+                   "app/cities/[city]/[service]/page.tsx"]) {
+    const src = readFileSync(f, "utf8");
+    const uses = (src.match(/<SiteFooter \/>/g) ?? []).length;
+    assert.equal(uses, 1, `${f} renders SiteFooter ${uses} times`);
+
+    // And it must sit in the page component, not in a helper below it.
+    const atFooter = src.indexOf("<SiteFooter />");
+    const atHelper = src.search(/\nfunction \w+\(/);
+    assert.ok(atHelper === -1 || atFooter < atHelper,
+      `${f} renders the footer inside a helper component, which repeats it`);
+  }
+});

@@ -448,6 +448,7 @@ export default async function ServiceDetailPage({
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }
@@ -458,7 +459,6 @@ function Trust({ icon: Icon, title, sub }: { icon: React.ComponentType<{ classNa
       <Icon className="w-4 h-4 text-brand-600 mb-1.5" />
       <div className="font-bold text-slate-900">{title}</div>
       <div className="text-slate-500 mt-0.5 leading-snug">{sub}</div>
-      <SiteFooter />
     </div>
   );
 }
