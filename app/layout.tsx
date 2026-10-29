@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { ScrollReset } from "@/components/scroll-reset";
 import { NavProgress } from "@/components/nav-progress";
 
@@ -86,9 +87,28 @@ const WEBSITE_LD = {
   },
 };
 
+/* Typography.
+ *
+ * The brief asked for a specific competitor's typeface. That one is
+ * proprietary and licensed to them, so this is an openly-licensed
+ * geometric sans chosen for the same qualities: generous round counters, a
+ * tall x-height that stays readable at 13px in a dense UI, and heavy
+ * weights that carry a headline without shouting.
+ *
+ * Loaded through next/font so it is self-hosted, preloaded and carries no
+ * layout shift — a webfont that arrives late reflows the whole page, which
+ * is the opposite of feeling solid.
+ */
+const display = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-display",
+  display: "swap",
+});
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={display.variable}>
       <head>
         {/* Preconnect to image CDNs we hit on every page — saves ~100-200ms
             of DNS + TLS on the LCP image, hands down the cheapest CWV win. */}
