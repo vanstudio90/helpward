@@ -72,6 +72,16 @@ export default async function CityServicePage({
 
   // JSON-LD: Service scoped to this one city, LocalBusiness for the city,
   // FAQPage with location-aware Q&A, and BreadcrumbList for the deep path.
+  // The LOCAL price — used by the structured data AND the FAQ below, so
+  // they cannot disagree. Both previously derived from
+  // service.base_price_cents, which is the US figure.
+  const localCents = displayBaseCents(
+    service.base_price_cents,
+    service.country_pricing ?? undefined,
+    city.country,
+  );
+  const localCurrency = city.country === "CA" ? "CAD" : "USD";
+
   const SERVICE_LD = {
     "@context": "https://schema.org",
     "@type": "Service",
@@ -89,8 +99,13 @@ export default async function CityServicePage({
     },
     offers: {
       "@type": "Offer",
-      price: baseDollars.toFixed(2),
-      priceCurrency: city.country === "CA" ? "CAD" : "USD",
+      // The LOCAL price. This read service.base_price_cents and labelled it
+      // CAD on the Vancouver pages, so Vancouver dog walking published
+      // CAD25.00 in its structured data for a booking the database charges
+      // CA$27 for. Structured data that contradicts the page is worse than
+      // none, and this contradicted the page's own FAQ.
+      price: (localCents / 100).toFixed(2),
+      priceCurrency: localCurrency,
       availability: "https://schema.org/InStock",
       url: `https://helpward.com/new-request?service=${service.id}`,
     },
@@ -121,12 +136,6 @@ export default async function CityServicePage({
   // faster than the platform-wide average". There are no completed
   // bookings, so there is no average and no comparison; both are removed
   // rather than softened.
-  const localCents = displayBaseCents(
-    service.base_price_cents,
-    service.country_pricing ?? undefined,
-    city.country,
-  );
-  const localCurrency = city.country === "CA" ? "CAD" : "USD";
 
   const FAQS = [
     {

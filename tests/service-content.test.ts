@@ -154,3 +154,16 @@ test("the city page renders its local content", () => {
   assert.match(cityServicePage, /local\.places\.map/);
   assert.match(cityServicePage, /local\.commonlyOutside\.map/);
 });
+
+test("the city page's structured data quotes the same price as its own copy", () => {
+  // Vancouver dog walking published CAD25.00 in its Service markup for a
+  // booking the database charges CA$27 for — the US figure with a Canadian
+  // label, contradicting the FAQ directly beneath it on the same page.
+  const code = codeOnly(cityServicePage);
+  assert.match(code, /price: \(localCents \/ 100\)\.toFixed\(2\)/);
+  assert.match(code, /priceCurrency: localCurrency/);
+  assert.doesNotMatch(code, /price: baseDollars\.toFixed\(2\)/);
+  // One definition, used by both the markup and the copy, so they cannot
+  // drift apart again.
+  assert.equal((code.match(/const localCents = displayBaseCents\(/g) ?? []).length, 1);
+});
