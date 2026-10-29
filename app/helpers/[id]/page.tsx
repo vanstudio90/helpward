@@ -11,6 +11,7 @@ import { isUuid } from "@/lib/slug";
 import { redirect } from "next/navigation";
 import { one } from "@/lib/supabase/relation";
 import { Logo } from "@/components/Logo";
+import { HELPER_KINDS } from "@/lib/roles";
 
 // Per-helper metadata for shareable previews. iMessage/Twitter/Slack all
 // pull these tags when an inbound link is unfurled, so a profile shared
@@ -135,7 +136,7 @@ export default async function PublicProviderProfile({
       .from("favorites")
       .select("user_id")
       .eq("user_id", user.id)
-      .eq("kind", "helper")
+      .in("kind", HELPER_KINDS)
       .eq("target_id", id)
       .maybeSingle();
     initialSaved = !!fav;

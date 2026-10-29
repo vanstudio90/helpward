@@ -19,6 +19,7 @@ import { ClientDateTime } from "@/components/ClientDateTime";
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
 import { PortfolioRevokeButton, PortfolioBadge } from "./portfolio-revoke";
 import { BookingDetailRealtimeRefresh } from "./realtime-refresh";
+import { HELPER_KINDS } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -176,7 +177,7 @@ export default async function BookingDetailPage({
       .from("favorites")
       .select("user_id")
       .eq("user_id", user.id)
-      .eq("kind", "helper")
+      .in("kind", HELPER_KINDS)
       .eq("target_id", provider.user_id)
       .maybeSingle();
     helperIsFavorited = !!fav;

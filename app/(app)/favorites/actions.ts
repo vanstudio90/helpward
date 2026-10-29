@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-type Kind = "helper" | "service" | "address";
+// "provider" is the retired spelling, still written until migration 0081
+// widens the favorites CHECK constraint. See FAVORITE_HELPER_KIND.
+type Kind = "helper" | "provider" | "service" | "address";
 
 export async function toggleFavoriteAction(kind: Kind, targetId: string): Promise<{ saved: boolean } | { error: string }> {
   const supabase = await createSupabaseServerClient();

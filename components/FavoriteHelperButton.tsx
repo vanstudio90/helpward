@@ -5,6 +5,7 @@ import { Heart, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { toggleFavoriteAction } from "@/app/(app)/favorites/actions";
+import { FAVORITE_HELPER_KIND } from "@/lib/roles";
 
 // Tap to star/un-star a helper. Persists via the existing `favorites` table
 // with kind='helper'. Unauthed taps bounce through /signup with a
@@ -36,7 +37,7 @@ export function FavoriteHelperButton({
     const prev = saved;
     setSaved(!prev);
     start(async () => {
-      const r = await toggleFavoriteAction("helper", helperId);
+      const r = await toggleFavoriteAction(FAVORITE_HELPER_KIND, helperId);
       if ("error" in r) {
         setSaved(prev);
       } else {

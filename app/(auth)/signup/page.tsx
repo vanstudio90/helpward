@@ -7,6 +7,7 @@ import { signupAction } from "../auth/actions";
 import { Mail, Lock, User, AlertCircle, Globe } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ReferralBanner } from "./referral-banner";
+import { NEW_HELPER_ROLE } from "@/lib/roles";
 
 export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signupAction, undefined);
@@ -66,7 +67,7 @@ export default function SignupPage() {
       )}
 
       <form action={formAction} className="mt-5 space-y-4">
-        <input type="hidden" name="role" value={role} />
+        <input type="hidden" name="role" value={role === "helper" ? NEW_HELPER_ROLE : role} />
 
         <label className="block">
           <span className="text-xs font-semibold text-slate-700">Full Name</span>
