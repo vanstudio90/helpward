@@ -84,3 +84,35 @@ test("the split is explained once, in the helper's own currency", () => {
   // And must not be sold as an hourly wage.
   assert.match(forms, /not an hourly rate across travel or/);
 });
+
+/* ------------------------------------------------- display/charge parity */
+
+test("the whole rule is localised, not just the base and the time block", async () => {
+  const { localizeRule } = await import("../lib/country-price.ts");
+  const rule = {
+    extraBlockCents: 900, perExtraUnitCents: 800, perExtraCrewCents: 3500,
+  };
+  const overrides = [
+    { country: "US" as const, base_price_cents: 2500, extra_block_cents: 800,
+      per_extra_unit_cents: 800, per_extra_crew_cents: null },
+    { country: "CA" as const, base_price_cents: 2700, extra_block_cents: 800,
+      per_extra_unit_cents: 1000, per_extra_crew_cents: null },
+  ];
+  // The bug this prevents: showing CA$27 + 2 x US$8 = CA$43 for a job the
+  // database bills at CA$27 + 2 x CA$10 = CA$47.
+  assert.equal(localizeRule(rule, overrides, "CA")!.perExtraUnitCents, 1000);
+  assert.equal(localizeRule(rule, overrides, "US")!.perExtraUnitCents, 800);
+  // A null override keeps the service's own figure rather than blanking it.
+  assert.equal(localizeRule(rule, overrides, "CA")!.perExtraCrewCents, 3500);
+  // No country, no overrides: unchanged.
+  assert.equal(localizeRule(rule, overrides, null), rule);
+  assert.equal(localizeRule(rule, [], "CA"), rule);
+  assert.equal(localizeRule(null, overrides, "CA"), null);
+});
+
+test("the booking summary localises through that one helper", () => {
+  const view = readFileSync("app/(app)/new-request/view.tsx", "utf8");
+  assert.match(view, /localizeRule\(/);
+  // Field-at-a-time localisation is what let per-dog money drift.
+  assert.doesNotMatch(view, /displayExtraBlockCents/);
+});

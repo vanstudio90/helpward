@@ -26,7 +26,7 @@ import { SERVICE_FEE_CENTS, quoteOneShotCents, dollars } from "@/lib/pricing";
 import { pickInitialSelected } from "@/lib/new-request-selection";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
-import { displayBaseCents, displayExtraBlockCents, type CountryPrice } from "@/lib/country-price";
+import { displayBaseCents, localizeRule, type CountryPrice } from "@/lib/country-price";
 
 export type SavedAddressOption = {
   id: string;
@@ -791,13 +791,14 @@ function SummaryCard({ selected, rule, answers, currency, bundle }: {
     (selected.country_pricing ?? undefined) as CountryPrice[] | undefined,
     quotedCountry,
   );
-  const quotedRule = rule
-    ? { ...rule, extraBlockCents: displayExtraBlockCents(
-        rule.extraBlockCents,
-        (selected.country_pricing ?? undefined) as CountryPrice[] | undefined,
-        quotedCountry,
-      ) ?? rule.extraBlockCents }
-    : rule;
+  // The WHOLE rule, not just the time block: per-dog and per-helper money
+  // vary by market too, and localising them one field at a time is how the
+  // display drifts from the charge.
+  const quotedRule = localizeRule(
+    rule,
+    (selected.country_pricing ?? undefined) as CountryPrice[] | undefined,
+    quotedCountry,
+  );
   const priced = priceService(quotedBase, quotedRule, answers);
 
   return (

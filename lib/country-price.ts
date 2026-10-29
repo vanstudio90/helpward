@@ -60,6 +60,8 @@ export type CountryPrice = {
   country: PricedCountry;
   base_price_cents: number;
   extra_block_cents: number | null;
+  per_extra_unit_cents?: number | null;
+  per_extra_crew_cents?: number | null;
 };
 
 /**
@@ -116,4 +118,42 @@ export function staticPriceLabel(
   const usCents = us?.base_price_cents ?? serviceBaseCents;
   const caCents = ca?.base_price_cents ?? serviceBaseCents;
   return `${format(usCents, "USD")} · ${format(caCents, "CAD")}`;
+}
+
+
+/**
+ * A pricing rule with every local money amount applied.
+ *
+ * displayBaseCents covered the base and displayExtraBlockCents the time
+ * block, which left the per-unit and per-crew amounts at their single
+ * value — so a Canadian booking three dogs would have been SHOWN
+ * CA$27 + 2 x US$8 = CA$43 and CHARGED CA$47. Localising the whole rule
+ * in one place means a new country-priced field cannot be applied in the
+ * database and forgotten in the display, which is the exact shape of the
+ * bug that put "$15" on a page billing CA$40.
+ *
+ * Returns the rule unchanged when there is nothing to override, so every
+ * service without country rows behaves exactly as before.
+ */
+export function localizeRule<
+  R extends {
+    extraBlockCents: number | null;
+    perExtraUnitCents: number | null;
+    perExtraCrewCents: number | null;
+  },
+>(
+  rule: R | null | undefined,
+  overrides: CountryPrice[] | null | undefined,
+  country: string | null | undefined,
+): R | null {
+  if (!rule) return null;
+  if (!isPricedCountry(country) || !overrides?.length) return rule;
+  const row = overrides.find((o) => o.country === country);
+  if (!row) return rule;
+  return {
+    ...rule,
+    extraBlockCents: row.extra_block_cents ?? rule.extraBlockCents,
+    perExtraUnitCents: row.per_extra_unit_cents ?? rule.perExtraUnitCents,
+    perExtraCrewCents: row.per_extra_crew_cents ?? rule.perExtraCrewCents,
+  };
 }
