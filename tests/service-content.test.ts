@@ -207,3 +207,59 @@ test("every public page offers a way to contact a person", () => {
   assert.match(readFileSync("components/MarketingShell.tsx", "utf8"), /support@helpward\.com/);
   assert.match(readFileSync("app/page.tsx", "utf8"), /support@helpward\.com/);
 });
+
+/* --------------------------------------------- problem-led positioning */
+
+test("every service leads with the problem, not the product name", async () => {
+  const { SERVICE_COPY } = await import("../lib/service-copy.ts");
+  for (const [id, c] of Object.entries(SERVICE_COPY)) {
+    assert.ok(c.title.length > 15, `${id} has no real title`);
+    assert.ok(c.headline.length > 15, `${id} has no headline`);
+    // A headline that is just the catalogue name defeats the point.
+    assert.notEqual(c.headline.toLowerCase(), id.replace(/-/g, " "),
+      `${id}'s headline is just its own name`);
+    assert.ok(c.situations.length >= 3, `${id} describes fewer than three situations`);
+  }
+});
+
+test("no two services share a headline or a situation list", async () => {
+  const { SERVICE_COPY } = await import("../lib/service-copy.ts");
+  for (const field of ["title", "headline", "situations"] as const) {
+    const seen = new Map<string, string>();
+    for (const [id, c] of Object.entries(SERVICE_COPY)) {
+      const key = JSON.stringify(c[field]);
+      assert.equal(seen.get(key), undefined, `${id} and ${seen.get(key)} share a ${field}`);
+      seen.set(key, id);
+    }
+  }
+});
+
+test("overlapping services point at each other", async () => {
+  const { SERVICE_COPY } = await import("../lib/service-copy.ts");
+  // The groups the plan names as competing. Each must disambiguate, or the
+  // pages quietly fight over the same reader.
+  for (const group of [
+    ["rent-a-friend", "date-companion", "event-companion"],
+    ["event-companion", "wedding-guest", "family-standin"],
+    ["grocery-pickup", "errand-runner", "package-delivery"],
+    ["house-check-in", "property-inspection"],
+    ["listening-service", "sleep-call-companion"],
+  ]) {
+    for (const id of group) {
+      const alts = SERVICE_COPY[id]?.chooseBetween ?? [];
+      assert.ok(alts.length > 0, `${id} does not say which neighbouring service to use instead`);
+      // And every alternative must be a service that exists.
+      for (const a of alts) {
+        assert.ok(SERVICE_COPY[a.slug], `${id} points at "${a.slug}", which has no copy`);
+      }
+    }
+  }
+});
+
+test("the page renders the problem-led title and situations", () => {
+  const page = readFileSync("app/services/[slug]/page.tsx", "utf8");
+  assert.match(page, /copyForMeta\.title\} \| Helpward/);
+  assert.match(page, /copy\?\.headline \?\? service\.title/);
+  assert.match(page, /copy\.situations\.map/);
+  assert.match(page, /copy\.chooseBetween/);
+});

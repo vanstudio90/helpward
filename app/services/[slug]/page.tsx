@@ -29,7 +29,11 @@ export async function generateMetadata({
   const { slug } = await params;
   const service = await getServicePublic(slug);
   if (!service) return { title: "Service not found — Helpward" };
-  const title = `${service.title} — Book a verified helper | Helpward`;
+  const copyForMeta = serviceCopy(slug);
+  // Problem-led where we have written one, the catalogue title otherwise.
+  const title = copyForMeta
+    ? `${copyForMeta.title} | Helpward`
+    : `${service.title} — Book a Local Helper | Helpward`;
   // Both markets' prices, because this page is force-static and served to
   // San Diego and Vancouver alike — there is no request to read a country
   // from, and picking one would advertise a number half the visitors will
@@ -180,8 +184,10 @@ export default async function ServiceDetailPage({
               <ServiceIcon name={service.category?.icon ?? "spark"} size="sm" />
               {service.category?.label}
             </div>
+            {/* The outcome, not the service name. Someone recognises
+                their own evening long before they recognise a category. */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
-              {service.title}
+              {copy?.headline ?? service.title}
             </h1>
             <p className="mt-3 text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
               {service.blurb}
@@ -312,6 +318,57 @@ export default async function ServiceDetailPage({
                 <Trust icon={ShieldCheck} title="Pay after completion" sub="Your card is held, not charged, until the task is done" />
                 <Trust icon={Clock} title="Fast matching" sub="Average match in 2m 14s" />
                 <Trust icon={Sparkles} title="Transparent pricing" sub="No surge, no hidden fees" />
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* The situations, in the words someone would use about their own
+            evening. This is the part that makes a page findable by the
+            problem rather than only by the product name. */}
+        {copy && copy.situations.length > 0 && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <h2 className="text-2xl font-bold text-slate-900">
+              When {service.title.toLowerCase()} helps
+            </h2>
+            <ul className="mt-4 grid sm:grid-cols-2 gap-x-8 gap-y-2.5 max-w-4xl">
+              {copy.situations.map((sit) => (
+                <li key={sit} className="flex items-start gap-2.5 text-sm text-slate-700 leading-relaxed">
+                  <span className="mt-[7px] w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0" aria-hidden="true" />
+                  <span>{sit}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Several services overlap enough to compete with one another —
+            three kinds of company, three ways to move a parcel, two kinds
+            of property visit. Saying which is which sends the reader to
+            the one that fits instead of letting them book the wrong thing
+            and discover it on the day. */}
+        {copy?.chooseBetween && copy.chooseBetween.length > 0 && (
+          <section className="bg-slate-50 border-y border-slate-100 py-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <h2 className="text-2xl font-bold text-slate-900">Is this the right one?</h2>
+              <p className="mt-2 text-sm text-slate-600 max-w-2xl">
+                A few of our services sit close together. If one of these describes you better,
+                that page will be more use than this one.
+              </p>
+              <div className="mt-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-5xl">
+                {copy.chooseBetween.map((alt) => (
+                  <Link
+                    key={alt.slug}
+                    href={`/services/${alt.slug}`}
+                    className="block rounded-2xl bg-white border border-slate-200 p-4 hover:border-brand-300 transition-colors"
+                  >
+                    <span className="block text-sm font-bold text-slate-900">{alt.label}</span>
+                    <span className="block mt-1 text-xs text-slate-600 leading-relaxed">{alt.when}</span>
+                    <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-700">
+                      See {alt.label.toLowerCase()} <ArrowRight className="w-3 h-3" aria-hidden="true" />
+                    </span>
+                  </Link>
+                ))}
               </div>
             </div>
           </section>
