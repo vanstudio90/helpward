@@ -131,7 +131,13 @@ export async function updateProviderProfileAction(
 }
 
 export async function setProviderServicesAction(
-  services: { id: string; custom_price_cents?: number | null }[]
+  // No custom_price_cents. The column exists (migration 0001) and the
+  // form used to write it, but price_service_cents prices from the
+  // catalogue, the pricing rule and the country override — nothing reads
+  // it. Accepting one here would store a number that misleads whoever
+  // finds it next, and wiring it in later would silently replace a
+  // customer's sealed quote with a rate they never agreed to.
+  services: { id: string }[]
 ): Promise<State> {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -145,7 +151,6 @@ export async function setProviderServicesAction(
     const rows = services.map((s) => ({
       provider_id: user.id,
       service_id: s.id,
-      custom_price_cents: s.custom_price_cents ?? null,
     }));
     const { error: upErr } = await supabase
       .from("provider_services")

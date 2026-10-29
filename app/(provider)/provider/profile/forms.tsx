@@ -4,6 +4,8 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { AlertCircle, CheckCircle2, Edit3, Camera } from "lucide-react";
 import { updateProviderProfileAction, setProviderServicesAction, uploadProviderAvatarAction } from "./actions";
 import { cn } from "@/lib/cn";
+import { formatMoney } from "@/lib/money";
+import { SERVICE_FEE_CENTS } from "@/lib/pricing";
 import { AvatarEditor } from "./avatar-editor";
 
 export function ProviderAvatarUpload({ avatarUrl, fullName }: { avatarUrl: string | null; fullName: string }) {
@@ -202,21 +204,47 @@ export function ProfileForm({
   );
 }
 
+/* What a helper actually earns, per service.
+ *
+ * This card used to show "Base $15" and a "Your price (optional)" box.
+ * Both were wrong in a way that mattered:
+ *
+ *   "Base $15" was services.base_price_cents — the legacy single number.
+ *   A Vancouver helper reading it was looking at neither what the customer
+ *   pays nor what they themselves receive, in a currency nobody named.
+ *
+ *   "Your price" wrote provider_services.custom_price_cents, which NOTHING
+ *   reads. price_service_cents prices from the catalogue, the pricing rule
+ *   and the country override; accept_request uses the same function. So a
+ *   helper could set a rate, watch it save, and be paid the platform rate
+ *   regardless. A control that silently does nothing is worse than no
+ *   control, and quietly switching to it later would replace a customer's
+ *   sealed quote with a number they never agreed to.
+ *
+ * Replaced with the three figures that are true: what the customer pays,
+ * what this helper receives, and the unit both refer to.
+ */
 export function ServicesForm({
-  allServices, initialSelected, initialCustomPrices = {},
+  allServices, initialSelected, country,
 }: {
-  allServices: { id: string; title: string; category: string; blurb: string; basePriceCents: number }[];
+  allServices: {
+    id: string; title: string; category: string; blurb: string;
+    /** Commissionable service subtotal in this helper's market. */
+    subtotalCents: number;
+    /** 80% of the subtotal. Tips are extra and are never commissioned. */
+    helperEarnsCents: number;
+    /** Subtotal + the flat service fee, before tax and any tip. */
+    customerPaysCents: number;
+    /** "/ first hour", "/ first 30 minutes" — what the figures buy. */
+    unit: string;
+  }[];
   initialSelected: string[];
-  initialCustomPrices?: Record<string, number | null>;
+  country: "US" | "CA";
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set(initialSelected));
-  const [customDollars, setCustomDollars] = useState<Record<string, string>>(
-    Object.fromEntries(
-      Object.entries(initialCustomPrices).map(([k, v]) => [k, v != null ? (v / 100).toString() : ""])
-    )
-  );
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok?: string; err?: string } | null>(null);
+  const currency = country === "CA" ? "CAD" : "USD";
 
   const grouped = allServices.reduce<Record<string, typeof allServices>>((acc, s) => {
     (acc[s.category] ??= []).push(s);
@@ -225,14 +253,9 @@ export function ServicesForm({
 
   const save = () => {
     setMsg(null);
-    const payload = Array.from(selected).map((id) => {
-      const raw = customDollars[id]?.trim();
-      const dollars = raw ? parseFloat(raw) : NaN;
-      return {
-        id,
-        custom_price_cents: isFinite(dollars) && dollars > 0 ? Math.round(dollars * 100) : null,
-      };
-    });
+    // No custom_price_cents. Nothing reads it, so sending one would only
+    // store a number that misleads whoever finds it next.
+    const payload = Array.from(selected).map((id) => ({ id }));
     start(async () => {
       const r = await setProviderServicesAction(payload);
       if (r?.error) setMsg({ err: r.error });
@@ -246,8 +269,19 @@ export function ServicesForm({
         <h2 className="text-base font-bold text-slate-900">Services you offer</h2>
         <span className="text-[11px] text-slate-500">{selected.size} selected</span>
       </div>
-      <p className="text-xs text-slate-500 mb-4">
+      <p className="text-xs text-slate-500 mb-3">
         You&apos;ll only get task offers for services you check here.
+      </p>
+
+      {/* Said once, rather than repeated beside 27 figures. The honesty
+          that matters: these are gross receipts for the booked work, not
+          an hourly wage across travel and waiting. */}
+      <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-2 mb-4 leading-snug">
+        Amounts are in {currency === "CAD" ? "Canadian dollars" : "US dollars"} for the area you work
+        in, before tax. <strong className="text-slate-700">You earn 80% of the service price, and
+        all of any tip.</strong> Helpward keeps the rest plus a flat {formatMoney(SERVICE_FEE_CENTS, currency)} fee
+        the customer pays. These are what a booking pays you — not an hourly rate across travel or
+        waiting between jobs.
       </p>
 
       <div className="space-y-4">
@@ -280,26 +314,17 @@ export function ServicesForm({
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-slate-900">{s.title}</div>
                         <div className="text-[11px] text-slate-500 line-clamp-2">{s.blurb}</div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">Base ${(s.basePriceCents / 100).toFixed(0)}</div>
+                        <div className="text-[11px] mt-1 leading-snug">
+                          <span className="font-semibold text-emerald-700">
+                            You earn {formatMoney(s.helperEarnsCents, currency)}
+                          </span>
+                          {s.unit && <span className="text-slate-400"> {s.unit.replace("/ first", "·")}</span>}
+                          <span className="block text-slate-400">
+                            Customer pays {formatMoney(s.customerPaysCents, currency)}
+                          </span>
+                        </div>
                       </div>
                     </label>
-                    {isOn && (
-                      <div className="pl-6">
-                        <label className="text-[11px] text-slate-500 inline-flex items-center gap-1.5">
-                          Your price (optional)
-                          <span className="text-slate-400">$</span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder={(s.basePriceCents / 100).toFixed(0)}
-                            value={customDollars[s.id] ?? ""}
-                            onChange={(e) => setCustomDollars({ ...customDollars, [s.id]: e.target.value })}
-                            className="w-20 px-2 py-1 rounded border border-slate-200 text-xs"
-                          />
-                        </label>
-                      </div>
-                    )}
                   </div>
                 );
               })}
