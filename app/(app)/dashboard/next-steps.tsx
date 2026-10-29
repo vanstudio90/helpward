@@ -98,12 +98,12 @@ export function NextStepsWidget(input: DashboardNextStepsInput) {
   if (steps.length === 0) return null;
 
   return (
-    <section className="mb-5 rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
+    <section className="mb-5 bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-bold text-slate-900 inline-flex items-center gap-2">
+        <h2 className="text-[18px] font-extrabold text-slate-900 inline-flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-brand-600" /> Next steps
         </h2>
-        <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+        <span className="text-[12px] font-bold uppercase tracking-wide text-slate-400">
           {steps.length} {steps.length === 1 ? "thing" : "things"} to do
         </span>
       </div>
@@ -112,16 +112,16 @@ export function NextStepsWidget(input: DashboardNextStepsInput) {
           <li key={s.key}>
             <Link
               href={s.href}
-              className="block rounded-xl border border-slate-100 hover:border-slate-200 hover:shadow-sm transition p-3 h-full"
+              className="block rounded-field border border-slate-100 hover:border-slate-200 hover:shadow-sm transition p-3 h-full"
             >
               <div className="flex items-start gap-3 mb-2">
-                <span className={`w-9 h-9 rounded-lg ${s.tint} inline-flex items-center justify-center shrink-0`}>
+                <span className={`w-9 h-9 rounded-field ${s.tint} inline-flex items-center justify-center shrink-0`}>
                   {s.icon}
                 </span>
-                <div className="text-sm font-bold text-slate-900 leading-tight pt-0.5">{s.title}</div>
+                <div className="text-[15px] font-bold text-slate-900 leading-tight pt-0.5">{s.title}</div>
               </div>
-              <p className="text-[11px] text-slate-500 leading-snug mb-2">{s.body}</p>
-              <div className="inline-flex items-center gap-1 text-xs font-bold text-brand-700">
+              <p className="text-[13px] text-slate-500 leading-snug mb-2">{s.body}</p>
+              <div className="inline-flex items-center gap-1 text-[13px] font-bold text-brand-700">
                 {s.cta} <ArrowRight className="w-3 h-3" />
               </div>
             </Link>

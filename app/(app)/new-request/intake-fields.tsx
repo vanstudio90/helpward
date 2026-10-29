@@ -8,19 +8,19 @@ import type { ServiceIntake, IntakeField } from "@/lib/service-intake";
 // component decides presentation only, never what is acceptable.
 
 const INPUT =
-  "w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm " +
+  "w-full px-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] " +
   "focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400";
 
 function Label({ field }: { field: IntakeField }) {
   return (
     <>
-      <span className="text-xs font-semibold text-slate-700">
+      <span className="text-[13px] font-semibold text-slate-700">
         {field.label}
         {field.required && <span className="text-rose-600" aria-hidden="true"> *</span>}
         {!field.required && <span className="text-slate-400 font-normal"> (optional)</span>}
       </span>
       {field.hint && (
-        <span className="block text-[11px] text-slate-500 mt-0.5 leading-snug">{field.hint}</span>
+        <span className="block text-[13px] text-slate-500 mt-0.5 leading-snug">{field.hint}</span>
       )}
     </>
   );
@@ -52,7 +52,7 @@ function Field({ field, value }: { field: IntakeField; value?: string | string[]
           {(field.options ?? []).map((o) => (
             <label
               key={o.value}
-              className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white border border-slate-200 text-xs cursor-pointer hover:border-brand-300"
+              className="flex items-center gap-2 px-2.5 py-2 rounded-field bg-white border border-slate-200 text-[13px] cursor-pointer hover:border-brand-300"
             >
               <input
                 type="checkbox" name={name} value={o.value}
@@ -109,7 +109,7 @@ function Field({ field, value }: { field: IntakeField; value?: string | string[]
             defaultValue={single}
             className={`${INPUT} max-w-[9rem]`}
           />
-          {field.unit && <span className="text-xs text-slate-500">{field.unit}</span>}
+          {field.unit && <span className="text-[13px] text-slate-500">{field.unit}</span>}
         </span>
       </label>
     );
@@ -149,10 +149,10 @@ export function IntakeFields({
   values?: Record<string, string | string[]>;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-4">
+    <div className="rounded-card border border-slate-200 bg-white p-4 sm:p-5 space-y-4">
       <div>
-        <h3 className="text-sm font-bold text-slate-900">About your {serviceTitle.toLowerCase()}</h3>
-        {spec.intro && <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{spec.intro}</p>}
+        <h3 className="text-[15px] font-bold text-slate-900">About your {serviceTitle.toLowerCase()}</h3>
+        {spec.intro && <p className="text-[13px] text-slate-600 mt-0.5 leading-relaxed">{spec.intro}</p>}
       </div>
       {spec.fields.map((f) => (
         <Field key={f.key} field={f} value={values?.[f.key]} />

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import {
   PageHeader, Card, Action, EmptyState, Hint,
-} from "@/components/helper/ui";
+} from "@/components/ui/kit";
 import { cn } from "@/lib/cn";
 import { InboxRow } from "./row";
 import { ClientDateTime } from "@/components/ClientDateTime";

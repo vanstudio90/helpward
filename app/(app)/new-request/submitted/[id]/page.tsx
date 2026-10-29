@@ -6,6 +6,7 @@ import { ClientDateTime } from "@/components/ClientDateTime";
 import { LiveRequestStatus, type LiveStage } from "./live-status";
 import { formatMoney } from "@/lib/money";
 import { one } from "@/lib/supabase/relation";
+import { PageHeader } from "@/components/ui/kit";
 
 export default async function RequestSubmittedPage({
   params,
@@ -60,12 +61,12 @@ export default async function RequestSubmittedPage({
         <span className={`inline-flex w-16 h-16 rounded-full items-center justify-center mb-4 ${copy.iconWrap}`}>
           {copy.icon}
         </span>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{copy.heading}</h1>
-        <p className="mt-2 text-sm text-slate-600">{copy.sub}</p>
+        <PageHeader title={copy.heading} className="mb-0" />
+        <p className="mt-2 text-[15px] text-slate-600">{copy.sub}</p>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-white border border-slate-100 p-5">
-        <dl className="text-sm space-y-3">
+      <div className="mt-6 bg-white rounded-card border border-slate-100 shadow-soft p-5">
+        <dl className="text-[15px] space-y-3">
           <Row label="Service" value={request.service?.title ?? "—"} />
           <Row label="Address" value={request.pickup?.formatted ?? "—"} />
           <Row label="When" value={request.scheduled_for ? <ClientDateTime iso={request.scheduled_for} /> : "ASAP"} />
@@ -78,19 +79,19 @@ export default async function RequestSubmittedPage({
             }
           />
           <Row label="Status" value={
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${copy.badgeClass}`}>
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-semibold ${copy.badgeClass}`}>
               {copy.badgeIcon} {copy.badgeLabel}
             </span>
           } />
         </dl>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-brand-50 border border-brand-100 p-5">
+      <div className="mt-6 rounded-card bg-brand-50 border border-brand-100 p-5">
         <div className="flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-brand-600 shrink-0 mt-0.5" />
           <div>
-            <div className="text-sm font-bold text-slate-900">{copy.nextTitle}</div>
-            <p className="text-xs text-slate-600 mt-1 leading-relaxed">{copy.nextBody}</p>
+            <div className="text-[15px] font-bold text-slate-900">{copy.nextTitle}</div>
+            <p className="text-[13px] text-slate-600 mt-1 leading-relaxed">{copy.nextBody}</p>
           </div>
         </div>
       </div>
@@ -117,7 +118,7 @@ export default async function RequestSubmittedPage({
       </div>
 
       <div className="mt-4 text-center">
-        <Link href="/new-request" className="text-xs font-semibold text-slate-500 underline underline-offset-2">
+        <Link href="/new-request" className="text-[13px] font-semibold text-slate-500 underline underline-offset-2">
           Book something else
         </Link>
       </div>

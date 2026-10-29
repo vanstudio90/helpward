@@ -11,7 +11,7 @@ import { HelperNextStepsWidget } from "./next-steps";
 import { OnlineCard } from "./online-card";
 import {
   PageHeader, SectionLabel, Card, StatCard, RowGroup, Row, Action, TextAction, Hint,
-} from "@/components/helper/ui";
+} from "@/components/ui/kit";
 import { formatMoney } from "@/lib/money";
 
 export default async function HelperDashboardPage() {

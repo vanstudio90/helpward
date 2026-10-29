@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/money";
 import Link from "next/link";
 import { CreditCard, Plus, Wallet, Gift, DollarSign, Download } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { PageHeader } from "@/components/ui/kit";
 
 export default async function PaymentsPage() {
   const me = await getMe();
@@ -58,8 +59,8 @@ export default async function PaymentsPage() {
 
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
-      <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Payments</h1>
-      <p className="text-sm text-slate-500 mt-1 mb-6">Track your spending, manage payments and download receipts.</p>
+      <PageHeader title="Payments" className="mb-0" />
+      <p className="text-[15px] text-slate-500 mt-1 mb-6">Track your spending, manage payments and download receipts.</p>
 
       <div className="grid grid-cols-3 gap-3 mb-5">
         <Stat
@@ -81,21 +82,21 @@ export default async function PaymentsPage() {
           "Paying by card isn't available yet", which stopped being true
           the day card entry shipped. Removed rather than re-labelled:
           there is no wallet. */}
-      <h2 className="text-base font-bold text-slate-900 mb-3">Transactions</h2>
+      <h2 className="text-[18px] font-extrabold text-slate-900 mb-3">Transactions</h2>
       {completed.length === 0 ? (
-        <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center">
-          <p className="text-sm text-slate-500">No transactions yet — they'll appear here once you complete a booking.</p>
+        <div className="bg-white rounded-card border border-slate-100 shadow-soft p-8 text-center">
+          <p className="text-[15px] text-slate-500">No transactions yet — they'll appear here once you complete a booking.</p>
         </div>
       ) : (
-        <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
+        <ul className="bg-white rounded-card border border-slate-100 shadow-soft divide-y divide-slate-100 overflow-hidden">
           {completed.map((b) => (
             <li key={b.id} className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center"><CreditCard className="w-4 h-4 text-brand-600" /></div>
+              <div className="w-10 h-10 rounded-field bg-brand-50 flex items-center justify-center"><CreditCard className="w-4 h-4 text-brand-600" /></div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-slate-900 truncate">{b.service.title}</div>
-                <div className="text-[11px] text-slate-500"><ClientDateTime iso={b.completed_at} mode="date" /></div>
+                <div className="text-[15px] font-bold text-slate-900 truncate">{b.service.title}</div>
+                <div className="text-[13px] text-slate-500"><ClientDateTime iso={b.completed_at} mode="date" /></div>
               </div>
-              <div className="text-sm font-bold text-slate-900 tabular-nums">
+              <div className="text-[15px] font-bold text-slate-900 tabular-nums">
                 {formatMoney(b.total_cents, (b as { currency?: string }).currency ?? "USD")}
               </div>
               {/* Was an inert <button>: it rendered, it was clickable,
@@ -105,7 +106,7 @@ export default async function PaymentsPage() {
                 href={`/api/receipts/${b.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 rounded-lg border border-slate-200 hover:border-brand-300 inline-flex"
+                className="p-2 rounded-field border border-slate-200 hover:border-brand-300 inline-flex"
                 aria-label={`Receipt for ${b.service.title}`}
               >
                 <Download className="w-3.5 h-3.5 text-slate-500" />
@@ -115,7 +116,7 @@ export default async function PaymentsPage() {
         </ul>
       )}
 
-      <h2 className="text-base font-bold text-slate-900 mt-6 mb-3">Payment Methods</h2>
+      <h2 className="text-[18px] font-extrabold text-slate-900 mt-6 mb-3">Payment Methods</h2>
       <CardManager
         cards={methods as CardRow[]}
         publishableKey={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null}
@@ -126,13 +127,13 @@ export default async function PaymentsPage() {
 
 function Stat({ label, value, icon, tint, sub }: { label: string; value: string; icon: React.ReactNode; tint: string; sub?: string }) {
   return (
-    <div className="rounded-2xl bg-white border border-slate-100 p-4">
+    <div className="bg-white rounded-card border border-slate-100 shadow-soft p-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="text-xs text-slate-500">{label}</div>
-        <span className={`inline-flex w-9 h-9 ${tint} rounded-xl items-center justify-center shrink-0`}>{icon}</span>
+        <div className="text-[13px] text-slate-500">{label}</div>
+        <span className={`inline-flex w-9 h-9 ${tint} rounded-field items-center justify-center shrink-0`}>{icon}</span>
       </div>
       <div className="mt-3 text-xl font-bold text-slate-900">{value}</div>
-      {sub && <div className="text-[11px] text-slate-500 mt-0.5">{sub}</div>}
+      {sub && <div className="text-[13px] text-slate-500 mt-0.5">{sub}</div>}
     </div>
   );
 }

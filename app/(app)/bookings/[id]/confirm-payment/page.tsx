@@ -25,7 +25,7 @@ export default async function ConfirmPaymentPage({
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-xl mx-auto">
-      <Link href={`/bookings/${id}`} className="text-xs font-semibold text-slate-500 inline-flex items-center gap-1 mb-4">
+      <Link href={`/bookings/${id}`} className="text-[13px] font-semibold text-slate-500 inline-flex items-center gap-1 mb-4">
         <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" /> Back to booking
       </Link>
       <h1 className="text-2xl font-bold text-slate-900 mb-4">Confirm your payment</h1>

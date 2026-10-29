@@ -7,7 +7,7 @@ import {
   Power, Sun, SunDim, AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { Toggle } from "@/components/helper/Toggle";
+import { Toggle } from "@/components/ui/Toggle";
 import { WaitingMap } from "@/components/helper/WaitingMap";
 
 /* The waiting screen.

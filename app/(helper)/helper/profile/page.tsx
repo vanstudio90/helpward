@@ -11,7 +11,7 @@ import { SERVICE_AREAS } from "@/lib/service-areas";
 import { canAcceptWork, type HelperReadiness } from "@/lib/provider-readiness";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { PageHeader } from "@/components/helper/ui";
+import { PageHeader } from "@/components/ui/kit";
 
 export default async function HelperProfilePage() {
   const supabase = await createSupabaseServerClient();

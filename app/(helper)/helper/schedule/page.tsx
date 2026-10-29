@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Calendar, Info } from "lucide-react";
 import { getMyAvailability } from "@/lib/data/availability";
 import { ScheduleEditor } from "./editor";
-import { PageHeader } from "@/components/helper/ui";
+import { PageHeader } from "@/components/ui/kit";
 
 export const metadata = {
   title: "Schedule — Helpward",

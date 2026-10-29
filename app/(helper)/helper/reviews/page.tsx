@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Star } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { one } from "@/lib/supabase/relation";
-import { PageHeader, Card, EmptyState, Action } from "@/components/helper/ui";
+import { PageHeader, Card, EmptyState, Action } from "@/components/ui/kit";
 
 export default async function HelperReviewsPage() {
   const supabase = await createSupabaseServerClient();

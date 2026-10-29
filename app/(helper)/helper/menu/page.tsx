@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
   PageHeader, SectionLabel, Card, CircleChip, RowGroup, Row, TextAction,
-} from "@/components/helper/ui";
+} from "@/components/ui/kit";
 import { canAcceptWork, type HelperReadiness } from "@/lib/provider-readiness";
 
 /* Everything that does not fit in five tabs.

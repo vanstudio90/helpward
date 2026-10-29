@@ -6,7 +6,7 @@ import { MapBackdrop } from "@/components/MapBackdrop";
 import { Activity, MessageSquare, Phone, CheckCircle2, Play } from "lucide-react";
 import { OnlineToggle, BookingActions } from "./client";
 import { ReadyLive } from "./ready-live";
-import { PageHeader } from "@/components/helper/ui";
+import { PageHeader } from "@/components/ui/kit";
 import { ClientDateTime } from "@/components/ClientDateTime";
 import { BundleChecklist, type BundleChecklistItem } from "./bundle-checklist";
 import { CompletionPhotos, type CompletionPhoto } from "./completion-photos";

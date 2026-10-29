@@ -53,7 +53,7 @@ export function FavoriteHelperButton({
         disabled={pending}
         aria-pressed={saved}
         className={cn(
-          "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition disabled:opacity-60",
+          "inline-flex items-center gap-1.5 px-3 py-2 rounded-field text-[13px] font-bold border transition disabled:opacity-60",
           saved
             ? "bg-rose-50 text-rose-700 border-rose-200"
             : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50",

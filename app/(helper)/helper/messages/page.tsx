@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { ChevronRight, MessageSquare } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
-import { PageHeader, EmptyState, Action } from "@/components/helper/ui";
+import { PageHeader, EmptyState, Action } from "@/components/ui/kit";
 
 export default async function HelperMessagesPage() {
   const supabase = await createSupabaseServerClient();

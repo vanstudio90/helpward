@@ -15,7 +15,7 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl border border-rose-200 text-rose-700 text-sm font-semibold"
+        className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-field border border-rose-200 text-rose-700 text-[15px] font-semibold"
       >
         <X className="w-4 h-4" /> Cancel booking
       </button>
@@ -23,17 +23,17 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-      <div className="text-sm font-semibold text-slate-900 mb-2">Cancel this booking?</div>
+    <div className="rounded-field border border-slate-200 bg-slate-50 p-3">
+      <div className="text-[15px] font-semibold text-slate-900 mb-2">Cancel this booking?</div>
       <textarea
         rows={2}
         placeholder="Reason (optional)…"
         value={reason}
         onChange={(e) => setReason(e.target.value)}
-        className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+        className="w-full px-3 py-2 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
       />
       {err && (
-        <div className="mt-2 flex items-start gap-1.5 text-xs text-rose-700">
+        <div className="mt-2 flex items-start gap-1.5 text-[13px] text-rose-700">
           <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {err}
         </div>
       )}
@@ -49,14 +49,14 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
               else setOpen(false);
             });
           }}
-          className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-lg bg-rose-600 text-white text-sm font-semibold disabled:opacity-50"
+          className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-field bg-rose-600 text-white text-[15px] font-semibold disabled:opacity-50"
         >
           {pending ? "Cancelling…" : "Cancel booking"}
         </button>
         <button
           type="button"
           onClick={() => { setOpen(false); setErr(null); setReason(""); }}
-          className="px-3 py-2.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700"
+          className="px-3 py-2.5 rounded-field border border-slate-200 text-[15px] font-semibold text-slate-700"
         >
           Keep
         </button>

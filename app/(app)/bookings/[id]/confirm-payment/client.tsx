@@ -103,9 +103,9 @@ export function ConfirmPaymentClient({
   const money = amount ? `$${(amount.cents / 100).toFixed(2)} ${amount.currency}` : "";
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-200 p-5 sm:p-6">
+    <div className="rounded-card bg-white border border-slate-200 p-5 sm:p-6">
       {phase === "loading" && (
-        <p className="text-sm text-slate-500 flex items-center gap-2">
+        <p className="text-[15px] text-slate-500 flex items-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Checking this payment…
         </p>
       )}
@@ -115,8 +115,8 @@ export function ConfirmPaymentClient({
           <div className="flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 text-brand-600 mt-0.5 shrink-0" aria-hidden="true" />
             <div>
-              <h2 className="text-base font-bold text-slate-900">Your bank needs to check it&rsquo;s you</h2>
-              <p className="text-sm text-slate-600 mt-1">
+              <h2 className="text-[18px] font-extrabold text-slate-900">Your bank needs to check it&rsquo;s you</h2>
+              <p className="text-[15px] text-slate-600 mt-1">
                 Confirming places a hold of {money}. You&rsquo;re charged when the job is finished,
                 not now — and nothing is held until your bank approves this.
               </p>
@@ -125,7 +125,7 @@ export function ConfirmPaymentClient({
           <button
             type="button"
             onClick={runChallenge}
-            className="mt-4 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold"
+            className="mt-4 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-field bg-brand-600 text-white text-[15px] font-semibold"
           >
             Confirm with my bank
           </button>
@@ -133,7 +133,7 @@ export function ConfirmPaymentClient({
       )}
 
       {phase === "challenging" && (
-        <p className="text-sm text-slate-600 flex items-center gap-2">
+        <p className="text-[15px] text-slate-600 flex items-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
           Waiting for your bank…
         </p>
@@ -143,8 +143,8 @@ export function ConfirmPaymentClient({
         <div className="flex items-start gap-3">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" aria-hidden="true" />
           <div>
-            <h2 className="text-base font-bold text-slate-900">{message}</h2>
-            <Link href={`/bookings/${bookingId}`} className="text-sm font-semibold text-brand-700 mt-2 inline-block">
+            <h2 className="text-[18px] font-extrabold text-slate-900">{message}</h2>
+            <Link href={`/bookings/${bookingId}`} className="text-[15px] font-semibold text-brand-700 mt-2 inline-block">
               Back to the booking
             </Link>
           </div>
@@ -155,21 +155,21 @@ export function ConfirmPaymentClient({
         <div className="flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-slate-900">That didn&rsquo;t go through</h2>
-            <p className="text-sm text-slate-600 mt-1">{message}</p>
+            <h2 className="text-[18px] font-extrabold text-slate-900">That didn&rsquo;t go through</h2>
+            <p className="text-[15px] text-slate-600 mt-1">{message}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {secret && (
                 <button
                   type="button"
                   onClick={runChallenge}
-                  className="px-3 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold"
+                  className="px-3 py-2 rounded-field bg-brand-600 text-white text-[15px] font-semibold"
                 >
                   Try again
                 </button>
               )}
               <Link
                 href="/payments"
-                className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700"
+                className="px-3 py-2 rounded-field border border-slate-300 bg-white text-[15px] font-semibold text-slate-700"
               >
                 Use a different card
               </Link>

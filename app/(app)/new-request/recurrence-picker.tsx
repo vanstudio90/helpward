@@ -54,7 +54,7 @@ export function RecurrencePicker() {
   }, [enabled, rule]);
 
   return (
-    <fieldset className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <fieldset className="mt-4 rounded-card border border-slate-200 bg-slate-50 p-4">
       <input type="hidden" name="repeat_on" value={enabled ? "1" : "0"} />
       {enabled && (
         <>
@@ -80,24 +80,24 @@ export function RecurrencePicker() {
           onChange={(e) => setEnabled(e.target.checked)}
           className="w-4 h-4 rounded text-brand-600"
         />
-        <span className="inline-flex items-center gap-2 text-sm font-bold text-slate-900">
+        <span className="inline-flex items-center gap-2 text-[15px] font-bold text-slate-900">
           <Repeat className="w-4 h-4 text-brand-600" />
           Repeat this task
         </span>
-        <span className="text-xs text-slate-500">Schedule it weekly, biweekly, or monthly.</span>
+        <span className="text-[13px] text-slate-500">Schedule it weekly, biweekly, or monthly.</span>
       </label>
 
       {enabled && (
         <div className="mt-4 space-y-3">
           {/* Cadence */}
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-white rounded-xl border border-slate-200">
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-white rounded-field border border-slate-200">
             {(["weekly", "biweekly", "monthly"] as Cadence[]).map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => setCadence(c)}
                 className={cn(
-                  "py-2 rounded-lg text-xs font-semibold transition capitalize",
+                  "py-2 rounded-field text-[13px] font-semibold transition capitalize",
                   cadence === c ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-50",
                 )}
               >
@@ -109,7 +109,7 @@ export function RecurrencePicker() {
           {/* Weekday picker for weekly + biweekly */}
           {(cadence === "weekly" || cadence === "biweekly") && (
             <div>
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">
+              <span className="block text-[13px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">
                 Day of the week
               </span>
               <div className="grid grid-cols-7 gap-1">
@@ -119,7 +119,7 @@ export function RecurrencePicker() {
                     type="button"
                     onClick={() => setWeekday(d.id)}
                     className={cn(
-                      "py-2 rounded-lg text-xs font-bold border transition",
+                      "py-2 rounded-field text-[13px] font-bold border transition",
                       weekday === d.id
                         ? "bg-brand-600 text-white border-brand-600"
                         : "bg-white text-slate-700 border-slate-200 hover:border-brand-300",
@@ -135,19 +135,19 @@ export function RecurrencePicker() {
           {/* Day-of-month for monthly */}
           {cadence === "monthly" && (
             <label className="block">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">
+              <span className="block text-[13px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">
                 Day of the month
               </span>
               <select
                 value={dayOfMonth}
                 onChange={(e) => setDayOfMonth(Number(e.target.value))}
-                className="w-32 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+                className="w-32 px-3 py-2 rounded-field bg-white border border-slate-200 text-[15px] font-semibold focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
               >
                 {Array.from({ length: 31 }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>{n}{ordinal(n)}</option>
                 ))}
               </select>
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-[12px] text-slate-500 mt-1">
                 If the month doesn&apos;t have this day (e.g. Feb 31), we&apos;ll use the last day of the month.
               </p>
             </label>
@@ -156,18 +156,18 @@ export function RecurrencePicker() {
           {/* Time of day + start date */}
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">
+              <span className="block text-[13px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">
                 Time
               </span>
               <input
                 type="time"
                 value={timeOfDay}
                 onChange={(e) => setTimeOfDay(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+                className="w-full px-3 py-2 rounded-field bg-white border border-slate-200 text-[15px] font-semibold focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
               />
             </label>
             <label className="block">
-              <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">
+              <span className="block text-[13px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">
                 Start date
               </span>
               <input
@@ -175,13 +175,13 @@ export function RecurrencePicker() {
                 min={isoToday()}
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+                className="w-full px-3 py-2 rounded-field bg-white border border-slate-200 text-[15px] font-semibold focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
               />
             </label>
           </div>
 
           {/* End conditions */}
-          <details className="text-xs">
+          <details className="text-[13px]">
             <summary className="cursor-pointer flex items-center gap-1 font-semibold text-slate-700">
               <ChevronDown className="w-3 h-3" /> Optional: end date or occurrence limit
             </summary>
@@ -196,7 +196,7 @@ export function RecurrencePicker() {
                   min={startDate}
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="ml-6 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-100"
+                  className="ml-6 px-3 py-2 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-100"
                 />
               )}
               <label className="flex items-center gap-2">
@@ -210,7 +210,7 @@ export function RecurrencePicker() {
                   max={520}
                   value={maxOccurrences}
                   onChange={(e) => setMaxOccurrences(Number(e.target.value))}
-                  className="ml-6 w-20 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-100"
+                  className="ml-6 w-20 px-3 py-2 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-100"
                 />
               )}
             </div>
@@ -218,11 +218,11 @@ export function RecurrencePicker() {
 
           {/* Schedule preview */}
           {previewDates.length > 0 && (
-            <div className="mt-2 rounded-xl bg-white border border-slate-200 p-3">
-              <div className="text-[11px] font-bold uppercase tracking-wide text-brand-700 mb-1.5 inline-flex items-center gap-1">
+            <div className="mt-2 rounded-field bg-white border border-slate-200 p-3">
+              <div className="text-[13px] font-bold uppercase tracking-wide text-brand-700 mb-1.5 inline-flex items-center gap-1">
                 <Sparkles className="w-3 h-3" /> {describeRule(rule)}
               </div>
-              <ul className="text-xs text-slate-600 space-y-0.5">
+              <ul className="text-[13px] text-slate-600 space-y-0.5">
                 {previewDates.map((d) => (
                   <li key={d}>
                     {new Date(d + "T00:00:00").toLocaleDateString(undefined, {
@@ -231,7 +231,7 @@ export function RecurrencePicker() {
                   </li>
                 ))}
               </ul>
-              <p className="text-[10px] text-slate-500 mt-2">
+              <p className="text-[12px] text-slate-500 mt-2">
                 Next {previewDates.length} occurrences shown. We&apos;ll match a helper for each one and notify you
                 as it&apos;s scheduled.
               </p>

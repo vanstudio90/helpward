@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/helper/ui";
+import { PageHeader } from "@/components/ui/kit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import {

@@ -26,14 +26,14 @@ export function ActionNeeded({ actions }: { actions: PendingAction[] }) {
           <div
             key={a.bookingId}
             role="status"
-            className={`rounded-2xl border p-4 flex flex-col sm:flex-row sm:items-center gap-3 ${
+            className={`rounded-card border p-4 flex flex-col sm:flex-row sm:items-center gap-3 ${
               declined
                 ? "border-rose-200 bg-rose-50"
                 : "border-amber-200 bg-amber-50"
             }`}
           >
             <span
-              className={`w-10 h-10 rounded-xl inline-flex items-center justify-center shrink-0 ${
+              className={`w-10 h-10 rounded-field inline-flex items-center justify-center shrink-0 ${
                 declined ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
               }`}
             >
@@ -43,12 +43,12 @@ export function ActionNeeded({ actions }: { actions: PendingAction[] }) {
             </span>
 
             <div className="min-w-0 flex-1">
-              <div className={`text-sm font-bold ${declined ? "text-rose-950" : "text-amber-950"}`}>
+              <div className={`text-[15px] font-bold ${declined ? "text-rose-950" : "text-amber-950"}`}>
                 {declined
                   ? "Your card was declined"
                   : "Your helper is ready. Confirm your card to let them start."}
               </div>
-              <div className={`text-xs mt-0.5 ${declined ? "text-rose-900/80" : "text-amber-900/80"}`}>
+              <div className={`text-[13px] mt-0.5 ${declined ? "text-rose-900/80" : "text-amber-900/80"}`}>
                 {a.serviceTitle}
                 {declined
                   ? " — add a different card and we'll try again."
@@ -58,7 +58,7 @@ export function ActionNeeded({ actions }: { actions: PendingAction[] }) {
 
             <Link
               href={declined ? "/payments" : `/bookings/${a.bookingId}/confirm-payment`}
-              className={`inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0 ${
+              className={`inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-field text-[15px] font-semibold shrink-0 ${
                 declined ? "bg-rose-600 text-white" : "bg-amber-600 text-white"
               }`}
             >

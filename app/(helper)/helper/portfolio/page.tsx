@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/helper/ui";
+import { PageHeader } from "@/components/ui/kit";
 import { ArrowLeft, GalleryHorizontal } from "lucide-react";
 import Link from "next/link";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";

@@ -214,15 +214,15 @@ export default async function BookingDetailPage({
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-8 max-w-3xl mx-auto pb-12">
       <BookingDetailRealtimeRefresh bookingId={b.id} />
-      <Link href="/bookings" className="inline-flex items-center gap-1 text-sm text-slate-500 mb-4">
+      <Link href="/bookings" className="inline-flex items-center gap-1 text-[15px] text-slate-500 mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to bookings
       </Link>
 
-      <div className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-card border border-slate-100 shadow-soft overflow-hidden">
         {service?.image_url && (
           <div className="relative h-40 bg-slate-100">
             <img src={service.image_url} alt="" className="w-full h-full object-cover" />
-            <span className={`absolute top-3 right-3 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+            <span className={`absolute top-3 right-3 inline-flex items-center px-2.5 py-1 rounded-full text-[13px] font-semibold ${
                 bookingStatusTone(
                   b.status,
                   bookingStatusLabel(b.status, b.payment_status, !!b.stripe_payment_intent_id).needsCustomer,
@@ -236,12 +236,12 @@ export default async function BookingDetailPage({
         <div className="p-5 space-y-5">
           <div>
             <h1 className="text-xl font-bold text-slate-900">{service?.title}</h1>
-            <div className="text-xs text-slate-500 mt-0.5">Booking #{b.id.slice(0, 8)}</div>
+            <div className="text-[13px] text-slate-500 mt-0.5">Booking #{b.id.slice(0, 8)}</div>
           </div>
 
           {/* Helper */}
           {provider && (
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
+            <div className="flex items-center gap-3 p-3 rounded-field bg-slate-50">
               {provider.profile?.avatar_url ? (
                 <Link href={providerHref!}>
                   <img src={provider.profile.avatar_url} className="w-12 h-12 rounded-full" alt="" />
@@ -252,22 +252,22 @@ export default async function BookingDetailPage({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <Link href={providerHref!} className="text-sm font-bold text-slate-900 truncate hover:underline">
+                <Link href={providerHref!} className="text-[15px] font-bold text-slate-900 truncate hover:underline">
                   {provider.profile?.full_name}
                 </Link>
                 {provider.rating_avg && (
-                  <div className="text-xs text-brand-700 font-semibold">★ {provider.rating_avg}</div>
+                  <div className="text-[13px] text-brand-700 font-semibold">★ {provider.rating_avg}</div>
                 )}
               </div>
               {convo && (
-                <Link href={`/messages/${convo.id}`} aria-label="Message" className="p-2 rounded-lg border border-brand-200 text-brand-700">
+                <Link href={`/messages/${convo.id}`} aria-label="Message" className="p-2 rounded-field border border-brand-200 text-brand-700">
                   <MessageSquare className="w-4 h-4" />
                 </Link>
               )}
               {/* Only rendered when there IS a number to call. A tel:
                   link with an empty href looks live and does nothing. */}
               {helperPhone && (
-              <a href={`tel:${helperPhone}`} aria-label={`Call ${provider.profile?.full_name ?? "your helper"}`} className="p-2 rounded-lg border border-brand-200 text-brand-700">
+              <a href={`tel:${helperPhone}`} aria-label={`Call ${provider.profile?.full_name ?? "your helper"}`} className="p-2 rounded-field border border-brand-200 text-brand-700">
                 <Phone className="w-4 h-4" aria-hidden="true" />
               </a>
               )}
@@ -284,8 +284,8 @@ export default async function BookingDetailPage({
           {/* Pickup / Drop-off */}
           {pickup && (
             <div>
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Address</div>
-              <div className="text-sm text-slate-900 inline-flex items-center gap-2">
+              <div className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Address</div>
+              <div className="text-[15px] text-slate-900 inline-flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-brand-600" /> {pickup.formatted}
               </div>
             </div>
@@ -294,13 +294,13 @@ export default async function BookingDetailPage({
           {/* The brief. Same answers the helper saw on the offer, so both
               sides are looking at one agreed description of the job. */}
           {brief.length > 0 && (
-            <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-              <h2 className="text-sm font-bold text-slate-900 mb-3">
+            <section className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
+              <h2 className="text-[15px] font-bold text-slate-900 mb-3">
                 {service?.title ? `${service.title} details` : "Booking details"}
               </h2>
               <dl className="space-y-2">
                 {brief.map((b2) => (
-                  <div key={b2.label} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-3 text-sm">
+                  <div key={b2.label} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-3 text-[15px]">
                     <dt className="text-slate-500">{b2.label}</dt>
                     <dd className="text-slate-900 font-medium whitespace-pre-line">{b2.value}</dd>
                   </div>
@@ -312,47 +312,47 @@ export default async function BookingDetailPage({
           {/* Bundle items — shown only for multi-task bundles */}
           {bundleItems.length > 0 && (
             <div className="border-t border-slate-100 pt-4">
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <div className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                 <Calendar className="w-3 h-3" /> {bundleItems.length}-stop bundle
               </div>
               <ol className="space-y-2">
                 {bundleItems.map((it) => (
-                  <li key={it.id} className="flex items-start gap-3 rounded-xl bg-slate-50 p-3">
+                  <li key={it.id} className="flex items-start gap-3 rounded-field bg-slate-50 p-3">
                     <span className={
                       it.status === "completed"
-                        ? "w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold inline-flex items-center justify-center shrink-0"
+                        ? "w-6 h-6 rounded-full bg-emerald-600 text-white text-[13px] font-bold inline-flex items-center justify-center shrink-0"
                         : it.status === "in_progress"
-                        ? "w-6 h-6 rounded-full bg-amber-500 text-white text-xs font-bold inline-flex items-center justify-center shrink-0 animate-pulse"
-                        : "w-6 h-6 rounded-full bg-white border border-slate-300 text-slate-500 text-xs font-bold inline-flex items-center justify-center shrink-0"
+                        ? "w-6 h-6 rounded-full bg-amber-500 text-white text-[13px] font-bold inline-flex items-center justify-center shrink-0 animate-pulse"
+                        : "w-6 h-6 rounded-full bg-white border border-slate-300 text-slate-500 text-[13px] font-bold inline-flex items-center justify-center shrink-0"
                     }>
                       {it.status === "completed" ? <CheckCircle2 className="w-3 h-3" /> : it.position}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-bold text-slate-900">{it.service?.title ?? "Stop"}</div>
-                      {it.notes && <div className="text-xs text-slate-500 mt-0.5 leading-snug">{it.notes}</div>}
+                      <div className="text-[15px] font-bold text-slate-900">{it.service?.title ?? "Stop"}</div>
+                      {it.notes && <div className="text-[13px] text-slate-500 mt-0.5 leading-snug">{it.notes}</div>}
                     </div>
-                    <div className="text-xs font-semibold text-slate-700 tabular-nums shrink-0">
+                    <div className="text-[13px] font-semibold text-slate-700 tabular-nums shrink-0">
                       ${(it.item_price_cents / 100).toFixed(2)}
                     </div>
                   </li>
                 ))}
               </ol>
-              <p className="text-[11px] text-slate-500 mt-2 leading-snug">
+              <p className="text-[13px] text-slate-500 mt-2 leading-snug">
                 One helper, one trip. Your helper marks each stop done as they go.
               </p>
             </div>
           )}
 
           {/* Schedule */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-xl bg-slate-50 p-3">
-              <div className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5 uppercase tracking-wide"><Calendar className="w-3 h-3" />Scheduled</div>
+          <div className="grid grid-cols-2 gap-3 text-[15px]">
+            <div className="rounded-field bg-slate-50 p-3">
+              <div className="text-[13px] font-semibold text-slate-500 flex items-center gap-1.5 uppercase tracking-wide"><Calendar className="w-3 h-3" />Scheduled</div>
               <div className="font-semibold text-slate-900 mt-1">
                 <ClientDateTime iso={b.scheduled_for} />
               </div>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{b.completed_at ? "Completed" : "Created"}</div>
+            <div className="rounded-field bg-slate-50 p-3">
+              <div className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide">{b.completed_at ? "Completed" : "Created"}</div>
               <div className="font-semibold text-slate-900 mt-1">
                 <ClientDateTime iso={b.completed_at ?? b.created_at} />
               </div>
@@ -361,23 +361,23 @@ export default async function BookingDetailPage({
 
           {/* Payment */}
           <div className="border-t border-slate-100 pt-4">
-            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Payment</div>
-            <dl className="text-sm space-y-1.5">
+            <div className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Payment</div>
+            <dl className="text-[15px] space-y-1.5">
               <div className="flex justify-between"><dt className="text-slate-500">Base</dt><dd className="font-medium">${(b.base_price_cents / 100).toFixed(2)}</dd></div>
               <div className="flex justify-between"><dt className="text-slate-500">Service fee</dt><dd className="font-medium">${(b.service_fee_cents / 100).toFixed(2)}</dd></div>
               {b.tip_cents > 0 && (
                 <div className="flex justify-between"><dt className="text-slate-500">Tip</dt><dd className="font-medium">${(b.tip_cents / 100).toFixed(2)}</dd></div>
               )}
               <div className="flex justify-between pt-2 border-t border-slate-100">
-                <dt className="text-base font-bold text-slate-900">Total</dt>
-                <dd className="text-base font-bold text-slate-900">${(b.total_cents / 100).toFixed(2)} {b.currency}</dd>
+                <dt className="text-[18px] font-extrabold text-slate-900">Total</dt>
+                <dd className="text-[18px] font-extrabold text-slate-900">${(b.total_cents / 100).toFixed(2)} {b.currency}</dd>
               </div>
               {/* The raw enum used to be printed here, with "(pending
                   Stripe wiring)" when there was no intent — so a CANCELLED
                   booking whose hold had been released correctly told the
                   customer "Payment pending", and a working integration
                   described itself as unwired. */}
-              <div className="text-[11px] text-slate-500 pt-1">
+              <div className="text-[13px] text-slate-500 pt-1">
                 {PAYMENT_WORDING(b.status, b.payment_status)}
               </div>
             </dl>
@@ -407,14 +407,14 @@ export default async function BookingDetailPage({
               was told to wait for something the customer could not do. */}
           {b.payment_status === "pending" && b.stripe_payment_intent_id &&
            (b.status === "scheduled" || b.status === "in_progress") && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-              <div className="text-sm font-bold text-amber-950">Your bank needs to check it&rsquo;s you</div>
-              <p className="text-xs text-amber-900/90 mt-0.5">
+            <div className="rounded-field border border-amber-200 bg-amber-50 p-3">
+              <div className="text-[15px] font-bold text-amber-950">Your bank needs to check it&rsquo;s you</div>
+              <p className="text-[13px] text-amber-900/90 mt-0.5">
                 Nothing is held until you confirm, and your helper can&rsquo;t start until then.
               </p>
               <Link
                 href={`/bookings/${b.id}/confirm-payment`}
-                className="mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-600 text-white text-xs font-semibold"
+                className="mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-field bg-amber-600 text-white text-[13px] font-semibold"
               >
                 Confirm payment
               </Link>
@@ -428,7 +428,7 @@ export default async function BookingDetailPage({
               serve no purpose. */}
           {b.status === "in_progress" && provider && !isCallService && (
             <div>
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Live tracking</div>
+              <div className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Live tracking</div>
               <LiveProviderMap
                 providerId={provider.user_id}
                 providerAvatar={provider.profile?.avatar_url ?? null}
@@ -442,7 +442,7 @@ export default async function BookingDetailPage({
               (e.g. front porch) and post-completion proof side by side. */}
           {completionPhotos.length > 0 && (
             <div>
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2 inline-flex items-center gap-1.5">
+              <div className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mb-2 inline-flex items-center gap-1.5">
                 <Camera className="w-3 h-3" /> Proof photos from your helper
               </div>
               <div className="grid grid-cols-3 gap-2">
@@ -452,12 +452,12 @@ export default async function BookingDetailPage({
                       href={p.url}
                       target="_blank"
                       rel="noopener"
-                      className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 group block"
+                      className="relative aspect-square rounded-field overflow-hidden bg-slate-100 group block"
                     >
                       <img src={p.url} alt={p.caption ?? "Proof of completion"} className="w-full h-full object-cover transition group-hover:scale-105" />
                       {p.isPortfolio && <PortfolioBadge />}
                       {p.caption && (
-                        <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] px-1.5 py-1 leading-tight line-clamp-2">
+                        <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[12px] px-1.5 py-1 leading-tight line-clamp-2">
                           {p.caption}
                         </div>
                       )}
@@ -466,7 +466,7 @@ export default async function BookingDetailPage({
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-slate-500 mt-2 leading-snug">
+              <p className="text-[13px] text-slate-500 mt-2 leading-snug">
                 Tap a photo to view full-size. If anything looks wrong, you have 24 hours to
                 <Link href={`/bookings/${b.id}/dispute`} className="text-rose-600 font-semibold underline ml-1">open a dispute</Link>.
               </p>
@@ -487,25 +487,25 @@ export default async function BookingDetailPage({
           {/* CTAs */}
           <div className="space-y-2 pt-2">
             {b.status === "completed" && !review && (
-              <Link href={`/bookings/${b.id}/rate`} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-brand-600 text-white text-sm font-semibold">
+              <Link href={`/bookings/${b.id}/rate`} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-field bg-brand-600 text-white text-[15px] font-semibold">
                 <Star className="w-4 h-4" /> Rate this task
               </Link>
             )}
             {b.status === "completed" && review && (
-              <div className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold">
+              <div className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-field bg-emerald-50 text-emerald-700 text-[15px] font-semibold">
                 <CheckCircle2 className="w-4 h-4" /> You rated this {review.rating}/5
               </div>
             )}
             {(b.status === "scheduled" || b.status === "in_progress") && (
               <>
-                <Link href={`/bookings/${b.id}/dispute`} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl border border-amber-200 text-amber-700 text-sm font-semibold">
+                <Link href={`/bookings/${b.id}/dispute`} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-field border border-amber-200 text-amber-700 text-[15px] font-semibold">
                   <AlertOctagon className="w-4 h-4" /> Report an issue
                 </Link>
                 <CancelBookingButton bookingId={b.id} />
               </>
             )}
             {b.status === "completed" && (
-              <Link href={`/bookings/${b.id}/dispute`} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl border border-rose-200 text-rose-700 text-sm font-semibold">
+              <Link href={`/bookings/${b.id}/dispute`} className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-field border border-rose-200 text-rose-700 text-[15px] font-semibold">
                 <AlertOctagon className="w-4 h-4" /> Open dispute
               </Link>
             )}

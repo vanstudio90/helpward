@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MapPin, ChevronRight } from "lucide-react";
 import { setOnlineAction } from "../active/actions";
 import { startGpsPings } from "@/lib/gps/ping";
-import { Toggle } from "@/components/helper/Toggle";
+import { Toggle } from "@/components/ui/Toggle";
 import { cn } from "@/lib/cn";
 
 /* The online switch, on the screen helpers actually open first.

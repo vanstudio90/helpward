@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import { getHelperAnalytics } from "@/lib/data/helper-analytics";
 import { Sparkline } from "@/components/charts/Sparkline";
-import { PageHeader } from "@/components/helper/ui";
+import { PageHeader } from "@/components/ui/kit";
 
 export const dynamic = "force-dynamic";
 

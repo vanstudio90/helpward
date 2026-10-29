@@ -11,7 +11,7 @@ import { join } from "node:path";
  * emerald accent from before the brand existed. Each page looked fine
  * alone; together they read as separate products.
  *
- * components/helper/ui.tsx is the furniture now. These keep pages on
+ * components/ui/kit.tsx is the furniture now. These keep pages on
  * it.
  */
 
@@ -92,14 +92,20 @@ test("the live badge reports the channel, not the mount", () => {
 });
 
 
-test("the helper app carries no pre-kit classes", () => {
+test("neither half of the signed-in product carries pre-kit classes", () => {
   /* The migration that removed these touched 29 files and 338 class uses.
    * A single `rounded-2xl` creeping back is how the drift started: it
    * looks fine alone and wrong beside the card next to it. text-sm and
    * text-xs are the same story one scale down — the kit sets body at
    * 15px and secondary at 13-14px, so 14/12 read as a second, smaller
    * typographic system sharing the page. */
-  const files = [...walk("app/(helper)"), ...walk("components/helper")];
+  // Both halves of the signed-in product, plus the shared kit and the
+   // app chrome. Marketing is deliberately excluded — the public site is
+   // a separate design decision, not part of this system.
+  const files = [
+    ...walk("app/(helper)"), ...walk("app/(app)"),
+    ...walk("components/helper"), ...walk("components/ui"),
+  ];
   const legacy = /rounded-2xl|rounded-xl|rounded-lg(?!-)|\btext-xs\b|\btext-sm\b|text-2xl sm:text-3xl/;
   const offenders = files.filter((f) => legacy.test(readFileSync(f, "utf8")));
   assert.deepEqual(offenders, [], `pre-kit classes in: ${offenders.join(", ")}`);

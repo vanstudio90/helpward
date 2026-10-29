@@ -22,20 +22,20 @@ export function RateForm({
   if (bookingStatus !== "completed") {
     return (
       <div className="max-w-md mx-auto py-12 px-4 text-center">
-        <h1 className="text-lg font-bold">Booking not yet completed</h1>
-        <p className="text-sm text-slate-500 mt-2">You can rate once the helper marks the task complete.</p>
-        <Link href="/bookings" className="mt-4 inline-block text-sm font-semibold text-brand-700">← Back to bookings</Link>
+        <h1 className="text-[20px] font-extrabold">Booking not yet completed</h1>
+        <p className="text-[15px] text-slate-500 mt-2">You can rate once the helper marks the task complete.</p>
+        <Link href="/bookings" className="mt-4 inline-block text-[15px] font-semibold text-brand-700">← Back to bookings</Link>
       </div>
     );
   }
 
   return (
     <div className="max-w-md mx-auto py-8 px-4">
-      <Link href="/bookings" className="inline-flex items-center gap-1 text-sm text-slate-500 mb-4">
+      <Link href="/bookings" className="inline-flex items-center gap-1 text-[15px] text-slate-500 mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to bookings
       </Link>
 
-      <div className="rounded-2xl bg-white border border-slate-100 p-6 text-center">
+      <div className="bg-white rounded-card border border-slate-100 shadow-soft p-6 text-center">
         {providerAvatar ? (
           <img src={providerAvatar} className="w-20 h-20 rounded-full mx-auto" alt="" />
         ) : (
@@ -44,12 +44,12 @@ export function RateForm({
           </div>
         )}
         <h1 className="mt-4 text-2xl font-bold text-slate-900">How was your experience?</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-[15px] text-slate-500">
           Rate <strong>{providerName}</strong> for the <strong>{serviceTitle}</strong> task.
         </p>
 
         {state?.error && (
-          <div className="mt-4 flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3 text-left">
+          <div className="mt-4 flex items-start gap-2 text-[15px] text-rose-700 bg-rose-50 border border-rose-100 rounded-field p-3 text-left">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {state.error}
           </div>
         )}
@@ -79,13 +79,13 @@ export function RateForm({
             name="comment"
             rows={4}
             placeholder="Anything you'd like to say? (optional)"
-            className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 text-left"
+            className="w-full px-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200 text-left"
           />
 
           <button
             type="submit"
             disabled={pending}
-            className="w-full py-3 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-50"
+            className="w-full py-3 rounded-field bg-brand-600 text-white text-[15px] font-semibold disabled:opacity-50"
           >
             {pending ? "Submitting…" : "Submit review"}
           </button>

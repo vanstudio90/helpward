@@ -6,7 +6,7 @@ import {
 import {
   PageHeader, SectionLabel, Card, IconChip, StatCard, StatusPill,
   RowGroup, Row, Action, EmptyState,
-} from "@/components/helper/ui";
+} from "@/components/ui/kit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ClientDateTime } from "@/components/ClientDateTime";
 

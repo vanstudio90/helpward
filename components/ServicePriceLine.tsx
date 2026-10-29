@@ -41,7 +41,7 @@ export function ServicePriceLine({
     baseCents, countryPricing ?? undefined, currency === "CAD" ? "CA" : "US",
   );
   return (
-    <span className={`block text-[11px] sm:text-xs ${className}`}>
+    <span className={`block text-[13px] sm:text-[13px] ${className}`}>
       <span className="block font-semibold text-slate-900">
         From {formatMoney(shown, currency)}
         {unit && <span className="font-normal text-slate-500"> {unit}</span>}
