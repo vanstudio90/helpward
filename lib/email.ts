@@ -21,7 +21,13 @@ export function isEmailEnabled(): boolean {
 
 // Brand-default From address. Override per call if a different sub-team
 // makes more sense (e.g. dispute-resolution emails from safety@).
-const DEFAULT_FROM = process.env.HELPWARD_EMAIL_FROM ?? "Helpward <hello@helpward.com>";
+/* The fallback must be an address that EXISTS.
+ *
+ * It was hello@helpward.com, which bounces — verified by sending to it and
+ * reading Resend's delivery event. Every booking confirmation, reminder and
+ * digest would have come from a mailbox nobody could reply to, and bounce
+ * handling for a non-existent sender is how a domain's reputation goes. */
+const DEFAULT_FROM = process.env.HELPWARD_EMAIL_FROM ?? "Helpward <support@helpward.com>";
 
 export type SendEmailInput = {
   to: string;
