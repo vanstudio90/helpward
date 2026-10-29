@@ -19,3 +19,6 @@ backfill-addresses.jsonl
 # Boundary source files are large and licence-bound; load them from the
 # publisher and record provenance in service_area_datasets instead.
 /data/
+
+# Scratch directory the Supabase CLI creates on any invocation.
+supabase/.temp/
