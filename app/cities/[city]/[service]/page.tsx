@@ -62,6 +62,9 @@ export default async function CityServicePage({
   if (!service) notFound();
 
   const copy = serviceCopy(service.id);
+  // Services delivered over an audio call. Nothing travels, so the local
+  // page must not promise arrival or describe access to an address.
+  const REMOTE_SERVICES = new Set(["listening-service", "sleep-call-companion"]);
   const local = cityLocal(city.slug);
 
   const related = allServices
@@ -160,10 +163,18 @@ export default async function CityServicePage({
           + `when you submit, and a request outside the area is refused before you are charged. Bookings here are priced `
           + `and charged in US dollars.`,
     },
-    {
+    // An audio call has nobody arriving. Asking how fast a helper reaches
+    // a listening session invites the wrong expectation entirely, and the
+    // answer would be about travel to an address that does not exist.
+    ...(REMOTE_SERVICES.has(service.id) ? [{
+      q: `How does a session work from ${city.name}?`,
+      a: `It is an audio call, so nothing depends on travel. You connect at the time you book `
+        + `and the session runs for the length you chose. Being in ${city.metro ?? city.name} `
+        + `decides the currency you are charged in, not how the session happens.`,
+    }] : [{
       q: `How fast can a helper arrive in ${city.name}?`,
       a: `Average response time for ${service.title} in ${city.name} is ${service.eta_label ?? "around 18 minutes"} during normal hours. Helper supply is densest in ${city.metro ?? city.name} so ${city.name}-based requests typically match faster than the platform-wide average.`,
-    },
+    }]),
     ...(copy?.faqs ?? []),
     ...UNIVERSAL_FAQS,
   ];

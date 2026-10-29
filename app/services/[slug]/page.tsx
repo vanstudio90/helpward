@@ -377,7 +377,14 @@ export default async function ServiceDetailPage({
         {/* Where it's available */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <h2 className="text-2xl font-bold text-slate-900">Where {service.title.toLowerCase()} is available</h2>
-          <p className="text-sm text-slate-600 mt-1">Where {service.title} is available today. The two California areas cover city limits only.</p>
+          {/* This previously described both markets as being in one US state.
+              One of them is in British Columbia, and the sentence appeared
+              on all 26 service pages. */}
+          <p className="text-sm text-slate-600 mt-1">
+            Where {service.title} is available today. San Diego means the city
+            itself, not the wider county; the Lower Mainland covers fifteen
+            municipalities.
+          </p>
           <ul className="mt-4 flex flex-wrap gap-2">
             {CITIES.map((c) => (
               <li key={c.slug}>

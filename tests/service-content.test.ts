@@ -290,3 +290,36 @@ test("each page renders exactly one footer", () => {
       `${f} renders the footer inside a helper component, which repeats it`);
   }
 });
+
+test("a service definition never contradicts the scope beside it", async () => {
+  /* services.blurb is the most reused string on the site: the catalogue
+   * card, the meta description, the opening answer and the schema.org
+   * Service description all read it. Six promised something the detailed
+   * scope on the same page then withdrew — "we shop your list at any
+   * store" for a prepaid-pickup service, "certified technician… most
+   * fixed same day" for a diagnosis visit, video for two audio-only
+   * services. Each produced a specific bad booking. */
+  const mig = readFileSync("supabase/migrations/0080_service_definitions.sql", "utf8");
+  // The guard lives in the migration so a future catalogue edit fails loudly.
+  assert.match(mig, /qualification claim/);
+  assert.match(mig, /timing promise/);
+  assert.match(mig, /offers video/);
+  assert.match(mig, /raise exception 'service definitions still contradict/);
+});
+
+test("coverage is described accurately on every service page", () => {
+  // It said "the two California areas". One of them is in British Columbia.
+  const page = readFileSync("app/services/[slug]/page.tsx", "utf8");
+  assert.doesNotMatch(page, /two California areas/);
+  assert.match(page, /San Diego means the city/);
+  assert.match(page, /fifteen\s*\n?\s*municipalities/);
+});
+
+test("remote services do not promise someone will arrive", () => {
+  // An audio call has nobody travelling. Asking how fast a helper reaches
+  // a listening session invites exactly the wrong expectation.
+  const city = readFileSync("app/cities/[city]/[service]/page.tsx", "utf8");
+  assert.match(city, /REMOTE_SERVICES = new Set\(\["listening-service", "sleep-call-companion"\]\)/);
+  assert.match(city, /How does a session work from/);
+  assert.match(city, /REMOTE_SERVICES\.has\(service\.id\)/);
+});
