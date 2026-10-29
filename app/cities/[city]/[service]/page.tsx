@@ -7,7 +7,7 @@ import { listServicesPublic, listCategoriesPublic, getServicePublic } from "@/li
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../../_landing-header";
 import { CITIES, getCity } from "@/lib/marketing";
-import { serviceCopy, UNIVERSAL_FAQS } from "@/lib/service-copy";
+import { serviceCopy, cityLocal, UNIVERSAL_FAQS } from "@/lib/service-copy";
 import { formatMoney } from "@/lib/money";
 import { displayBaseCents } from "@/lib/country-price";
 
@@ -61,6 +61,7 @@ export default async function CityServicePage({
   if (!service) notFound();
 
   const copy = serviceCopy(service.id);
+  const local = cityLocal(city.slug);
 
   const related = allServices
     .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
@@ -332,18 +333,45 @@ export default async function CityServicePage({
             Booking {service.title.toLowerCase()} in {city.name}
           </h2>
           <div className="mt-3 max-w-3xl space-y-3 text-sm text-slate-700 leading-relaxed">
+            {local && <p>{local.intro}</p>}
+            {local && <p>{local.boundary}</p>}
             <p>
-              This page covers addresses in {city.metro ?? city.name}. Helpward checks the exact
-              collection address against that area when you submit, so enter the real address rather
-              than a nearby landmark — a request outside the area is refused before you are charged,
-              not after a helper has travelled.
-            </p>
-            <p>
+              Helpward checks the exact address when you submit, so enter the real one rather than a
+              nearby landmark — a request outside the area is refused before you are charged, not
+              after a helper has travelled.{" "}
               {city.country === "CA"
-                ? "Bookings here are priced and charged in Canadian dollars. The confirmed address decides the currency, not your account or your card."
-                : "Bookings here are priced and charged in US dollars, and cover the City of San Diego itself rather than the wider county. The confirmed address decides the currency, not your account or your card."}
+                ? "Bookings here are priced and charged in Canadian dollars; the confirmed address decides the currency, not your account or your card."
+                : "Bookings here are priced and charged in US dollars; the confirmed address decides the currency, not your account or your card."}
             </p>
           </div>
+
+          {local && (
+            <div className="mt-8 grid md:grid-cols-2 gap-8 lg:gap-12 max-w-5xl">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  {city.country === "CA" ? "Municipalities covered" : "Covered, inside the city line"}
+                </h3>
+                <ul className="mt-3 flex flex-wrap gap-1.5">
+                  {local.places.map((pl) => (
+                    <li key={pl} className="px-2.5 py-1 rounded-full bg-white border border-slate-200 text-xs text-slate-700">
+                      {pl}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Commonly assumed, but outside</h3>
+                <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                  {local.commonlyOutside.map((pl) => (
+                    <li key={pl} className="flex items-start gap-2">
+                      <XCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" aria-hidden="true" />
+                      <span>{pl}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Same service, other cities */}

@@ -108,3 +108,49 @@ test("the public services directory exists and is linked", () => {
 test("an unknown service degrades rather than throwing", () => {
   assert.equal(serviceCopy("does-not-exist"), null);
 });
+
+/* ------------------------------------------------------------ city pages */
+
+test("each city says something only true of that city", async () => {
+  const { CITY_LOCAL } = await import("../lib/service-copy.ts");
+  const slugs = Object.keys(CITY_LOCAL);
+  assert.ok(slugs.length >= 2);
+
+  // Adding the same per-service copy to both city pages made them MORE
+  // alike — 92% identical, against 87% before. The fix has to be facts
+  // that apply to one city and not the other, so nothing here may be
+  // shared between them.
+  for (const field of ["intro", "boundary", "places", "commonlyOutside"] as const) {
+    const seen = new Map<string, string>();
+    for (const slug of slugs) {
+      const key = JSON.stringify(CITY_LOCAL[slug][field]);
+      const prior = seen.get(key);
+      assert.equal(prior, undefined, `${slug} and ${prior} share the same ${field}`);
+      seen.set(key, slug);
+    }
+  }
+
+  // And it must be substantial enough to differentiate a 900-word page.
+  for (const [slug, l] of Object.entries(CITY_LOCAL)) {
+    assert.ok(l.places.length >= 10, `${slug} names too few places to be useful`);
+    assert.ok(l.commonlyOutside.length >= 3, `${slug} does not say what is outside`);
+    assert.ok((l.intro + l.boundary).length > 400, `${slug}'s local copy is too thin`);
+  }
+});
+
+test("the Lower Mainland list matches the areas actually served", async () => {
+  const { CITY_LOCAL } = await import("../lib/service-copy.ts");
+  const { SERVICE_AREAS, normalizeMunicipality } = await import("../lib/service-areas.ts");
+  const area = SERVICE_AREAS.find((a) => a.id === "lower-mainland-bc")!;
+  const listed = new Set(CITY_LOCAL.vancouver.places.map(normalizeMunicipality));
+  for (const m of area.municipalities) {
+    assert.ok(listed.has(normalizeMunicipality(m)),
+      `the Vancouver page does not name ${m}, which is in the service area`);
+  }
+});
+
+test("the city page renders its local content", () => {
+  assert.match(cityServicePage, /cityLocal\(city\.slug\)/);
+  assert.match(cityServicePage, /local\.places\.map/);
+  assert.match(cityServicePage, /local\.commonlyOutside\.map/);
+});

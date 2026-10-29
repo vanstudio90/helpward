@@ -783,3 +783,90 @@ export const SERVICE_COPY: Record<string, ServiceCopy> = {
 export function serviceCopy(serviceId: string): ServiceCopy | null {
   return SERVICE_COPY[serviceId] ?? null;
 }
+
+/* ---------------------------------------------------------------------
+ * What is genuinely different about booking in one city rather than the
+ * other.
+ *
+ * Adding the same per-service copy to both city pages made them MORE
+ * alike, not less: measured at 92% identical afterwards, against 87%
+ * before. That is the right content in the wrong place — a reader on the
+ * Vancouver page still learned nothing they could not get from the San
+ * Diego one.
+ *
+ * The honest differentiator is not reworded prose, it is facts that only
+ * apply here: which municipalities the area actually contains, where the
+ * boundary catches people out, and what that means for a booking. San
+ * Diego is ONE city and the county around it is not covered; the Lower
+ * Mainland is fifteen separate municipalities and a helper crossing
+ * between them is crossing a real line.
+ * ------------------------------------------------------------------- */
+
+export type CityLocal = {
+  /** Two or three sentences about booking here specifically. */
+  intro: string;
+  /** Where the boundary actually bites, in the words people use. */
+  boundary: string;
+  /** Places inside the area that people name when they book. */
+  places: string[];
+  /** What "outside the area" most often turns out to mean here. */
+  commonlyOutside: string[];
+};
+
+export const CITY_LOCAL: Record<string, CityLocal> = {
+  "san-diego": {
+    intro:
+      "Helpward covers the City of San Diego itself. That is a smaller area than people usually mean by "
+      + "“San Diego”, which in conversation often stretches to the whole county — and the county is "
+      + "roughly the size of Connecticut. The address you enter is checked against the city boundary, not "
+      + "against the postal town, so a Chula Vista or El Cajon address is refused even though the post comes "
+      + "addressed to San Diego.",
+    boundary:
+      "The city line is not where most people expect it. It runs around several places that share the San Diego "
+      + "postal address and are separate cities in their own right, and it wraps around Coronado and National "
+      + "City rather than through them.",
+    places: [
+      "Downtown and East Village", "North Park and South Park", "Hillcrest and Bankers Hill",
+      "Pacific Beach and Mission Beach", "La Jolla", "Ocean Beach and Point Loma",
+      "Clairemont and Kearny Mesa", "Mira Mesa and Scripps Ranch", "Rancho Bernardo",
+      "Otay Mesa and San Ysidro", "Normal Heights and Kensington", "Mission Valley",
+    ],
+    commonlyOutside: [
+      "Chula Vista, National City and Imperial Beach — separate cities to the south",
+      "La Mesa, El Cajon, Santee and Lemon Grove — separate cities inland",
+      "Coronado, which is its own city across the bay",
+      "Poway, Del Mar, Solana Beach and Encinitas to the north",
+    ],
+  },
+
+  vancouver: {
+    intro:
+      "Helpward covers fifteen municipalities across the Lower Mainland, not only the City of Vancouver. That "
+      + "matters more here than in most places, because the region is a mosaic of separate cities rather than "
+      + "one spreading outward — somewhere twenty minutes from downtown is usually a different municipality "
+      + "with its own council, bylaws and parking rules.",
+    boundary:
+      "Two names cover two municipalities each. North Vancouver is both a City and a District, and Langley is "
+      + "both a City and a Township — in each pair the larger one is several times the size of the smaller. "
+      + "Helpward covers both halves of both, so either address works.",
+    places: [
+      "Vancouver", "Burnaby", "Richmond", "New Westminster", "Surrey", "Delta", "White Rock",
+      "Coquitlam", "Port Coquitlam", "Port Moody", "Pitt Meadows", "Maple Ridge",
+      // Plain names. The City/District and City/Township pairs are
+      // explained in `boundary` above; repeating them here would make the
+      // list read like four places instead of two names, and stops it
+      // matching the service area it is supposed to mirror.
+      "North Vancouver", "West Vancouver", "Langley",
+    ],
+    commonlyOutside: [
+      "Abbotsford, Mission and Chilliwack — east, beyond the covered area",
+      "Squamish and Whistler — north along the Sea to Sky",
+      "The North Shore beyond West Vancouver, including Lions Bay",
+      "Bowen Island and anywhere reached only by ferry",
+    ],
+  },
+};
+
+export function cityLocal(citySlug: string): CityLocal | null {
+  return CITY_LOCAL[citySlug] ?? null;
+}
