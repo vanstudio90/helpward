@@ -6,18 +6,31 @@ import {
   LayoutDashboard, Inbox, Activity, DollarSign, Calendar, MessageCircle,
   UserCircle, LogOut, Star, GalleryHorizontal, BarChart3,
 } from "lucide-react";
+import { ProviderTopBar } from "@/components/provider/ProviderTopBar";
+import { ProviderTabBar } from "@/components/provider/ProviderTabBar";
+import { ProviderSideNav } from "@/components/provider/ProviderSideNav";
 
-const NAV = [
-  { href: "/provider/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/provider/inbox", label: "Inbox", icon: Inbox },
-  { href: "/provider/active", label: "Active task", icon: Activity },
-  { href: "/provider/schedule", label: "Schedule", icon: Calendar },
-  { href: "/provider/messages", label: "Messages", icon: MessageCircle },
-  { href: "/provider/reviews", label: "Reviews", icon: Star },
-  { href: "/provider/portfolio", label: "Portfolio", icon: GalleryHorizontal },
-  { href: "/provider/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/provider/earnings", label: "Earnings", icon: DollarSign },
-  { href: "/provider/profile", label: "Profile", icon: UserCircle },
+/* Grouped so the sidebar and the phone's Menu page describe the same app.
+   A flat list of ten is a list you read every time instead of recognising. */
+const NAV_GROUPS: { title: string | null; items: { href: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
+  { title: null, items: [
+    { href: "/provider/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/provider/inbox", label: "Offers", icon: Inbox },
+    { href: "/provider/active", label: "Active task", icon: Activity },
+  ]},
+  { title: "Your work", items: [
+    { href: "/provider/schedule", label: "Schedule", icon: Calendar },
+    { href: "/provider/messages", label: "Messages", icon: MessageCircle },
+    { href: "/provider/reviews", label: "Reviews", icon: Star },
+    { href: "/provider/portfolio", label: "Portfolio", icon: GalleryHorizontal },
+    { href: "/provider/analytics", label: "Analytics", icon: BarChart3 },
+  ]},
+  { title: "Money", items: [
+    { href: "/provider/earnings", label: "Earnings", icon: DollarSign },
+  ]},
+  { title: "Account", items: [
+    { href: "/provider/profile", label: "My profile", icon: UserCircle },
+  ]},
 ];
 
 export default async function ProviderLayout({ children }: { children: React.ReactNode }) {
@@ -55,6 +68,15 @@ export default async function ProviderLayout({ children }: { children: React.Rea
     redirect("/dashboard");
   }
 
+  // Offers waiting, for the tab badge. A count is the whole point of a
+  // badge, so a failure must show nothing rather than a zero that looks
+  // like an answer.
+  const { count: offerCount } = await supabase
+    .from("match_attempts")
+    .select("request_id", { count: "exact", head: true })
+    .eq("provider_id", user.id)
+    .is("responded_at", null);
+
   // If they haven't finished onboarding, force them to /provider/onboard
   // (status='pending' AND no approved_at means they haven't submitted KYC yet)
 
@@ -69,21 +91,7 @@ export default async function ProviderLayout({ children }: { children: React.Rea
             <div className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide">For helpers</div>
           </div>
         </Link>
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              >
-                <Icon className="w-5 h-5 text-slate-400" />
-                <span className="flex-1">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        <ProviderSideNav groups={NAV_GROUPS} offerCount={offerCount ?? 0} />
         <div className="px-3 pb-4 space-y-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-3">
             <div className="text-xs text-slate-500">Logged in as</div>
@@ -115,7 +123,17 @@ export default async function ProviderLayout({ children }: { children: React.Rea
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0">{children}</main>
+      {/* On a phone there was no navigation at all: the sidebar above is
+          `hidden lg:flex`, so a helper who landed on Active task from a
+          notification could reach none of the other nine sections. A top
+          bar says where you are, a tab bar gets you to the five things you
+          do repeatedly, and Menu holds the rest. */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        <ProviderTopBar />
+        <main className="flex-1 min-w-0 pb-20 lg:pb-0">{children}</main>
+      </div>
+
+      <ProviderTabBar offerCount={offerCount ?? 0} />
     </div>
   );
 }
