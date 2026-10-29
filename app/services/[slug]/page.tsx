@@ -104,11 +104,12 @@ export default async function ServiceDetailPage({
 
   // Service-specific first, then the three that are true of every booking.
   //
-  // What was here claimed an "average response time ... around 18 minutes"
-  // and that you could "track their ETA live". There have been no completed
-  // bookings, so there is no average, and a figure invented for a FAQ is
-  // the kind of promise a customer later holds you to. Removed rather than
-  // softened.
+  // The response-time and matching figures below are owner-set marketing
+  // claims, restored at the owner's instruction on 2026-10-29 after I had
+  // removed them. They are not computed from booking data — there are no
+  // completed bookings yet — and the owner's position is that they will be
+  // met before the site takes orders. If they change, they change HERE and
+  // in the Trust tile below, which are the only two places they appear.
   const SERVICE_FAQS = [
     {
       q: `What is ${service.title.toLowerCase()} on Helpward?`,
@@ -123,6 +124,10 @@ export default async function ServiceDetailPage({
           + `extra quantities and larger crews change the price, and the total is shown before you submit.`
         : `${formatMoney(usCents, "USD")} plus a flat ${formatMoney(450, "USD")} service fee. What you pay depends on `
           + `what you ask for, and the total is shown before you submit.`,
+    },
+    {
+      q: `How fast can a helper arrive?`,
+      a: `Average response time for ${service.title} is ${service.eta_label ?? "around 18 minutes"} during normal hours. The matching engine notifies all nearby qualified helpers at once; the first to accept becomes yours and you can track their ETA live.`,
     },
     ...(copy?.faqs ?? []),
     ...UNIVERSAL_FAQS,
@@ -296,6 +301,16 @@ export default async function ServiceDetailPage({
                     ))}
                   </ul>
                 </div>
+              </div>
+
+              {/* Platform claims, owner-set. Kept to one row rather than the
+                  full block that used to repeat on every page, so the
+                  service-specific content above still carries the page. */}
+              <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <Trust icon={Users} title="Approved helpers" sub="Reviewed by a person at Helpward before taking work" />
+                <Trust icon={ShieldCheck} title="Pay after completion" sub="Your card is held, not charged, until the task is done" />
+                <Trust icon={Clock} title="Fast matching" sub="Average match in 2m 14s" />
+                <Trust icon={Sparkles} title="Transparent pricing" sub="No surge, no hidden fees" />
               </div>
             </div>
           </section>

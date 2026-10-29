@@ -49,7 +49,12 @@ function fromStripeError(err: unknown): PaymentFailure {
   }
   if (e?.type === "StripeInvalidRequestError") {
     console.error("stripe invalid request:", e.message);
-    return fail("invalid_request", "Payment could not be set up. Support has been notified.");
+    // "Support has been notified" was not true: nothing notifies support,
+    // and until MX records exist the address it would use bounces. Say what
+    // is actually known and what the person can do.
+    return fail("invalid_request",
+      "Stripe refused that request. Try again — if it keeps happening, email support@helpward.com "
+      + "and quote the time it occurred.");
   }
   console.error("stripe error:", err);
   return fail("stripe_error", "Payment failed. Please try again.");
@@ -91,6 +96,47 @@ async function readAuthEmail(userId: string): Promise<string | undefined> {
  * CONNECTED_ACCOUNT_CONTROLLER) because this platform is provisioned that
  * way and the classic Express shape is rejected outright.
  */
+
+/**
+ * Can THIS platform use the connected account we have stored?
+ *
+ * A Connect account belongs to the platform and mode that created it. An
+ * account created under test keys cannot be read with a live key, and vice
+ * versa — Stripe answers `resource_missing`, exactly as it would for an id
+ * that never existed.
+ *
+ * That is not hypothetical here. Helper accounts were created in May under
+ * test keys; the platform went live on 2026-10-28. Every one of those ids
+ * is now unusable, and the code that found one simply handed it to
+ * accountLinks.create, which failed, which showed "Payment could not be set
+ * up" — on every attempt, for ever, with no way for the helper to get past
+ * it.
+ *
+ * Only a missing-or-inaccessible answer counts. A rate limit or a network
+ * blip must NOT be read as "this account is gone", or a transient failure
+ * would throw away a working account.
+ */
+async function connectAccountIsUsable(
+  stripe: Stripe,
+  accountId: string,
+): Promise<boolean> {
+  try {
+    await stripe.accounts.retrieve(accountId);
+    return true;
+  } catch (err) {
+    const e = err as Stripe.errors.StripeError;
+    const gone =
+      e?.code === "resource_missing" ||
+      e?.type === "StripePermissionError" ||
+      (e?.type === "StripeInvalidRequestError" && /no such account/i.test(e?.message ?? ""));
+    if (gone) return false;
+    // Anything else: assume the account is fine and let the real call
+    // report the real problem.
+    console.error("could not verify connect account", accountId, e?.message);
+    return true;
+  }
+}
+
 export async function startHelperOnboarding(
   providerId: string,
   returnTo: string,
@@ -109,6 +155,31 @@ export async function startHelperOnboarding(
   let accountId = profile.stripe_connect_account_id as string | null;
 
   try {
+    // A stored id this platform cannot use is worse than no id at all: it
+    // fails identically every time and there is no path forward. Discard it
+    // and start again. Nothing of ours can be inside an account our own key
+    // cannot read, so there is nothing to lose by replacing it — but the
+    // derived flags must go too, or the dashboard keeps reporting the dead
+    // account's requirements against the new one.
+    if (accountId && !(await connectAccountIsUsable(stripe, accountId))) {
+      console.warn("replacing unusable connect account", accountId, "for", providerId);
+      const { error } = await admin
+        .from("provider_profiles")
+        .update({
+          stripe_connect_account_id: null,
+          stripe_details_submitted: false,
+          stripe_transfers_active: false,
+          stripe_requirements_due: null,
+          stripe_disabled_reason: null,
+        })
+        .eq("user_id", providerId);
+      if (error) {
+        console.error("could not clear unusable connect account", accountId, error);
+        return fail("persist_failed", "Could not restart payout setup. Please try again.");
+      }
+      accountId = null;
+    }
+
     if (!accountId) {
       const { data: person } = await admin
         .from("profiles")
@@ -420,9 +491,14 @@ export async function authorizeBookingPayment(
       console.error("AUTHORIZED BUT NOT RECORDED", {
         bookingId: booking.id, intent: intent.id, error: writeError,
       });
+      // Not "support has been notified": this writes a server log and
+      // nothing else. Telling someone help is already coming, when the
+      // hold is on THEIR card, is the worst place to be wrong about it.
       return fail(
         "persist_failed",
-        "The payment was authorized but could not be recorded. Support has been notified.",
+        "Your card was authorized but we could not record it, so this booking is not confirmed. "
+        + "Do not try again — that would place a second hold. Email support@helpward.com with the "
+        + "time this happened and we will release it.",
       );
     }
 
@@ -1155,7 +1231,12 @@ export async function pendingAuthorizationSecret(
           console.error("RECONCILE FAILED: Stripe holds the money, booking still blocked", {
             bookingId, intent: intent.id, repairError,
           });
-          return fail("reconcile_failed", "Your payment went through but we couldn't record it. Support has been notified.");
+          // Same correction: logged, not notified. The money is held at
+          // Stripe and the booking is stuck, so the instruction has to be
+          // "contact us", not "wait".
+          return fail("reconcile_failed",
+            "Your payment went through but we could not record it, so the booking is still blocked. "
+            + "Do not retry. Email support@helpward.com with the time and we will sort it out.");
         }
         console.warn("reconciled a hold Stripe had and the booking did not", {
           bookingId, intent: intent.id,

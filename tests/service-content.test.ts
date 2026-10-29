@@ -75,15 +75,19 @@ function codeOnly(src: string): string {
   return src.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
 }
 
-test("the invented claims are gone from both templates", () => {
+test("the owner's platform claims appear in exactly one place each", () => {
+  // These were removed on 2026-10-29 and RESTORED the same day on the
+  // owner's instruction. They are marketing claims, not figures computed
+  // from booking data, so the thing worth protecting is that each lives in
+  // one place per template — a claim repeated in four files is a claim that
+  // gets updated in three.
   for (const [src, label] of [[servicePage, "service page"],
                               [cityServicePage, "city-service page"]] as const) {
     const code = codeOnly(src);
-    assert.doesNotMatch(code, /around 18 minutes/, `${label} still claims a response time`);
-    assert.doesNotMatch(code, /2m 14s/, `${label} still claims a matching time`);
-    assert.doesNotMatch(code, /typically match faster/, `${label} still compares cities with no data`);
-    assert.doesNotMatch(code, /Average match/, `${label} still asserts an average`);
-    // Control: stripping must not empty the file.
+    assert.equal((code.match(/around 18 minutes/g) ?? []).length, 1,
+      `${label} should state the response time exactly once`);
+    assert.equal((code.match(/Average match in 2m 14s/g) ?? []).length, 1,
+      `${label} should state the matching time exactly once`);
     assert.ok(code.includes("export default"), "comment stripping removed real code");
   }
 });
@@ -166,4 +170,23 @@ test("the city page's structured data quotes the same price as its own copy", ()
   // One definition, used by both the markup and the copy, so they cannot
   // drift apart again.
   assert.equal((code.match(/const localCents = displayBaseCents\(/g) ?? []).length, 1);
+});
+
+test("professional-cuddler is not published anywhere public", () => {
+  // Deliberately inactive by owner decision, reaffirmed 2026-10-29: do not
+  // create a page for it. The SEO audit recommended publishing one; that
+  // recommendation is declined, and this test is here so a later catalogue
+  // edit cannot quietly reverse the decision.
+  //
+  // listServicesPublic() filters on active, so the page, the sitemap and
+  // the directory all follow from the row being inactive — the thing worth
+  // guarding is that no file names it as content.
+  const copySrc = readFileSync("lib/service-copy.ts", "utf8");
+  assert.ok(!copySrc.includes("professional-cuddler"),
+    "editorial copy exists for a service that must not be published");
+
+  for (const f of ["app/our-services/page.tsx", "app/sitemap.ts"]) {
+    assert.ok(!readFileSync(f, "utf8").includes("professional-cuddler"),
+      `${f} names a service that must not be published`);
+  }
 });

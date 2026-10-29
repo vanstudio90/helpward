@@ -132,10 +132,10 @@ export default async function CityServicePage({
   //
   // What was here read service.base_price_cents and labelled it "(CAD)" on
   // the Vancouver pages — the US number with a Canadian label. It also
-  // claimed an average response time and that this city "typically matches
-  // faster than the platform-wide average". There are no completed
-  // bookings, so there is no average and no comparison; both are removed
-  // rather than softened.
+  // The response-time and matching figures are owner-set marketing claims,
+  // restored at the owner's instruction on 2026-10-29 after I had removed
+  // them. They are not computed from booking data. Change them here and in
+  // the Trust tile below; those are the only two places they appear.
 
   const FAQS = [
     {
@@ -158,6 +158,10 @@ export default async function CityServicePage({
         : `Addresses inside the City of ${city.name} itself, not the wider county. Helpward checks the exact address `
           + `when you submit, and a request outside the area is refused before you are charged. Bookings here are priced `
           + `and charged in US dollars.`,
+    },
+    {
+      q: `How fast can a helper arrive in ${city.name}?`,
+      a: `Average response time for ${service.title} in ${city.name} is ${service.eta_label ?? "around 18 minutes"} during normal hours. Helper supply is densest in ${city.metro ?? city.name} so ${city.name}-based requests typically match faster than the platform-wide average.`,
     },
     ...(copy?.faqs ?? []),
     ...UNIVERSAL_FAQS,
@@ -329,6 +333,15 @@ export default async function CityServicePage({
                     ))}
                   </ul>
                 </div>
+              </div>
+
+              {/* Platform claims, owner-set. One row rather than the full
+                  block that used to repeat on all 52 city-service pages. */}
+              <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <Trust icon={Users} title="Local helpers" sub={`Verified humans in ${city.metro ?? city.name}`} />
+                <Trust icon={ShieldCheck} title="Approved helpers" sub="Reviewed by a person at Helpward before taking work" />
+                <Trust icon={Clock} title="Fast matching" sub="Average match in 2m 14s" />
+                <Trust icon={Sparkles} title="Transparent pricing" sub="No surge, no hidden fees" />
               </div>
             </div>
           </section>
