@@ -36,7 +36,7 @@ export function FavoriteHelperButton({
     const prev = saved;
     setSaved(!prev);
     start(async () => {
-      const r = await toggleFavoriteAction("provider", helperId);
+      const r = await toggleFavoriteAction("helper", helperId);
       if ("error" in r) {
         setSaved(prev);
       } else {

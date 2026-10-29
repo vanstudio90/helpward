@@ -162,7 +162,7 @@ export async function getConversationMessages(conversationId: string): Promise<M
   return (data ?? []).reverse();
 }
 
-export async function listFavoritesByKind(kind?: "provider" | "service" | "address") {
+export async function listFavoritesByKind(kind?: "helper" | "service" | "address") {
   const supabase = await createSupabaseServerClient();
   let q = supabase.from("favorites").select("*").order("created_at", { ascending: false }).limit(200);
   if (kind) q = q.eq("kind", kind);
@@ -175,7 +175,7 @@ export async function listFavoritesByKind(kind?: "provider" | "service" | "addre
 }
 
 export async function listSavedProviderIds(): Promise<string[]> {
-  const favs = await listFavoritesByKind("provider");
+  const favs = await listFavoritesByKind("helper");
   return favs.map((f) => f.target_id);
 }
 

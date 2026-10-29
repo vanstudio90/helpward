@@ -32,11 +32,11 @@ export function canUseHelperArea(role: string | null | undefined): boolean {
 /**
  * What a NEW account is given.
  *
- * Still the old value: the enum has not been renamed yet, so writing
- * "helper" would be rejected by the type. Flipped in the same change
- * that renames the enum value.
+ * The enum value is now 'helper'. handle_new_user still normalises the
+ * retired spelling, so a browser tab holding an older bundle keeps
+ * working — but nothing we ship writes it any more.
  */
-export const NEW_HELPER_ROLE = "provider";
+export const NEW_HELPER_ROLE = "helper";
 
 /** Where someone lands after signing in. */
 export function homePathFor(role: string | null | undefined): string {

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-type Kind = "provider" | "service" | "address";
+type Kind = "helper" | "service" | "address";
 
 export async function toggleFavoriteAction(kind: Kind, targetId: string): Promise<{ saved: boolean } | { error: string }> {
   const supabase = await createSupabaseServerClient();

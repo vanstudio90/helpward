@@ -135,7 +135,7 @@ export default async function PublicProviderProfile({
       .from("favorites")
       .select("user_id")
       .eq("user_id", user.id)
-      .eq("kind", "provider")
+      .eq("kind", "helper")
       .eq("target_id", id)
       .maybeSingle();
     initialSaved = !!fav;

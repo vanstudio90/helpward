@@ -135,7 +135,10 @@ export async function signupAction(
   if (password.length > 128) {
     return { error: "Password is too long (max 128 chars)." };
   }
-  if (!["customer", "provider"].includes(role)) {
+  // "provider" is the retired spelling. Still accepted so a browser tab
+  // holding an older bundle can finish signing up; handle_new_user
+  // normalises it before the enum cast.
+  if (!["customer", "helper", "provider"].includes(role)) {
     return { error: "Invalid role." };
   }
   if (!["US", "CA"].includes(country)) {
@@ -152,7 +155,7 @@ export async function signupAction(
         role,
         country,
         // Only ever a real area id and a real municipality name, or absent.
-        ...(role === "provider" && workArea && workCity
+        ...(isHelperRole(role) && workArea && workCity
           ? { work_region: workArea.id, work_city: workCity }
           : {}),
       },

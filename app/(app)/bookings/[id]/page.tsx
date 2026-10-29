@@ -176,7 +176,7 @@ export default async function BookingDetailPage({
       .from("favorites")
       .select("user_id")
       .eq("user_id", user.id)
-      .eq("kind", "provider")
+      .eq("kind", "helper")
       .eq("target_id", provider.user_id)
       .maybeSingle();
     helperIsFavorited = !!fav;

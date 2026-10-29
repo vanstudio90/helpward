@@ -10,7 +10,7 @@ import { ReferralBanner } from "./referral-banner";
 
 export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signupAction, undefined);
-  const [role, setRole] = useState<"customer" | "provider">("customer");
+  const [role, setRole] = useState<"customer" | "helper">("customer");
   // Mirrored so the "not your city" waitlist can use it without a second ask.
   const [email, setEmail] = useState("");
   const [country, setCountry] = useState("US");
@@ -36,10 +36,10 @@ export default function SignupPage() {
         </button>
         <button
           type="button"
-          onClick={() => setRole("provider")}
+          onClick={() => setRole("helper")}
           className={cn(
             "py-2 rounded-lg text-sm font-semibold transition",
-            role === "provider" ? "bg-white text-brand-700 shadow-sm" : "text-slate-500"
+            role === "helper" ? "bg-white text-brand-700 shadow-sm" : "text-slate-500"
           )}
         >
           I want to earn
@@ -136,7 +136,7 @@ export default function SignupPage() {
             onboarding, connect a Stripe payout account and wait for an
             approval that leads nowhere. Customers already get this check at
             booking; helpers did not. */}
-        {role === "provider" && <WhereYouWork country={country} email={email} />}
+        {role === "helper" && <WhereYouWork country={country} email={email} />}
 
         <button
           type="submit"
