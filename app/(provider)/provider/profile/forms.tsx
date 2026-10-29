@@ -102,6 +102,37 @@ export function ProviderAvatarUpload({ avatarUrl, fullName }: { avatarUrl: strin
   );
 }
 
+
+/* Confirmation where the person is actually looking.
+ *
+ * Every card on this page put its result banner at the TOP and its save
+ * button at the BOTTOM. On a phone that means tapping Save scrolls the
+ * confirmation off screen: you press the button and nothing visibly
+ * happens, which reads as the press not registering.
+ *
+ * `role="status"` so a screen reader announces it without stealing focus.
+ */
+function SaveResult({ state }: { state?: { error?: string; success?: string } }) {
+  if (!state?.error && !state?.success) return null;
+  const bad = !!state.error;
+  return (
+    <p
+      role="status"
+      aria-live="polite"
+      className={`flex items-start gap-1.5 text-xs rounded-lg px-2.5 py-2 border ${
+        bad
+          ? "text-rose-700 bg-rose-50 border-rose-100"
+          : "text-emerald-800 bg-emerald-50 border-emerald-100"
+      }`}
+    >
+      {bad
+        ? <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" aria-hidden="true" />
+        : <CheckCircle2 className="w-3.5 h-3.5 mt-px shrink-0" aria-hidden="true" />}
+      <span className="min-w-0">{state.error ?? state.success}</span>
+    </p>
+  );
+}
+
 export function ProfileForm({
   initial,
 }: { initial: { full_name: string; bio: string; service_radius_km: number; languages: string } }) {
@@ -110,17 +141,6 @@ export function ProfileForm({
   return (
     <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
       <h2 className="text-base font-bold text-slate-900 mb-3">Public profile</h2>
-
-      {state?.error && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
-          <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {state.error}
-        </div>
-      )}
-      {state?.success && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">
-          <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {state.success}
-        </div>
-      )}
 
       <form action={formAction} className="space-y-4">
         <label className="block">
@@ -172,10 +192,11 @@ export function ProfileForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-brand-700 border border-brand-200 px-3 py-2 rounded-lg disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-50"
         >
-          <Edit3 className="w-3 h-3" /> {pending ? "Saving…" : "Save profile"}
+          <Edit3 className="w-3.5 h-3.5" aria-hidden="true" /> {pending ? "Saving…" : "Save profile"}
         </button>
+        <SaveResult state={state} />
       </form>
     </div>
   );

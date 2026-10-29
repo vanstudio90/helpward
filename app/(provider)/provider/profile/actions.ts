@@ -111,7 +111,23 @@ export async function updateProviderProfileAction(
   revalidatePath("/provider/profile");
   revalidatePath("/provider/dashboard", "layout");
   revalidatePath(`/helpers/${user.id}`);
-  return { success: "Profile updated." };
+
+  // Name what was saved, not that something was.
+  //
+  // "Profile updated." is the kind of message you have to take on trust —
+  // it confirms a request completed, not that the right values landed.
+  // Reading your own name and radius back is the difference between being
+  // told it worked and seeing that it did.
+  const saved = [
+    fullName,
+    `${radius} km radius`,
+    languages.length
+      ? `${languages.length === 1 ? "speaks" : "speaks"} ${languages.join(", ")}`
+      : null,
+    bio ? "bio saved" : "no bio yet",
+  ].filter(Boolean);
+
+  return { success: `Saved · ${saved.join(" · ")}` };
 }
 
 export async function setProviderServicesAction(

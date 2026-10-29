@@ -55,17 +55,6 @@ export function CitiesForm({
         </div>
       )}
 
-      {state?.error && (
-        <div className="mt-3 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
-          <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" /> {state.error}
-        </div>
-      )}
-      {state?.success && (
-        <div className="mt-3 flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">
-          <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" /> {state.success}
-        </div>
-      )}
-
       <form action={formAction} className="mt-4 space-y-4">
         <label className="block">
           <span className="text-xs font-semibold text-slate-700">Region</span>
@@ -138,6 +127,21 @@ export function CitiesForm({
             <span className="text-xs text-slate-500">Tick at least one city.</span>
           )}
         </div>
+
+        {/* Beside the button, where the person is looking when they press it. */}
+        {(state?.error || state?.success) && (
+          <p role="status" aria-live="polite"
+            className={`flex items-start gap-1.5 text-xs rounded-lg px-2.5 py-2 border ${
+              state.error
+                ? "text-rose-700 bg-rose-50 border-rose-100"
+                : "text-emerald-800 bg-emerald-50 border-emerald-100"
+            }`}>
+            {state.error
+              ? <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" aria-hidden="true" />
+              : <CheckCircle2 className="w-3.5 h-3.5 mt-px shrink-0" aria-hidden="true" />}
+            <span className="min-w-0">{state.error ?? state.success}</span>
+          </p>
+        )}
       </form>
     </div>
   );
