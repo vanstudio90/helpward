@@ -8,6 +8,9 @@ import { unitFor } from "@/lib/money";
 import { priceTask } from "@/lib/pricing";
 import { displayBaseCents } from "@/lib/country-price";
 import { SERVICE_AREAS } from "@/lib/service-areas";
+import { canAcceptWork, type ProviderReadiness } from "@/lib/provider-readiness";
+import Link from "next/link";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 export default async function ProviderProfilePage() {
   const supabase = await createSupabaseServerClient();
@@ -43,8 +46,32 @@ export default async function ProviderProfilePage() {
 
   const mySelectedServices = (myServices ?? []).map((r) => r.service_id as string);
 
+  // Whether this helper is still working through the setup list decides
+  // where "done" should send them. Same readiness the dashboard and the
+  // onboarding page use, so all three agree about what is outstanding.
+  const readiness: ProviderReadiness = {
+    status: pp?.status ?? "pending",
+    serviceCount: mySelectedServices.length,
+    transfersActive: !!pp?.stripe_transfers_active,
+    hasBio: !!pp?.bio,
+    isOnline: !!pp?.is_online,
+  };
+  const stillSettingUp = !canAcceptWork(readiness);
+
+
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-3xl mx-auto pb-12">
+      {/* There was no way back from this page — not to the setup steps, not
+          to the dashboard. A helper who arrived from "Complete your
+          profile" on step 1, filled it in and saved was simply stranded. */}
+      <Link
+        href={stillSettingUp ? "/provider/onboard" : "/provider/dashboard"}
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 mb-3"
+      >
+        <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+        {stillSettingUp ? "Setup steps" : "Dashboard"}
+      </Link>
+
       <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My helper profile</h1>
       <p className="text-sm text-slate-500 mt-1 mb-6">
         Customers see this on your public profile when matching tasks.
@@ -92,6 +119,25 @@ export default async function ProviderProfilePage() {
           })}
           initialSelected={mySelectedServices}
         />
+
+        {/* The way out, at the bottom where someone lands after saving the
+            last card. Each card saves on its own, so this is navigation,
+            not a submit — it must not look like one more thing to press
+            before the work counts. */}
+        <div className="rounded-2xl bg-brand-50 border border-brand-100 p-4 sm:p-5">
+          <p className="text-sm text-slate-700">
+            {stillSettingUp
+              ? "Each card above saves on its own — there's nothing left to submit here."
+              : "You're set up. Go online from your dashboard to start receiving offers."}
+          </p>
+          <Link
+            href={stillSettingUp ? "/provider/onboard" : "/provider/dashboard"}
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold"
+          >
+            {stillSettingUp ? "Back to your setup steps" : "Back to dashboard"}
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          </Link>
+        </div>
       </div>
     </div>
   );

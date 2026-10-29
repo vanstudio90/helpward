@@ -93,3 +93,30 @@ test("the confirmation is announced, not just coloured", () => {
     assert.match(src, /aria-live="polite"/, `${label} should not steal focus`);
   }
 });
+
+/* ------------------------------------------------------------- navigation */
+
+test("the profile page is not a dead end", () => {
+  // There was no way back from it — not to the setup steps, not to the
+  // dashboard. A helper who arrived from "Complete your profile" on step 1,
+  // filled it in and saved had nowhere to go.
+  const page = readFileSync(`${DIR}/page.tsx`, "utf8");
+  assert.match(page, /href=\{stillSettingUp \? "\/provider\/onboard" : "\/provider\/dashboard"\}/);
+  // Top and bottom: the top for someone who changed their mind, the bottom
+  // for someone who has just saved the last card.
+  assert.equal((page.match(/\/provider\/onboard" : "\/provider\/dashboard/g) ?? []).length, 2);
+});
+
+test("the way out is navigation, not a fifth save button", () => {
+  const page = readFileSync(`${DIR}/page.tsx`, "utf8");
+  // Each card saves itself; a final "submit" would imply the earlier saves
+  // had not counted.
+  assert.match(page, /nothing left to submit here/);
+});
+
+test("where 'done' leads depends on whether setup is finished", () => {
+  const page = readFileSync(`${DIR}/page.tsx`, "utf8");
+  assert.match(page, /canAcceptWork\(readiness\)/);
+  assert.match(page, /Back to your setup steps/);
+  assert.match(page, /Back to dashboard/);
+});
