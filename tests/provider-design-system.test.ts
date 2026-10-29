@@ -19,12 +19,12 @@ function walk(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir)) {
     const p = join(dir, e);
     if (statSync(p).isDirectory()) walk(p, out);
-    else if (p.endsWith("page.tsx")) out.push(p);
+    else if (p.endsWith(".tsx")) out.push(p);
   }
   return out;
 }
 
-const PAGES = walk("app/(provider)");
+const PAGES = walk("app/(provider)").filter((f) => f.endsWith("page.tsx"));
 const read = (f: string) => readFileSync(f, "utf8");
 
 /** Comments stripped, so prose about a removed string never counts as it. */
@@ -89,4 +89,18 @@ test("the live badge reports the channel, not the mount", () => {
   assert.match(s, /subscribe\(\(status\)/);
   assert.match(s, /status === "SUBSCRIBED"/);
   assert.match(s, /CHANNEL_ERROR/);
+});
+
+
+test("the helper app carries no pre-kit classes", () => {
+  /* The migration that removed these touched 29 files and 338 class uses.
+   * A single `rounded-2xl` creeping back is how the drift started: it
+   * looks fine alone and wrong beside the card next to it. text-sm and
+   * text-xs are the same story one scale down — the kit sets body at
+   * 15px and secondary at 13-14px, so 14/12 read as a second, smaller
+   * typographic system sharing the page. */
+  const files = [...walk("app/(provider)"), ...walk("components/provider")];
+  const legacy = /rounded-2xl|rounded-xl|rounded-lg(?!-)|\btext-xs\b|\btext-sm\b|text-2xl sm:text-3xl/;
+  const offenders = files.filter((f) => legacy.test(readFileSync(f, "utf8")));
+  assert.deepEqual(offenders, [], `pre-kit classes in: ${offenders.join(", ")}`);
 });

@@ -54,16 +54,16 @@ export function OnlineToggle({ initialOnline }: { initialOnline: boolean }) {
           });
         }}
         className={cn(
-          "relative inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold shrink-0",
+          "relative inline-flex items-center gap-2 px-3 py-2 rounded-field border text-[15px] font-semibold shrink-0",
           on ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-600"
         )}
       >
         <span className={cn("w-2 h-2 rounded-full", on ? "bg-emerald-500 animate-pulse" : "bg-slate-400")} />
         {on ? "Online" : "Offline"}
       </button>
-      {err && <div className="text-[11px] text-rose-600">{err}</div>}
+      {err && <div className="text-[13px] text-rose-600">{err}</div>}
       {gpsNote && (
-        <div className="text-[11px] text-amber-700 inline-flex items-center gap-1">
+        <div className="text-[13px] text-amber-700 inline-flex items-center gap-1">
           <MapPin className="w-3 h-3" /> {gpsNote}
         </div>
       )}
@@ -145,7 +145,7 @@ export function BookingActions({
     <div>
       {asksOutcome && (
         <fieldset className="mb-3">
-          <legend className="text-xs font-semibold text-slate-700 mb-1.5">
+          <legend className="text-[13px] font-semibold text-slate-700 mb-1.5">
             How did it end?
           </legend>
           <div className="space-y-1.5">
@@ -153,7 +153,7 @@ export function BookingActions({
               <label
                 key={o.value}
                 className={cn(
-                  "flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer",
+                  "flex items-start gap-2.5 p-2.5 rounded-field border cursor-pointer",
                   outcome === o.value
                     ? "border-brand-300 bg-brand-50/70"
                     : "border-slate-200 bg-white hover:bg-slate-50",
@@ -168,8 +168,8 @@ export function BookingActions({
                   className="mt-0.5 w-4 h-4 shrink-0 text-brand-600 focus:ring-brand-200"
                 />
                 <span className="min-w-0">
-                  <span className="block text-xs font-semibold text-slate-900">{o.label}</span>
-                  <span className="block text-[11px] text-slate-600 leading-snug">{o.detail}</span>
+                  <span className="block text-[13px] font-semibold text-slate-900">{o.label}</span>
+                  <span className="block text-[13px] text-slate-600 leading-snug">{o.detail}</span>
                 </span>
               </label>
             ))}
@@ -177,7 +177,7 @@ export function BookingActions({
         </fieldset>
       )}
       {err && (
-        <div className="mb-2 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
+        <div className="mb-2 flex items-start gap-2 text-[13px] text-rose-700 bg-rose-50 border border-rose-100 rounded-field p-2.5">
           <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {err}
         </div>
       )}
@@ -195,7 +195,7 @@ export function BookingActions({
           });
         }}
         className={cn(
-          "w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl font-semibold",
+          "w-full inline-flex items-center justify-center gap-2 py-3 rounded-field font-semibold",
           "disabled:opacity-60 disabled:cursor-not-allowed",
           action === "start"
             ? "bg-brand-600 text-white"
@@ -212,7 +212,7 @@ export function BookingActions({
               : "Mark complete"}</>}
       </button>
       {blockedReason && (
-        <p className="mt-1.5 text-[11px] text-slate-500 text-center">{blockedReason}</p>
+        <p className="mt-1.5 text-[13px] text-slate-500 text-center">{blockedReason}</p>
       )}
     </div>
   );

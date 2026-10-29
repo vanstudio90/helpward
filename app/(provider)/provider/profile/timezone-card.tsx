@@ -38,49 +38,49 @@ export function TimezoneCard({ stored }: { stored: string }) {
   };
 
   return (
-    <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-      <h2 className="text-base font-bold text-slate-900 inline-flex items-center gap-2 mb-1">
+    <section className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
+      <h2 className="text-[18px] font-extrabold text-slate-900 inline-flex items-center gap-2 mb-1">
         <Globe className="w-4 h-4 text-brand-600" /> Timezone
       </h2>
-      <p className="text-xs text-slate-500 mb-3 leading-relaxed">
+      <p className="text-[13px] text-slate-500 mb-3 leading-relaxed">
         Used to render your analytics + future schedule features in your actual local time.
         We never auto-change this — if you travel, your existing data stays bucketed where you set it.
       </p>
 
       {state?.error && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
+        <div className="mb-3 flex items-start gap-2 text-[13px] text-rose-700 bg-rose-50 border border-rose-100 rounded-field p-2.5">
           <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {state.error}
         </div>
       )}
       {state?.success && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">
+        <div className="mb-3 flex items-start gap-2 text-[13px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-field p-2.5">
           <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {state.success}
         </div>
       )}
 
-      <div className="rounded-xl bg-slate-50 p-3 flex items-center gap-3">
+      <div className="rounded-field bg-slate-50 p-3 flex items-center gap-3">
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Stored</div>
-          <div className="text-sm font-bold text-slate-900 font-mono truncate">{current}</div>
+          <div className="text-[12px] font-bold uppercase tracking-wide text-slate-500">Stored</div>
+          <div className="text-[15px] font-bold text-slate-900 font-mono truncate">{current}</div>
         </div>
         {matches && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full shrink-0">
+          <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full shrink-0">
             <CheckCircle2 className="w-3 h-3" /> Matches this browser
           </span>
         )}
       </div>
 
       {canSwitch && (
-        <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 flex items-center gap-3">
+        <div className="mt-3 rounded-field bg-amber-50 border border-amber-200 p-3 flex items-center gap-3">
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-amber-700">This browser is in</div>
-            <div className="text-sm font-bold text-amber-900 font-mono truncate">{detected}</div>
+            <div className="text-[12px] font-bold uppercase tracking-wide text-amber-700">This browser is in</div>
+            <div className="text-[15px] font-bold text-amber-900 font-mono truncate">{detected}</div>
           </div>
           <button
             type="button"
             onClick={() => apply(detected!)}
             disabled={pending}
-            className="px-3 py-2 rounded-lg bg-amber-600 text-white text-xs font-bold disabled:opacity-50 shrink-0"
+            className="px-3 py-2 rounded-field bg-amber-600 text-white text-[13px] font-bold disabled:opacity-50 shrink-0"
           >
             {pending ? "Saving…" : "Use this timezone"}
           </button>

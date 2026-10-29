@@ -22,32 +22,32 @@ export function ProviderServicesForm({
   return (
     <form
       action={formAction}
-      className={embedded ? "mt-2" : "mt-8 rounded-2xl bg-slate-50 border border-slate-100 p-5"}
+      className={embedded ? "mt-2" : "mt-8 rounded-card bg-slate-50 border border-slate-100 p-5"}
     >
       {!embedded && (
-        <div className="text-sm font-bold text-slate-900 mb-1">
+        <div className="text-[15px] font-bold text-slate-900 mb-1">
           Services you offer ({services.length} available)
         </div>
       )}
-      <p className="text-[11px] text-slate-500 mb-3">
+      <p className="text-[13px] text-slate-500 mb-3">
         You&apos;ll only be offered tasks for the services you tick here.
         Choose at least one of the {services.length} available.
       </p>
 
       {state?.error && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
+        <div className="mb-3 flex items-start gap-2 text-[13px] text-rose-700 bg-rose-50 border border-rose-100 rounded-field p-2.5">
           <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {state.error}
         </div>
       )}
       {state?.success && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">
+        <div className="mb-3 flex items-start gap-2 text-[13px] text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-field p-2.5">
           <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {state.success}
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[13px]">
         {services.map((s) => (
-          <label key={s.id} className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-100 cursor-pointer hover:border-brand-300">
+          <label key={s.id} className="flex items-center gap-2 p-2 rounded-field bg-white border border-slate-100 cursor-pointer hover:border-brand-300">
             <input
               type="checkbox"
               name="service_id"
@@ -63,12 +63,12 @@ export function ProviderServicesForm({
       <button
         type="submit"
         disabled={pending}
-        className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-60"
+        className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-field bg-brand-600 text-white text-[15px] font-semibold disabled:opacity-60"
       >
         {pending ? "Saving…" : "Save my services"}
       </button>
 
-      <p className="text-[11px] text-slate-500 mt-3 leading-relaxed">
+      <p className="text-[13px] text-slate-500 mt-3 leading-relaxed">
         Saving this is what puts you into the matching pool. You also need to be
         approved, online, and reporting a recent location before tasks reach you.
       </p>

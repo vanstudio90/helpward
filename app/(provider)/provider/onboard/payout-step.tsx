@@ -89,7 +89,7 @@ export function PayoutStep({ state }: { state: PayoutState }) {
 
   if (state.payable) {
     return (
-      <p className="text-xs text-emerald-700 mt-1">
+      <p className="text-[13px] text-emerald-700 mt-1">
         Bank account connected. Earnings are paid out automatically.
       </p>
     );
@@ -107,7 +107,7 @@ export function PayoutStep({ state }: { state: PayoutState }) {
           not yet typed their date of birth was told their account had been
           paused, and sent to support for it. */}
       {disabled && (
-        <p className={`text-xs flex items-start gap-1.5 ${
+        <p className={`text-[13px] flex items-start gap-1.5 ${
           disabled.serious ? "text-rose-700" : "text-amber-700"
         }`}>
           <AlertTriangle className="w-3.5 h-3.5 mt-px shrink-0" aria-hidden="true" />
@@ -116,7 +116,7 @@ export function PayoutStep({ state }: { state: PayoutState }) {
       )}
 
       {state.started && state.requirementsDue.length > 0 && (
-        <div className="text-xs text-slate-600">
+        <div className="text-[13px] text-slate-600">
           <p className="font-semibold text-slate-700">Stripe still needs:</p>
           <ul className="mt-1 space-y-0.5 list-disc list-inside">
             {describeRequirements(state.requirementsDue).slice(0, 6).map((r) => (
@@ -126,7 +126,7 @@ export function PayoutStep({ state }: { state: PayoutState }) {
         </div>
       )}
 
-      <p className="text-xs text-slate-500">
+      <p className="text-[13px] text-slate-500">
         Stripe collects your bank and tax details on their own pages and handles your tax forms.
         Helpward never sees your account number.
       </p>
@@ -136,7 +136,7 @@ export function PayoutStep({ state }: { state: PayoutState }) {
           <button
             type="submit"
             disabled={starting}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-600 text-white text-xs font-semibold disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-field bg-brand-600 text-white text-[13px] font-semibold disabled:opacity-50"
           >
             <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
             {starting ? "Opening Stripe…" : state.started ? "Finish payout setup" : "Set up payouts"}
@@ -148,7 +148,7 @@ export function PayoutStep({ state }: { state: PayoutState }) {
             <button
               type="submit"
               disabled={refreshing}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-700 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-field border border-slate-300 bg-white text-[13px] font-semibold text-slate-700 disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
               Check status
@@ -157,8 +157,8 @@ export function PayoutStep({ state }: { state: PayoutState }) {
         )}
       </div>
 
-      {message?.error && <p className="text-xs text-rose-700">{message.error}</p>}
-      {message?.success && <p className="text-xs text-emerald-700">{message.success}</p>}
+      {message?.error && <p className="text-[13px] text-rose-700">{message.error}</p>}
+      {message?.success && <p className="text-[13px] text-emerald-700">{message.success}</p>}
     </div>
   );
 }

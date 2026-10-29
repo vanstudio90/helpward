@@ -99,13 +99,13 @@ export function ScheduleEditor({
     <div className="space-y-6">
       <VacationCard initial={vacation} />
 
-      <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
+      <section className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
-            <h2 className="text-base font-bold text-slate-900 inline-flex items-center gap-2">
+            <h2 className="text-[18px] font-extrabold text-slate-900 inline-flex items-center gap-2">
               <Calendar className="w-4 h-4 text-brand-600" /> Weekly hours
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-[13px] text-slate-500 mt-0.5">
               The hours you&apos;re typically available, repeated every week.{" "}
               {hours > 0 && <span className="font-semibold text-slate-700">~{hours} hours/week</span>}
             </p>
@@ -114,7 +114,7 @@ export function ScheduleEditor({
             <button
               type="button"
               onClick={copyToWeekdays}
-              className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1 shrink-0"
+              className="text-[13px] font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1 shrink-0"
               title="Copy Monday's first shift to Tue-Fri"
             >
               <Copy className="w-3 h-3" /> Same hours Mon–Fri
@@ -126,12 +126,12 @@ export function ScheduleEditor({
           {grouped.map((day) => (
             <li key={day.id} className="py-3 grid grid-cols-[80px_1fr] sm:grid-cols-[100px_1fr] gap-3 items-start">
               <div className="pt-2">
-                <div className="text-sm font-bold text-slate-900">{day.short}</div>
-                <div className="text-[10px] text-slate-400 hidden sm:block">{day.long}</div>
+                <div className="text-[15px] font-bold text-slate-900">{day.short}</div>
+                <div className="text-[12px] text-slate-400 hidden sm:block">{day.long}</div>
               </div>
               <div className="space-y-2">
                 {day.shifts.length === 0 && (
-                  <div className="text-xs text-slate-400 italic py-2">Not available</div>
+                  <div className="text-[13px] text-slate-400 italic py-2">Not available</div>
                 )}
                 {day.shifts.map((s) => (
                   <ShiftRow
@@ -144,7 +144,7 @@ export function ScheduleEditor({
                 <button
                   type="button"
                   onClick={() => addShift(day.id)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800"
+                  className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand-700 hover:text-brand-800"
                 >
                   <Plus className="w-3 h-3" /> Add shift
                 </button>
@@ -154,12 +154,12 @@ export function ScheduleEditor({
         </ul>
 
         {saveState?.error && (
-          <div className="mt-3 flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
+          <div className="mt-3 flex items-start gap-2 text-[15px] text-rose-700 bg-rose-50 border border-rose-100 rounded-field p-2.5">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {saveState.error}
           </div>
         )}
         {saveState?.success && (
-          <div className="mt-3 flex items-start gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">
+          <div className="mt-3 flex items-start gap-2 text-[15px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-field p-2.5">
             <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> {saveState.success}
           </div>
         )}
@@ -169,7 +169,7 @@ export function ScheduleEditor({
             type="button"
             onClick={save}
             disabled={savePending}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-field bg-slate-900 text-white text-[15px] font-semibold disabled:opacity-50"
           >
             {savePending ? "Saving…" : "Save schedule"}
           </button>
@@ -177,7 +177,7 @@ export function ScheduleEditor({
             type="button"
             onClick={() => { setEditorRules(fromDb(initialRules)); setSaveState(undefined); }}
             disabled={savePending}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700"
+            className="px-4 py-2.5 rounded-field border border-slate-200 text-[15px] font-semibold text-slate-700"
           >
             Discard changes
           </button>
@@ -222,22 +222,22 @@ function ShiftRow({
         type="time"
         value={rule.start_time}
         onChange={(e) => onChange({ start_time: e.target.value })}
-        className={cn("w-28 px-2 py-1.5 rounded-lg bg-white border text-sm focus:outline-none focus:ring-2",
+        className={cn("w-28 px-2 py-1.5 rounded-field bg-white border text-[15px] focus:outline-none focus:ring-2",
           invalid ? "border-rose-300 focus:ring-rose-200" : "border-slate-200 focus:ring-brand-200")}
       />
-      <span className="text-xs text-slate-400">to</span>
+      <span className="text-[13px] text-slate-400">to</span>
       <input
         type="time"
         value={rule.end_time}
         onChange={(e) => onChange({ end_time: e.target.value })}
-        className={cn("w-28 px-2 py-1.5 rounded-lg bg-white border text-sm focus:outline-none focus:ring-2",
+        className={cn("w-28 px-2 py-1.5 rounded-field bg-white border text-[15px] focus:outline-none focus:ring-2",
           invalid ? "border-rose-300 focus:ring-rose-200" : "border-slate-200 focus:ring-brand-200")}
       />
       <button
         type="button"
         onClick={onRemove}
         aria-label="Remove shift"
-        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+        className="p-1.5 rounded-field text-slate-400 hover:text-rose-600 hover:bg-rose-50"
       >
         <X className="w-3.5 h-3.5" />
       </button>
@@ -261,14 +261,14 @@ function VacationCard({ initial }: { initial: { on: boolean; returnsOn: string |
   };
 
   return (
-    <section className={cn("rounded-2xl border p-4 sm:p-5", on ? "bg-amber-50 border-amber-200" : "bg-white border-slate-100")}>
+    <section className={cn("rounded-card border p-4 sm:p-5", on ? "bg-amber-50 border-amber-200" : "bg-white border-slate-100")}>
       <div className="flex items-start gap-3">
-        <span className={cn("w-10 h-10 rounded-xl inline-flex items-center justify-center shrink-0", on ? "bg-amber-100" : "bg-slate-50")}>
+        <span className={cn("w-10 h-10 rounded-field inline-flex items-center justify-center shrink-0", on ? "bg-amber-100" : "bg-slate-50")}>
           <Plane className={cn("w-5 h-5", on ? "text-amber-700" : "text-slate-500")} />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-bold text-slate-900">Vacation mode</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h2 className="text-[18px] font-extrabold text-slate-900">Vacation mode</h2>
+          <p className="text-[13px] text-slate-500 mt-0.5">
             Temporarily mark yourself as unavailable without erasing your weekly schedule.
             {on && returnsOn && <span className="text-amber-800 font-semibold"> Returning {new Date(returnsOn).toLocaleDateString()}.</span>}
           </p>
@@ -288,25 +288,25 @@ function VacationCard({ initial }: { initial: { on: boolean; returnsOn: string |
       </div>
       {on && (
         <div className="mt-3 flex items-center gap-2">
-          <label className="text-xs font-semibold text-slate-700">Returning on</label>
+          <label className="text-[13px] font-semibold text-slate-700">Returning on</label>
           <input
             type="date"
             value={returnsOn}
             min={new Date().toISOString().slice(0, 10)}
             onChange={(e) => setReturnsOn(e.target.value)}
-            className="px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+            className="px-2 py-1.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-amber-200"
           />
           <button
             type="button"
             onClick={() => submit(true)}
             disabled={pending}
-            className="text-xs font-semibold text-amber-800 hover:text-amber-900"
+            className="text-[13px] font-semibold text-amber-800 hover:text-amber-900"
           >
             Update
           </button>
         </div>
       )}
-      {state?.error && <div className="mt-2 text-xs text-rose-700">{state.error}</div>}
+      {state?.error && <div className="mt-2 text-[13px] text-rose-700">{state.error}</div>}
     </section>
   );
 }
@@ -404,34 +404,34 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
   const pastCount = overrides.length - visible.length;
 
   return (
-    <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
+    <section className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-bold text-slate-900 inline-flex items-center gap-2">
+        <h2 className="text-[18px] font-extrabold text-slate-900 inline-flex items-center gap-2">
           <Clock className="w-4 h-4 text-brand-600" /> One-off dates
         </h2>
         {!open && (
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
+            className="text-[13px] font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
           >
             <Plus className="w-3 h-3" /> Add date
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-500 mb-3">
+      <p className="text-[13px] text-slate-500 mb-3">
         Mark a single date as off (vacation, sick day) or add an extra shift outside your weekly hours.
         Overrides win over weekly rules for that date.
       </p>
 
       {open && (
-        <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+        <div className="mb-3 rounded-field border border-slate-200 bg-slate-50 p-3 space-y-2">
           <label className="block">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Type</span>
+            <span className="text-[12px] font-bold uppercase tracking-wide text-slate-500">Type</span>
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value as "off" | "off-range" | "extra")}
-              className="mt-1 w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+              className="mt-1 w-full px-2 py-1.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
             >
               <option value="off">Time off — single day</option>
               <option value="off-range">Time off — date range</option>
@@ -441,7 +441,7 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
 
           <div className={cn("grid gap-2", kind === "off-range" ? "grid-cols-2" : "grid-cols-1")}>
             <label className="block">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+              <span className="text-[12px] font-bold uppercase tracking-wide text-slate-500">
                 {kind === "off-range" ? "Start" : "Date"}
               </span>
               <input
@@ -454,12 +454,12 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
                   // Keep end >= start when in range mode
                   if (kind === "off-range" && endDate < e.target.value) setEndDate(e.target.value);
                 }}
-                className="mt-1 w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+                className="mt-1 w-full px-2 py-1.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
               />
             </label>
             {kind === "off-range" && (
               <label className="block">
-                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">End (inclusive)</span>
+                <span className="text-[12px] font-bold uppercase tracking-wide text-slate-500">End (inclusive)</span>
                 <input
                   type="date"
                   value={endDate}
@@ -467,7 +467,7 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
                   max={maxDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className={cn(
-                    "mt-1 w-full px-2 py-1.5 rounded-lg bg-white border text-sm focus:outline-none focus:ring-2",
+                    "mt-1 w-full px-2 py-1.5 rounded-field bg-white border text-[15px] focus:outline-none focus:ring-2",
                     rangeInvalid
                       ? "border-rose-300 focus:ring-rose-200"
                       : "border-slate-200 focus:ring-brand-200",
@@ -485,28 +485,28 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   className={cn(
-                    "w-28 px-2 py-1.5 rounded-lg bg-white border text-sm",
+                    "w-28 px-2 py-1.5 rounded-field bg-white border text-[15px]",
                     extraInvalid ? "border-rose-300" : "border-slate-200",
                   )}
                 />
-                <span className="text-xs text-slate-400">to</span>
+                <span className="text-[13px] text-slate-400">to</span>
                 <input
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
                   className={cn(
-                    "w-28 px-2 py-1.5 rounded-lg bg-white border text-sm",
+                    "w-28 px-2 py-1.5 rounded-field bg-white border text-[15px]",
                     extraInvalid ? "border-rose-300" : "border-slate-200",
                   )}
                 />
               </div>
               {extraInvalid && (
-                <div className="text-[11px] text-rose-700">End time must be after start time.</div>
+                <div className="text-[13px] text-rose-700">End time must be after start time.</div>
               )}
             </>
           )}
           <label className="block">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Label (optional)</span>
+            <span className="text-[12px] font-bold uppercase tracking-wide text-slate-500">Label (optional)</span>
             <input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
@@ -516,23 +516,23 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
                 : kind === "off-range" ? "Vacation, conference, family trip…"
                 : "Vacation, sick day, family event…"
               }
-              className="mt-1 w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+              className="mt-1 w-full px-2 py-1.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
             />
           </label>
-          {state?.error && <div className="text-xs text-rose-700">{state.error}</div>}
+          {state?.error && <div className="text-[13px] text-rose-700">{state.error}</div>}
           <div className="flex items-center gap-2 pt-1">
             <button
               type="button"
               onClick={add}
               disabled={pending || extraInvalid || rangeInvalid}
-              className="px-4 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold disabled:opacity-50"
+              className="px-4 py-1.5 rounded-field bg-slate-900 text-white text-[13px] font-semibold disabled:opacity-50"
             >
               {pending ? "Adding…" : kind === "off-range" ? "Add date range" : "Add"}
             </button>
             <button
               type="button"
               onClick={() => { setOpen(false); setState(undefined); }}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700"
+              className="px-3 py-1.5 rounded-field border border-slate-200 text-[13px] font-semibold text-slate-700"
             >
               Cancel
             </button>
@@ -545,7 +545,7 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
           <button
             type="button"
             onClick={() => setShowPast((v) => !v)}
-            className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+            className="text-[13px] font-semibold text-slate-500 hover:text-slate-700"
           >
             {showPast
               ? `Hide past (${pastCount})`
@@ -554,7 +554,7 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
         </div>
       )}
       {visible.length === 0 ? (
-        <p className="text-xs text-slate-400 text-center py-4">
+        <p className="text-[13px] text-slate-400 text-center py-4">
           {overrides.length === 0 ? "No upcoming overrides." : "No upcoming overrides — past ones hidden."}
         </p>
       ) : (
@@ -565,13 +565,13 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
             });
             return (
               <li key={o.id} className="py-2.5 flex items-center gap-3">
-                <span className={cn("inline-flex w-9 h-9 rounded-lg items-center justify-center shrink-0",
+                <span className={cn("inline-flex w-9 h-9 rounded-field items-center justify-center shrink-0",
                   o.is_unavailable ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700")}>
                   {o.is_unavailable ? <Plane className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-slate-900">{niceDate}</div>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[15px] font-bold text-slate-900">{niceDate}</div>
+                  <div className="text-[13px] text-slate-500">
                     {o.is_unavailable
                       ? "Off all day"
                       : `Extra shift ${o.start_time?.slice(0,5)}–${o.end_time?.slice(0,5)}`}
@@ -583,7 +583,7 @@ function OverridesCard({ initial }: { initial: DateOverride[] }) {
                   onClick={() => remove(o.id)}
                   disabled={pending}
                   aria-label="Remove override"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                  className="p-1.5 rounded-field text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

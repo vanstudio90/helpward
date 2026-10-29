@@ -55,8 +55,8 @@ export function PortfolioGrid({ initial }: { initial: PortfolioPhoto[] }) {
 
   if (photos.length === 0) {
     return (
-      <div className="rounded-2xl bg-white border border-slate-100 p-8 text-center">
-        <p className="text-sm text-slate-500 max-w-sm mx-auto">
+      <div className="bg-white rounded-card border border-slate-100 shadow-soft p-8 text-center">
+        <p className="text-[15px] text-slate-500 max-w-sm mx-auto">
           No completed-task photos yet. After you wrap a booking and snap a proof photo, it shows up here ready
           to feature on your public profile.
         </p>
@@ -66,7 +66,7 @@ export function PortfolioGrid({ initial }: { initial: PortfolioPhoto[] }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3 text-xs">
+      <div className="flex items-center justify-between mb-3 text-[13px]">
         <div className="text-slate-500">
           <span className="font-bold text-slate-900 tabular-nums">{featuredCount}</span> of {photos.length} photos featured
         </div>
@@ -84,22 +84,22 @@ export function PortfolioGrid({ initial }: { initial: PortfolioPhoto[] }) {
             <li
               key={p.id}
               className={cn(
-                "rounded-2xl overflow-hidden border bg-white",
+                "rounded-card overflow-hidden border bg-white",
                 p.isPortfolio ? "border-amber-200 ring-2 ring-amber-100" : "border-slate-100",
               )}
             >
               <div className="relative aspect-square bg-slate-100">
                 <img src={p.signedUrl} alt={p.portfolioCaption ?? p.caption ?? "Completed task"} className="w-full h-full object-cover" />
                 {p.isPortfolio && (
-                  <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-amber-900 bg-amber-100 px-2 py-1 rounded-full">
+                  <span className="absolute top-2 left-2 inline-flex items-center gap-1 text-[12px] font-bold uppercase tracking-wide text-amber-900 bg-amber-100 px-2 py-1 rounded-full">
                     <Star className="w-2.5 h-2.5 fill-current" /> Featured
                   </span>
                 )}
               </div>
               <div className="p-3 space-y-2">
                 <div>
-                  <div className="text-xs font-bold text-slate-900 truncate" title={p.serviceTitle}>{p.serviceTitle}</div>
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-[13px] font-bold text-slate-900 truncate" title={p.serviceTitle}>{p.serviceTitle}</div>
+                  <div className="text-[12px] text-slate-500">
                     {new Date(p.completedAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
                   </div>
                 </div>
@@ -107,7 +107,7 @@ export function PortfolioGrid({ initial }: { initial: PortfolioPhoto[] }) {
                 {!editing ? (
                   <div className="flex items-start gap-1.5">
                     <p className={cn(
-                      "text-[11px] flex-1 min-w-0 leading-snug",
+                      "text-[13px] flex-1 min-w-0 leading-snug",
                       p.portfolioCaption ? "text-slate-700" : "text-slate-400 italic",
                     )}>
                       {p.portfolioCaption ?? "No portfolio caption yet"}
@@ -129,9 +129,9 @@ export function PortfolioGrid({ initial }: { initial: PortfolioPhoto[] }) {
                       autoFocus
                       rows={2}
                       placeholder="Short portfolio caption — what you did, e.g. 'mulched and edged 200 sqft'"
-                      className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-[11px]"
+                      className="w-full px-2 py-1.5 rounded-field border border-slate-200 text-[13px]"
                     />
-                    <div className="flex items-center justify-between text-[10px] text-slate-500">
+                    <div className="flex items-center justify-between text-[12px] text-slate-500">
                       <span>{draftCaption.length}/200</span>
                       <div className="flex gap-1">
                         <button
@@ -161,7 +161,7 @@ export function PortfolioGrid({ initial }: { initial: PortfolioPhoto[] }) {
                   onClick={() => toggle(p)}
                   disabled={pending}
                   className={cn(
-                    "w-full inline-flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold border transition disabled:opacity-50",
+                    "w-full inline-flex items-center justify-center gap-1.5 py-1.5 rounded-field text-[13px] font-bold border transition disabled:opacity-50",
                     p.isPortfolio
                       ? "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                       : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100",
@@ -176,7 +176,7 @@ export function PortfolioGrid({ initial }: { initial: PortfolioPhoto[] }) {
         })}
       </ul>
 
-      <p className="text-[11px] text-slate-500 mt-4 leading-snug inline-flex items-start gap-1.5">
+      <p className="text-[13px] text-slate-500 mt-4 leading-snug inline-flex items-start gap-1.5">
         <CheckCircle2 className="w-3 h-3 mt-0.5 shrink-0 text-emerald-600" />
         Customers can remove individual photos from your portfolio at any time from their booking page.
         We auto-hide your portfolio if your account is paused or removed.

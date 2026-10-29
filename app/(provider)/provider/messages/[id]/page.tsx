@@ -36,7 +36,7 @@ export default async function ProviderConversationPage({
   return (
     <div className="h-[calc(100vh-60px)] lg:h-[calc(100vh-0px)] flex flex-col max-w-3xl mx-auto">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-white">
-        <Link href="/provider/messages" aria-label="Back" className="p-1.5 -ml-1 rounded-lg hover:bg-slate-100 shrink-0">
+        <Link href="/provider/messages" aria-label="Back" className="p-1.5 -ml-1 rounded-field hover:bg-slate-100 shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         {customer?.avatar_url ? (
@@ -47,11 +47,11 @@ export default async function ProviderConversationPage({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-slate-900 truncate">
+          <div className="text-[15px] font-bold text-slate-900 truncate">
             {customer?.full_name ?? "Customer"}
           </div>
           {booking?.service?.title && (
-            <div className="text-[11px] text-slate-500 truncate">
+            <div className="text-[13px] text-slate-500 truncate">
               {booking.service.title} · Booking #{booking.id.slice(0, 8)}
             </div>
           )}

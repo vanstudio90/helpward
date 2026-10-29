@@ -56,7 +56,7 @@ export function ProviderSideNav({ offerCount = 0 }: { offerCount?: number }) {
       {groups.map((g, gi) => (
         <div key={g.title ?? gi}>
           {g.title && (
-            <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+            <div className="px-3 mb-1.5 text-[12px] font-bold uppercase tracking-wide text-slate-400">
               {g.title}
             </div>
           )}
@@ -70,7 +70,7 @@ export function ProviderSideNav({ offerCount = 0 }: { offerCount?: number }) {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
+                    "relative flex items-center gap-3 px-3 py-2.5 rounded-field text-[15px] font-medium transition-colors",
                     active
                       ? "bg-brand-50 text-brand-900"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
@@ -82,7 +82,7 @@ export function ProviderSideNav({ offerCount = 0 }: { offerCount?: number }) {
                   <Icon className={cn("w-5 h-5 shrink-0", active ? "text-brand-600" : "text-slate-400")} aria-hidden="true" />
                   <span className="flex-1 truncate">{item.label}</span>
                   {item.href === "/provider/inbox" && offerCount > 0 && (
-                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-brand-600 text-white text-[11px] font-bold flex items-center justify-center">
+                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-brand-600 text-white text-[13px] font-bold flex items-center justify-center">
                       {offerCount > 9 ? "9+" : offerCount}
                     </span>
                   )}

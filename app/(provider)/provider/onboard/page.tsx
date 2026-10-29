@@ -103,7 +103,7 @@ export default async function ProviderOnboardPage({
       {/* What the helper is actually waiting on, which is not always this
           list. Approval is a decision a person at Helpward makes; the
           page used to imply the checklist alone decided it. */}
-      <p className="text-sm text-slate-500 mt-1">
+      <p className="text-[15px] text-slate-500 mt-1">
         {ready
           ? allStepsDone
             ? "You're approved and set up. Go online from your dashboard to start receiving offers."
@@ -117,10 +117,10 @@ export default async function ProviderOnboardPage({
 
       <ol className="mt-6 space-y-3">
         {steps.map((s, i) => (
-          <li key={s.key} className="rounded-2xl bg-white border border-slate-100 p-4 flex items-start gap-3">
+          <li key={s.key} className="bg-white rounded-card border border-slate-100 shadow-soft p-4 flex items-start gap-3">
             {/* The "blocked" styling that was here served the two
                 unwireable steps, which are gone, so it served nothing. */}
-            <span className={`w-8 h-8 rounded-full inline-flex items-center justify-center text-sm font-bold shrink-0 ${
+            <span className={`w-8 h-8 rounded-full inline-flex items-center justify-center text-[15px] font-bold shrink-0 ${
               s.done ? "bg-emerald-500 text-white" : "bg-brand-600 text-white"
             }`}>
               {s.done ? <Check className="w-4 h-4" /> : i + 1}
@@ -133,20 +133,20 @@ export default async function ProviderOnboardPage({
                 and tapping "Select services" on the dashboard landed on a
                 page whose visible content was about bank accounts. */}
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-slate-900">{s.title}</div>
+              <div className="text-[15px] font-bold text-slate-900">{s.title}</div>
               {s.done && s.key !== "payouts" && (
-                <div className="text-xs text-emerald-700 mt-0.5">Completed</div>
+                <div className="text-[13px] text-emerald-700 mt-0.5">Completed</div>
               )}
 
               {s.key === "profile" && (
                 <div className="mt-1">
-                  <p className="text-xs text-slate-600 leading-relaxed">
+                  <p className="text-[13px] text-slate-600 leading-relaxed">
                     Add your name, a photo and a short description. This is what a
                     customer reads when deciding who to book.
                   </p>
                   <Link
                     href="/provider/profile"
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-700"
+                    className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-700"
                   >
                     {s.done ? "Edit your profile" : "Complete your profile"} →
                   </Link>
@@ -167,7 +167,7 @@ export default async function ProviderOnboardPage({
         ))}
       </ol>
 
-      <p className="mt-4 text-xs text-slate-500 leading-relaxed">
+      <p className="mt-4 text-[13px] text-slate-500 leading-relaxed">
         Helpward does not currently run ID verification or criminal background
         checks. Applications are read and approved by a person. If that changes,
         you&rsquo;ll be asked for them here before it applies to you.
@@ -175,7 +175,7 @@ export default async function ProviderOnboardPage({
 
       <Link
         href="/provider/dashboard"
-        className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-700"
+        className="mt-6 inline-flex items-center gap-2 text-[15px] font-semibold text-brand-700"
       >
         ← Back to dashboard
       </Link>

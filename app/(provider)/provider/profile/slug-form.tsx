@@ -12,17 +12,17 @@ export function SlugForm({ initial }: { initial: string | null }) {
   const [state, formAction, pending] = useActionState(setProviderSlugAction, undefined);
 
   return (
-    <form action={formAction} className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-      <h2 className="text-base font-bold text-slate-900 inline-flex items-center gap-2 mb-1">
+    <form action={formAction} className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
+      <h2 className="text-[18px] font-extrabold text-slate-900 inline-flex items-center gap-2 mb-1">
         <Link2 className="w-4 h-4 text-brand-600" /> Public profile URL
       </h2>
-      <p className="text-xs text-slate-500 mb-3 leading-relaxed">
-        Your shareable profile lives at <code className="text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">helpward.com/helpers/&lt;your-slug&gt;</code>.
+      <p className="text-[13px] text-slate-500 mb-3 leading-relaxed">
+        Your shareable profile lives at <code className="text-[13px] bg-slate-100 px-1.5 py-0.5 rounded">helpward.com/helpers/&lt;your-slug&gt;</code>.
         Pick something memorable — customers will see it on every shared link.
       </p>
 
-      <label className="flex items-center gap-0 rounded-lg overflow-hidden border border-slate-200 focus-within:ring-4 focus-within:ring-brand-100 focus-within:border-brand-400">
-        <span className="px-3 py-2 bg-slate-50 text-xs text-slate-500 font-mono shrink-0">/helpers/</span>
+      <label className="flex items-center gap-0 rounded-field overflow-hidden border border-slate-200 focus-within:ring-4 focus-within:ring-brand-100 focus-within:border-brand-400">
+        <span className="px-3 py-2 bg-slate-50 text-[13px] text-slate-500 font-mono shrink-0">/helpers/</span>
         <input
           type="text"
           name="slug"
@@ -32,18 +32,18 @@ export function SlugForm({ initial }: { initial: string | null }) {
           maxLength={60}
           pattern="[a-z0-9][a-z0-9\-]*[a-z0-9]"
           placeholder="maya-r"
-          className="flex-1 min-w-0 px-2 py-2 text-sm font-mono focus:outline-none"
+          className="flex-1 min-w-0 px-2 py-2 text-[15px] font-mono focus:outline-none"
           disabled={pending}
         />
       </label>
-      <p className="text-[10px] text-slate-500 mt-1">
+      <p className="text-[12px] text-slate-500 mt-1">
         Lowercase letters, numbers, and dashes only. 3–60 characters. Cannot start or end with a dash.
       </p>
 
       <button
         type="submit"
         disabled={pending}
-        className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-50"
+        className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-field bg-brand-600 text-white text-[15px] font-semibold disabled:opacity-50"
       >
         {pending ? "Saving…" : "Save URL"}
       </button>
@@ -52,7 +52,7 @@ export function SlugForm({ initial }: { initial: string | null }) {
           top is scrolled off at the moment it appears. */}
       {(state?.error || state?.success) && (
         <p role="status" aria-live="polite"
-          className={`mt-3 flex items-start gap-1.5 text-xs rounded-lg px-2.5 py-2 border ${
+          className={`mt-3 flex items-start gap-1.5 text-[13px] rounded-field px-2.5 py-2 border ${
             state.error
               ? "text-rose-700 bg-rose-50 border-rose-100"
               : "text-emerald-800 bg-emerald-50 border-emerald-100"

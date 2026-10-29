@@ -12,7 +12,7 @@ export function InboxRow({ requestId }: { requestId: string }) {
         <button
           type="submit"
           disabled={pending}
-          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-field border border-slate-200 text-[15px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
         >
           <X className="w-4 h-4" /> Decline
         </button>
@@ -21,7 +21,7 @@ export function InboxRow({ requestId }: { requestId: string }) {
         <button
           type="submit"
           disabled={pending}
-          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60"
+          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-field bg-emerald-600 text-white text-[15px] font-semibold hover:bg-emerald-700 disabled:opacity-60"
         >
           <Check className="w-4 h-4" /> Accept task
         </button>

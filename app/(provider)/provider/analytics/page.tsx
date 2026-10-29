@@ -45,7 +45,7 @@ export default async function HelperAnalyticsPage() {
         <a
           href="/api/provider/export/bookings?days=90"
           download
-          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-field border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 hover:bg-slate-50"
           title="Download the last 90 days of bookings as CSV — accountant-ready"
         >
           <Download className="w-3.5 h-3.5" /> Export 90-day CSV
@@ -87,23 +87,23 @@ export default async function HelperAnalyticsPage() {
 
       {/* Bookings sparkline + repeat-customer card */}
       <div className="grid lg:grid-cols-3 gap-4 mb-6">
-        <section className="lg:col-span-2 rounded-2xl bg-white border border-slate-100 p-5">
+        <section className="lg:col-span-2 bg-white rounded-card border border-slate-100 shadow-soft p-5">
           <div className="flex items-start justify-between mb-3">
             <div>
-              <h2 className="text-sm font-bold text-slate-900 inline-flex items-center gap-2">
+              <h2 className="text-[15px] font-bold text-slate-900 inline-flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-brand-600" /> Bookings per week
               </h2>
-              <div className="text-xs text-slate-500 mt-0.5">Last 12 weeks</div>
+              <div className="text-[13px] text-slate-500 mt-0.5">Last 12 weeks</div>
             </div>
             {prevWeek && (
               <div className="text-right">
-                <div className={`text-xs font-bold ${
+                <div className={`text-[13px] font-bold ${
                   weekDelta > 0 ? "text-emerald-700"
                   : weekDelta < 0 ? "text-rose-700" : "text-slate-500"
                 }`}>
                   {weekDelta > 0 ? "+" : ""}{weekDelta} vs prior week
                 </div>
-                <div className="text-[11px] text-slate-500">{lastWeek?.count ?? 0} this week</div>
+                <div className="text-[13px] text-slate-500">{lastWeek?.count ?? 0} this week</div>
               </div>
             )}
           </div>
@@ -113,29 +113,29 @@ export default async function HelperAnalyticsPage() {
           <div className="mt-3 text-violet-600">
             <Sparkline values={weeklyPayouts} width={640} height={48} strokeWidth={2} ariaLabel="Payout per week, last 12 weeks" color="#7c3aed" />
           </div>
-          <p className="text-[11px] text-slate-500 mt-2">
+          <p className="text-[13px] text-slate-500 mt-2">
             Top line: booking count. Bottom: payout dollars (mirrors count when prices are stable; diverges when you take more or fewer high-ticket tasks).
           </p>
         </section>
 
-        <section className="rounded-2xl bg-white border border-slate-100 p-5">
-          <h2 className="text-sm font-bold text-slate-900 inline-flex items-center gap-2 mb-3">
+        <section className="bg-white rounded-card border border-slate-100 shadow-soft p-5">
+          <h2 className="text-[15px] font-bold text-slate-900 inline-flex items-center gap-2 mb-3">
             <Users className="w-4 h-4 text-rose-600" /> Repeat customers
           </h2>
           {a.kpis.repeatCustomerRatePct != null ? (
             <>
               <div className="text-3xl font-bold text-slate-900">{a.kpis.repeatCustomerRatePct}%</div>
-              <p className="text-xs text-slate-500 mt-1 leading-snug">
+              <p className="text-[13px] text-slate-500 mt-1 leading-snug">
                 of your completed bookings are from customers who&apos;ve hired you more than once.
               </p>
-              <p className="text-[11px] text-slate-500 mt-2 leading-snug">
+              <p className="text-[13px] text-slate-500 mt-2 leading-snug">
                 {a.kpis.repeatCustomerRatePct >= 30
                   ? "Strong loyalty — customers like working with you and come back."
                   : "Solid baseline. Saving favorites + portfolio photos tends to lift this."}
               </p>
             </>
           ) : (
-            <p className="text-xs text-slate-500 leading-snug">
+            <p className="text-[13px] text-slate-500 leading-snug">
               We start showing repeat-customer rate after 5 completed bookings — gives us enough signal to draw a meaningful line.
             </p>
           )}
@@ -143,12 +143,12 @@ export default async function HelperAnalyticsPage() {
       </div>
 
       {/* Top services */}
-      <section className="rounded-2xl bg-white border border-slate-100 p-5 mb-6">
-        <h2 className="text-sm font-bold text-slate-900 inline-flex items-center gap-2 mb-3">
+      <section className="bg-white rounded-card border border-slate-100 shadow-soft p-5 mb-6">
+        <h2 className="text-[15px] font-bold text-slate-900 inline-flex items-center gap-2 mb-3">
           <BarChart3 className="w-4 h-4 text-brand-600" /> Top services by payout
         </h2>
         {a.topServices.length === 0 ? (
-          <p className="text-xs text-slate-500 italic py-2">No completed services yet.</p>
+          <p className="text-[13px] text-slate-500 italic py-2">No completed services yet.</p>
         ) : (
           <ul className="space-y-2">
             {a.topServices.map((s) => {
@@ -158,13 +158,13 @@ export default async function HelperAnalyticsPage() {
               return (
                 <li key={s.serviceTitle} className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
                   <div className="min-w-0">
-                    <div className="text-sm font-bold text-slate-900 truncate">{s.serviceTitle}</div>
+                    <div className="text-[15px] font-bold text-slate-900 truncate">{s.serviceTitle}</div>
                     <div className="relative h-2 mt-1.5 rounded-full bg-slate-100 overflow-hidden">
                       <div className="absolute inset-y-0 left-0 bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
-                  <div className="text-xs font-bold text-slate-900 tabular-nums">{formatMoney(s.payoutCents)}</div>
-                  <div className="text-[11px] text-slate-500 tabular-nums w-10 text-right">{s.bookings}×</div>
+                  <div className="text-[13px] font-bold text-slate-900 tabular-nums">{formatMoney(s.payoutCents)}</div>
+                  <div className="text-[13px] text-slate-500 tabular-nums w-10 text-right">{s.bookings}×</div>
                 </li>
               );
             })}
@@ -173,17 +173,17 @@ export default async function HelperAnalyticsPage() {
       </section>
 
       {/* Hour-of-day */}
-      <section className="rounded-2xl bg-white border border-slate-100 p-5 mb-6">
+      <section className="bg-white rounded-card border border-slate-100 shadow-soft p-5 mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-slate-900 inline-flex items-center gap-2">
+          <h2 className="text-[15px] font-bold text-slate-900 inline-flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-600" /> When offers come in
           </h2>
-          <span className="text-[10px] font-semibold text-slate-400 uppercase" title={a.timezone}>
+          <span className="text-[12px] font-semibold text-slate-400 uppercase" title={a.timezone}>
             {a.timezone === "UTC" ? "UTC" : `${a.timezone.split("/").slice(-1)[0].replace(/_/g, " ")} time`}
           </span>
         </div>
         {peakHour.count === 0 ? (
-          <p className="text-xs text-slate-500 italic py-2">
+          <p className="text-[13px] text-slate-500 italic py-2">
             No offers received yet — toggle yourself online from Active task to start receiving them.
           </p>
         ) : (
@@ -206,7 +206,7 @@ export default async function HelperAnalyticsPage() {
                 <div key={h.hour} className="text-center">{h.hour % 6 === 0 ? h.hour : ""}</div>
               ))}
             </div>
-            <p className="text-[11px] text-slate-500 mt-2 leading-snug">
+            <p className="text-[13px] text-slate-500 mt-2 leading-snug">
               Peak offer hour: <strong>{peakHour.hour}:00 {a.timezone === "UTC" ? "UTC" : "local"}</strong> ({peakHour.count} offer{peakHour.count === 1 ? "" : "s"} in the last 12 weeks). Aligning your schedule to overlap these hours raises your offer flow.
             </p>
           </>
@@ -214,9 +214,9 @@ export default async function HelperAnalyticsPage() {
       </section>
 
       {a.kpis.completedAllTime === 0 && (
-        <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
+        <div className="rounded-card bg-amber-50 border border-amber-200 p-4 flex items-start gap-3">
           <ZapOff className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-          <div className="text-xs text-amber-900 leading-relaxed">
+          <div className="text-[13px] text-amber-900 leading-relaxed">
             <strong>No completed tasks yet.</strong> Once you wrap your first booking, this page fills in
             with real numbers. Toggle online from <a href="/provider/active" className="font-semibold underline">Active task</a> to start receiving offers.
           </div>
@@ -230,13 +230,13 @@ function Kpi({
   icon, tint, label, value, sub,
 }: { icon: React.ReactNode; tint: string; label: string; value: string; sub: string }) {
   return (
-    <div className="rounded-2xl bg-white border border-slate-100 p-4">
+    <div className="bg-white rounded-card border border-slate-100 shadow-soft p-4">
       <div className="flex items-start justify-between mb-2">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-        <span className={`w-7 h-7 ${tint} rounded-lg inline-flex items-center justify-center shrink-0`}>{icon}</span>
+        <div className="text-[13px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+        <span className={`w-7 h-7 ${tint} rounded-field inline-flex items-center justify-center shrink-0`}>{icon}</span>
       </div>
       <div className="text-xl sm:text-2xl font-bold text-slate-900 tabular-nums">{value}</div>
-      <div className="text-[11px] text-slate-500 mt-0.5 truncate">{sub}</div>
+      <div className="text-[13px] text-slate-500 mt-0.5 truncate">{sub}</div>
     </div>
   );
 }

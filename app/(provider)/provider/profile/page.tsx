@@ -73,7 +73,7 @@ export default async function ProviderProfilePage() {
           profile" on step 1, filled it in and saved was simply stranded. */}
       <Link
         href={stillSettingUp ? "/provider/onboard" : "/provider/dashboard"}
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 mb-3"
+        className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-brand-700 mb-3"
       >
         <ArrowLeft className="w-4 h-4" aria-hidden="true" />
         {stillSettingUp ? "Setup steps" : "Dashboard"}
@@ -130,15 +130,15 @@ export default async function ProviderProfilePage() {
             last card. Each card saves on its own, so this is navigation,
             not a submit — it must not look like one more thing to press
             before the work counts. */}
-        <div className="rounded-2xl bg-brand-50 border border-brand-100 p-4 sm:p-5">
-          <p className="text-sm text-slate-700">
+        <div className="rounded-card bg-brand-50 border border-brand-100 p-4 sm:p-5">
+          <p className="text-[15px] text-slate-700">
             {stillSettingUp
               ? "Each card above saves on its own — there's nothing left to submit here."
               : "You're set up. Go online from your dashboard to start receiving offers."}
           </p>
           <Link
             href={stillSettingUp ? "/provider/onboard" : "/provider/dashboard"}
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold"
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 rounded-field bg-brand-600 text-white text-[15px] font-semibold"
           >
             {stillSettingUp ? "Back to your setup steps" : "Back to dashboard"}
             <ArrowRight className="w-4 h-4" aria-hidden="true" />

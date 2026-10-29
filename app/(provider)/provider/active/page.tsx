@@ -290,11 +290,11 @@ export default async function ProviderActivePage() {
   return (
     <div className="space-y-5">
       {pp?.offline_reason === "location_stale" && (
-        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" role="status">
-          <div className="text-sm font-bold text-amber-950">
+        <div className="mb-4 rounded-card border border-amber-200 bg-amber-50 p-4" role="status">
+          <div className="text-[15px] font-bold text-amber-950">
             You were marked offline — we stopped receiving your location
           </div>
-          <p className="text-xs text-amber-900/80 mt-0.5 leading-relaxed">
+          <p className="text-[13px] text-amber-900/80 mt-0.5 leading-relaxed">
             Helpward matches you to nearby jobs using your position, and it stops updating when this
             tab is closed or in the background. While it was stale you weren&rsquo;t being offered
             work. Go back online below, keep this tab open, and allow location when asked.
@@ -328,8 +328,8 @@ export default async function ProviderActivePage() {
           <span className="inline-flex w-14 h-14 rounded-field bg-slate-50 items-center justify-center mb-3">
             <Activity className="w-7 h-7 text-slate-400" />
           </span>
-          <h2 className="text-lg font-bold text-slate-900">No task offers yet</h2>
-          <p className="mt-1.5 text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
+          <h2 className="text-[20px] font-extrabold text-slate-900">No task offers yet</h2>
+          <p className="mt-1.5 text-[15px] text-slate-500 max-w-sm mx-auto leading-relaxed">
             Finish setting up your profile and we&rsquo;ll start sending you work in
             the cities you picked.
           </p>
@@ -347,11 +347,11 @@ export default async function ProviderActivePage() {
           subtitle="Keep this page open until the job is finished."
           action={<OnlineToggle initialOnline={pp?.is_online ?? false} />}
         />
-        <div className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
+        <div className="bg-white rounded-card border border-slate-100 shadow-soft overflow-hidden">
           {booking.service?.image_url && (
             <div className="h-40 bg-slate-100 relative">
               <img src={booking.service.image_url} alt="" className="w-full h-full object-cover" />
-              <span className={`absolute top-3 right-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+              <span className={`absolute top-3 right-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-semibold ${
                 booking.status === "in_progress" ? "bg-emerald-50 text-emerald-700" : "bg-brand-50 text-brand-700"
               }`}>
                 {booking.status === "in_progress" ? "In progress" : "Scheduled"}
@@ -360,8 +360,8 @@ export default async function ProviderActivePage() {
           )}
           <div className="p-5 space-y-5">
             <div>
-              <div className="text-base font-bold text-slate-900">{booking.service?.title}</div>
-              <div className="text-xs text-slate-500 mt-0.5">
+              <div className="text-[18px] font-extrabold text-slate-900">{booking.service?.title}</div>
+              <div className="text-[13px] text-slate-500 mt-0.5">
                 Payout: ${(booking.payout_cents / 100).toFixed(2)} {booking.currency}
                 {" · "}Customer pays ${(booking.total_cents / 100).toFixed(2)}
               </div>
@@ -376,8 +376,8 @@ export default async function ProviderActivePage() {
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-slate-900 truncate">{booking.customer?.full_name ?? "Customer"}</div>
-                <div className="text-xs text-slate-500">
+                <div className="text-[15px] font-bold text-slate-900 truncate">{booking.customer?.full_name ?? "Customer"}</div>
+                <div className="text-[13px] text-slate-500">
                   Customer{customerPhone ? ` · ${customerPhone}` : ""}
                 </div>
               </div>
@@ -387,22 +387,22 @@ export default async function ProviderActivePage() {
                 <a
                   href={`tel:${customerPhone}`}
                   aria-label={`Call ${booking.customer?.full_name ?? "the customer"}`}
-                  className="p-2 rounded-lg border border-brand-200 text-brand-700"
+                  className="p-2 rounded-field border border-brand-200 text-brand-700"
                 >
                   <Phone className="w-4 h-4" aria-hidden="true" />
                 </a>
               )}
-              <a href="/provider/messages" aria-label="Message" className="p-2 rounded-lg border border-brand-200 text-brand-700">
+              <a href="/provider/messages" aria-label="Message" className="p-2 rounded-field border border-brand-200 text-brand-700">
                 <MessageSquare className="w-4 h-4" />
               </a>
             </div>
 
-            <div className="rounded-xl bg-slate-50 p-3 text-sm">
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Pickup</div>
+            <div className="rounded-field bg-slate-50 p-3 text-[15px]">
+              <div className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide">Pickup</div>
               <div className="text-slate-900 mt-0.5">
                 {one(booking.pickup_addr?.pickup)?.formatted ?? "—"}
               </div>
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mt-2">When</div>
+              <div className="text-[13px] font-semibold text-slate-500 uppercase tracking-wide mt-2">When</div>
               <div className="text-slate-900 mt-0.5">
                 {booking.scheduled_for ? <ClientDateTime iso={booking.scheduled_for} /> : "ASAP"}
               </div>
@@ -415,14 +415,14 @@ export default async function ProviderActivePage() {
                 exactly when they need it. accept_request copies intake
                 onto the booking for this reason. */}
             {(brief.length > 0 || customerNotes) && (
-              <div className="rounded-xl bg-amber-50/60 border border-amber-100 p-3 text-sm">
-                <div className="text-[11px] font-semibold text-amber-800 uppercase tracking-wide">
+              <div className="rounded-field bg-amber-50/60 border border-amber-100 p-3 text-[15px]">
+                <div className="text-[13px] font-semibold text-amber-800 uppercase tracking-wide">
                   The brief
                 </div>
                 {brief.length > 0 && (
                   <dl className="mt-1.5 space-y-1">
                     {brief.map((item) => (
-                      <div key={item.label} className="flex gap-2 text-xs">
+                      <div key={item.label} className="flex gap-2 text-[13px]">
                         <dt className="text-slate-500 shrink-0">{item.label}</dt>
                         <dd className="text-slate-900 font-medium min-w-0">{item.value}</dd>
                       </div>
@@ -430,7 +430,7 @@ export default async function ProviderActivePage() {
                   </dl>
                 )}
                 {customerNotes && (
-                  <p className="mt-2 text-xs text-slate-700 whitespace-pre-wrap border-t border-amber-100 pt-2">
+                  <p className="mt-2 text-[13px] text-slate-700 whitespace-pre-wrap border-t border-amber-100 pt-2">
                     <span className="text-slate-500">Notes: </span>{customerNotes}
                   </p>
                 )}
@@ -446,7 +446,7 @@ export default async function ProviderActivePage() {
                 to photograph. Showing them asks a helper on a listening
                 call to photograph proof of a conversation. */}
             {!deliveredByCall && (
-              <div className="relative rounded-xl overflow-hidden h-44 bg-slate-100">
+              <div className="relative rounded-field overflow-hidden h-44 bg-slate-100">
                 <MapBackdrop />
               </div>
             )}
@@ -485,14 +485,14 @@ export default async function ProviderActivePage() {
                 helper got a bare error with no idea what to do about it —
                 the answer being nothing: it is the customer's bank. */}
             {booking.payment_status === "pending" && booking.status === "scheduled" && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
+              <div className="rounded-field border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-950">
                 <span className="font-bold">Waiting on the customer&rsquo;s bank.</span>{" "}
                 Their card needs confirming before you can start. We&rsquo;ve asked them —
                 message them if it stays like this.
               </div>
             )}
             {booking.payment_status === "failed" && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-950">
+              <div className="rounded-field border border-rose-200 bg-rose-50 p-3 text-[13px] text-rose-950">
                 <span className="font-bold">This booking can&rsquo;t be paid for.</span>{" "}
                 The customer&rsquo;s card was declined. Don&rsquo;t start work — contact support.
               </div>

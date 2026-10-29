@@ -64,7 +64,7 @@ export default async function ProviderPortfolioPage() {
     <div className="space-y-5">
       <Link
         href="/provider/earnings"
-        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 mb-4 hover:text-brand-800"
+        className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand-700 mb-4 hover:text-brand-800"
       >
         <ArrowLeft className="w-3.5 h-3.5" /> Back
       </Link>

@@ -77,11 +77,11 @@ export function InspectionReport({
 
   if (done) {
     return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-emerald-900">
+      <div className="rounded-field border border-emerald-200 bg-emerald-50 p-3">
+        <div className="flex items-center gap-2 text-[15px] font-semibold text-emerald-900">
           <Check className="w-4 h-4 shrink-0" aria-hidden="true" /> Report sent to the customer
         </div>
-        <p className="text-xs text-emerald-800/80 mt-1">
+        <p className="text-[13px] text-emerald-800/80 mt-1">
           You can mark this job complete now.
         </p>
       </div>
@@ -89,12 +89,12 @@ export function InspectionReport({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+    <div className="rounded-field border border-slate-200 bg-white p-3 space-y-3">
       <div className="flex items-start gap-2">
         <ClipboardCheck className="w-4 h-4 text-brand-600 mt-0.5 shrink-0" aria-hidden="true" />
         <div>
-          <h3 className="text-sm font-bold text-slate-900">Inspection report</h3>
-          <p className="text-xs text-slate-500">
+          <h3 className="text-[15px] font-bold text-slate-900">Inspection report</h3>
+          <p className="text-[13px] text-slate-500">
             The customer asked for {report.scope.length} area
             {report.scope.length === 1 ? "" : "s"}. This is what they are paying for, so the job
             can&rsquo;t be completed until it&rsquo;s sent.
@@ -104,8 +104,8 @@ export function InspectionReport({
 
       <ul className="space-y-2.5">
         {items.map((item) => (
-          <li key={item.id} className="rounded-lg border border-slate-100 p-2.5">
-            <div className="text-xs font-semibold text-slate-800">
+          <li key={item.id} className="rounded-field border border-slate-100 p-2.5">
+            <div className="text-[13px] font-semibold text-slate-800">
               {AREA_LABELS[item.area] ?? item.area}
             </div>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -116,7 +116,7 @@ export function InspectionReport({
                   disabled={pending}
                   onClick={() => setCondition(item, c.value)}
                   className={cn(
-                    "px-2.5 py-1 rounded-lg border text-[11px] font-semibold disabled:opacity-60",
+                    "px-2.5 py-1 rounded-field border text-[13px] font-semibold disabled:opacity-60",
                     item.condition === c.value
                       ? c.tone
                       : "bg-white border-slate-200 text-slate-600 hover:border-slate-300",
@@ -131,25 +131,25 @@ export function InspectionReport({
               defaultValue={item.note ?? ""}
               onBlur={(e) => setNote(item, e.target.value)}
               placeholder="What did you find? (optional)"
-              className="mt-2 w-full px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-100"
+              className="mt-2 w-full px-2.5 py-1.5 rounded-field bg-slate-50 border border-slate-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-100"
             />
           </li>
         ))}
       </ul>
 
       <label className="block">
-        <span className="text-xs font-semibold text-slate-700">Summary for the customer</span>
+        <span className="text-[13px] font-semibold text-slate-700">Summary for the customer</span>
         <textarea
           rows={3}
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
           placeholder="Anything they should know first."
-          className="mt-1 w-full px-2.5 py-2 rounded-lg bg-white border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-100"
+          className="mt-1 w-full px-2.5 py-2 rounded-field bg-white border border-slate-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-100"
         />
       </label>
 
       {error && (
-        <p className="text-xs text-rose-700 flex items-start gap-1.5">
+        <p className="text-[13px] text-rose-700 flex items-start gap-1.5">
           <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" aria-hidden="true" /> {error}
         </p>
       )}
@@ -165,7 +165,7 @@ export function InspectionReport({
             else setDone(true);
           });
         }}
-        className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-field bg-brand-600 text-white text-[15px] font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <Send className="w-4 h-4" aria-hidden="true" />
         {unchecked > 0

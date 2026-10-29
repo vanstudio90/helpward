@@ -66,23 +66,23 @@ export default async function ProviderLayout({ children }: { children: React.Rea
         <Link href="/" className="flex items-center gap-2 px-6 h-16 border-b border-slate-100">
           <Logo size={32} />
           <div>
-            <div className="text-base font-bold leading-tight">Helpward</div>
-            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.18em]">Helper</div>
+            <div className="text-[18px] font-extrabold leading-tight">Helpward</div>
+            <div className="text-[12px] text-slate-400 font-bold uppercase tracking-[0.18em]">Helper</div>
           </div>
         </Link>
         <ProviderSideNav offerCount={offerCount ?? 0} />
         <div className="px-3 pb-4 space-y-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-3">
-            <div className="text-xs text-slate-500">Logged in as</div>
-            <div className="text-sm font-semibold text-slate-900 truncate">{profile?.full_name}</div>
+          <div className="rounded-card border border-slate-200 bg-white p-3">
+            <div className="text-[13px] text-slate-500">Logged in as</div>
+            <div className="text-[15px] font-semibold text-slate-900 truncate">{profile?.full_name}</div>
             <form action={logoutAction}>
-              <button className="mt-2 w-full inline-flex items-center justify-center gap-2 text-xs font-semibold text-rose-600 border border-slate-200 rounded-lg py-2">
+              <button className="mt-2 w-full inline-flex items-center justify-center gap-2 text-[13px] font-semibold text-rose-600 border border-slate-200 rounded-field py-2">
                 <LogOut className="w-3.5 h-3.5" /> Log out
               </button>
             </form>
           </div>
           {pp?.status && (
-            <div className={`rounded-xl border p-3 text-xs ${
+            <div className={`rounded-field border p-3 text-[13px] ${
               pp.status === "approved" ? "border-emerald-200 bg-emerald-50 text-emerald-700"
               : pp.status === "pending" ? "border-amber-200 bg-amber-50 text-amber-700"
               : "border-rose-200 bg-rose-50 text-rose-700"

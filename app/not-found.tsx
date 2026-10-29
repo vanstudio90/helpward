@@ -15,17 +15,17 @@ export default function NotFound() {
       </header>
       <main className="flex-1 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <span className="inline-flex w-16 h-16 rounded-2xl bg-brand-50 items-center justify-center mb-4">
+          <span className="inline-flex w-16 h-16 rounded-card bg-brand-50 items-center justify-center mb-4">
             <Compass className="w-8 h-8 text-brand-600" />
           </span>
           <div className="text-6xl font-bold text-slate-900 leading-none">404</div>
           <h1 className="mt-3 text-xl font-bold text-slate-900">Page not found</h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-[15px] text-slate-600">
             The page you&apos;re looking for moved, or never existed.
           </p>
           <Link
             href="/"
-            className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold"
+            className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-btn bg-slate-900 text-white text-[15px] font-semibold"
           >
             <Home className="w-4 h-4" /> Back to home
           </Link>

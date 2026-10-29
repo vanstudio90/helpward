@@ -46,14 +46,14 @@ export function CrewPanel({
   const me = members.find((m) => m.providerId === viewerId);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+    <div className="rounded-field border border-slate-200 bg-white p-3 space-y-3">
       <div className="flex items-start gap-2">
         <Users className="w-4 h-4 text-brand-600 mt-0.5 shrink-0" aria-hidden="true" />
         <div className="min-w-0">
-          <h3 className="text-sm font-bold text-slate-900">
+          <h3 className="text-[15px] font-bold text-slate-900">
             {confirmed.length} of {crewSize} helpers confirmed
           </h3>
-          <p className="text-xs text-slate-500">
+          <p className="text-[13px] text-slate-500">
             {shortfall > 0
               ? `The customer paid for ${crewSize}. The job can't start until ${shortfall} more ${shortfall === 1 ? "joins" : "join"}.`
               : "Everyone the customer paid for is on this job."}
@@ -69,28 +69,28 @@ export function CrewPanel({
             return (
               <li
                 key={m.id}
-                className="flex items-center gap-2 rounded-lg border border-slate-100 px-2.5 py-2"
+                className="flex items-center gap-2 rounded-field border border-slate-100 px-2.5 py-2"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-semibold text-slate-800 truncate">
+                  <div className="text-[13px] font-semibold text-slate-800 truncate">
                     {m.name}
                     {m.isLead && (
-                      <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-brand-700">
+                      <span className="ml-1.5 text-[12px] font-bold uppercase tracking-wide text-brand-700">
                         lead
                       </span>
                     )}
                     {m.providerId === viewerId && (
-                      <span className="ml-1.5 text-[10px] text-slate-400">you</span>
+                      <span className="ml-1.5 text-[12px] text-slate-400">you</span>
                     )}
                   </div>
                   {m.shareCents > 0 && (
-                    <div className="text-[11px] text-slate-500 tabular-nums">
+                    <div className="text-[13px] text-slate-500 tabular-nums">
                       ${(m.shareCents / 100).toFixed(2)} {currency}
                     </div>
                   )}
                 </div>
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border shrink-0 ${tone.className}`}
+                  className={`text-[12px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border shrink-0 ${tone.className}`}
                 >
                   {tone.text}
                 </span>
@@ -110,7 +110,7 @@ export function CrewPanel({
               if (r?.error) setError(r.error);
             });
           }}
-          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-60"
+          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-field bg-brand-600 text-white text-[15px] font-semibold disabled:opacity-60"
         >
           <Check className="w-4 h-4" aria-hidden="true" />
           Join this job
@@ -129,21 +129,21 @@ export function CrewPanel({
               if (r?.error) setError(r.error);
             });
           }}
-          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl border border-brand-300 bg-white text-brand-700 text-sm font-semibold disabled:opacity-60"
+          className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-field border border-brand-300 bg-white text-brand-700 text-[15px] font-semibold disabled:opacity-60"
         >
           <MapPin className="w-4 h-4" aria-hidden="true" /> I&rsquo;ve arrived
         </button>
       )}
 
       {me?.status === "arrived" && (
-        <p className="text-xs text-emerald-700 flex items-center gap-1.5">
+        <p className="text-[13px] text-emerald-700 flex items-center gap-1.5">
           <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           You&rsquo;re marked as on site. The lead starts the job when everyone is here.
         </p>
       )}
 
       {error && (
-        <p className="text-xs text-rose-700 flex items-start gap-1.5">
+        <p className="text-[13px] text-rose-700 flex items-start gap-1.5">
           <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" aria-hidden="true" /> {error}
         </p>
       )}

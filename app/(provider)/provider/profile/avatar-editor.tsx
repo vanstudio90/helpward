@@ -136,16 +136,16 @@ export function AvatarEditor({
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-card border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-slate-900">Position your photo</h3>
+        <h3 className="text-[15px] font-bold text-slate-900">Position your photo</h3>
         <button type="button" onClick={onCancel} aria-label="Cancel"
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60">
+          className="p-1.5 rounded-field text-slate-400 hover:text-slate-700 hover:bg-slate-200/60">
           <X className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
 
-      {error && <p className="mb-3 text-xs text-rose-700">{error}</p>}
+      {error && <p className="mb-3 text-[13px] text-rose-700">{error}</p>}
 
       <div className="flex justify-center">
         <div
@@ -155,7 +155,7 @@ export function AvatarEditor({
           onPointerUp={endPointer}
           onPointerCancel={endPointer}
           style={{ width: VIEWPORT, height: VIEWPORT, touchAction: "none" }}
-          className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 cursor-grab active:cursor-grabbing select-none"
+          className="relative overflow-hidden rounded-card bg-white border border-slate-200 cursor-grab active:cursor-grabbing select-none"
         >
           {img && (
             <img
@@ -191,7 +191,7 @@ export function AvatarEditor({
 
       <div className="mt-3 flex items-center gap-2">
         <button type="button" onClick={() => nudgeZoom(1 / 1.25)} aria-label="Zoom out"
-          className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600">
+          className="p-2 rounded-field bg-white border border-slate-200 text-slate-600">
           <ZoomOut className="w-4 h-4" aria-hidden="true" />
         </button>
         <input
@@ -203,7 +203,7 @@ export function AvatarEditor({
           className="flex-1 accent-brand-600"
         />
         <button type="button" onClick={() => nudgeZoom(1.25)} aria-label="Zoom in"
-          className="p-2 rounded-lg bg-white border border-slate-200 text-slate-600">
+          className="p-2 rounded-field bg-white border border-slate-200 text-slate-600">
           <ZoomIn className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
@@ -211,17 +211,17 @@ export function AvatarEditor({
       <div className="mt-2 flex flex-wrap gap-2">
         <button type="button"
           onClick={() => setT(centered(natural, VIEWPORT, containScale(natural, VIEWPORT)))}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700">
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-field bg-white border border-slate-200 text-[13px] font-semibold text-slate-700">
           <Maximize2 className="w-3.5 h-3.5" aria-hidden="true" /> Fit whole photo
         </button>
         <button type="button"
           onClick={() => setT(centered(natural, VIEWPORT, coverScale(natural, VIEWPORT)))}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-slate-700">
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-field bg-white border border-slate-200 text-[13px] font-semibold text-slate-700">
           <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" /> Fill the circle
         </button>
       </div>
 
-      <p className="mt-2 text-[11px] text-slate-500 leading-snug">
+      <p className="mt-2 text-[13px] text-slate-500 leading-snug">
         {showingWholePhoto
           ? "Your whole photo is inside the circle. The space around it will be white."
           : "Drag to move, pinch or use the slider to zoom. Anything dimmed is outside the circle."}
@@ -229,10 +229,10 @@ export function AvatarEditor({
 
       <div className="mt-3 flex items-center gap-3">
         <button type="button" onClick={confirm} disabled={busy || !img}
-          className="px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-50">
+          className="px-4 py-2.5 rounded-field bg-brand-600 text-white text-[15px] font-semibold disabled:opacity-50">
           {busy ? "Saving…" : "Use this photo"}
         </button>
-        <button type="button" onClick={onCancel} className="text-sm font-semibold text-slate-600">
+        <button type="button" onClick={onCancel} className="text-[15px] font-semibold text-slate-600">
           Cancel
         </button>
       </div>

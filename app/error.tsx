@@ -24,11 +24,11 @@ export default function GlobalError({
       </header>
       <main className="flex-1 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <span className="inline-flex w-16 h-16 rounded-2xl bg-rose-50 items-center justify-center mb-4">
+          <span className="inline-flex w-16 h-16 rounded-card bg-rose-50 items-center justify-center mb-4">
             <AlertOctagon className="w-8 h-8 text-rose-600" />
           </span>
           <h1 className="text-2xl font-bold text-slate-900">Something went wrong</h1>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-[15px] text-slate-600">
             We hit an unexpected error. You can try again, or head home.
           </p>
           {error.digest && (
@@ -37,13 +37,13 @@ export default function GlobalError({
           <div className="mt-6 flex items-center justify-center gap-2">
             <button
               onClick={reset}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-btn bg-slate-900 text-white text-[15px] font-semibold"
             >
               <RefreshCw className="w-4 h-4" /> Try again
             </button>
             <Link
               href="/"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-btn border border-slate-200 text-slate-700 text-[15px] font-semibold"
             >
               <Home className="w-4 h-4" /> Home
             </Link>

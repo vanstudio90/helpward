@@ -33,15 +33,15 @@ export function ProviderAvatarUpload({ avatarUrl, fullName }: { avatarUrl: strin
   };
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-      <h2 className="text-base font-bold text-slate-900 mb-3">Profile photo</h2>
+    <div className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
+      <h2 className="text-[18px] font-extrabold text-slate-900 mb-3">Profile photo</h2>
       {state?.error && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
+        <div className="mb-3 flex items-start gap-2 text-[13px] text-rose-700 bg-rose-50 border border-rose-100 rounded-field p-2.5">
           <AlertCircle className="w-3.5 h-3.5 mt-0.5" /> {state.error}
         </div>
       )}
       {state?.success && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">
+        <div className="mb-3 flex items-start gap-2 text-[13px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-field p-2.5">
           <CheckCircle2 className="w-3.5 h-3.5 mt-0.5" /> {state.success}
         </div>
       )}
@@ -82,9 +82,9 @@ export function ProviderAvatarUpload({ avatarUrl, fullName }: { avatarUrl: strin
             />
           </form>
         </div>
-        <div className="text-sm text-slate-600">
+        <div className="text-[15px] text-slate-600">
           A clear headshot helps customers trust you.<br />
-          <span className="text-xs text-slate-400">JPEG/PNG/WEBP/GIF, up to 5 MB.</span>
+          <span className="text-[13px] text-slate-400">JPEG/PNG/WEBP/GIF, up to 5 MB.</span>
         </div>
       </div>
 
@@ -121,7 +121,7 @@ function SaveResult({ state }: { state?: { error?: string; success?: string } })
     <p
       role="status"
       aria-live="polite"
-      className={`mt-3 flex items-start gap-1.5 text-xs rounded-lg px-2.5 py-2 border ${
+      className={`mt-3 flex items-start gap-1.5 text-[13px] rounded-field px-2.5 py-2 border ${
         bad
           ? "text-rose-700 bg-rose-50 border-rose-100"
           : "text-emerald-800 bg-emerald-50 border-emerald-100"
@@ -142,61 +142,61 @@ export function ProfileForm({
   const [state, formAction, pending] = useActionState(updateProviderProfileAction, undefined);
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-      <h2 className="text-base font-bold text-slate-900 mb-3">Public profile</h2>
+    <div className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
+      <h2 className="text-[18px] font-extrabold text-slate-900 mb-3">Public profile</h2>
 
       <form action={formAction} className="space-y-4">
         <label className="block">
-          <span className="text-xs font-semibold text-slate-700">Your name</span>
+          <span className="text-[13px] font-semibold text-slate-700">Your name</span>
           <input
             name="full_name"
             defaultValue={initial.full_name}
             maxLength={80}
             required
             placeholder="The name customers will see"
-            className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+            className="mt-1 w-full px-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
         </label>
         <div className="grid sm:grid-cols-2 gap-3">
           <label className="block">
-            <span className="text-xs font-semibold text-slate-700">Phone number</span>
+            <span className="text-[13px] font-semibold text-slate-700">Phone number</span>
             <input
               name="phone"
               type="tel"
               defaultValue={initial.phone}
               maxLength={30}
               placeholder="+1 604 555 0123"
-              className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+              className="mt-1 w-full px-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
             />
-            <p className="text-[11px] text-slate-500 mt-1">So we can reach you about a booking.</p>
+            <p className="text-[13px] text-slate-500 mt-1">So we can reach you about a booking.</p>
           </label>
           <label className="block">
-            <span className="text-xs font-semibold text-slate-700">Where you&rsquo;re based</span>
+            <span className="text-[13px] font-semibold text-slate-700">Where you&rsquo;re based</span>
             <input
               name="base_address"
               defaultValue={initial.base_address}
               maxLength={200}
               placeholder="Street and city"
-              className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+              className="mt-1 w-full px-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
             />
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="text-[13px] text-slate-500 mt-1">
               For our records. Jobs reach you from your live location, not this.
             </p>
           </label>
         </div>
         <label className="block">
-          <span className="text-xs font-semibold text-slate-700">About you</span>
+          <span className="text-[13px] font-semibold text-slate-700">About you</span>
           <textarea
             name="bio"
             defaultValue={initial.bio}
             rows={4}
             placeholder="Brief introduction that shows on your public profile (specialties, years of experience, what makes you reliable)..."
-            className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+            className="mt-1 w-full px-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
         </label>
         <div className="grid sm:grid-cols-2 gap-3">
           <label className="block">
-            <span className="text-xs font-semibold text-slate-700">Service radius (km)</span>
+            <span className="text-[13px] font-semibold text-slate-700">Service radius (km)</span>
             <input
               name="service_radius_km"
               type="number"
@@ -204,25 +204,25 @@ export function ProfileForm({
               max={200}
               defaultValue={initial.service_radius_km}
               required
-              className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+              className="mt-1 w-full px-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
             />
-            <p className="text-[11px] text-slate-500 mt-1">How far you&apos;ll travel from your base location.</p>
+            <p className="text-[13px] text-slate-500 mt-1">How far you&apos;ll travel from your base location.</p>
           </label>
           <label className="block">
-            <span className="text-xs font-semibold text-slate-700">Languages</span>
+            <span className="text-[13px] font-semibold text-slate-700">Languages</span>
             <input
               name="languages"
               defaultValue={initial.languages}
               placeholder="English, Spanish, French"
-              className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+              className="mt-1 w-full px-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
             />
-            <p className="text-[11px] text-slate-500 mt-1">Comma-separated.</p>
+            <p className="text-[13px] text-slate-500 mt-1">Comma-separated.</p>
           </label>
         </div>
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-field bg-brand-600 text-white text-[15px] font-semibold disabled:opacity-50"
         >
           <Edit3 className="w-3.5 h-3.5" aria-hidden="true" /> {pending ? "Saving…" : "Save profile"}
         </button>
@@ -292,19 +292,19 @@ export function ServicesForm({
   };
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
+    <div className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-base font-bold text-slate-900">Services you offer</h2>
-        <span className="text-[11px] text-slate-500">{selected.size} selected</span>
+        <h2 className="text-[18px] font-extrabold text-slate-900">Services you offer</h2>
+        <span className="text-[13px] text-slate-500">{selected.size} selected</span>
       </div>
-      <p className="text-xs text-slate-500 mb-3">
+      <p className="text-[13px] text-slate-500 mb-3">
         You&apos;ll only get task offers for services you check here.
       </p>
 
       {/* Said once, rather than repeated beside 27 figures. The honesty
           that matters: these are gross receipts for the booked work, not
           an hourly wage across travel and waiting. */}
-      <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-2 mb-4 leading-snug">
+      <p className="text-[13px] text-slate-500 bg-slate-50 border border-slate-100 rounded-field px-2.5 py-2 mb-4 leading-snug">
         Amounts are in {currency === "CAD" ? "Canadian dollars" : "US dollars"} for the area you work
         in, before tax. <strong className="text-slate-700">You earn 80% of the service price, and
         all of any tip.</strong> Helpward keeps the rest plus a flat {formatMoney(SERVICE_FEE_CENTS, currency)} fee
@@ -315,7 +315,7 @@ export function ServicesForm({
       <div className="space-y-4">
         {Object.entries(grouped).map(([cat, list]) => (
           <div key={cat}>
-            <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400 mb-2">{cat}</div>
+            <div className="text-[13px] font-bold uppercase tracking-wide text-slate-400 mb-2">{cat}</div>
             <div className="grid sm:grid-cols-2 gap-2">
               {list.map((s) => {
                 const isOn = selected.has(s.id);
@@ -323,7 +323,7 @@ export function ServicesForm({
                   <div
                     key={s.id}
                     className={cn(
-                      "flex flex-col gap-2 p-3 rounded-xl border transition",
+                      "flex flex-col gap-2 p-3 rounded-field border transition",
                       isOn ? "border-brand-300 bg-brand-50/40" : "border-slate-100 hover:border-slate-300"
                     )}
                   >
@@ -340,9 +340,9 @@ export function ServicesForm({
                         className="mt-0.5"
                       />
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold text-slate-900">{s.title}</div>
-                        <div className="text-[11px] text-slate-500 line-clamp-2">{s.blurb}</div>
-                        <div className="text-[11px] mt-1 leading-snug">
+                        <div className="text-[15px] font-semibold text-slate-900">{s.title}</div>
+                        <div className="text-[13px] text-slate-500 line-clamp-2">{s.blurb}</div>
+                        <div className="text-[13px] mt-1 leading-snug">
                           <span className="font-semibold text-emerald-700">
                             You earn {formatMoney(s.helperEarnsCents, currency)}
                           </span>
@@ -365,7 +365,7 @@ export function ServicesForm({
         type="button"
         onClick={save}
         disabled={pending}
-        className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white bg-brand-600 px-4 py-2.5 rounded-xl disabled:opacity-50"
+        className="mt-5 inline-flex items-center gap-2 text-[15px] font-semibold text-white bg-brand-600 px-4 py-2.5 rounded-field disabled:opacity-50"
       >
         {pending ? "Saving…" : `Save ${selected.size} service${selected.size === 1 ? "" : "s"}`}
       </button>

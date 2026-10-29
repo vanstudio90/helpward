@@ -241,12 +241,12 @@ export default async function ProviderEarningsPage() {
             <Action href="/provider/inbox">View offers</Action>
           </EmptyState>
         ) : (
-          <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
+          <ul className="bg-white rounded-card border border-slate-100 shadow-soft divide-y divide-slate-100 overflow-hidden">
             {weeks.map((w) => (
               <li key={w.key} className="p-4 flex items-center gap-4 flex-wrap sm:flex-nowrap">
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-slate-900">{w.label}</div>
-                  <div className="text-[11px] text-slate-500">
+                  <div className="text-[15px] font-bold text-slate-900">{w.label}</div>
+                  <div className="text-[13px] text-slate-500">
                     {/* "Pays Tuesday, Nov 3" was arithmetic, not a fact:
                         next Monday plus one day, with no Stripe payout
                         behind it. Stripe sets its own payout schedule and
@@ -256,16 +256,16 @@ export default async function ProviderEarningsPage() {
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-[10px] uppercase tracking-wide text-slate-500">Base + distance</div>
-                  <div className="text-sm font-semibold text-slate-900">{formatMoney(w.basePayoutCents, currency)}</div>
+                  <div className="text-[12px] uppercase tracking-wide text-slate-500">Base + distance</div>
+                  <div className="text-[15px] font-semibold text-slate-900">{formatMoney(w.basePayoutCents, currency)}</div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-[10px] uppercase tracking-wide text-slate-500">Tips</div>
-                  <div className="text-sm font-semibold text-rose-700">+ {formatMoney(w.tipsCents, currency)}</div>
+                  <div className="text-[12px] uppercase tracking-wide text-slate-500">Tips</div>
+                  <div className="text-[15px] font-semibold text-rose-700">+ {formatMoney(w.tipsCents, currency)}</div>
                 </div>
                 <div className="text-right shrink-0 sm:w-28">
-                  <div className="text-[10px] uppercase tracking-wide text-slate-500">Total</div>
-                  <div className="text-base font-bold text-emerald-700">{formatMoney(w.totalCents, currency)}</div>
+                  <div className="text-[12px] uppercase tracking-wide text-slate-500">Total</div>
+                  <div className="text-[18px] font-extrabold text-emerald-700">{formatMoney(w.totalCents, currency)}</div>
                 </div>
               </li>
             ))}
@@ -276,27 +276,27 @@ export default async function ProviderEarningsPage() {
       {/* Recent completed bookings */}
       {completed.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-base font-bold text-slate-900 mb-3">Recent tasks</h2>
-          <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
+          <h2 className="text-[18px] font-extrabold text-slate-900 mb-3">Recent tasks</h2>
+          <ul className="bg-white rounded-card border border-slate-100 shadow-soft divide-y divide-slate-100 overflow-hidden">
             {completed.slice(0, 12).map((b) => (
               <li key={b.id} className="p-3 flex items-start gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-slate-900 truncate">{b.service?.title ?? "Task"}</div>
-                  <div className="text-[11px] text-slate-500 truncate">
+                  <div className="text-[15px] font-bold text-slate-900 truncate">{b.service?.title ?? "Task"}</div>
+                  <div className="text-[13px] text-slate-500 truncate">
                     {b.customer?.full_name ?? "Customer"} · <ClientDateTime iso={b.completed_at} />
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-sm font-bold text-slate-900">{formatMoney(b.payout_cents ?? 0, b.currency)}</div>
+                  <div className="text-[15px] font-bold text-slate-900">{formatMoney(b.payout_cents ?? 0, b.currency)}</div>
                   {(b.tip_cents ?? 0) > 0 && (
-                    <div className="text-[10px] text-rose-600">+ {formatMoney(b.tip_cents ?? 0, b.currency)} tip</div>
+                    <div className="text-[12px] text-rose-600">+ {formatMoney(b.tip_cents ?? 0, b.currency)} tip</div>
                   )}
                 </div>
               </li>
             ))}
           </ul>
           {completed.length > 12 && (
-            <p className="mt-3 text-xs text-slate-500 text-center">
+            <p className="mt-3 text-[13px] text-slate-500 text-center">
               Showing 12 of {completed.length} completed tasks · pagination ships with CSV export
             </p>
           )}
@@ -304,9 +304,9 @@ export default async function ProviderEarningsPage() {
       )}
 
       {/* Tax forms */}
-      <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-        <h2 className="text-base font-bold text-slate-900 mb-2">Tax forms</h2>
-        <p className="text-xs text-slate-500 leading-relaxed">
+      <section className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
+        <h2 className="text-[18px] font-extrabold text-slate-900 mb-2">Tax forms</h2>
+        <p className="text-[13px] text-slate-500 leading-relaxed">
           U.S. helpers earning over $600 in a calendar year receive a 1099-NEC by January 31. Canadian helpers
           receive a T4A. Forms are issued through Stripe and emailed to your registered address.{" "}
           <Link href="/help/helper-payouts-and-earnings" className="text-brand-700 font-semibold hover:underline">
@@ -316,7 +316,7 @@ export default async function ProviderEarningsPage() {
         <button
           disabled
           title="Tax forms are issued automatically through Stripe Connect — UI ships with the same integration."
-          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 px-3 py-1.5 rounded-lg border border-slate-200 cursor-not-allowed"
+          className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-400 px-3 py-1.5 rounded-field border border-slate-200 cursor-not-allowed"
         >
           <Download className="w-3 h-3" /> View past forms
         </button>

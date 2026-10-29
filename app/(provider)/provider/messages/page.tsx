@@ -1,8 +1,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { MessageSquare } from "lucide-react";
+import { ChevronRight, MessageSquare } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
-import { PageHeader } from "@/components/provider/ui";
+import { PageHeader, EmptyState, Action } from "@/components/provider/ui";
 
 export default async function ProviderMessagesPage() {
   const supabase = await createSupabaseServerClient();
@@ -27,33 +27,32 @@ export default async function ProviderMessagesPage() {
       <PageHeader title="Messages" subtitle="Your customer conversations." />
 
       {conversations.length === 0 ? (
-        <div className="rounded-2xl bg-white border border-slate-100 p-8 sm:p-12 text-center">
-          <span className="inline-flex w-14 h-14 rounded-2xl bg-slate-50 items-center justify-center mb-3">
-            <MessageSquare className="w-7 h-7 text-slate-400" />
-          </span>
-          <h2 className="text-lg font-bold text-slate-900">No conversations yet</h2>
-          <p className="mt-1 text-sm text-slate-500 max-w-sm mx-auto">
-            Accept a task offer and you&apos;ll be able to chat with the customer here.
-          </p>
-        </div>
+        <EmptyState
+          icon={MessageSquare}
+          title="No conversations yet"
+          body="Accept a task offer and you'll be able to message the customer here."
+        >
+          <Action href="/provider/inbox">View offers</Action>
+        </EmptyState>
       ) : (
-        <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
+        <ul className="bg-white rounded-card border border-slate-100 shadow-soft divide-y divide-slate-100 overflow-hidden">
           {conversations.map((c) => (
             <li key={c.id}>
-              <Link href={`/provider/messages/${c.id}`} className="p-4 flex items-center gap-3 hover:bg-slate-50">
+              <Link href={`/provider/messages/${c.id}`} className="p-4 min-h-[68px] flex items-center gap-3.5">
                 {c.customer?.avatar_url ? (
-                  <img src={c.customer.avatar_url} className="w-11 h-11 rounded-full" alt="" />
+                  <img src={c.customer.avatar_url} className="w-11 h-11 rounded-full object-cover shrink-0" alt="" />
                 ) : (
-                  <div className="w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold">
+                  <div className="w-11 h-11 rounded-full bg-brand-50 flex items-center justify-center text-brand-700 font-extrabold shrink-0">
                     {c.customer?.full_name?.[0] ?? "?"}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-slate-900 truncate">{c.customer?.full_name ?? "Customer"}</div>
-                  <div className="text-xs text-slate-500 truncate">
+                  <div className="text-[16px] font-bold text-slate-900 truncate">{c.customer?.full_name ?? "Customer"}</div>
+                  <div className="text-[14px] text-slate-500 truncate mt-0.5">
                     {c.booking?.service?.title ?? "Helpward"} · <ClientDateTime iso={c.last_message_at} />
                   </div>
                 </div>
+                <ChevronRight className="w-5 h-5 text-slate-300 shrink-0" aria-hidden="true" />
               </Link>
             </li>
           ))}

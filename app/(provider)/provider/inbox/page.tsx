@@ -132,18 +132,18 @@ export default async function ProviderInboxPage() {
             return (
               <li
                 key={row.id}
-                className={`rounded-2xl border overflow-hidden ${
+                className={`rounded-card border overflow-hidden ${
                   preferred
                     ? "bg-gradient-to-br from-rose-50 to-pink-50 border-rose-200 ring-2 ring-rose-100"
                     : "bg-white border-slate-100"
                 }`}
               >
                 {preferred && customer && (
-                  <div className="px-4 py-2.5 bg-rose-600 text-white flex items-center gap-2.5 text-xs">
+                  <div className="px-4 py-2.5 bg-rose-600 text-white flex items-center gap-2.5 text-[13px]">
                     {customer.avatar_url ? (
                       <img src={customer.avatar_url} className="w-6 h-6 rounded-full ring-2 ring-white shrink-0" alt="" />
                     ) : (
-                      <div className="w-6 h-6 rounded-full bg-rose-700 ring-2 ring-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-rose-700 ring-2 ring-white flex items-center justify-center text-[12px] font-bold shrink-0">
                         {customer.full_name?.[0] ?? "?"}
                       </div>
                     )}
@@ -161,16 +161,16 @@ export default async function ProviderInboxPage() {
                 <div className="p-4 sm:p-5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="text-base font-bold text-slate-900">{service?.title}</div>
-                      <div className="text-xs text-slate-500 mt-1 line-clamp-2">{service?.blurb}</div>
+                      <div className="text-[18px] font-extrabold text-slate-900">{service?.title}</div>
+                      <div className="text-[13px] text-slate-500 mt-1 line-clamp-2">{service?.blurb}</div>
                     </div>
-                    <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full shrink-0 ${
+                    <span className={`text-[12px] font-bold uppercase tracking-wide px-2 py-1 rounded-full shrink-0 ${
                       preferred ? "text-rose-700 bg-white" : "text-amber-700 bg-amber-50"
                     }`}>
                       {preferred ? "Exclusive 2 min" : "Live"}
                     </span>
                   </div>
-                  <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <dl className="mt-3 grid grid-cols-2 gap-2 text-[13px]">
                     {/* Area, not the doorstep. An exact address at offer
                         stage is an address handed to everyone the request
                         was broadcast to, including everyone who declines.
@@ -203,9 +203,9 @@ export default async function ProviderInboxPage() {
                     );
                     if (brief.length === 0) return null;
                     return (
-                      <dl className="mt-3 rounded-lg bg-brand-50/70 border border-brand-100 p-2.5 space-y-1">
+                      <dl className="mt-3 rounded-field bg-brand-50/70 border border-brand-100 p-2.5 space-y-1">
                         {brief.map((b) => (
-                          <div key={b.label} className="flex items-start gap-2 text-[11px]">
+                          <div key={b.label} className="flex items-start gap-2 text-[13px]">
                             <dt className="text-brand-900/70 shrink-0 min-w-[7rem]">{b.label}</dt>
                             <dd className="text-brand-950 font-medium min-w-0">{b.value}</dd>
                           </div>
@@ -214,7 +214,7 @@ export default async function ProviderInboxPage() {
                     );
                   })()}
                   {req.notes && (
-                    <div className="mt-3 text-xs text-slate-600 bg-slate-50 rounded-lg p-2.5">
+                    <div className="mt-3 text-[13px] text-slate-600 bg-slate-50 rounded-field p-2.5">
                       <span className="font-semibold">Note: </span>{req.notes}
                     </div>
                   )}
@@ -232,10 +232,10 @@ export default async function ProviderInboxPage() {
 function Field({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide inline-flex items-center gap-1">
+      <div className="text-[12px] font-semibold text-slate-500 uppercase tracking-wide inline-flex items-center gap-1">
         {icon} {label}
       </div>
-      <div className="text-xs text-slate-900 mt-0.5">{value}</div>
+      <div className="text-[13px] text-slate-900 mt-0.5">{value}</div>
     </div>
   );
 }
