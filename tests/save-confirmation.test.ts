@@ -19,22 +19,50 @@ const slug = readFileSync(`${DIR}/slug-form.tsx`, "utf8");
 const cities = readFileSync(`${DIR}/cities-form.tsx`, "utf8");
 const actions = readFileSync(`${DIR}/actions.ts`, "utf8");
 
+/* The button and the confirmation, wherever each card happens to keep them.
+ *
+ * The first version of this check searched only for `state?.success`, so it
+ * passed ServicesForm — which stores its result in `msg` — while that card
+ * still rendered its banner above a list of 26 services, several screens
+ * from the button. A check that cannot see a card is worse than no check,
+ * because it reports the card as fixed. Both the button and the result are
+ * matched by SHAPE here, not by one component's choice of variable name.
+ */
 function confirmationIsBelowTheButton(src: string, label: string) {
-  const button = src.indexOf('type="submit"');
-  const result = src.search(/state\?\.success|SaveResult|state\?\.error \|\| state\?\.success/);
-  assert.ok(button > -1, `${label} has no submit button`);
+  const button = Math.max(src.indexOf('type="submit"'), src.indexOf("onClick={save}"));
+  const result = src.search(/SaveResult|state\?\.success|msg\?\.ok|success:/);
+  assert.ok(button > -1, `${label} has no save button this check can find`);
   assert.ok(result > -1, `${label} shows no result at all`);
   assert.ok(result > button,
     `${label} renders its confirmation above the button, where a phone scrolls it out of view`);
 }
 
-test("each card confirms where the button is", () => {
+/** Every card on the profile page, so none can be skipped silently. */
+function cardsIn(src: string): [string, string][] {
+  const names = [...src.matchAll(/export function (\w+)/g)].map((m) => m[1]);
+  return names.map((n, i) => {
+    const start = src.indexOf(`export function ${n}`);
+    const end = i + 1 < names.length ? src.indexOf(`export function ${names[i + 1]}`) : src.length;
+    return [n, src.slice(start, end)] as [string, string];
+  });
+}
+
+test("every card confirms where its own button is", () => {
+  // Cards that save something. ProviderAvatarUpload submits on pick and is
+  // covered by the avatar editor instead.
+  const saving = new Set(["ProfileForm", "ServicesForm"]);
+  const checked: string[] = [];
+  for (const [name, src] of cardsIn(forms)) {
+    if (!saving.has(name)) continue;
+    confirmationIsBelowTheButton(src, name);
+    checked.push(name);
+  }
+  // Control: if a card were renamed, this would catch it rather than
+  // quietly checking nothing.
+  assert.deepEqual(checked.sort(), ["ProfileForm", "ServicesForm"]);
+
   confirmationIsBelowTheButton(slug, "slug-form");
   confirmationIsBelowTheButton(cities, "cities-form");
-  // forms.tsx holds several cards; check the one with the reported problem.
-  const profile = forms.slice(forms.indexOf("export function ProfileForm"),
-                              forms.indexOf("export function ServicesForm"));
-  confirmationIsBelowTheButton(profile, "ProfileForm");
 });
 
 test("saving the profile reports the values it stored", () => {

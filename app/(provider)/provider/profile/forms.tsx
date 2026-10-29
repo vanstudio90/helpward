@@ -119,7 +119,7 @@ function SaveResult({ state }: { state?: { error?: string; success?: string } })
     <p
       role="status"
       aria-live="polite"
-      className={`flex items-start gap-1.5 text-xs rounded-lg px-2.5 py-2 border ${
+      className={`mt-3 flex items-start gap-1.5 text-xs rounded-lg px-2.5 py-2 border ${
         bad
           ? "text-rose-700 bg-rose-50 border-rose-100"
           : "text-emerald-800 bg-emerald-50 border-emerald-100"
@@ -250,9 +250,6 @@ export function ServicesForm({
         You&apos;ll only get task offers for services you check here.
       </p>
 
-      {msg?.err && <div className="mb-3 text-xs text-rose-700 bg-rose-50 rounded-lg p-2.5">{msg.err}</div>}
-      {msg?.ok && <div className="mb-3 text-xs text-emerald-700 bg-emerald-50 rounded-lg p-2.5">{msg.ok}</div>}
-
       <div className="space-y-4">
         {Object.entries(grouped).map(([cat, list]) => (
           <div key={cat}>
@@ -319,6 +316,11 @@ export function ServicesForm({
       >
         {pending ? "Saving…" : `Save ${selected.size} service${selected.size === 1 ? "" : "s"}`}
       </button>
+
+      {/* Below the button like every other card here. This one is the
+          longest on the page — a banner above a list of 26 services is
+          not merely off screen, it is several screens away. */}
+      <SaveResult state={{ error: msg?.err, success: msg?.ok }} />
     </div>
   );
 }
