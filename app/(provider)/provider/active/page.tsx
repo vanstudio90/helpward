@@ -41,9 +41,68 @@ export default async function ProviderActivePage() {
 
   const { data: pp } = await supabase
     .from("provider_profiles")
-    .select("is_online, current_location, status, offline_reason, went_offline_at")
+    .select("is_online, current_location, location_updated_at, status, offline_reason, went_offline_at, vacation_mode, vacation_returns_on, service_radius_km")
     .eq("user_id", user.id)
     .single();
+
+  /* Why an online helper can still receive nothing.
+   *
+   * find_nearby_providers (0072) is the authority on who gets dispatched,
+   * and three of its conditions were invisible here: vacation mode, a
+   * stale or missing location, and — because the function INNER JOINs
+   * provider_services — having selected no services at all. A helper in
+   * any of those states could sit on this page watching a pulse, "online",
+   * and never be offered a single job.
+   *
+   * So the page asks the same questions the gate asks, and the waiting
+   * screen refuses to claim it is searching until the answers allow it.
+   * Each one names the fix rather than just the fault. */
+  const [{ count: serviceCount }, { count: cityCount }] = await Promise.all([
+    supabase.from("provider_services").select("service_id", { count: "exact", head: true })
+      .eq("provider_id", user.id),
+    supabase.from("provider_cities").select("muni_key", { count: "exact", head: true })
+      .eq("provider_id", user.id),
+  ]);
+
+  // Mirrors max_location_age() in 0030. If that interval is tuned, this
+  // must follow or the screen will promise offers the gate withholds.
+  const LOCATION_MAX_AGE_MS = 30 * 60 * 1000;
+  const locAge = pp?.location_updated_at ? Date.now() - new Date(pp.location_updated_at).getTime() : null;
+
+  const blockers: { title: string; detail: string; href: string; cta: string }[] = [];
+  if (pp?.vacation_mode) {
+    blockers.push({
+      title: "Vacation mode is on",
+      detail: pp.vacation_returns_on
+        ? `No offers will reach you until ${pp.vacation_returns_on}, even while you're online.`
+        : "No offers will reach you while it's on, even if you're online.",
+      href: "/provider/schedule",
+      cta: "End vacation mode",
+    });
+  }
+  if ((serviceCount ?? 0) === 0) {
+    blockers.push({
+      title: "You haven't picked any services",
+      detail: "Offers are matched by service, so there's nothing to send you yet.",
+      href: "/provider/profile",
+      cta: "Pick your services",
+    });
+  }
+  if (!pp?.current_location) {
+    blockers.push({
+      title: "We don't have your location",
+      detail: "Allow location for this site and keep this page open — offers are matched by distance.",
+      href: "/provider/active",
+      cta: "Allow location",
+    });
+  } else if (locAge !== null && locAge > LOCATION_MAX_AGE_MS) {
+    blockers.push({
+      title: "Your location is out of date",
+      detail: "It was last updated over 30 minutes ago. Keep this page open so it refreshes.",
+      href: "/provider/active",
+      cta: "Refresh location",
+    });
+  }
 
   // Find any current scheduled or in_progress booking for this helper
   const { data: bookings } = await supabase
@@ -256,7 +315,13 @@ export default async function ProviderActivePage() {
        * Not yet approved, there is nothing to toggle: say so plainly and
        * point at onboarding rather than offering a switch that refuses. */}
       {!booking && pp?.status === "approved" ? (
-        <ReadyLive initialOnline={pp?.is_online ?? false} />
+        <ReadyLive
+          initialOnline={pp?.is_online ?? false}
+          blockers={blockers}
+          serviceCount={serviceCount ?? 0}
+          cityCount={cityCount ?? 0}
+          radiusKm={pp?.service_radius_km ?? 20}
+        />
       ) : !booking ? (
         <div className="rounded-panel bg-white border border-slate-100 p-8 sm:p-12 text-center shadow-soft">
           <span className="inline-flex w-14 h-14 rounded-field bg-slate-50 items-center justify-center mb-3">

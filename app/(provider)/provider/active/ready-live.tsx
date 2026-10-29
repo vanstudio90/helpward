@@ -17,7 +17,17 @@ import { ReadyPanel } from "./ready-panel";
  * feels broken on a phone. It reverts if the server refuses, and the
  * reason is shown rather than swallowed.
  */
-export function ReadyLive({ initialOnline }: { initialOnline: boolean }) {
+export type Blocker = { title: string; detail: string; href: string; cta: string };
+
+export function ReadyLive({
+  initialOnline, blockers, serviceCount, cityCount, radiusKm,
+}: {
+  initialOnline: boolean;
+  blockers: Blocker[];
+  serviceCount: number;
+  cityCount: number;
+  radiusKm: number;
+}) {
   const [online, setOnline] = useState(initialOnline);
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -66,6 +76,10 @@ export function ReadyLive({ initialOnline }: { initialOnline: boolean }) {
         busy={pending}
         onToggleOnline={toggle}
         blockedReason={err}
+        blockers={blockers}
+        serviceCount={serviceCount}
+        cityCount={cityCount}
+        radiusKm={radiusKm}
       />
       {gpsNote && (
         <p className="mt-3 flex items-start gap-2 text-[13px] text-amber-800 bg-amber-50 border border-amber-100 rounded-field px-3.5 py-2.5">
