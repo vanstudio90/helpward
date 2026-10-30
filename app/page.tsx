@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ScrollLink } from "./_scroll-link";
 import Link from "next/link";
 import {
   Sparkles, Shield, MapPin, Lock, ArrowRight, Star, HelpCircle, Headphones,
@@ -245,14 +246,14 @@ export default async function LandingPage() {
               <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Popular services</h2>
               <p className="text-sm text-slate-500 mt-1">Most requested help from our community</p>
             </div>
-            <Link href="#services" className="text-xs sm:text-sm font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap">
+            <ScrollLink href="#services" className="text-xs sm:text-sm font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap">
               View all services →
-            </Link>
+            </ScrollLink>
           </div>
           <div className="-mx-4 sm:mx-0">
             <div className="flex sm:grid sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 overflow-x-auto scrollbar-none px-4 sm:px-0 snap-x snap-mandatory">
               {topCategories.map(({ category, count }) => (
-                <Link
+                <ScrollLink
                   key={category.id}
                   href={`#services`}
                   className="group snap-start shrink-0 w-[40%] sm:w-auto rounded-2xl overflow-hidden bg-white border border-slate-100 hover:border-brand-300 hover:shadow-lg transition"
@@ -269,7 +270,7 @@ export default async function LandingPage() {
                     <div className="text-sm font-bold text-slate-900 truncate">{category.label}</div>
                     <div className="text-[11px] text-slate-500 mt-0.5">{count} service{count === 1 ? "" : "s"}</div>
                   </div>
-                </Link>
+                </ScrollLink>
               ))}
             </div>
           </div>
@@ -511,7 +512,7 @@ export default async function LandingPage() {
             />
             <FooterCol
               title="Categories"
-              items={topCategories.map(({ category }) => [category.label, `/#services`] as [string, string])}
+              items={topCategories.map(({ category }) => [category.label, `#services`] as [string, string])}
             />
             <FooterCol
               title="Top cities"
@@ -562,7 +563,16 @@ function FooterCol({ title, items }: { title: string; items: [string, string][] 
       <ul className="space-y-2 text-xs">
         {items.map(([label, href]) => (
           <li key={href + label}>
-            <Link href={href} className="text-slate-400 hover:text-white transition">{label}</Link>
+            {/* This footer is rendered only by the home page, so a
+                fragment does resolve here — it just must not be left
+                in the address bar. */}
+            {href.startsWith("#") ? (
+              <ScrollLink href={href} className="text-slate-400 hover:text-white transition">
+                {label}
+              </ScrollLink>
+            ) : (
+              <Link href={href} className="text-slate-400 hover:text-white transition">{label}</Link>
+            )}
           </li>
         ))}
       </ul>

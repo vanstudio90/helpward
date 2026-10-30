@@ -3,13 +3,22 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Globe, ChevronDown, Menu, X } from "lucide-react";
+import { ScrollLink } from "./_scroll-link";
 
 const NAV_LINKS: [string, string][] = [
   ["#how", "How it works"],
   ["#services", "Services"],
   ["#business", "For Business"],
   ["#safety", "Safety"],
-  ["#helpers", "Become a Helper"],
+  /*
+    A REAL PAGE, because "#helpers" was never a section.
+
+    The home page has ids how / services / business / safety — there is
+    no "helpers". So this link did nothing at all except write
+    "#helpers" into the address bar, on every page the header appears
+    on. Signing up as a helper is a real destination; it goes there.
+  */
+  ["/signup?role=helper", "Become a Helper"],
 ];
 
 export function LandingHeader() {
@@ -26,7 +35,9 @@ export function LandingHeader() {
 
           <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-700">
             {NAV_LINKS.map(([href, label]) => (
-              <a key={href} href={href} className="hover:text-slate-900">{label}</a>
+              <ScrollLink key={href} href={href} className="hover:text-slate-900">
+                {label}
+              </ScrollLink>
             ))}
           </nav>
 
@@ -61,7 +72,14 @@ export function LandingHeader() {
         </div>
         <nav className="px-3 py-4 space-y-1 text-sm font-medium text-slate-700">
           {NAV_LINKS.map(([href, label]) => (
-            <a key={href} href={href} onClick={() => setMenuOpen(false)} className="block px-3 py-2.5 rounded-lg hover:bg-slate-50">{label}</a>
+            <ScrollLink
+              key={href}
+              href={href}
+              onNavigate={() => setMenuOpen(false)}
+              className="block px-3 py-2.5 rounded-lg hover:bg-slate-50"
+            >
+              {label}
+            </ScrollLink>
           ))}
         </nav>
         <div className="px-3 mt-4 space-y-2">
