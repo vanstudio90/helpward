@@ -4,7 +4,8 @@ import { quoteOneShotCents } from "@/lib/pricing";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
 import { reviewResolution } from "@/lib/address-confirmation";
-import { validateIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service-intake";
+import { validateIntake, describeIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service-intake";
+import { validateHandover, isHandoverEmpty } from "@/lib/handover";
 import { resolveIntakeAddresses, applyResolvedAddresses } from "@/lib/intake-addresses";
 import { checkTrip } from "@/lib/trip-limits";
 import { resolveAddressStrict } from "@/lib/geocode";
@@ -38,6 +39,11 @@ type Body = {
   scheduledFor?: string | null;
   notes?: string | null;
   intake?: Record<string, string | string[]>;
+  /**
+   * Handover answers, section-keyed — see lib/handover.ts. The server
+   * decides which half of this is shareable; the client only sends it.
+   */
+  handover?: Record<string, Record<string, string>>;
 };
 
 export const POST = withBearerAuth(async ({ user, supabase }, request) => {
@@ -70,6 +76,22 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
   const intakeRaw = (body.intake ?? {}) as IntakeValues;
   const intakeCheck = validateIntake(serviceId, intakeRaw);
   if (!intakeCheck.ok) return Response.json({ error: intakeCheck.error }, { status: 400 });
+
+  /*
+    HANDOVER INSTRUCTIONS, SPLIT BY WHO MAY SEE THEM.
+
+    validateHandover checks the answers against the service's own spec and
+    returns two objects: `shared`, which goes on the request and therefore
+    out with every broadcast offer, and `restricted`, which goes to
+    request_private_details where RLS opens it to the ASSIGNED helper only.
+    The split is decided here, on the server — a client cannot promote one
+    of its own answers into the shareable half.
+  */
+  const handoverCheck = validateHandover(serviceId, body.handover);
+  if (!handoverCheck.ok) {
+    return Response.json({ error: handoverCheck.error }, { status: 400 });
+  }
+  const handover = handoverCheck.split;
 
   // Address ANSWERS (a drop-off, a delivery destination) are real places a
   // helper has to drive to, so they are geocoded too — and the resolved
@@ -201,6 +223,16 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
       estimated_duration_min: Number(intake.duration_min) || 45,
       status: "matching",
       intake,
+      handover_details: isHandoverEmpty(handover.shared) ? null : handover.shared,
+      /*
+        THE BRIEF A CANDIDATE MAY SEE, decided here and stored.
+
+        `describeIntake(forOffer)` is the one place that knows which
+        answers are `sensitive`; computing it now means SQL never has to
+        re-derive that rule and the two definitions cannot drift. From
+        0085 the offer list serves this column and never `intake`.
+      */
+      offer_summary: describeIntake(serviceId, intake, { forOffer: true }),
     })
     .select("id")
     .single();
@@ -223,6 +255,27 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
     request, so one that reached helpers without a seal is one nobody
     could ever accept.
   */
+  /*
+    The private half, written BEFORE the broadcast.
+
+    A helper who accepts needs the meeting point immediately; writing it
+    after the offers go out leaves a window where the job is accepted and
+    the instructions are not there yet. Written as the CUSTOMER, so
+    rpd_write_own is what proves the row is theirs — not the service key.
+
+    Not fatal. The shareable half is already on the request and the
+    customer can add the rest from the booking; losing the request over a
+    meeting point would be the worse outcome.
+  */
+  if (!isHandoverEmpty(handover.restricted)) {
+    const { error: privateErr } = await supabase
+      .from("request_private_details")
+      .upsert({ request_id: created.id, details: handover.restricted });
+    if (privateErr) {
+      console.error("could not save private handover details", created.id, privateErr);
+    }
+  }
+
   const { error: sealErr } = await admin.rpc("seal_request_quote", { p_request_id: created.id });
   if (sealErr) {
     await admin.from("requests").update({ status: "cancelled" }).eq("id", created.id);
@@ -234,8 +287,26 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
   // expire-stale cron retires it if no helper ever sees it.
   await broadcastRequestBestEffort(admin, created.id, { label: "ios-one-shot" });
 
+  /*
+    HOW MANY HELPERS ACTUALLY GOT IT.
+
+    A broadcast that reaches nobody still "succeeds" — find_nearby_providers
+    simply returns no rows, which is what happens when every helper in
+    range has a location older than max_location_age() (30 minutes) or is
+    offline. The customer is then watching a screen that says their request
+    went to helpers nearby, while nobody was ever offered it.
+
+    Counted here so the app can say so. The client cannot read
+    match_attempts itself — RLS keeps it to the helper it concerns.
+  */
+  const { count: candidateCount } = await admin
+    .from("match_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("request_id", created.id);
+
   return Response.json({
     requestId: created.id,
+    candidateCount: candidateCount ?? 0,
     // The ATTESTED coordinates, so the app can show the search area over a
     // real map rather than over whatever the customer typed.
     pickup: { formatted: guard.address.formatted, lat: fromPoint.lat, lng: fromPoint.lng },

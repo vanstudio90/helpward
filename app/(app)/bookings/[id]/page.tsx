@@ -4,6 +4,8 @@ import { InspectionView } from "./inspection-view";
 import { bookingStatusLabel, bookingStatusTone } from "@/lib/booking-status";
 import { CallPanel } from "@/components/CallPanel";
 import { describeIntake } from "@/lib/service-intake";
+import { describeHandover, handoverFor } from "@/lib/handover";
+import { HandoverEditor } from "./handover-editor";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
@@ -145,6 +147,50 @@ export default async function BookingDetailPage({
     (b as { intake?: Record<string, string | string[]> | null }).intake,
   );
   const request = (b as { request: { id: string; is_bundle: boolean; bundle_item_count: number | null; pickup: { formatted: string } | null } | null }).request;
+
+  /*
+    The handover instructions, read back from where they were SAVED.
+
+    Both halves: the shareable one travelled on the booking, the private
+    one is fetched as the customer, whose own policy opens it. This is
+    the same pair the helper's active task reads, so the two sides are
+    looking at one agreed set of instructions rather than two
+    reconstructions of it.
+  */
+  let handoverPrivate: unknown = null;
+  if (request?.id) {
+    const { data: priv } = await supabase
+      .from("request_private_details")
+      .select("details")
+      .eq("request_id", request.id)
+      .maybeSingle();
+    handoverPrivate = priv?.details ?? null;
+  }
+  const handoverSpec = handoverFor(service?.id ?? "");
+  /*
+    The saved answers, section-keyed, so the editor opens on what is
+    actually stored rather than on an empty form the customer has to
+    retype. Both halves, because the customer may see both.
+  */
+  const handoverValues: Record<string, Record<string, string>> = {};
+  for (const source of [
+    (b as { handover_details?: unknown }).handover_details,
+    handoverPrivate,
+  ]) {
+    if (!source || typeof source !== "object") continue;
+    for (const [sectionKey, raw] of Object.entries(source as Record<string, unknown>)) {
+      if (sectionKey === "version" || !raw || typeof raw !== "object") continue;
+      handoverValues[sectionKey] = {
+        ...(handoverValues[sectionKey] ?? {}),
+        ...(raw as Record<string, string>),
+      };
+    }
+  }
+  const handover = describeHandover(
+    service?.id ?? "",
+    (b as { handover_details?: unknown }).handover_details ?? null,
+    handoverPrivate,
+  );
   const pickup = request?.pickup;
   // conversation and review are UNIQUE relations, so PostgREST embeds them
   // as objects. Reading [0] off an object gives undefined, which is why the
@@ -171,6 +217,12 @@ export default async function BookingDetailPage({
   // initial state of the heart on the helper row + the post-completion
   // save-as-favorite prompt so neither flickers.
   const { data: { user } } = await supabase.auth.getUser();
+  /*
+    The HELPER can open this page too (b_read allows the provider), and
+    they may read these instructions but never rewrite them — they are
+    the customer's words. The editor is only offered to the owner.
+  */
+  const isCustomer = !!user && (b as { customer_id?: string }).customer_id === user.id;
   let helperIsFavorited = false;
   if (user && provider?.user_id) {
     const { data: fav } = await supabase
@@ -307,6 +359,40 @@ export default async function BookingDetailPage({
                   </div>
                 ))}
               </dl>
+            </section>
+          )}
+
+          {/* The handover, as saved. An older booking that never had any
+              says so rather than showing a plausible example. */}
+          {handoverSpec && (
+            <section className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
+              <h2 className="text-[15px] font-bold text-slate-900 mb-3">
+                {handoverSpec.label}
+              </h2>
+              {handover.length > 0 ? (
+                <dl className="space-y-2">
+                  {handover.map((h) => (
+                    <div
+                      key={h.section + h.label}
+                      className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-3 text-[15px]"
+                    >
+                      <dt className="text-slate-500">{h.label}</dt>
+                      <dd className="text-slate-900 font-medium whitespace-pre-line">{h.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="text-[15px] text-slate-500">No instructions added</p>
+              )}
+              {/* Editable while the booking is live. A finished or
+                  cancelled booking keeps its record rather than letting
+                  it be rewritten after the fact. */}
+              <HandoverEditor
+                bookingId={b.id}
+                spec={handoverSpec}
+                initial={handoverValues}
+                canEdit={isCustomer && b.status !== "completed" && b.status !== "cancelled"}
+              />
             </section>
           )}
 

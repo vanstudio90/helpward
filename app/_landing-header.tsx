@@ -2,19 +2,77 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Globe, ChevronDown, Menu, X } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
+/*
+  REAL PAGES WHERE THERE IS ONE, AND ROOT-RELATIVE ANCHORS OTHERWISE.
+
+  Every link here used to be a bare "#section", which has two problems.
+
+  A bare fragment is resolved against the CURRENT page, and this header
+  is on four of them — the home page, /services/<slug>, /cities/<city>
+  and /cities/<city>/<service>. On any of those, clicking "Safety" did
+  nothing at all except append "#safety" to the address bar, which is
+  what made every URL grow a hash.
+
+  Worse, two of the five never existed anywhere: the home page has
+  id="how", id="business" and id="safety", but no "#services" and no
+  "#helpers". So those two did nothing even at home.
+
+  Services and Safety are real pages and now link to them, which also
+  stops wasting the internal links. The two that are genuinely home-page
+  sections are written "/#..." so they work from anywhere.
+*/
 const NAV_LINKS: [string, string][] = [
-  ["#how", "How it works"],
-  ["#services", "Services"],
-  ["#business", "For Business"],
-  ["#safety", "Safety"],
-  ["#helpers", "Become a Helper"],
+  ["/#how", "How it works"],
+  ["/our-services", "Services"],
+  ["/#business", "For Business"],
+  ["/safety", "Safety"],
+  ["/signup?role=helper", "Become a Helper"],
 ];
 
 export function LandingHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  /*
+    SCROLLS WITHOUT PUTTING A "#" IN THE ADDRESS BAR.
+
+    Two of these links point at sections of the home page, and the
+    browser's own behaviour for those is to append "#how" or "#business"
+    to the URL — which is what the owner asked to be rid of.
+
+    The href stays a real URL so the link still works with JavaScript
+    off, still right-clicks and copies to something sensible, and is
+    still followed by a crawler. The click is intercepted only when it
+    CAN be handled here: a plain left click, on this page, to a section
+    that exists. Anything else falls through to the browser.
+  */
+  const onSectionClick = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!href.startsWith("/#")) return;
+    // Let the browser handle modified clicks — new tab, new window,
+    // download — exactly as it would for any other link.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+
+    const id = href.slice(2);
+    if (pathname !== "/") {
+      // Not on the home page: go there first, then scroll once it has
+      // rendered. Still no hash.
+      e.preventDefault();
+      router.push("/");
+      window.setTimeout(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 350);
+      return;
+    }
+    const target = document.getElementById(id);
+    if (!target) return;   // nothing to scroll to; let the link behave normally
+    e.preventDefault();
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <>
@@ -27,7 +85,14 @@ export function LandingHeader() {
 
           <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-700">
             {NAV_LINKS.map(([href, label]) => (
-              <a key={href} href={href} className="hover:text-slate-900">{label}</a>
+              <a
+                key={href}
+                href={href}
+                onClick={onSectionClick(href)}
+                className="hover:text-slate-900"
+              >
+                {label}
+              </a>
             ))}
           </nav>
 
@@ -62,7 +127,14 @@ export function LandingHeader() {
         </div>
         <nav className="px-3 py-4 space-y-1 text-sm font-medium text-slate-700">
           {NAV_LINKS.map(([href, label]) => (
-            <a key={href} href={href} onClick={() => setMenuOpen(false)} className="block px-3 py-2.5 rounded-lg hover:bg-slate-50">{label}</a>
+            <a
+              key={href}
+              href={href}
+              onClick={(e) => { setMenuOpen(false); onSectionClick(href)(e); }}
+              className="block px-3 py-2.5 rounded-lg hover:bg-slate-50"
+            >
+              {label}
+            </a>
           ))}
         </nav>
         <div className="px-3 mt-4 space-y-2">

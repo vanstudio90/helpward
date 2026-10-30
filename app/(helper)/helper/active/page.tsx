@@ -2,6 +2,7 @@ import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/s
 import Link from "next/link";
 import { one } from "@/lib/supabase/relation";
 import { describeIntake } from "@/lib/service-intake";
+import { describeHandover, handoverFor } from "@/lib/handover";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { Activity, MessageSquare, Phone, CheckCircle2, Play } from "lucide-react";
 import { OnlineToggle, BookingActions } from "./client";
@@ -110,7 +111,7 @@ export default async function HelperActivePage() {
     .from("bookings")
     .select(`
       id, status, scheduled_for, started_at, total_cents, payout_cents, currency, request_id,
-      intake, payment_status, customer_id, crew_size,
+      intake, handover_details, payment_status, customer_id, crew_size,
       service:services(id, title, image_url),
       customer:profiles!bookings_customer_id_fkey(full_name, avatar_url),
       pickup_addr:requests!bookings_request_id_fkey(
@@ -144,6 +145,33 @@ export default async function HelperActivePage() {
     ? describeIntake(booking.service?.id ?? "", booking.intake)
     : [];
   const customerNotes = booking ? one(bookingRow!.pickup_addr)?.notes ?? null : null;
+
+  /*
+    The handover instructions, both halves.
+
+    The shareable half rode in on the booking. The private half —
+    meeting point, recipient, entry procedure — is fetched as THIS
+    HELPER, so `rpd_read` is what decides they may have it: assigned to
+    a live booking, or nothing. A helper who was merely offered the job,
+    or whose booking has ended, gets an empty result rather than a
+    redacted string, because the row never reaches them.
+  */
+  let handoverPrivate: unknown = null;
+  if (booking && bookingRow?.request_id) {
+    const { data: priv } = await supabase
+      .from("request_private_details")
+      .select("details")
+      .eq("request_id", bookingRow.request_id)
+      .maybeSingle();
+    handoverPrivate = priv?.details ?? null;
+  }
+  const handover = booking
+    ? describeHandover(
+        booking.service?.id ?? "",
+        (bookingRow as { handover_details?: unknown } | null)?.handover_details ?? null,
+        handoverPrivate,
+      )
+    : [];
 
   // The customer's number, released by profile_contacts' policy only
   // while this booking is live (migration 0050). It used to ride on the
@@ -433,6 +461,29 @@ export default async function HelperActivePage() {
                   <p className="mt-2 text-[13px] text-slate-700 whitespace-pre-wrap border-t border-amber-100 pt-2">
                     <span className="text-slate-500">Notes: </span>{customerNotes}
                   </p>
+                )}
+              </div>
+            )}
+
+            {/* THE HANDOVER, exactly as the customer saved it.
+                Not rebuilt from the notes and never filled in with an
+                example: a booking made before this existed says so. */}
+            {booking && handoverFor(booking.service?.id ?? "") && (
+              <div className="rounded-field bg-indigo-50/70 border border-indigo-100 p-3 text-[15px]">
+                <div className="text-[13px] font-semibold text-indigo-800 uppercase tracking-wide">
+                  {handoverFor(booking.service?.id ?? "")!.label}
+                </div>
+                {handover.length > 0 ? (
+                  <dl className="mt-1.5 space-y-1">
+                    {handover.map((item) => (
+                      <div key={item.section + item.label} className="flex gap-2 text-[13px]">
+                        <dt className="text-slate-500 shrink-0">{item.label}</dt>
+                        <dd className="text-slate-900 font-medium min-w-0">{item.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p className="mt-1.5 text-[13px] text-slate-600">No instructions added</p>
                 )}
               </div>
             )}

@@ -56,7 +56,21 @@ export function HeroSearch({ quickRequests }: { quickRequests: string[] }) {
 
   const submit = (q: string) => {
     const text = q.trim();
-    if (!text) return;
+    /*
+      AN EMPTY BOX STILL GOES SOMEWHERE.
+
+      "Find a helper" used to do nothing at all when nothing had been
+      typed — the one case where a visitor has clearly said "yes, start"
+      and the page answered by sitting still. Plenty of people press the
+      button before the box, and the request flow asks for the service
+      anyway, so send them to it.
+
+      Nothing is recorded as a recent search, because no search happened.
+    */
+    if (!text) {
+      router.push("/new-request");
+      return;
+    }
     const next = [text, ...recent.filter((r) => r.toLowerCase() !== text.toLowerCase())].slice(0, MAX_RECENT);
     persistRecent(next);
     router.push(`/new-request?q=${encodeURIComponent(text)}`);

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { voidBookingAuthorization, chargeTip } from "@/lib/payments";
 import { stripeConfigured } from "@/lib/stripe";
+import { validateHandover, isHandoverEmpty } from "@/lib/handover";
 
 export async function cancelRequestAction(requestId: string) {
   const supabase = await createSupabaseServerClient();
@@ -113,4 +114,81 @@ export async function cancelBookingAction(bookingId: string, reason?: string) {
   revalidatePath("/dashboard");
   revalidatePath("/admin/bookings");
   return { success: "Cancelled." };
+}
+
+/*
+  EDIT THE HANDOVER INSTRUCTIONS ON AN EXISTING BOOKING.
+
+  SCOPE, and it is the whole point: this writes `handover_details` and
+  `request_private_details` and NOTHING ELSE. It never touches the
+  address, the stops, the duration, the quantities or the service — the
+  four things that set the price. A customer who needs one of those
+  changed is told how to arrange it rather than having their booking
+  quietly altered underneath a quote that no longer matches it.
+
+  The split is done again, server-side, by the same validator the
+  original submission used. A client cannot promote a meeting point into
+  the shareable half by sending it under a different key.
+*/
+export async function updateHandoverAction(
+  bookingId: string,
+  handover: Record<string, Record<string, string>>,
+) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Please sign in." };
+
+  // Read as the CALLER, so b_read decides whether this booking is theirs.
+  // The service_id is needed to validate against the right question set.
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, customer_id, service_id, status")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  if (!booking) return { error: "We couldn't find that booking." };
+  if (booking.customer_id !== user.id) {
+    return { error: "Only the customer who made this booking can change its instructions." };
+  }
+
+  const check = validateHandover(booking.service_id ?? "", handover);
+  if (!check.ok) return { error: check.error };
+  const { shared, restricted } = check.split;
+
+  /*
+    ONE GUARDED WRITE, not three.
+
+    The edit has to touch the booking, the request and the private
+    details, and a customer cannot update `bookings` from the client —
+    there is no such policy, and adding one would also let them set
+    total_cents. `set_booking_handover` (0086) is SECURITY DEFINER, checks
+    the caller is the customer, refuses a finished booking, writes the
+    three rows and notifies the helper. It changes instructions and
+    nothing else: no address, no stops, no duration, no quantities, no
+    service, no money.
+
+    Writing the booking row is also what refreshes the helper's screen —
+    their active task subscribes to UPDATEs on their own bookings.
+  */
+  const { error } = await supabase.rpc("set_booking_handover", {
+    p_booking_id: bookingId,
+    p_shared: isHandoverEmpty(shared) ? null : shared,
+    p_private: isHandoverEmpty(restricted) ? null : restricted,
+  });
+
+  if (error) {
+    // The caller keeps the customer's draft; nothing here clears it.
+    const friendly =
+      error.message?.includes("has finished")
+        ? "This booking has finished, so its instructions can't be changed."
+        : error.message?.includes("Only the customer")
+          ? "Only the customer who made this booking can change its instructions."
+          : "Couldn't save those instructions. Please try again.";
+    return { error: friendly };
+  }
+
+  revalidatePath(`/bookings/${bookingId}`);
+  revalidatePath("/bookings");
+  revalidatePath("/helper/active");
+  return { success: "Instructions updated" };
 }

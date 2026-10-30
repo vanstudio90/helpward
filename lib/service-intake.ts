@@ -19,7 +19,18 @@ export type IntakeField = {
    *
    * An offer reaches every candidate helper, including everyone who
    * declines. A gate code or lockbox combination in that payload has been
-   * given away. describeIntake() withholds these until acceptance.
+   * given away.
+   *
+   * THE RULE, applied across every spec: free text that names a person,
+   * or says exactly where to go or how to get in, is sensitive. A
+   * METHOD is not — "lift or stairs", "I'll hand over the keys", "no
+   * alarm" is what a candidate needs to judge the job, and none of it
+   * identifies anyone or opens anything.
+   *
+   * This is no longer only a rendering hint. `offer_summary` is computed
+   * from it when the request is created, and from 0085 that column is
+   * the ONLY thing a candidate helper can read — the request row itself
+   * is no longer served to them.
    */
   sensitive?: boolean;
   key: string;
@@ -196,7 +207,7 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
         placeholder: "e.g. 2019 Toyota RAV4", maxLength: 120 },
       { key: "passengers", label: "Passengers travelling", required: true,
         type: "number", min: 1, max: 7, unit: "people" },
-      { key: "pickup_detail", label: "Where exactly is the car?",
+      { key: "pickup_detail", sensitive: true, label: "Where exactly is the car?",
         hint: "Parkade level, street side, building entrance.",
         required: false, type: "text", maxLength: 200 },
     ],
@@ -223,7 +234,7 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
           { value: "under-seat", label: "Under a seat" },
           { value: "unsure", label: "Not sure" },
         ] },
-      { key: "vehicle_location", label: "Where is the car parked?",
+      { key: "vehicle_location", sensitive: true, label: "Where is the car parked?",
         hint: "Parkade level, street, driveway — and whether a second car can pull alongside.",
         required: true, type: "textarea", maxLength: 400 },
     ],
@@ -281,7 +292,7 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
         ] },
       { key: "weight_kg", label: "Rough weight", required: false,
         type: "number", min: 0, max: 50, unit: "kg" },
-      { key: "recipient", label: "Who receives it?", required: false,
+      { key: "recipient", sensitive: true, label: "Who receives it?", required: false,
         type: "text", placeholder: "Name, or leave with concierge", maxLength: 160 },
     ],
   },
@@ -305,7 +316,7 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
         ] },
       { key: "parcel_count", label: "How many parcels?", required: true,
         type: "number", min: 1, max: 10, unit: "parcels" },
-      { key: "dropoff_point", label: "Preferred drop-off", required: false,
+      { key: "dropoff_point", sensitive: true, label: "Preferred drop-off", required: false,
         type: "text", placeholder: "e.g. the depot on Main St", maxLength: 200 },
     ],
   },
@@ -385,7 +396,7 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
         placeholder: "Usually on a sticker inside the door", maxLength: 160 },
       { key: "fault", label: "What's it doing?", required: true, type: "textarea",
         placeholder: "Noises, error codes, when it started", maxLength: 1000 },
-      { key: "access_detail", label: "Where is it, and can it be moved?",
+      { key: "access_detail", sensitive: true, label: "Where is it, and can it be moved?",
         required: false, type: "text", maxLength: 200 },
     ],
   },
@@ -480,7 +491,7 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
           { value: "medium", label: "Medium — 10 to 25kg" },
           { value: "large", label: "Large — 25kg or more" },
         ] },
-      { key: "leash_location", label: "Where are the lead and harness?",
+      { key: "leash_location", sensitive: true, label: "Where are the lead and harness?",
         required: true, type: "text", maxLength: 200 },
       { key: "behaviour", label: "Anything your helper should know?",
         hint: "Pulling, reactivity to other dogs, recall, medication.",
@@ -547,7 +558,7 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
           { value: "wheelchair", label: "Uses a wheelchair" },
           { value: "assistance", label: "Needs steadying" },
         ] },
-      { key: "notes", label: "Anything else your helper should know?",
+      { key: "notes", sensitive: true, label: "Anything else your helper should know?",
         hint: "Hearing, memory, routines, what to avoid. No medical care is provided.",
         required: false, type: "textarea", maxLength: 1000 },
       ACCESS,
@@ -594,7 +605,7 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
       // details — or photograph documents — into a free-text field that
       // every matched helper can read. Ask for the minimum that actually
       // helps someone hold a place in a line.
-      { key: "documents", label: "Does your helper need anything to join the queue?",
+      { key: "documents", sensitive: true, label: "Does your helper need anything to join the queue?",
         hint: "A booking name or reference number is usually enough. Never share ID documents, passwords or account details here.",
         required: false, type: "text", maxLength: 200 },
 
@@ -603,7 +614,7 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
       // without ever knowing.
       { key: "venue_name", label: "Which venue?", required: true, type: "text",
         placeholder: "The business name, as it appears on the door", maxLength: 120 },
-      { key: "which_queue", label: "Which entrance or line should your helper join?",
+      { key: "which_queue", sensitive: true, label: "Which entrance or line should your helper join?",
         hint: "If there is more than one, say which. 'The one on the north side, under the awning.'",
         required: true, type: "text", maxLength: 200 },
 

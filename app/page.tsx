@@ -245,7 +245,7 @@ export default async function LandingPage() {
               <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Popular services</h2>
               <p className="text-sm text-slate-500 mt-1">Most requested help from our community</p>
             </div>
-            <Link href="#services" className="text-xs sm:text-sm font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap">
+            <Link href="/our-services" className="text-xs sm:text-sm font-semibold text-brand-700 hover:text-brand-800 whitespace-nowrap">
               View all services →
             </Link>
           </div>
@@ -254,7 +254,9 @@ export default async function LandingPage() {
               {topCategories.map(({ category, count }) => (
                 <Link
                   key={category.id}
-                  href={`#services`}
+                  // Plain URL, no fragment: the services page is one
+                  // short list now that the catalogue is eight.
+                  href="/our-services"
                   className="group snap-start shrink-0 w-[40%] sm:w-auto rounded-2xl overflow-hidden bg-white border border-slate-100 hover:border-brand-300 hover:shadow-lg transition"
                 >
                   <div className="aspect-[5/4] bg-slate-100 relative overflow-hidden">
@@ -521,7 +523,7 @@ export default async function LandingPage() {
             />
             <FooterCol
               title="Categories"
-              items={topCategories.map(({ category }) => [category.label, `/#services`] as [string, string])}
+              items={topCategories.map(({ category }) => [category.label, `/our-services`] as [string, string])}
             />
             <FooterCol
               title="Top cities"

@@ -87,7 +87,9 @@ export default async function OurServicesPage() {
 
       <div className="not-prose mt-8 space-y-10">
         {byCategory.map(({ category, items }) => (
-          <section key={category.id}>
+          /* An id so a category link from the home page lands on the
+             right block rather than the top of a long list. */
+          <section key={category.id} id={category.id} className="scroll-mt-24">
             <h2 className="text-xl font-bold text-slate-900">{category.label}</h2>
             <div className="mt-4 grid sm:grid-cols-2 gap-3">
               {items.map((s) => {

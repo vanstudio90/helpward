@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { one } from "@/lib/supabase/relation";
 import { payoutFromEstimateCents, dollars } from "@/lib/pricing";
-import { describeIntake } from "@/lib/service-intake";
+import { describeHandover, handoverFor } from "@/lib/handover";
 import {
   Inbox, MapPin, Clock, DollarSign, Heart, ListChecks, Calendar, Volume2,
 } from "lucide-react";
@@ -17,23 +17,37 @@ import { HelperInboxRealtimeRefresh } from "./realtime-refresh";
 export const dynamic = "force-dynamic";
 
 /** The offer row's embedded request, as the page actually uses it. */
-type OfferRequest = {
-  id: string;
+/*
+  One row of `my_offers()` — flat, and deliberately narrow.
+
+  No `intake`, no address id, no notes, no destination, no recipient.
+  The brief is `offer_summary`, which the server computed with
+  describeIntake(forOffer) when the request was created.
+*/
+type OfferRow = {
+  attempt_id: string;
+  request_id: string;
+  notified_at: string | null;
+  preferred: boolean;
+  distance_km: number | null;
+  rank_score: number | null;
+  service_id: string | null;
+  service_title: string | null;
+  service_blurb: string | null;
+  service_image_url: string | null;
+  service_eta_label: string | null;
   status: string;
   scheduled_for: string | null;
-  notes: string | null;
-  estimated_price_cents: number | null;
-  intake: Record<string, string | string[]> | null;
-  service?: { id: string; title: string; blurb: string | null; base_price_cents: number;
-              eta_label: string | null; image_url: string | null } | Array<{ id: string; title: string;
-              blurb: string | null; base_price_cents: number; eta_label: string | null;
-              image_url: string | null }> | null;
-  // Snapshotted onto the request (migration 0048) rather than embedded
-  // from addresses, which 0047 correctly hides from an un-accepted helper.
+  is_bundle: boolean;
+  bundle_item_count: number | null;
+  // The approximate area (0048), not the address.
   pickup_city: string | null;
   pickup_region: string | null;
-  customer?: { full_name: string; avatar_url: string | null }
-           | Array<{ full_name: string; avatar_url: string | null }> | null;
+  estimated_price_cents: number | null;
+  customer_name: string | null;
+  customer_avatar_url: string | null;
+  offer_summary: Array<{ label: string; value: string; withheld?: boolean }> | null;
+  handover_details: unknown;
 };
 
 export default async function HelperInboxPage() {
@@ -51,26 +65,24 @@ export default async function HelperInboxPage() {
   // match_attempts where the current helper was offered and hasn't responded.
   // We also pull the customer's full_name (and avatar) when the attempt is
   // flagged preferred so the helper sees who specifically requested them.
-  const { data } = await supabase
-    .from("match_attempts")
-    .select(`
-      id, distance_km, rank_score, notified_at, preferred,
-      request:requests(
-        id, status, scheduled_for, notes, estimated_price_cents, intake,
-        pickup_city, pickup_region,
-        service:services(id, title, blurb, base_price_cents, eta_label, image_url),
-        customer:profiles!requests_customer_id_fkey(full_name, avatar_url)
-      )
-    `)
-    .is("responded_at", null)
-    .order("preferred", { ascending: false })
-    .order("notified_at", { ascending: false });
+  /*
+    THE OFFER PAYLOAD COMES FROM THE SERVER, NOT FROM THE REQUEST ROW.
 
-  // Filter out attempts whose request has already been taken
-  const offers = (data ?? []).filter((row) => {
-    const req = one((row as { request?: OfferRequest | OfferRequest[] | null }).request);
-    return !!req && req.status === "matching";
-  });
+    This used to embed `requests(... intake ...)` and withhold the
+    sensitive answers while rendering them. That withheld nothing: the
+    row was readable over PostgREST with a helper token, so every
+    candidate could read the destination the screen labelled "shared
+    once you accept".
+
+    `my_offers()` (0084) returns approved columns only — service, area,
+    schedule, the pre-computed brief and the payout. There is no
+    `intake` in it to leak, which is also why old requests are safe:
+    their private answers are still in that column and this never asks
+    for it.
+  */
+  const { data } = await supabase.rpc("my_offers");
+
+  const offers = (data ?? []) as OfferRow[];
 
   return (
     <div className="space-y-4">
@@ -125,13 +137,36 @@ export default async function HelperInboxPage() {
             // say which. one() asks what actually arrived instead of
             // asserting a shape — the casts this replaces were wrong in
             // both directions and failed silently, rendering nothing.
-            const req = one((row as { request?: OfferRequest | OfferRequest[] | null }).request)!;
-            const preferred = (row as { preferred: boolean }).preferred;
-            const service = one(req.service);
-            const customer = one(req.customer);
+            // Shaped back into the objects this markup already reads,
+            // so the change is the DATA SOURCE and not the layout.
+            const req = {
+              id: row.request_id,
+              status: row.status,
+              scheduled_for: row.scheduled_for,
+              estimated_price_cents: row.estimated_price_cents,
+              pickup_city: row.pickup_city,
+              pickup_region: row.pickup_region,
+              // There is no `notes` in an offer any more: free text the
+              // customer wrote for their helper is not something to hand
+              // to every candidate.
+              notes: null as string | null,
+            };
+            const preferred = row.preferred;
+            const service = row.service_id
+              ? {
+                  id: row.service_id,
+                  title: row.service_title ?? "",
+                  blurb: row.service_blurb,
+                  eta_label: row.service_eta_label,
+                  image_url: row.service_image_url,
+                }
+              : null;
+            const customer = row.customer_name
+              ? { full_name: row.customer_name, avatar_url: row.customer_avatar_url }
+              : null;
             return (
               <li
-                key={row.id}
+                key={row.attempt_id}
                 className={`rounded-card border overflow-hidden ${
                   preferred
                     ? "bg-gradient-to-br from-rose-50 to-pink-50 border-rose-200 ring-2 ring-rose-100"
@@ -193,14 +228,15 @@ export default async function HelperInboxPage() {
                       the destination, the crew size, the stairs — not just a
                       price and a pin. */}
                   {(() => {
-                    // forOffer: this payload goes to every candidate,
-                    // including everyone who declines. Access codes are
-                    // withheld until someone is accountable for the job.
-                    const brief = describeIntake(
-                      service?.id ?? "",
-                      (req as { intake?: Record<string, string | string[]> }).intake,
-                      { forOffer: true },
-                    );
+                    /*
+                      The brief as the SERVER approved it.
+
+                      Computed by describeIntake(forOffer) at creation and
+                      stored on the request, so this screen renders what
+                      it was given rather than deciding what to hide. An
+                      older request has none, and shows none.
+                    */
+                    const brief = row.offer_summary ?? [];
                     if (brief.length === 0) return null;
                     return (
                       <dl className="mt-3 rounded-field bg-brand-50/70 border border-brand-100 p-2.5 space-y-1">
@@ -213,11 +249,38 @@ export default async function HelperInboxPage() {
                       </dl>
                     );
                   })()}
-                  {req.notes && (
-                    <div className="mt-3 text-[13px] text-slate-600 bg-slate-50 rounded-field p-2.5">
-                      <span className="font-semibold">Note: </span>{req.notes}
-                    </div>
-                  )}
+                  {(() => {
+                    /*
+                      WHAT A CANDIDATE NEEDS TO JUDGE THE JOB.
+
+                      Only the shareable half exists on the request —
+                      stairs, parking, which handover method. The meeting
+                      point and the recipient are in
+                      request_private_details, which this helper's policy
+                      does not open until they are assigned. Nothing is
+                      filtered here; there is nothing to filter.
+                    */
+                    const spec = handoverFor(service?.id ?? "");
+                    if (!spec) return null;
+                    const lines = describeHandover(service?.id ?? "", row.handover_details ?? null);
+                    if (lines.length === 0) return null;
+                    return (
+                      <dl className="mt-3 rounded-field bg-indigo-50/70 border border-indigo-100 p-2.5 space-y-1">
+                        <div className="text-[12px] font-semibold text-indigo-900/70 uppercase tracking-wide">
+                          {spec.label}
+                        </div>
+                        {lines.map((b) => (
+                          <div key={b.section + b.label} className="flex items-start gap-2 text-[13px]">
+                            <dt className="text-indigo-900/70 shrink-0 min-w-[7rem]">{b.label}</dt>
+                            <dd className="text-indigo-950 font-medium min-w-0">{b.value}</dd>
+                          </div>
+                        ))}
+                        <div className="text-[12px] text-indigo-900/60 pt-1">
+                          Exact meeting point and contact details are shared once you accept.
+                        </div>
+                      </dl>
+                    );
+                  })()}
                   <InboxRow requestId={req.id} />
                 </div>
               </li>

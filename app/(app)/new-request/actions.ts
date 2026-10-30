@@ -11,7 +11,7 @@ import { collectSubmitted, type SubmittedValues } from "@/lib/request-form";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
 import { reviewResolution } from "@/lib/address-confirmation";
-import { validateIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service-intake";
+import { validateIntake, describeIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service-intake";
 import { resolveIntakeAddresses, applyResolvedAddresses } from "@/lib/intake-addresses";
 import { checkTrip } from "@/lib/trip-limits";
 import { resolveAddressStrict } from "@/lib/geocode";
@@ -457,6 +457,11 @@ async function createRequestActionInner(
       estimated_duration_min: Number(intake.duration_min) || 45,
       status: "matching",
       intake,
+      // The brief a CANDIDATE may see — see the note in
+      // app/api/v1/requests/route.ts. Computed once, here, because
+      // describeIntake is the only place that knows which answers are
+      // sensitive.
+      offer_summary: describeIntake(serviceId, intake, { forOffer: true }),
       preferred_helper_id: preferredHelperId,
     })
     .select()
