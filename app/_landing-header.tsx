@@ -15,6 +15,30 @@ const NAV_LINKS: [string, string][] = [
 export function LandingHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  /*
+    SCROLLS TO THE SECTION WITHOUT PUTTING A "#" IN THE ADDRESS BAR.
+
+    These point at sections of the home page, and the browser's own
+    behaviour is to append "#services" or "#how" to the URL — which is
+    what every visitor then sees and copies.
+
+    The href stays a real fragment so the link still works with
+    JavaScript off, still right-clicks to something sensible, and is
+    still followed by a crawler. A plain left click is handled here
+    instead; anything else — a modified click, or a target that does not
+    exist on this page — falls straight through to the browser, so the
+    link can never become a dead control.
+  */
+  const onNavClick = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!href.startsWith("#")) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+
+    const target = document.getElementById(href.slice(1));
+    if (!target) return;
+    e.preventDefault();
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <>
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
@@ -26,7 +50,14 @@ export function LandingHeader() {
 
           <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-700">
             {NAV_LINKS.map(([href, label]) => (
-              <a key={href} href={href} className="hover:text-slate-900">{label}</a>
+              <a
+                key={href}
+                href={href}
+                onClick={onNavClick(href)}
+                className="hover:text-slate-900"
+              >
+                {label}
+              </a>
             ))}
           </nav>
 
@@ -61,7 +92,14 @@ export function LandingHeader() {
         </div>
         <nav className="px-3 py-4 space-y-1 text-sm font-medium text-slate-700">
           {NAV_LINKS.map(([href, label]) => (
-            <a key={href} href={href} onClick={() => setMenuOpen(false)} className="block px-3 py-2.5 rounded-lg hover:bg-slate-50">{label}</a>
+            <a
+              key={href}
+              href={href}
+              onClick={(e) => { setMenuOpen(false); onNavClick(href)(e); }}
+              className="block px-3 py-2.5 rounded-lg hover:bg-slate-50"
+            >
+              {label}
+            </a>
           ))}
         </nav>
         <div className="px-3 mt-4 space-y-2">
