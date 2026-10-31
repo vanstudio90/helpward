@@ -32,8 +32,14 @@ export type CityCopy = {
   /** The word the address form uses here. */
   regionWord: "province" | "state";
   /**
-    A true local consequence for a TIME-PRICED job, where geography costs
-    time and time costs money.
+    A true local consequence for a TIME-PRICED job.
+
+    NOT a surcharge. priceService() reads the duration from the
+    customer's own intake answer, never from started_at or elapsed time,
+    and migration 0054 seals the priced intake at request time. So the
+    helper's journey is not billable and booking longer does not pay for
+    it — booking longer buys more time ON the task. Geography changes who
+    can reach you and when, not what you are charged.
   */
   travelNote: string;
   /**
@@ -60,14 +66,14 @@ export const CITY_COPY: Record<string, CityCopy> = {
     currency: "CAD",
     regionWord: "province",
     travelNote:
-      "Getting around the Lower Mainland means bridges and tunnels, and a crossing at the wrong "
-      + "hour costs time rather than money: Helpward prices by the time you book, not by distance. "
-      + "A job that crosses the water is worth booking a little longer than the same job inside one "
-      + "municipality.",
+      "Getting around the Lower Mainland means bridges and tunnels, and a crossing at the wrong hour "
+      + "is the difference between a helper accepting your request and leaving it. It does not change "
+      + "the price: you pay for the time you book on the task, and the journey to reach you is not "
+      + "billable. Book the time the job needs, and expect fewer helpers within reach at rush hour.",
     flatNote:
-      "This one is a flat price, so a bridge or a tunnel between the two ends costs you nothing "
-      + "extra — it costs the helper time, which is why giving an accurate collection point, "
-      + "destination and access detail matters more here than the distance does.",
+      "This one is a flat price, so a bridge or a tunnel between the two ends costs you nothing extra. "
+      + "What it changes is who is willing to take the job and how long it takes them, which is why an "
+      + "accurate collection point, destination and access detail matters more here than distance does.",
     remoteNote:
       "Nobody travels for this one, so where you are in the Lower Mainland makes no difference to "
       + "the booking or the price.",
@@ -90,16 +96,15 @@ export const CITY_COPY: Record<string, CityCopy> = {
     currency: "USD",
     regionWord: "state",
     travelNote:
-      "San Diego city limits are an awkward shape, and a San Diego mailing address is not always "
-      + "inside them — several neighbouring places are their own incorporated cities. Where a job "
-      + "has two ends, check both against the line before booking: a drop-off outside it cannot be "
-      + "served. Within the limits, distance does not change the price, because Helpward charges "
-      + "for time booked.",
+      "San Diego city limits are an awkward shape, and a San Diego mailing address is not always inside "
+      + "them — several neighbouring places are their own incorporated cities. Distance does not change "
+      + "the price: you pay for the time you book on the task, not for the helper's journey. What it "
+      + "changes is how many helpers are close enough to accept.",
     flatNote:
-      "This one is a flat price, so distance inside the city limits costs you nothing extra. What "
-      + "matters is that BOTH ends sit inside them: several neighbouring places are their own "
-      + "incorporated cities, and a San Diego mailing address is not proof an address is inside "
-      + "the line.",
+      "This one is a flat price, so distance costs you nothing extra. Where a job has two ends, give "
+      + "both accurately: several neighbouring places are their own incorporated cities, and a San "
+      + "Diego mailing address is not proof an address is inside the line. A helper decides whether "
+      + "they can cover both ends before accepting.",
     remoteNote:
       "Nobody travels for this one, so the city-limits boundary does not apply the way it does to a "
       + "booking at an address.",

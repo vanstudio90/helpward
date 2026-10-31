@@ -563,16 +563,21 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
     faqs: [
       {
         q: "What size parcel can I send?",
-        a: "The form asks for size and rough weight, and the answer sets who can take it: something that "
-          + "fits in a backpack suits almost any helper, a bulky box needs one with a car. Be accurate "
-          + "rather than optimistic — a helper who arrives to find something twice the size described can "
-          + "decline it.",
+        a: "The form offers three size bands — fits in a backpack, needs two hands, awkward to carry alone "
+          + "— and accepts a weight up to 50 kg. That 50 kg is the most the form will take, not a promise "
+          + "that a helper will carry it: acceptance depends on what you declare and whether somebody with "
+          + "suitable handling for it is available. Anything heavy or awkward needs the right description "
+          + "and, often, a helper with a vehicle and a trolley. Describe it accurately — a helper who "
+          + "arrives to find something twice what was declared can decline it, and should.",
       },
       {
         q: "What destinations are supported?",
-        a: "Addresses within the area we operate in, which means Vancouver and the surrounding Lower "
-          + "Mainland, or the City of San Diego within city limits. There is no intercity, interprovincial "
-          + "or cross-border delivery.",
+        a: "We operate in the City of San Diego and supported municipalities across Vancouver's Lower "
+          + "Mainland, and this is a local trip within those areas — not postal, intercity or cross-border "
+          + "shipping. Be aware of how that is actually decided: nothing checks your destination when you "
+          + "submit. The request goes to approved helpers near the collection point, and each one decides "
+          + "whether they can cover both ends before accepting. A destination far from the pickup simply "
+          + "may not be accepted, so give the real address rather than the nearest one you think qualifies.",
       },
       {
         q: "Must someone receive the parcel?",
