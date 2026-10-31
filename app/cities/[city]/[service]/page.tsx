@@ -19,6 +19,9 @@ import {
   relatedPrompt,
 } from "@/lib/public-service-copy";
 import { cityCopy } from "@/lib/public-city-copy";
+import { displayBaseCents, countryMoneyForService, oneCountry } from "@/lib/country-price";
+import { pricingExplanation } from "@/lib/public-service-copy";
+import { formatMoney } from "@/lib/money";
 import { servicePrep, prepHeading, HANDOVER_LINE } from "@/lib/public-service-prep";
 import { SERVICE_SCOPE } from "@/lib/public-service-pages";
 import { ServiceIcon } from "@/components/ServiceIcon";
@@ -51,7 +54,8 @@ export async function generateMetadata({
   const title = `${name} in ${city.name}, ${city.region} | Helpward`;
   const local = cityCopy(city.slug);
   const money = local?.currency ?? (city.country === "CA" ? "CAD" : "USD");
-  const description = `Book ${name.toLowerCase()} in ${city.name}. From $${(service.base_price_cents / 100).toFixed(0)} ${money}, approved local helpers, paid only once the job is done.`;
+  const metaCents = displayBaseCents(service.base_price_cents, service.country_pricing ?? undefined, city.country);
+  const description = `Book ${name.toLowerCase()} in ${city.name}. From $${(metaCents / 100).toFixed(0)} ${money}, approved local helpers, paid only once the job is done.`;
   const url = `https://helpward.com/cities/${city.slug}/${service.id}`;
   return {
     title,
@@ -101,9 +105,39 @@ export default async function CityServicePage({
     : allServices
         .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
         .slice(0, 6);
-  const baseDollars = service.base_price_cents / 100;
+  /*
+    THE PRICE FOR THIS COUNTRY, not the single catalogue figure wearing a
+    local currency label. Every launch service costs more in Canada —
+    errand running CA$40 against US$35 — so a Vancouver page built from
+    base_price_cents advertised a number nobody is charged.
+
+    Unlike the main service pages, a city page DOES know its country, so
+    it shows one correct figure rather than both.
+  */
+  const baseDollars = displayBaseCents(service.base_price_cents, service.country_pricing ?? undefined, city.country) / 100;
   const serviceFee = 4.5;
   const total = baseDollars + serviceFee;
+
+  /*
+    The whole quote in THIS country, not just the base. A city page knows
+    where it is, so unlike the main service pages it shows one figure per
+    line — and every line is the local one, because the block, per-unit
+    and per-crew amounts differ by country as well.
+  */
+  const localMoney = countryMoneyForService(
+    service.base_price_cents,
+    service.country_pricing ?? undefined,
+    pricingRules[service.id] ?? null,
+  );
+  const localPricing = pricingExplanation({
+    base: localMoney.base,
+    block: localMoney.block,
+    unit: localMoney.unit,
+    crew: localMoney.crew,
+    serviceFeeCents: Math.round(serviceFee * 100),
+    rule: pricingRules[service.id] ?? null,
+    amount: oneCountry(formatMoney, city.country),
+  });
 
   // JSON-LD: Service scoped to this one city, LocalBusiness for the city,
   // FAQPage with location-aware Q&A, and BreadcrumbList for the deep path.
@@ -175,7 +209,7 @@ export default async function CityServicePage({
         },
     {
       q: `How much does ${name.toLowerCase()} cost in ${city.name}?`,
-      a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)} (${currency}). A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. Pricing is the same across ${city.name} — no surge fees, no per-block markup. You're only charged after the helper marks the task complete.`,
+      a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)} (${currency}). A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. Pricing is the same across ${city.name} — no surge fees, no per-block markup — though it differs between our two countries, so this is the ${currency} price. You're only charged after the helper marks the task complete.`,
     },
     ...(local
       ? [
@@ -466,6 +500,23 @@ export default async function CityServicePage({
             </div>
           </section>
         )}
+
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <h2 className="text-2xl font-bold text-slate-900">
+            What {name.toLowerCase()} costs in {city.name}
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            {localPricing.lead} Every figure below is in {currency}.
+          </p>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2 max-w-4xl text-sm text-slate-700">
+            {localPricing.points.map((point) => (
+              <li key={point} className="flex items-start gap-2 rounded-xl bg-white border border-slate-100 p-3.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         {/*
           Trust statements get a path here too — the same gap the main

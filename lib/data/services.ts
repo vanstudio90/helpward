@@ -10,8 +10,19 @@ import type { Service, ServiceCategory, Country } from "@/lib/supabase/types";
  * customer reads must be the price they are charged, so the override comes
  * back on the same row as the base and there is no query that can forget
  * it. */
+/*
+  The per-country overrides travel with the service on every read.
+
+  THE SELECT MUST NAME EVERY OVERRIDDEN COLUMN. It listed only the base
+  and the time block, while localizeRule() below reads
+  per_extra_unit_cents and per_extra_crew_cents as well — so those two
+  arrived undefined and silently fell back to the rule, quoting a
+  Canadian a US per-parcel and per-helper price. That is the same bug
+  this constant exists to prevent, one field deeper, which is why there
+  is one select and not a per-query list.
+*/
 export const SERVICE_SELECT =
-  "*, category:service_categories(*), country_pricing:service_country_pricing(country, base_price_cents, extra_block_cents)";
+  "*, category:service_categories(*), country_pricing:service_country_pricing(country, base_price_cents, extra_block_cents, per_extra_unit_cents, per_extra_crew_cents)";
 
 import type { CountryPrice } from "@/lib/country-price";
 export type { CountryPrice as ServiceCountryPrice } from "@/lib/country-price";

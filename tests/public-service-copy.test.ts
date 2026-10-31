@@ -14,6 +14,7 @@ import {
   pricingExplanation,
 } from "../lib/public-service-copy.ts";
 import { CITY_COPY } from "../lib/public-city-copy.ts";
+import { countryMoneyForService, bothCountries, oneCountry } from "../lib/country-price.ts";
 import { SERVICE_PREP, servicePrep, prepHeading, HANDOVER_LINE } from "../lib/public-service-prep.ts";
 
 /*
@@ -63,17 +64,18 @@ test("every token in the copy is one the resolver fills", () => {
   }
 });
 
+/* US and CA deliberately different: every launch service is. */
+const amount = (a: { us: number; ca: number }) =>
+  a.us === a.ca ? `$${(a.us / 100).toFixed(2)}` : `US$${(a.us / 100).toFixed(2)} · CA$${(a.ca / 100).toFixed(2)}`;
+
 const facts: PriceFacts = {
-  baseCents: 2500,
+  base: { us: 2500, ca: 3000 },
+  block: { us: 800, ca: 900 },
+  unit: { us: 800, ca: 900 },
+  crew: { us: 10000, ca: 11000 },
   serviceFeeCents: 450,
-  rule: {
-    includedMinutes: 30,
-    extraBlockMinutes: 15,
-    extraBlockCents: 800,
-    includedUnits: 1,
-    perExtraUnitCents: 800,
-    perExtraCrewCents: 10000,
-  },
+  rule: { includedMinutes: 30, extraBlockMinutes: 15, includedUnits: 1 },
+  amount,
 };
 
 test("resolved answers carry real figures and no leftover tokens", () => {
@@ -82,11 +84,12 @@ test("resolved answers carry real figures and no leftover tokens", () => {
   for (const { a } of faqs) {
     assert.ok(!a.includes("{"), `token survived: ${a}`);
   }
-  assert.ok(faqs.some((f) => f.a.includes("$25")), "base price not substituted");
+  assert.ok(faqs.some((f) => f.a.includes("US$25.00")), "US base price not substituted");
+  assert.ok(faqs.some((f) => f.a.includes("CA$30.00")), "CA base price not substituted");
 });
 
 test("an answer whose figures are missing is dropped, not served with a token", () => {
-  const faqs = servicePageFaqs("dog-walking", { ...facts, rule: null });
+  const faqs = servicePageFaqs("dog-walking", { ...facts, rule: null, block: null, unit: null });
   for (const { a } of faqs) {
     assert.ok(!a.includes("{"), `token served with no rule behind it: ${a}`);
   }
@@ -142,7 +145,10 @@ test("the included list states one payment model, once", () => {
 
 test("no pricing explanation claims distance changes the price", () => {
   for (const rule of [facts.rule, null]) {
-    const { points } = pricingExplanation({ baseCents: 2500, serviceFeeCents: 450, rule });
+    const { points } = pricingExplanation({
+      base: facts.base, block: facts.block, unit: facts.unit, crew: facts.crew,
+      serviceFeeCents: 450, rule, amount,
+    });
     const text = points.join(" ");
     assert.ok(/Distance does not change the price/.test(text), text);
     assert.ok(!/depends on distance/.test(text), text);
@@ -298,4 +304,85 @@ test("an audio service is never told to prepare for an arrival", () => {
     );
     assert.match(text, /microphone/i, `${id} should mention microphone permission`);
   }
+});
+
+test("the 'same figure in both currencies' claim can never come back", () => {
+  /*
+    It was published, and it was false for every launch service: the
+    Canadian price differs on the base, the time block, the per-unit and
+    the per-crew amount. A page that says the figure is the same in both
+    currencies under-quotes a Canadian by 10-25%.
+
+    This guards the WORDING across every module that writes public copy,
+    because the sentence is what reached the page, not the arithmetic.
+  */
+  const banned = [
+    /same figure in (?:both|CAD|USD)/i,
+    /same number in both/i,
+    /same (?:amount|price) in both currencies/i,
+    /charged the same figure/i,
+  ];
+  const files = [
+    "lib/public-service-copy.ts",
+    "lib/public-service-pages.ts",
+    "lib/public-service-prep.ts",
+    "lib/public-city-copy.ts",
+    "lib/country-price.ts",
+    "app/pricing/page.tsx",
+    "app/services/[slug]/page.tsx",
+    "app/cities/[city]/[service]/page.tsx",
+    "app/our-services/page.tsx",
+  ];
+  for (const file of files) {
+    const body = stripComments(readFileSync(file, "utf8"));
+    for (const pattern of banned) {
+      assert.ok(
+        !pattern.test(body),
+        `${file} claims the price is the same in both currencies. It is not — see service_country_pricing.`,
+      );
+    }
+  }
+});
+
+test("every money component is localised, not just the base", () => {
+  /*
+    price_service_cents coalesces base, extra_block, per_extra_unit and
+    per_extra_crew SEPARATELY against the country row. A page that
+    localises the base and leaves the block at the catalogue value shows
+    a Canadian a US block price, which is the same bug one level down.
+  */
+  const overrides = [
+    { country: "US" as const, base_price_cents: 3500, extra_block_cents: 875,
+      per_extra_unit_cents: 300, per_extra_crew_cents: 10000 },
+    { country: "CA" as const, base_price_cents: 4000, extra_block_cents: 1000,
+      per_extra_unit_cents: 400, per_extra_crew_cents: 11000 },
+  ];
+  const money = countryMoneyForService(3500, overrides, {
+    extraBlockCents: 875, perExtraUnitCents: 300, perExtraCrewCents: 10000,
+  });
+  assert.deepEqual(money.base, { us: 3500, ca: 4000 });
+  assert.deepEqual(money.block, { us: 875, ca: 1000 }, "block price not localised");
+  assert.deepEqual(money.unit, { us: 300, ca: 400 }, "per-unit price not localised");
+  assert.deepEqual(money.crew, { us: 10000, ca: 11000 }, "per-crew price not localised");
+
+  // A country row with a null field falls back to the rule, exactly as
+  // the database's coalesce does.
+  const partial = countryMoneyForService(3500, [
+    { country: "US" as const, base_price_cents: 3500, extra_block_cents: null },
+    { country: "CA" as const, base_price_cents: 4000, extra_block_cents: null },
+  ], { extraBlockCents: 875, perExtraUnitCents: null, perExtraCrewCents: null });
+  assert.deepEqual(partial.block, { us: 875, ca: 875 }, "null override should fall back to the rule");
+});
+
+test("a static page prints both figures and a city page prints one", () => {
+  const differs = { us: 3500, ca: 4000 };
+  const same = { us: 450, ca: 450 };
+  const fmt = (c: number, cur: string) => `${cur === "CAD" ? "CA$" : "US$"}${(c / 100).toFixed(2)}`;
+
+  const both = bothCountries(fmt);
+  assert.equal(both(differs), "US$35.00 · CA$40.00");
+  assert.equal(both(same), "$4.50", "an amount that genuinely matches should print once");
+
+  assert.equal(oneCountry(fmt, "CA")(differs), "CA$40.00");
+  assert.equal(oneCountry(fmt, "US")(differs), "US$35.00");
 });
