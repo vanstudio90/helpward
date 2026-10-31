@@ -180,13 +180,42 @@ test("every service states what it does NOT cover", () => {
   }
 });
 
-test("no two services share an exclusion list", () => {
-  const seen = new Map<string, string>();
+test("exclusions are relevant to the service that lists them", () => {
+  /*
+    Uniqueness is NOT the bar, and an earlier version of this test made
+    it one. Several services legitimately share a restriction — nothing
+    illegal or hazardous applies to a courier run and an errand alike,
+    and forcing each page to word it differently would buy nothing but
+    awkward prose.
+
+    What matters is that an exclusion belongs on the page it appears on.
+    So: each service must rule out something specific to itself, rather
+    than filling the list with boilerplate that would read the same
+    anywhere.
+  */
+  const shared = new Map<string, number>();
+  for (const scope of Object.values(SERVICE_SCOPE)) {
+    for (const line of scope.excludes) shared.set(line, (shared.get(line) ?? 0) + 1);
+  }
   for (const [id, scope] of Object.entries(SERVICE_SCOPE)) {
-    const key = scope.excludes.join("|");
-    const prior = seen.get(key);
-    assert.equal(prior, undefined, `${id} and ${prior} share their exclusions`);
-    seen.set(key, id);
+    const ownToThisService = scope.excludes.filter((line) => shared.get(line) === 1);
+    assert.ok(
+      ownToThisService.length >= 1,
+      `${id} rules out nothing specific to itself — every exclusion it lists also appears elsewhere`,
+    );
+  }
+});
+
+test("an exclusion explains itself rather than just saying no", () => {
+  // "No insurance on the contents — there is none" tells a customer
+  // something. A bare "Not available" does not.
+  for (const [id, scope] of Object.entries(SERVICE_SCOPE)) {
+    for (const line of scope.excludes) {
+      assert.ok(
+        line.split(/\s+/).length >= 3,
+        `${id} has an exclusion too terse to be useful: "${line}"`,
+      );
+    }
   }
 });
 

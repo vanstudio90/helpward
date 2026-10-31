@@ -443,6 +443,14 @@ export default async function CityServicePage({
                 </span>
               </li>
               <li>
+                <Link href="/pricing" className="font-semibold text-brand-700 hover:underline">
+                  How pricing works
+                </Link>
+                <span className="block text-slate-600 text-[13px]">
+                  What affects a quote, and the currency you are charged in.
+                </span>
+              </li>
+              <li>
                 <Link href={`/cities/${city.slug}`} className="font-semibold text-brand-700 hover:underline">
                   Everything we cover in {city.name}
                 </Link>

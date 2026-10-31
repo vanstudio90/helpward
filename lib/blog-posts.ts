@@ -197,50 +197,20 @@ export const BLOG_POSTS: BlogPost[] = [
       { href: "/terms", label: "Cancellations and refunds", why: "The terms in full, including the 24-hour dispute window." },
     ],
   },
-  {
-    slug: "lessons-from-our-first-three-cities",
-    title: "Lessons from launching our first three cities",
-    excerpt:
-      "Vancouver, Toronto, Montreal. What was harder than we expected, what was easier, and what we'd do differently in Seattle.",
-    author: OPS_TEAM,
-    publishedAt: "2026-05-22",
-    tags: ["Operations", "Launches", "Cities"],
-    readingMinutes: 8,
-    body: [
-      { type: "p", text:
-        "Helpward launched its first three cities in tight succession: Vancouver, Toronto, Montreal. They share a country, a payment processor, and most of our operational tooling — and almost nothing else about the day-to-day work was the same. Below is what we learned in each, what we'd do differently, and what the next city will inherit." },
-      { type: "h2", text: "Vancouver: the helper-supply ramp" },
-      { type: "p", text:
-        "Vancouver was the first city we'd built a real pipeline in. We expected the bottleneck to be customer acquisition; the actual bottleneck was helper supply. Every helper had to clear Stripe Identity + Checkr/Triton + bank link + human approval — and at the volumes we wanted, the human-approval step became the gating one within two weeks of opening applications." },
-      { type: "p", text:
-        "We solved it by tripling the review team and writing a tighter adjudication checklist that cut review time per application from 25 minutes to 8. Quality of decisions didn't change; we just stopped asking reviewers to re-derive the policy from scratch on every borderline case. The published policy at /safety/background-checks is the artefact." },
-      { type: "h2", text: "Toronto: the density problem inverted" },
-      { type: "p", text:
-        "Toronto had the opposite problem to Vancouver. The city is geographically vast — driving from the western suburbs to the eastern ones can be 75 minutes — and helper supply concentrated in three neighbourhoods early. Response time was great in those three neighbourhoods and dreadful everywhere else, which was nearly invisible in the citywide average but very visible in the quarterly transparency report we were drafting." },
-      { type: "p", text:
-        "We shipped two things in response: a helper-supply ledger broken down by sub-neighbourhood (so it's harder to hide a weak corner of the city in the citywide average), and a recruiting push targeted explicitly at the neighbourhoods with thin supply. Response time outside the three core neighbourhoods is still worse than the average, but it's no longer invisible — and the recruitment push is moving the figure." },
-      { type: "h2", text: "Montreal: the language reality" },
-      { type: "p", text:
-        "Helpward shipped in Montreal in English-only. We knew this was an undershoot and assumed the bilingual customer base would carry us until we shipped French. We underestimated how much of the helper applicant pool would self-select out because the application flow was English-only. Helper supply in Montreal was 40% behind plan in week 1; we attributed it to the launch novelty until reviewing it on week 3 told a clearer story." },
-      { type: "p", text:
-        "French localisation for the helper application + onboarding shipped on day 30; full French support across the customer flow is on the roadmap for Q3 (#17 on the in-house feature list). The lesson, generalised: shipping in a region's primary language is not a marketing nicety. It's a supply-side requirement." },
-      { type: "h2", text: "What changed for Seattle" },
-      { type: "ul", items: [
-        "We started recruiting helpers 8 weeks before customer-facing launch (vs 4 weeks for the Canadian cities). By launch day, response time was at the citywide target in 80% of sub-neighbourhoods.",
-        "Sub-neighbourhood supply ledger was built into city launch playbook from day one. Citywide averages aren't allowed to hide thin corners.",
-        "Operational support for helpers was staffed locally in Seattle from day one, not from Vancouver. The community-management role at /careers/helper-community-manager is the formalisation of this.",
-        "Insurance carrier was pre-cleared for Washington-state operations 12 weeks before launch (we'd discovered, the hard way in Montreal, that adding a new jurisdiction to the carrier policy can take 8+ weeks).",
-      ] },
-      { type: "h2", text: "What we still don't have a good answer for" },
-      { type: "p", text:
-        "Surge demand windows during weather events. When a major snowstorm closes Toronto, demand for grocery pickup and elder check-ins spikes 6x while helper availability drops 40%. We don't surge-price; that means we hold the published rate and the matching engine simply runs out of nearby helpers faster. Customers see longer ETAs in the badge; some give up." },
-      { type: "p", text:
-        "The honest answer is that small unpriced supply shocks expose the structural choice we made. We don't think surge is the answer (see /blog/why-we-built-helpward), but we don't yet have a satisfying alternative. We're testing pre-positioning incentives — paying helpers a flat top-up to be online during forecasted demand windows — and the results so far are modest. This is one of the hardest open problems in the business." },
-      { type: "h2", text: "What's the same in every city" },
-      { type: "p", text:
-        "Tooling carries across cities almost completely. The matching engine, the dispute system, the helper schedule, the admin tooling — these are the same code path everywhere. The pieces that differ city-to-city are operational: language, neighbourhood density, weather, regulatory environment, insurance jurisdiction. Treating tooling as universal and operations as local was the cleanest framing we landed on, and the one we'd recommend to anyone launching a marketplace into a new geography." },
-    ],
-  },
+  /*
+    "Lessons from launching our first three cities" was REMOVED, not
+    edited. It described launching three cities with operating figures to
+    match: a review time cut to a third, supply 40% behind plan, an
+    insurance carrier pre-cleared for a state we do not operate in. Our
+    own records hold 67 requests, every one of them cancelled or expired,
+    and no bookings and no reviews in any city.
+
+    The URL returns 410 Gone from the proxy: see RETIRED_BLOG_SLUGS in
+    lib/retired-pages.ts. Removing it from this array is what drops it
+    from the sitemap, the /blog index and the related-reading links; the
+    410 is what tells a crawler it is gone rather than merely missing.
+    No replacement history was written in its place.
+  */
   {
     slug: "the-case-against-surge-pricing",
     title: "The case against surge pricing",

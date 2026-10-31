@@ -382,6 +382,14 @@ export default async function ServiceDetailPage({
                 </span>
               </li>
               <li>
+                <Link href="/how-it-works" className="font-semibold text-brand-700 hover:underline">
+                  How booking works
+                </Link>
+                <span className="block text-slate-600 text-[13px]">
+                  The eight steps, including when your card is charged.
+                </span>
+              </li>
+              <li>
                 <Link href="/help" className="font-semibold text-brand-700 hover:underline">
                   Help and contact a person
                 </Link>
@@ -404,7 +412,13 @@ export default async function ServiceDetailPage({
           <h2 className="text-2xl font-bold text-slate-900">
             How {name.toLowerCase()} is priced
           </h2>
-          <p className="mt-1 text-sm text-slate-600">{pricing.lead}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            {pricing.lead}{" "}
+            <Link href="/pricing" className="text-brand-700 font-semibold hover:underline">
+              How every Helpward price is worked out
+            </Link>
+            .
+          </p>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2 max-w-4xl text-sm text-slate-700">
             {pricing.points.map((point) => (
               <li key={point} className="flex items-start gap-2 rounded-xl bg-slate-50 border border-slate-100 p-3.5">

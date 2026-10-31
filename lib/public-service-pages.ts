@@ -1535,7 +1535,7 @@ export const SERVICE_SCOPE: Record<string, ServiceScope> = {
     excludes: [
       "Shopping done without you — that is Errand Runner",
       "Professional styling or wardrobe consulting",
-      "Your purchases",
+      "Your purchases — you pay for what you buy",
       "Pushing a wheelchair or any personal care",
     ],
   },

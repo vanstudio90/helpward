@@ -89,6 +89,71 @@ export function retiredSafetyHtml(pathname: string): string {
 </main></body></html>`;
 }
 
+/*
+  Articles retired because what they described did not happen.
+
+  /blog/lessons-from-our-first-three-cities set out the launch of
+  Vancouver, Toronto and Montreal, what we would do differently in
+  Seattle, and operational metrics for a review team — application
+  review cut "from 25 minutes to 8", a helper-supply ramp, a density
+  problem that inverted.
+
+  The database has never recorded a single completed booking. 67
+  requests exist and every one of them is cancelled or expired; there
+  are no bookings and no reviews, in any city. Helpward serves Vancouver
+  and San Diego, narrowed from a ten-city list on 2026-10-24 because the
+  rest were claims with no helper supply behind them. Toronto and
+  Montreal were never launched, and there is no operating history to
+  report from them.
+
+  410 and not a redirect: sending someone who searched for a launch
+  retrospective to a service page is an irrelevant redirect, which
+  Google treats as a soft 404 and which answers nobody's question. The
+  page was published, it is not coming back in that form, and a search
+  engine should drop it. No replacement history is invented here.
+*/
+const RETIRED_BLOG_SLUGS = new Set(["lessons-from-our-first-three-cities"]);
+
+export function isRetiredBlogPath(pathname: string): boolean {
+  const m = /^\/blog\/([^/]+)\/?$/.exec(pathname);
+  return m ? RETIRED_BLOG_SLUGS.has(m[1]) : false;
+}
+
+/** Self-contained body for a retired article, returned WITH a 410 status. */
+export function retiredBlogHtml(): string {
+  return `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>This article has been withdrawn — Helpward</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin:0; font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;
+         background:#f8fafc; color:#0f172a; }
+  @media (prefers-color-scheme: dark) { body { background:#0f172a; color:#e2e8f0; } }
+  main { max-width:40rem; margin:0 auto; padding:4rem 1.25rem; }
+  h1 { font-size:1.6rem; line-height:1.25; margin:0 0 .75rem; }
+  p { margin:0 0 1rem; }
+  a { color:#4f46e5; }
+</style>
+</head><body><main>
+<h1>We&rsquo;ve withdrawn this article</h1>
+<p>
+  It described launching Helpward in three cities, with operating figures to
+  match. That is not what happened: Helpward operates in Vancouver and the
+  surrounding Lower Mainland, and in the City of San Diego. We took the
+  article down rather than leave an account up that our own records do not
+  support, and we have not written a replacement history in its place.
+</p>
+<p>
+  <a href="/cities">Where we actually operate</a> &middot;
+  <a href="/our-services">What you can book</a> &middot;
+  <a href="/blog">Other articles</a>
+</p>
+</main></body></html>`;
+}
+
 /** Self-contained "not currently served" body, returned WITH a 410 status. */
 export function retiredCityHtml(pathname: string): string {
   const slug = (/^\/cities\/([^/]+)/.exec(pathname)?.[1] ?? "").replace(/-/g, " ");

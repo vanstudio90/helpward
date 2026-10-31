@@ -3,6 +3,7 @@ import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import {
   isRetiredCityPath, retiredCityHtml,
   isRetiredSafetyPath, retiredSafetyHtml,
+  isRetiredBlogPath, retiredBlogHtml,
 } from "@/lib/retired-pages";
 
 const PUBLIC_PATHS = new Set([
@@ -66,6 +67,15 @@ export async function proxy(request: NextRequest) {
   // insurance with no policy, background checks that are not wired,
   // a transparency report with no data. Published, so 410 rather than
   // 404, and checked before the public-prefix allowlist.
+  // An article whose launch history our own records contradict. Published,
+  // so 410 Gone rather than 404, and deliberately not redirected.
+  if (isRetiredBlogPath(pathname)) {
+    return new NextResponse(retiredBlogHtml(), {
+      status: 410,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
+
   if (isRetiredSafetyPath(pathname)) {
     return new NextResponse(retiredSafetyHtml(pathname), {
       status: 410,

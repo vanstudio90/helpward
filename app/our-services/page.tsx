@@ -154,6 +154,18 @@ export default async function OurServicesPage() {
               Request help <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
+              href="/how-it-works"
+              className="inline-flex items-center rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-white"
+            >
+              How booking works, step by step
+            </Link>
+            <Link
+              href="/pricing"
+              className="inline-flex items-center rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-white"
+            >
+              How pricing works
+            </Link>
+            <Link
               href="/safety"
               className="inline-flex items-center rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-white"
             >

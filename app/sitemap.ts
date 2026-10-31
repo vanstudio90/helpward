@@ -47,6 +47,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // service page now links back to — /services is the signed-in
     // browse and 307s a crawler to the login form.
     { url: `${BASE}/our-services`, lastModified: CATALOGUE_UPDATED, changeFrequency: "weekly", priority: 0.9 },
+    { url: `${BASE}/pricing`,     lastModified: d("2026-10-31"), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE}/how-it-works`, lastModified: d("2026-10-31"), changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/cities`,      lastModified: d("2026-10-28"), changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/about`,       lastModified: d("2026-10-31"), changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE}/safety`,      lastModified: d("2026-10-26"), changeFrequency: "monthly", priority: 0.7 },
