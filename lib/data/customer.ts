@@ -1,8 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
-  Profile, CustomerProfile, ProviderProfile, Booking, Conversation,
+  Profile, CustomerProfile, HelperProfile, Booking, Conversation,
   Message, BookingStatus,
 } from "@/lib/supabase/types";
+import { FAVORITE_HELPER_KIND } from "@/lib/roles";
 
 /* All queries scoped via RLS — only the caller's own rows come back. */
 
@@ -162,7 +163,7 @@ export async function getConversationMessages(conversationId: string): Promise<M
   return (data ?? []).reverse();
 }
 
-export async function listFavoritesByKind(kind?: "provider" | "service" | "address") {
+export async function listFavoritesByKind(kind?: "helper" | "provider" | "service" | "address") {
   const supabase = await createSupabaseServerClient();
   let q = supabase.from("favorites").select("*").order("created_at", { ascending: false }).limit(200);
   if (kind) q = q.eq("kind", kind);
@@ -175,7 +176,7 @@ export async function listFavoritesByKind(kind?: "provider" | "service" | "addre
 }
 
 export async function listSavedProviderIds(): Promise<string[]> {
-  const favs = await listFavoritesByKind("provider");
+  const favs = await listFavoritesByKind(FAVORITE_HELPER_KIND);
   return favs.map((f) => f.target_id);
 }
 

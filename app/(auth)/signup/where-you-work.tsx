@@ -118,31 +118,41 @@ export function WhereYouWork({ country, email }: { country: string; email: strin
           <div className="flex items-start gap-2">
             <Sparkles className="w-4 h-4 text-brand-600 mt-0.5 shrink-0" aria-hidden="true" />
             <div className="text-[13px] leading-relaxed text-slate-700">
-              <strong className="text-slate-900">Not your corner yet.</strong> Helpward
-              opens somewhere new when there&rsquo;s enough work waiting to be worth
-              your evening — never before. Today that&rsquo;s two places, and we&rsquo;d
-              rather say so than take your application and let it sit.
+              {/* {" "} is load-bearing. JSX strips whitespace at a line
+                  break, so `</strong> Helpward` on separate lines rendered
+                  as "yet.Helpward" with the full stop jammed against the
+                  next word. */}
+              <strong className="text-slate-900">Not your corner yet.</strong>{" "}
+              Helpward opens somewhere new when there&rsquo;s enough work waiting to
+              be worth your evening — never before. Today that&rsquo;s two places, and
+              we&rsquo;d rather say so than take your application and let it sit.
               <br /><br />
-              Tell us where you are and you get <strong>one email</strong>: the day we
-              open there. Not a newsletter. Not a drip campaign. One email.
+              Tell us where you are and you&rsquo;ll get <strong>one email</strong>: the
+              day we open there. Not a newsletter. Not a drip campaign. One email.
               <br /><br />
-              It&rsquo;s also how we choose where to go next — thirty people naming the
-              same city beats any guess we could make off a map.
+              It&rsquo;s also how we decide where to go next. Thirty requests for the
+              same city tell us more than any guess we could make off a map.
             </div>
           </div>
 
-          <div className="mt-3 flex gap-2">
+          {/* Stacked on phones, side by side from sm up.
+              An <input> carries an intrinsic minimum width, so `flex-1`
+              alone could not shrink it — the button was pushed past the
+              card's right edge on a narrow screen. min-w-0 lets it shrink,
+              and stacking removes the squeeze entirely where space is
+              tightest. */}
+          <div className="mt-3 flex flex-col sm:flex-row gap-2">
             <input
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               placeholder={country === "CA" ? "e.g. Victoria, Calgary" : "e.g. Los Angeles, Austin"}
-              className="flex-1 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100"
+              className="w-full sm:flex-1 min-w-0 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100"
             />
             <button
               type="button"
               onClick={join}
               disabled={busy}
-              className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold disabled:opacity-50 shrink-0"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold disabled:opacity-50 shrink-0"
             >
               {busy ? "Saving…" : "Tell us"}
             </button>

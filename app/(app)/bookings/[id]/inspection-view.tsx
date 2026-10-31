@@ -30,12 +30,12 @@ export function InspectionView({
 }) {
   if (!submittedAt) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+      <div className="rounded-card border border-slate-200 bg-white p-4">
+        <div className="flex items-center gap-2 text-[15px] font-bold text-slate-900">
           <ClipboardCheck className="w-4 h-4 text-slate-400" aria-hidden="true" />
           Inspection report
         </div>
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-[13px] text-slate-500 mt-1">
           Your inspector is still working through it. You&rsquo;ll be notified the moment it&rsquo;s sent.
         </p>
       </div>
@@ -43,33 +43,33 @@ export function InspectionView({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+    <div className="rounded-card border border-slate-200 bg-white p-4">
+      <div className="flex items-center gap-2 text-[15px] font-bold text-slate-900">
         <ClipboardCheck className="w-4 h-4 text-brand-600" aria-hidden="true" />
         Inspection report
       </div>
 
       {summary && (
-        <p className="mt-2 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{summary}</p>
+        <p className="mt-2 text-[15px] text-slate-700 whitespace-pre-wrap leading-relaxed">{summary}</p>
       )}
 
       <ul className="mt-3 space-y-2">
         {items.map((item) => {
           const tone = CONDITION_STYLE[item.condition] ?? CONDITION_STYLE.not_checked;
           return (
-            <li key={item.id} className="rounded-xl border border-slate-100 p-3">
+            <li key={item.id} className="rounded-field border border-slate-100 p-3">
               <div className="flex items-start justify-between gap-2">
-                <div className="text-xs font-semibold text-slate-800 min-w-0">
+                <div className="text-[13px] font-semibold text-slate-800 min-w-0">
                   {AREA_LABELS[item.area] ?? item.area}
                 </div>
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border shrink-0 ${tone.className}`}
+                  className={`text-[12px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border shrink-0 ${tone.className}`}
                 >
                   {tone.label}
                 </span>
               </div>
               {item.note && (
-                <p className="mt-1.5 text-xs text-slate-600 whitespace-pre-wrap">{item.note}</p>
+                <p className="mt-1.5 text-[13px] text-slate-600 whitespace-pre-wrap">{item.note}</p>
               )}
             </li>
           );

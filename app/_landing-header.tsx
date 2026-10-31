@@ -2,34 +2,56 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Globe, ChevronDown, Menu, X } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { ScrollLink } from "./_scroll-link";
 
-const NAV_LINKS: [string, string][] = [
-  ["#how", "How it works"],
-  ["#services", "Services"],
-  ["#business", "For Business"],
-  ["#safety", "Safety"],
-  /*
-    A REAL PAGE, because "#helpers" was never a section.
+/*
+  REAL PAGES WHERE THERE IS ONE, AND ROOT-RELATIVE ANCHORS OTHERWISE.
 
-    The home page has ids how / services / business / safety — there is
-    no "helpers". So this link did nothing at all except write
-    "#helpers" into the address bar, on every page the header appears
-    on. Signing up as a helper is a real destination; it goes there.
+  Every link here used to be a bare "#section", which has two problems.
+
+  A bare fragment is resolved against the CURRENT page, and this header
+  is on four of them — the home page, /services/<slug>, /cities/<city>
+  and /cities/<city>/<service>. On any of those, clicking "Safety" did
+  nothing at all except append "#safety" to the address bar, which is
+  what made every URL grow a hash.
+
+  Worse, two of the five never existed anywhere: the home page has
+  id="how", id="business" and id="safety", but no "#services" and no
+  "#helpers". So those two did nothing even at home.
+
+  Services and Safety are real pages and now link to them, which also
+  stops wasting the internal links. The two that are genuinely home-page
+  sections are written "/#..." so they work from anywhere.
+*/
+const NAV_LINKS: [string, string][] = [
+  /*
+    Real pages where one exists; anchors only where the destination
+    genuinely is a section of the home page. The two that remain
+    anchors go through ScrollLink, which scrolls without leaving a hash
+    in the address bar and, from any other page, routes home first.
   */
+  ["/#how", "How it works"],
+  ["/our-services", "Services"],
+  ["/#business", "For Business"],
+  ["/safety", "Safety"],
   ["/signup?role=helper", "Become a Helper"],
 ];
 
 export function LandingHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+
 
   return (
     <>
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">H</div>
+            <Logo size={32} />
             <span className="text-lg font-bold tracking-tight">Helpward</span>
           </Link>
 

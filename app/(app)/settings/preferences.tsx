@@ -38,9 +38,9 @@ export function NotificationPrefs({ initial }: { initial: Prefs }) {
   };
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-      <h2 className="text-base font-bold text-slate-900 mb-3">Notification preferences</h2>
-      {err && <div className="mb-3 text-xs text-rose-700 bg-rose-50 rounded-lg p-2.5">{err}</div>}
+    <div className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
+      <h2 className="text-[18px] font-extrabold text-slate-900 mb-3">Notification preferences</h2>
+      {err && <div className="mb-3 text-[13px] text-rose-700 bg-rose-50 rounded-field p-2.5">{err}</div>}
       <ul className="space-y-1">
         <Toggle
           icon={<Bell className="w-4 h-4" />}
@@ -59,7 +59,7 @@ export function NotificationPrefs({ initial }: { initial: Prefs }) {
           disabled={pending}
         />
       </ul>
-      <p className="text-[11px] text-slate-400 mt-3">
+      <p className="text-[13px] text-slate-400 mt-3">
         Booking push notifications need push switched on for this device, under
         Push notifications below. Receipts are available any time from Payments.
       </p>
@@ -72,10 +72,10 @@ function Toggle({
 }: { icon: React.ReactNode; label: string; sub: string; on: boolean; onChange: () => void; disabled?: boolean }) {
   return (
     <li className="flex items-center gap-3 py-2.5">
-      <span className="w-9 h-9 rounded-lg bg-slate-50 inline-flex items-center justify-center text-slate-500 shrink-0">{icon}</span>
+      <span className="w-9 h-9 rounded-field bg-slate-50 inline-flex items-center justify-center text-slate-500 shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-slate-900">{label}</div>
-        <div className="text-[11px] text-slate-500 leading-snug">{sub}</div>
+        <div className="text-[15px] font-semibold text-slate-900">{label}</div>
+        <div className="text-[13px] text-slate-500 leading-snug">{sub}</div>
       </div>
       <button
         type="button"

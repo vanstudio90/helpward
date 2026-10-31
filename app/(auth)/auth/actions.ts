@@ -5,8 +5,17 @@ import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { recordReferralAttribution } from "@/lib/data/referrals";
+import { SERVICE_AREAS, normalizeMunicipality } from "@/lib/service-areas";
+import { isHelperRole } from "@/lib/roles";
 
-type ActionState = { error?: string; success?: string } | undefined;
+type ActionState = {
+  error?: string;
+  success?: string;
+  /** Set when the refusal was an unconfirmed address: the login form offers to resend. */
+  resendEmail?: string;
+  /** Set when signup hit an address that is already registered: the form links to login. */
+  accountExists?: boolean;
+} | undefined;
 
 export async function loginAction(
   _prev: ActionState,
@@ -23,6 +32,18 @@ export async function loginAction(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    // Supabase refuses an unconfirmed account with the bare string "Email
+    // not confirmed", which reads like a system fault rather than something
+    // the person can act on. Say what to do, and offer to send it again —
+    // the first link expires, and "check your inbox" is useless advice when
+    // the message is a week old or never arrived.
+    if (error.code === "email_not_confirmed") {
+      return {
+        error: "Please confirm your email first — we sent you a link when you signed up. "
+          + "Check your inbox and your spam folder.",
+        resendEmail: email,
+      };
+    }
     return { error: error.message };
   }
 
@@ -43,7 +64,7 @@ export async function loginAction(
       ? await supabase.from("profiles").select("role").eq("id", mfaUser.id).maybeSingle()
       : { data: null };
     const destination =
-      profile?.role === "provider" ? "/provider/dashboard"
+      isHelperRole(profile?.role) ? "/helper/dashboard"
       : profile?.role === "admin" ? "/admin"
       : "/dashboard";
     redirect(`/login/mfa?next=${encodeURIComponent(destination)}`);
@@ -62,8 +83,8 @@ export async function loginAction(
 
   revalidatePath("/", "layout");
 
-  if (profile?.role === "provider") {
-    redirect("/provider/dashboard");
+  if (isHelperRole(profile?.role)) {
+    redirect("/helper/dashboard");
   } else if (profile?.role === "admin") {
     redirect("/admin");
   }
@@ -79,6 +100,23 @@ export async function signupAction(
   const fullName = String(formData.get("full_name") ?? "").trim();
   const country = String(formData.get("country") ?? "US");
   const role = String(formData.get("role") ?? "customer");
+
+  // Where a helper says they will work. The signup form has asked this
+  // since the city cascade shipped, but nothing read it — the answer was
+  // collected and discarded. It now rides in user metadata, and
+  // handle_new_user() (migration 0072) seeds provider_cities from it so
+  // dispatch honours it from the first request.
+  //
+  // Validated against SERVICE_AREAS rather than trusted: this is a posted
+  // form field, and a value that no boundary answers to would leave the
+  // helper configured and permanently undispatchable. "__other__" is the
+  // not-listed sentinel and is not a place, so it is dropped here.
+  const rawRegion = String(formData.get("work_region") ?? "").trim();
+  const rawCity = String(formData.get("work_city") ?? "").trim();
+  const workArea = SERVICE_AREAS.find((a) => a.id === rawRegion && a.country === country);
+  const workCity = workArea?.municipalities.find(
+    (m) => normalizeMunicipality(m) === normalizeMunicipality(rawCity),
+  );
 
   if (!email || !password || !fullName) {
     return { error: "All fields are required." };
@@ -97,7 +135,10 @@ export async function signupAction(
   if (password.length > 128) {
     return { error: "Password is too long (max 128 chars)." };
   }
-  if (!["customer", "provider"].includes(role)) {
+  // "provider" is the retired spelling. Still accepted so a browser tab
+  // holding an older bundle can finish signing up; handle_new_user
+  // normalises it before the enum cast.
+  if (!["customer", "helper", "provider"].includes(role)) {
     return { error: "Invalid role." };
   }
   if (!["US", "CA"].includes(country)) {
@@ -113,6 +154,10 @@ export async function signupAction(
         full_name: fullName,
         role,
         country,
+        // Only ever a real area id and a real municipality name, or absent.
+        ...(isHelperRole(role) && workArea && workCity
+          ? { work_region: workArea.id, work_city: workCity }
+          : {}),
       },
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com"}/auth/callback`,
     },
@@ -120,6 +165,26 @@ export async function signupAction(
 
   if (error) {
     return { error: error.message };
+  }
+
+  // An email that is already registered comes back as SUCCESS with an empty
+  // identities array — Supabase does this deliberately so a signup form
+  // cannot be used to discover who has an account. We were taking it at
+  // face value and showing "Check your inbox — we sent a confirmation
+  // link", for a link that was never sent. Someone with an existing account
+  // then waits for mail that is not coming.
+  //
+  // This does tell a visitor that an address is registered, which is the
+  // enumeration Supabase's silence avoids. It is the right trade here: the
+  // address is one the person just typed, the alternative is lying to every
+  // returning user about an email we did not send, and the practical value
+  // to an attacker is small next to that cost.
+  if (data.user && (data.user.identities?.length ?? 0) === 0) {
+    return {
+      error: "You already have a Helpward account with that email. Log in instead — "
+        + "or reset your password if you don't remember it.",
+      accountExists: true,
+    };
   }
 
   // Best-effort referral attribution. If the visitor was carrying an hw_ref
@@ -225,4 +290,39 @@ export async function resetPasswordAction(
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: error.message };
   return { success: "Password updated. You can now log in." };
+}
+
+
+// Re-send the signup confirmation link. Offered from the login form when a
+// sign-in is refused for an unconfirmed address.
+//
+// Always reports success, even for an address with no account: this one is
+// reachable by anyone who can type, with no prior step that already
+// revealed the address, so it would be a genuine enumeration oracle.
+// Supabase rate-limits resends on its own side.
+export async function resendConfirmationAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "Enter the email you signed up with." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com"}/auth/callback`,
+    },
+  });
+
+  // A rate-limit is worth surfacing — it is the one case where trying again
+  // immediately cannot work, and silence would just produce another click.
+  if (error && /rate|too many|seconds/i.test(error.message)) {
+    return { error: "That was just sent. Give it a minute before asking again." };
+  }
+
+  return { success: `Sent. Check ${email} — and your spam folder.` };
 }

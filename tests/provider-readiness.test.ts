@@ -48,21 +48,21 @@ test("each unmet requirement is named specifically, not as 'finish setup'", () =
   assert.equal(noPayouts.length, 1);
   assert.equal(noPayouts[0].key, "payouts");
   assert.match(noPayouts[0].detail, /bank account/i);
-  assert.equal(noPayouts[0].href, "/provider/onboard");
+  assert.equal(noPayouts[0].href, "/helper/onboard");
   assert.ok(noPayouts[0].action, "an unmet requirement needs a working next step");
 });
 
 test("no services is its own requirement with its own next step", () => {
   const out = outstandingRequirements({ ...ready, serviceCount: 0 });
   assert.deepEqual(out.map((q) => q.key), ["services"]);
-  assert.equal(out[0].action, "Pick services");
+  assert.equal(out[0].action, "Select services");
 });
 
 test("waiting on human approval offers no button that pretends to help", () => {
   const out = outstandingRequirements({ ...ready, status: "pending" });
   const approval = out.find((q) => q.key === "approval")!;
   assert.equal(approval.href, null, "nothing the helper presses decides this");
-  assert.match(approval.detail, /person at Helpward/);
+  assert.match(approval.detail, /personally reviewed by the Helpward team/);
 });
 
 test("a suspended account is sent to support, not to onboarding", () => {

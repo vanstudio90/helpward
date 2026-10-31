@@ -81,7 +81,7 @@ export function LiveRequestStatus({
           return (
             <li key={s.key} className="flex items-center gap-2">
               <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-semibold ${
                   now ? "bg-brand-600 text-white"
                   : done ? "bg-emerald-50 text-emerald-700"
                   : "bg-slate-100 text-slate-400"
@@ -98,16 +98,16 @@ export function LiveRequestStatus({
 
       {/* The next action, said plainly, on the screen they are watching. */}
       {stage === "confirm_card" && bookingId && (
-        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4" role="status">
-          <div className="text-sm font-bold text-amber-950">
+        <div className="rounded-card border-2 border-amber-300 bg-amber-50 p-4" role="status">
+          <div className="text-[15px] font-bold text-amber-950">
             {helperName ? `${helperName} is ready.` : "Your helper is ready."} Confirm your card to let them start.
           </div>
-          <p className="text-xs text-amber-900/80 mt-0.5">
+          <p className="text-[13px] text-amber-900/80 mt-0.5">
             A temporary hold, not a charge. You pay after the task is finished.
           </p>
           <Link
             href={`/bookings/${bookingId}/confirm-payment`}
-            className="mt-2.5 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-semibold"
+            className="mt-2.5 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-field bg-amber-600 text-white text-[15px] font-semibold"
           >
             Confirm card <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </Link>
@@ -115,7 +115,7 @@ export function LiveRequestStatus({
       )}
 
       {stage === "matching" && (
-        <p className="text-xs text-slate-500">
+        <p className="text-[13px] text-slate-500">
           This page updates on its own — you don&rsquo;t need to refresh.
           {expiresAt && (
             <> We&rsquo;ll stop looking around{" "}
@@ -132,14 +132,14 @@ export function LiveRequestStatus({
         {bookingId ? (
           <Link
             href={`/bookings/${bookingId}`}
-            className="flex-1 min-w-[12rem] inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 text-white text-sm font-semibold"
+            className="flex-1 min-w-[12rem] inline-flex items-center justify-center gap-2 py-3 rounded-field bg-slate-900 text-white text-[15px] font-semibold"
           >
             View your request <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </Link>
         ) : (
           <Link
             href="/bookings"
-            className="flex-1 min-w-[12rem] inline-flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 text-white text-sm font-semibold"
+            className="flex-1 min-w-[12rem] inline-flex items-center justify-center gap-2 py-3 rounded-field bg-slate-900 text-white text-[15px] font-semibold"
           >
             View your request <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </Link>
@@ -147,7 +147,7 @@ export function LiveRequestStatus({
         {(stage === "matching" || stage === "matched") && (
           <Link
             href={`/bookings?cancel=${requestId}`}
-            className="inline-flex items-center justify-center px-4 py-3 rounded-xl border border-slate-300 text-slate-600 text-sm font-semibold"
+            className="inline-flex items-center justify-center px-4 py-3 rounded-field border border-slate-300 text-slate-600 text-[15px] font-semibold"
           >
             Cancel this request
           </Link>

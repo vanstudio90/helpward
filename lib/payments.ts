@@ -54,7 +54,30 @@ function fromStripeError(err: unknown): PaymentFailure {
   }
   if (e?.type === "StripeInvalidRequestError") {
     console.error("stripe invalid request:", e.message);
-    return fail("invalid_request", "Payment could not be set up. Support has been notified.");
+    // Distinguish the two reasons Stripe rejects a request, because they
+    // need opposite advice.
+    //
+    // A PLATFORM configuration gap — the live Connect settings are
+    // incomplete — fails identically on every attempt. Telling someone to
+    // try again is telling them to do something that cannot work, and the
+    // fault is not theirs. The real one here was: "You cannot create
+    // livemode account sessions or account links until you have supplied
+    // URLs at .../settings/connect/site-links", which no amount of
+    // retrying resolves.
+    const msg = e?.message ?? "";
+    const platformSetup =
+      /site-links|livemode account (sessions|links)|platform.*(profile|settings).*(incomplete|complete)/i.test(msg);
+
+    if (platformSetup) {
+      return fail("platform_not_configured",
+        "We couldn't open your secure payout setup — this is a setup problem on our side, not "
+        + "yours. Nothing you entered is lost. We've recorded it and will have it working shortly; "
+        + "no need to keep trying.");
+    }
+
+    return fail("invalid_request",
+      "Stripe refused that request. Try again — if it keeps happening, email support@helpward.com "
+      + "and quote the time it occurred.");
   }
   console.error("stripe error:", err);
   return fail("stripe_error", "Payment failed. Please try again.");
@@ -96,6 +119,83 @@ async function readAuthEmail(userId: string): Promise<string | undefined> {
  * CONNECTED_ACCOUNT_CONTROLLER) because this platform is provisioned that
  * way and the classic Express shape is rejected outright.
  */
+
+/**
+ * Can THIS platform use the connected account we have stored?
+ *
+ * A Connect account belongs to the platform and mode that created it. An
+ * account created under test keys cannot be read with a live key, and vice
+ * versa — Stripe answers `resource_missing`, exactly as it would for an id
+ * that never existed.
+ *
+ * That is not hypothetical here. Helper accounts were created in May under
+ * test keys; the platform went live on 2026-10-28. Every one of those ids
+ * is now unusable, and the code that found one simply handed it to
+ * accountLinks.create, which failed, which showed "Payment could not be set
+ * up" — on every attempt, for ever, with no way for the helper to get past
+ * it.
+ *
+ * Only a missing-or-inaccessible answer counts. A rate limit or a network
+ * blip must NOT be read as "this account is gone", or a transient failure
+ * would throw away a working account.
+ */
+async function connectAccountIsUsable(
+  stripe: Stripe,
+  accountId: string,
+): Promise<{ usable: boolean; account?: Stripe.Account }> {
+  try {
+    const account = await stripe.accounts.retrieve(accountId);
+    return { usable: true, account };
+  } catch (err) {
+    const e = err as Stripe.errors.StripeError;
+    const gone =
+      e?.code === "resource_missing" ||
+      e?.type === "StripePermissionError" ||
+      (e?.type === "StripeInvalidRequestError" && /no such account/i.test(e?.message ?? ""));
+    if (gone) return { usable: false };
+    // Anything else: assume the account is fine and let the real call
+    // report the real problem.
+    console.error("could not verify connect account", accountId, e?.message);
+    return { usable: true };
+  }
+}
+
+/**
+ * Which country this helper's Connect account must be created in.
+ *
+ * The cities they ticked outrank profiles.country. Someone who chose Lower
+ * Mainland municipalities works in Canada, and that was a deliberate choice
+ * about where they will physically go — whereas profiles.country took the
+ * column default for every account created before migration 0078, which is
+ * why 93 of 94 profiles said US.
+ *
+ * This matters more than most defaults because **a Connect account's
+ * country cannot be changed afterwards**. Getting it wrong hands a
+ * Canadian helper a form asking for a Social Security number, and the only
+ * remedy is a different account.
+ */
+async function connectCountryFor(
+  admin: ReturnType<typeof createSupabaseServiceClient>,
+  providerId: string,
+): Promise<"US" | "CA"> {
+  const { data: cities } = await admin
+    .from("provider_cities")
+    .select("area_id")
+    .eq("provider_id", providerId)
+    .limit(1);
+
+  const areaId = cities?.[0]?.area_id as string | undefined;
+  if (areaId === "lower-mainland-bc") return "CA";
+  if (areaId === "san-diego-ca") return "US";
+
+  const { data: person } = await admin
+    .from("profiles")
+    .select("country")
+    .eq("id", providerId)
+    .single();
+  return person?.country === "CA" ? "CA" : "US";
+}
+
 export async function startHelperOnboarding(
   providerId: string,
   returnTo: string,
@@ -114,15 +214,60 @@ export async function startHelperOnboarding(
   let accountId = profile.stripe_connect_account_id as string | null;
 
   try {
-    if (!accountId) {
-      const { data: person } = await admin
-        .from("profiles")
-        .select("country")
-        .eq("id", providerId)
-        .single();
+    // A stored id this platform cannot use is worse than no id at all: it
+    // fails identically every time and there is no path forward. Discard it
+    // and start again. Nothing of ours can be inside an account our own key
+    // cannot read, so there is nothing to lose by replacing it — but the
+    // derived flags must go too, or the dashboard keeps reporting the dead
+    // account's requirements against the new one.
+    const wantCountry = await connectCountryFor(admin, providerId);
 
+    let replaceReason: string | null = null;
+    if (accountId) {
+      const check = await connectAccountIsUsable(stripe, accountId);
+      if (!check.usable) {
+        replaceReason = "unusable";
+      } else if (
+        check.account &&
+        check.account.country !== wantCountry &&
+        // Only when NOTHING has been entered. An account with submitted
+        // details may hold verification documents and a bank account, and
+        // throwing that away to fix a country is not ours to decide.
+        check.account.details_submitted === false
+      ) {
+        replaceReason = `wrong country (${check.account.country}, needs ${wantCountry})`;
+      }
+    }
+
+    if (replaceReason) {
+      console.warn("replacing connect account", accountId, replaceReason, "for", providerId);
+      const { error } = await admin
+        .from("provider_profiles")
+        .update({
+          stripe_connect_account_id: null,
+          stripe_details_submitted: false,
+          stripe_transfers_active: false,
+          stripe_charges_enabled: false,
+          stripe_payouts_enabled: false,
+          // NOT NULL jsonb. Setting it to null failed the whole update with
+          // a 23502, so the account could never actually be cleared and the
+          // helper saw "Could not restart payout setup" for ever. An empty
+          // list is what "no outstanding requirements" means here.
+          stripe_requirements_due: [],
+          stripe_disabled_reason: null,
+          stripe_onboarded_at: null,
+        })
+        .eq("user_id", providerId);
+      if (error) {
+        console.error("could not clear unusable connect account", accountId, error);
+        return fail("persist_failed", "Could not restart payout setup. Please try again.");
+      }
+      accountId = null;
+    }
+
+    if (!accountId) {
       const account = await stripe.accounts.create({
-        country: person?.country === "CA" ? "CA" : "US",
+        country: wantCountry,
         email: await readAuthEmail(providerId),
         controller: CONNECTED_ACCOUNT_CONTROLLER,
         capabilities: CONNECTED_ACCOUNT_CAPABILITIES,
@@ -156,6 +301,35 @@ export async function startHelperOnboarding(
     });
     return { ok: true, url: link.url, accountId };
   } catch (err) {
+    // Record what Stripe actually said.
+    //
+    // fromStripeError deliberately replaces Stripe's text with something a
+    // helper can read, and console.error only reaches a log nobody can
+    // retrieve after the fact. That left "Stripe refused that request" as
+    // the ONLY evidence of a failure that is blocking onboarding — not
+    // enough to diagnose anything. The code, the param and the request id
+    // are developer-facing but not secret, and without them the next
+    // attempt is a guess.
+    const e = err as Stripe.errors.StripeError;
+    try {
+      await admin.from("audit_log").insert({
+        actor_id: providerId,
+        action: "connect.onboarding_failed",
+        target_table: "provider_profiles",
+        target_id: providerId,
+        payload: {
+          account_id: accountId,
+          type: e?.type ?? null,
+          code: e?.code ?? null,
+          param: (e as { param?: string })?.param ?? null,
+          message: e?.message ?? String(err),
+          request_id: (e as { requestId?: string })?.requestId ?? null,
+          statusCode: (e as { statusCode?: number })?.statusCode ?? null,
+        },
+      });
+    } catch (logErr) {
+      console.error("could not record connect failure", logErr);
+    }
     return fromStripeError(err);
   }
 }
@@ -425,9 +599,14 @@ export async function authorizeBookingPayment(
       console.error("AUTHORIZED BUT NOT RECORDED", {
         bookingId: booking.id, intent: intent.id, error: writeError,
       });
+      // Not "support has been notified": this writes a server log and
+      // nothing else. Telling someone help is already coming, when the
+      // hold is on THEIR card, is the worst place to be wrong about it.
       return fail(
         "persist_failed",
-        "The payment was authorized but could not be recorded. Support has been notified.",
+        "Your card was authorized but we could not record it, so this booking is not confirmed. "
+        + "Do not try again — that would place a second hold. Email support@helpward.com with the "
+        + "time this happened and we will release it.",
       );
     }
 
@@ -1160,7 +1339,12 @@ export async function pendingAuthorizationSecret(
           console.error("RECONCILE FAILED: Stripe holds the money, booking still blocked", {
             bookingId, intent: intent.id, repairError,
           });
-          return fail("reconcile_failed", "Your payment went through but we couldn't record it. Support has been notified.");
+          // Same correction: logged, not notified. The money is held at
+          // Stripe and the booking is stuck, so the instruction has to be
+          // "contact us", not "wait".
+          return fail("reconcile_failed",
+            "Your payment went through but we could not record it, so the booking is still blocked. "
+            + "Do not retry. Email support@helpward.com with the time and we will sort it out.");
         }
         console.warn("reconciled a hold Stripe had and the booking did not", {
           bookingId, intent: intent.id,

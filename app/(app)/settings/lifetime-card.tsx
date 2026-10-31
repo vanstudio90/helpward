@@ -8,7 +8,7 @@ import { describeTotals } from "@/lib/money-by-currency";
 // Lifetime spend is grouped by currency upstream, so this renders a
 // LIST. A bare "$" over mixed CAD and USD was a number with no unit.
 
-// Customer-side mirror of /provider/analytics — compact lifetime-stats card
+// Customer-side mirror of /helper/analytics — compact lifetime-stats card
 // slotted on /settings. Hides itself when there's nothing to show (no
 // completed bookings yet) since "0 tasks, $0 spent" reads as the empty
 // state of the empty state.
@@ -18,12 +18,12 @@ export function CustomerLifetimeCard({ stats }: { stats: CustomerLifetimeStats }
   const weeklyValues = stats.weeklySpend.map((w) => w.spentCents);
 
   return (
-    <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
+    <section className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-bold text-slate-900 inline-flex items-center gap-2">
+        <h2 className="text-[18px] font-extrabold text-slate-900 inline-flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-brand-600" /> Your Helpward
         </h2>
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Lifetime</span>
+        <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wide">Lifetime</span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
@@ -55,14 +55,14 @@ export function CustomerLifetimeCard({ stats }: { stats: CustomerLifetimeStats }
           label="Top helper"
           value={stats.topHelper?.fullName ?? "—"}
           sub={stats.topHelper ? `${stats.topHelper.bookings} bookings together` : "Book the same helper twice"}
-          href={stats.topHelper ? `/providers/${stats.topHelper.slug ?? stats.topHelper.userId}` : undefined}
+          href={stats.topHelper ? `/helpers/${stats.topHelper.slug ?? stats.topHelper.userId}` : undefined}
           truncate
         />
       </div>
 
       {stats.totalSpent.some((t) => t.netCents > 0) && weeklyValues.some((v) => v > 0) && (
-        <div className="rounded-xl bg-slate-50 p-3 mb-3">
-          <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1">
+        <div className="rounded-field bg-slate-50 p-3 mb-3">
+          <div className="text-[12px] font-bold uppercase tracking-wide text-slate-500 mb-1">
             Weekly spend (last 12 weeks)
           </div>
           <div className="text-emerald-600">
@@ -74,15 +74,15 @@ export function CustomerLifetimeCard({ stats }: { stats: CustomerLifetimeStats }
       {stats.nextScheduled && (
         <Link
           href={`/bookings/${stats.nextScheduled.id}`}
-          className="flex items-center gap-3 rounded-xl border border-brand-100 bg-brand-50/40 p-3 hover:bg-brand-50 transition"
+          className="flex items-center gap-3 rounded-field border border-brand-100 bg-brand-50/40 p-3 hover:bg-brand-50 transition"
         >
-          <span className="w-9 h-9 rounded-lg bg-white inline-flex items-center justify-center shrink-0">
+          <span className="w-9 h-9 rounded-field bg-white inline-flex items-center justify-center shrink-0">
             <Calendar className="w-4 h-4 text-brand-600" />
           </span>
           <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-brand-700">Next scheduled</div>
-            <div className="text-sm font-bold text-slate-900 truncate">{stats.nextScheduled.serviceTitle}</div>
-            <div className="text-[11px] text-slate-500 mt-0.5">
+            <div className="text-[12px] font-bold uppercase tracking-wide text-brand-700">Next scheduled</div>
+            <div className="text-[15px] font-bold text-slate-900 truncate">{stats.nextScheduled.serviceTitle}</div>
+            <div className="text-[13px] text-slate-500 mt-0.5">
               <ClientDateTime iso={stats.nextScheduled.scheduledFor} />
             </div>
           </div>
@@ -102,19 +102,19 @@ function Stat({
   const inner = (
     <>
       <div className="flex items-center justify-between mb-1.5">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-        <span className={`w-6 h-6 ${tint} rounded-md inline-flex items-center justify-center shrink-0`}>{icon}</span>
+        <div className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+        <span className={`w-6 h-6 ${tint} rounded-chip inline-flex items-center justify-center shrink-0`}>{icon}</span>
       </div>
-      <div className={`text-sm sm:text-base font-bold text-slate-900 tabular-nums ${truncate ? "truncate" : ""}`}>{value}</div>
-      <div className="text-[10px] text-slate-500 mt-0.5 truncate">{sub}</div>
+      <div className={`text-[15px] sm:text-[18px] font-extrabold text-slate-900 tabular-nums ${truncate ? "truncate" : ""}`}>{value}</div>
+      <div className="text-[12px] text-slate-500 mt-0.5 truncate">{sub}</div>
     </>
   );
   if (href) {
     return (
-      <Link href={href} className="block rounded-xl bg-slate-50 hover:bg-slate-100 transition p-3 min-w-0">
+      <Link href={href} className="block rounded-field bg-slate-50 hover:bg-slate-100 transition p-3 min-w-0">
         {inner}
       </Link>
     );
   }
-  return <div className="rounded-xl bg-slate-50 p-3 min-w-0">{inner}</div>;
+  return <div className="rounded-field bg-slate-50 p-3 min-w-0">{inner}</div>;
 }

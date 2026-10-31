@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { one, type Embed } from "@/lib/supabase/relation";
 
 // CSV download of the calling customers bookings for a date range. Mirror
-// of /api/provider/export/bookings but flipped to the customer's
+// of /api/helper/export/bookings but flipped to the customer's
 // perspective — different default window (365d for tax-year personal
 // records), different columns (customer-paid breakdown: base + service
 // fee + tip + total instead of helper payout), helper first name instead

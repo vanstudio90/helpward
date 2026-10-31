@@ -12,8 +12,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       }
     : null;
 
+  /* Same ground as the helper shell. This had been inheriting the body's
+     slate, which is faintly blue — beside an indigo brand that reads as a
+     second hue rather than as neutral, and it put the two halves of the
+     product on visibly different whites. */
   return (
-    <div className="min-h-screen lg:flex">
+    <div className="min-h-screen lg:flex bg-app">
       <Sidebar user={sidebarUser} />
       <MobileShell
         avatarUrl={me?.profile.avatar_url}

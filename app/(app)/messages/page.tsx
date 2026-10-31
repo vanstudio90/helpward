@@ -2,6 +2,7 @@ import { listConversationsWithLatest } from "@/lib/data/customer";
 import Link from "next/link";
 import { MessageSquare, Plus } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { PageHeader } from "@/components/ui/kit";
 
 export default async function MessagesPage() {
   const conversations = await listConversationsWithLatest();
@@ -9,25 +10,25 @@ export default async function MessagesPage() {
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">Messages</h1>
-        <p className="text-sm text-slate-500 mt-1">Stay in touch with your helpers and get real-time updates.</p>
+        <PageHeader title="Messages" subtitle="Your conversations with helpers." className="mb-0" />
+        <p className="text-[15px] text-slate-500 mt-1">Stay in touch with your helpers and get real-time updates.</p>
       </div>
 
       {conversations.length === 0 ? (
-        <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-violet-50 border border-brand-100 p-8 sm:p-12 text-center">
-          <span className="inline-flex w-14 h-14 rounded-2xl bg-white items-center justify-center mb-3">
+        <div className="rounded-card bg-gradient-to-br from-brand-50 to-violet-50 border border-brand-100 p-8 sm:p-12 text-center">
+          <span className="inline-flex w-14 h-14 rounded-card bg-white items-center justify-center mb-3">
             <MessageSquare className="w-7 h-7 text-brand-600" />
           </span>
-          <h2 className="text-lg font-bold text-slate-900">No messages yet</h2>
-          <p className="mt-1 text-sm text-slate-600 max-w-sm mx-auto">
+          <h2 className="text-[20px] font-extrabold text-slate-900">No messages yet</h2>
+          <p className="mt-1 text-[15px] text-slate-600 max-w-sm mx-auto">
             When you book a service, you'll be able to chat with your helper in real time right here.
           </p>
-          <Link href="/new-request" className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold">
+          <Link href="/new-request" className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-field bg-slate-900 text-white text-[15px] font-semibold">
             <Plus className="w-4 h-4" /> Create a request
           </Link>
         </div>
       ) : (
-        <ul className="rounded-2xl bg-white border border-slate-100 divide-y divide-slate-100 overflow-hidden">
+        <ul className="bg-white rounded-card border border-slate-100 shadow-soft divide-y divide-slate-100 overflow-hidden">
           {conversations.map((c) => {
             const p = (c as { provider: { profile: { full_name: string; avatar_url: string | null } } | null }).provider;
             return (
@@ -41,8 +42,8 @@ export default async function MessagesPage() {
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-bold text-slate-900 truncate">{p?.profile?.full_name ?? "Provider"}</div>
-                    <div className="text-xs text-slate-500 truncate">
+                    <div className="text-[15px] font-bold text-slate-900 truncate">{p?.profile?.full_name ?? "Provider"}</div>
+                    <div className="text-[13px] text-slate-500 truncate">
                       Last message <ClientDateTime iso={c.last_message_at} />
                     </div>
                   </div>

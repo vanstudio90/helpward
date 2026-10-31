@@ -112,7 +112,7 @@ export default async function AdminReviewsPage({
                     <div className="text-xs text-slate-500 mt-0.5">
                       Reviewed{" "}
                       <Link
-                        href={`/providers/${one(r.provider_id)}`}
+                        href={`/helpers/${one(r.provider_id)}`}
                         className="font-semibold text-brand-700 hover:underline"
                       >
                         {providerProfile?.full_name ?? "unknown helper"}

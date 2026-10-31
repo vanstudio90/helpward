@@ -43,17 +43,17 @@ export function MissingFieldsNotice({
       ref={ref}
       role="alert"
       aria-live="assertive"
-      className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4"
+      className="mb-4 rounded-card border border-amber-200 bg-amber-50 p-4"
     >
       <div className="flex items-start gap-2.5">
         <AlertCircle className="w-4.5 h-4.5 text-amber-600 mt-0.5 shrink-0" aria-hidden="true" />
         <div className="min-w-0">
-          <h2 className="text-sm font-bold text-amber-950">
+          <h2 className="text-[15px] font-bold text-amber-950">
             {missing.length === 1
               ? "One more thing before you send this"
               : `${missing.length} things left before you send this`}
           </h2>
-          <p className="text-xs text-amber-900/80 mt-0.5">
+          <p className="text-[13px] text-amber-900/80 mt-0.5">
             Tap any of these to jump straight to it.
           </p>
           <ul className="mt-2.5 space-y-1.5">
@@ -62,7 +62,7 @@ export function MissingFieldsNotice({
                 <button
                   type="button"
                   onClick={() => onJump(f.name)}
-                  className="group inline-flex items-center gap-1.5 text-left text-sm font-semibold text-amber-950 hover:text-amber-700"
+                  className="group inline-flex items-center gap-1.5 text-left text-[15px] font-semibold text-amber-950 hover:text-amber-700"
                 >
                   <span
                     aria-hidden="true"

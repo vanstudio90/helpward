@@ -38,8 +38,51 @@
   --color-danger-500: #ef4444;
   --color-danger-600: #dc2626;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* The display face, with a real system fallback so a failed webfont
+     degrades to something with similar metrics rather than Times. */
+  --font-sans: var(--font-display), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* ---------------------------------------------------------------
+   * Shape.
+   *
+   * What reads as "bubbly" is not one big radius — it is a CONSISTENT
+   * ratio between a control's height and its corner. A 48px button with a
+   * 12px corner looks severe; the same button at 16px looks friendly, and
+   * at 24px looks like a pill. Scaling the radius with the element keeps
+   * that relationship steady, which is why the whole interface reads as
+   * one family rather than a pile of differently-rounded boxes.
+   * ------------------------------------------------------------- */
+  --radius-sm: 0.625rem;   /* 10px — chips, tags, small inputs */
+  --radius-md: 0.875rem;   /* 14px — inputs, list rows */
+  --radius-lg: 1.125rem;   /* 18px — buttons */
+  --radius-xl: 1.375rem;   /* 22px — cards */
+  --radius-2xl: 1.75rem;   /* 28px — panels, sheets */
+  --radius-3xl: 2.25rem;   /* 36px — hero surfaces */
+
+  /* ---------------------------------------------------------------
+   * Elevation.
+   *
+   * Soft and wide rather than tight and dark. A tight shadow reads as a
+   * cut-out; a diffuse one reads as a surface resting slightly above the
+   * page, which is what makes a card feel liftable. Tinted toward the
+   * brand hue rather than pure black, so shadows sit in the same colour
+   * world as everything else instead of greying it.
+   * ------------------------------------------------------------- */
+  --shadow-soft: 0 1px 2px rgb(49 46 129 / 0.04), 0 4px 16px rgb(49 46 129 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(49 46 129 / 0.05), 0 12px 32px rgb(49 46 129 / 0.10);
+  --shadow-float: 0 4px 8px rgb(49 46 129 / 0.06), 0 24px 56px rgb(49 46 129 / 0.14);
+
+  /* ---------------------------------------------------------------
+   * The ground.
+   *
+   * Cards are white, so the page behind them cannot be. slate-50 is the
+   * obvious choice and it is faintly BLUE — against an indigo brand it
+   * reads as a second, slightly-off hue rather than as neutral. This is
+   * the same light value biased toward the brand instead of away from
+   * it, which is what lets a white card lift off it cleanly.
+   * ------------------------------------------------------------- */
+  --color-app: #f6f5fb;
 }
 
 html, body { height: 100%; background: #f8fafc; color: #0f172a; overflow-x: hidden; }
@@ -94,4 +137,174 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
  * the elastic overscroll that happens even when nothing does. */
 html, body {
   overscroll-behavior-x: none;
+}
+
+/* -------------------------------------------------------------------
+ * Tap feedback.
+ *
+ * Tapping "Select services" or "Connect bank account" did not feel like
+ * anything had happened: the target page is server-rendered behind an auth
+ * check, so there was a pause with no acknowledgement, and a tap that
+ * produces nothing reads as a tap that missed.
+ *
+ * Two separate problems, and this is the first: the press itself was
+ * invisible. Mobile Safari suppresses its default tap highlight on
+ * elements that set their own background, which is most of ours.
+ *
+ * Opacity rather than a transform: it cannot shift layout, it reads
+ * identically on a text link and on a filled button, and it costs nothing
+ * on an element that is already animating something else.
+ * ------------------------------------------------------------------- */
+a, button, [role="button"], summary, select,
+input[type="checkbox"], input[type="radio"] {
+  -webkit-tap-highlight-color: rgb(99 102 241 / 0.18);
+}
+
+a:active,
+summary:active,
+[role="button"]:active,
+button:not(:disabled):active {
+  opacity: 0.68;
+}
+
+/* Deliberately NO base `transition` on these elements. The shorthand sets
+ * transition-property, which would replace Tailwind's `transition-colors`
+ * wherever this rule won, silently killing hover transitions across the
+ * site to animate a press that is better off instant anyway. */
+
+/* Anything disabled must not look pressable. */
+button:disabled, [aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* -------------------------------------------------------------------
+ * Navigation progress bar — the second half of the same problem.
+ *
+ * A press state answers "did it register?" but not "is it working?".
+ * Server-rendered pages behind auth take long enough that an instant
+ * press alone still leaves the screen looking frozen.
+ * ------------------------------------------------------------------- */
+#nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, rgb(99 102 241), rgb(139 92 246));
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+#nav-progress[data-active="true"] {
+  opacity: 1;
+  /* Creeps toward 90% and waits there: the remaining 10% is the server,
+   * and a bar that completes before the page does is a lie. */
+  animation: nav-progress-creep 10s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+
+#nav-progress[data-active="done"] {
+  opacity: 0;
+  transform: scaleX(1);
+  transition: transform 120ms ease-out, opacity 220ms ease-out 120ms;
+}
+
+@keyframes nav-progress-creep {
+  0%   { transform: scaleX(0); }
+  40%  { transform: scaleX(0.55); }
+  75%  { transform: scaleX(0.8); }
+  100% { transform: scaleX(0.9); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #nav-progress[data-active="true"] { animation: none; transform: scaleX(0.4); }
+  #nav-progress[data-active="done"] { transition: opacity 120ms ease-out; }
+}
+
+
+/* -------------------------------------------------------------------
+ * Typography scale.
+ *
+ * Headings get tightened tracking and balanced wrapping; body text does
+ * not. A display face set at body size with display tracking is harder to
+ * read, not friendlier — the warmth comes from the shapes, not from
+ * squeezing them.
+ * ----------------------------------------------------------------- */
+h1, h2, h3, h4 {
+  letter-spacing: -0.021em;
+  text-wrap: balance;
+}
+h1 { letter-spacing: -0.032em; }
+
+/* Numbers that sit in columns — prices, earnings, counts — line up. */
+.tabular, table td, table th {
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------------
+ * Shape utilities.
+ *
+ * Named for the ROLE rather than the measurement, so a card is
+ * `rounded-card` and stays right when the scale is tuned. Tailwind's
+ * numeric radii still work; these exist so the common surfaces move
+ * together.
+ * ----------------------------------------------------------------- */
+.rounded-chip   { border-radius: var(--radius-sm); }
+.rounded-field  { border-radius: var(--radius-md); }
+.rounded-btn    { border-radius: var(--radius-lg); }
+.rounded-card   { border-radius: var(--radius-xl); }
+.rounded-panel  { border-radius: var(--radius-2xl); }
+
+.shadow-soft  { box-shadow: var(--shadow-soft); }
+.shadow-lift  { box-shadow: var(--shadow-lift); }
+.shadow-float { box-shadow: var(--shadow-float); }
+
+/* -------------------------------------------------------------------
+ * Press physics.
+ *
+ * The existing :active rule dims. A slight inward scale on the elements
+ * that are meant to feel like objects — buttons and cards you can press —
+ * reads as the surface giving under a finger. Deliberately small: 0.97 is
+ * felt, 0.90 looks broken.
+ *
+ * Only where a pointer is coarse, because a mouse does not need it and a
+ * scaling button under a cursor reads as a glitch.
+ * ----------------------------------------------------------------- */
+@media (pointer: coarse) {
+  button:not(:disabled):active,
+  [role="button"]:active,
+  a[class*="rounded-btn"]:active,
+  a[class*="rounded-card"]:active {
+    transform: scale(0.975);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button:active, [role="button"]:active, a:active { transform: none !important; }
+}
+
+/* -------------------------------------------------------------------
+ * The waiting radar.
+ *
+ * Three rings on a staggered loop. It animates ONLY while a helper is
+ * online — a page that looks busy while nothing is happening is the most
+ * misleading thing a waiting screen can do, and this screen is looked at
+ * for long stretches.
+ * ----------------------------------------------------------------- */
+@keyframes hw-radar-pulse {
+  0%   { transform: scale(0.45); opacity: 0.85; }
+  70%  { opacity: 0.12; }
+  100% { transform: scale(2.3);  opacity: 0; }
+}
+.hw-radar {
+  animation: hw-radar-pulse 3.3s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+}
+
+/* Someone who asked for less motion should not be given a pulsing
+   beacon. The rings hold still at a readable size instead of vanishing,
+   so the shape of the screen is unchanged. */
+@media (prefers-reduced-motion: reduce) {
+  .hw-radar { animation: none; transform: scale(1); opacity: 0.18; }
 }

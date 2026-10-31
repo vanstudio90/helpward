@@ -22,6 +22,23 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/saved-providers", destination: "/saved-helpers", permanent: true },
+      // The public profile moved from /providers/<slug> to /helpers/<slug>.
+      // Everything a customer sees calls these people helpers, and the one
+      // place that still said "provider" was the URL a helper is asked to
+      // choose and share. Redirected rather than simply renamed: the path
+      // is in the sitemap and in every profile link already shared.
+      { source: "/providers/:slug", destination: "/helpers/:slug", permanent: true },
+      { source: "/providers", destination: "/helpers", permanent: true },
+      /* The helper app itself moved from /provider/* to /helper/*.
+       *
+       * Every one of these is auth-gated, so none is indexed — but a
+       * working helper lives on these URLs and will have bookmarked
+       * /provider/active or /provider/earnings, and any password-reset
+       * or notification link already sent carries the old path. A
+       * permanent redirect costs nothing and avoids sending someone
+       * mid-job to a 404. */
+      { source: "/provider", destination: "/helper/dashboard", permanent: true },
+      { source: "/provider/:path*", destination: "/helper/:path*", permanent: true },
     ];
   },
 

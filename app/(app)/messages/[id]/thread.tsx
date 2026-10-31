@@ -186,7 +186,7 @@ export function ChatThread({
       {/* Messages */}
       <div ref={scrollerRef} className="flex-1 overflow-y-auto bg-slate-50/30 px-3 sm:px-4 py-4 space-y-3">
         {messages.length === 0 ? (
-          <div className="text-center text-xs text-slate-400 py-8">
+          <div className="text-center text-[13px] text-slate-400 py-8">
             No messages yet. Say hi to start the conversation.
           </div>
         ) : (
@@ -198,21 +198,21 @@ export function ChatThread({
                   otherAvatar ? (
                     <img src={otherAvatar} className="w-7 h-7 rounded-full shrink-0" alt="" />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-[13px] shrink-0">
                       {otherInitial}
                     </div>
                   )
                 )}
                 <div className={cn(mine ? "items-end" : "items-start", "flex flex-col gap-1 max-w-[78%]")}>
                   <div className={cn(
-                    "px-3.5 py-2.5 text-sm rounded-2xl whitespace-pre-wrap break-words",
+                    "px-3.5 py-2.5 text-[15px] rounded-card whitespace-pre-wrap break-words",
                     mine
                       ? "bg-brand-600 text-white rounded-br-md"
                       : "bg-white border border-slate-100 rounded-bl-md text-slate-800"
                   )}>
                     {m.body}
                   </div>
-                  <div className="text-[10px] text-slate-400 px-1">
+                  <div className="text-[12px] text-slate-400 px-1">
                     {new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
                   </div>
                 </div>
@@ -228,7 +228,7 @@ export function ChatThread({
       {connection !== "live" && (
         <div
           role="status"
-          className="border-t border-amber-100 bg-amber-50 text-amber-800 text-[11px] px-4 py-1.5 flex items-center gap-2"
+          className="border-t border-amber-100 bg-amber-50 text-amber-800 text-[13px] px-4 py-1.5 flex items-center gap-2"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
           {connection === "connecting"
@@ -239,7 +239,7 @@ export function ChatThread({
 
       {/* Composer */}
       {sendError && (
-        <div className="border-t border-slate-100 bg-rose-50 text-rose-700 text-xs px-4 py-2">
+        <div className="border-t border-slate-100 bg-rose-50 text-rose-700 text-[13px] px-4 py-2">
           Couldn&apos;t send: {sendError} — your message is still in the box.
         </div>
       )}
@@ -257,13 +257,13 @@ export function ChatThread({
             }
           }}
           placeholder="Type your message…"
-          className="flex-1 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+          className="flex-1 px-3 py-2.5 rounded-field bg-slate-50 border border-slate-100 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-200"
         />
         <button
           aria-label="Send"
           disabled={pending || !draft.trim()}
           onClick={send}
-          className="p-2.5 rounded-xl bg-brand-600 text-white disabled:opacity-40"
+          className="p-2.5 rounded-field bg-brand-600 text-white disabled:opacity-40"
         >
           <Send className="w-4 h-4" />
         </button>

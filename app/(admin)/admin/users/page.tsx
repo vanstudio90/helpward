@@ -1,15 +1,22 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { Shield } from "lucide-react";
 import { ClientDateTime } from "@/components/ClientDateTime";
+import { isHelperRole } from "@/lib/roles";
 
 export default async function AdminUsersPage({
   searchParams,
 }: { searchParams: Promise<{ role?: string; country?: string; q?: string }> }) {
   const params = await searchParams;
   const supabase = createSupabaseServiceClient();
+  // `phone` moved to profile_contacts in migration 0050 and the column was
+  // dropped from profiles by 0051. This select still asked for it, so
+  // PostgREST rejected the whole query, `data` came back null, and the page
+  // rendered "0 most recent · No users match those filters" with 94 users
+  // in the table. The error was discarded, which is what made a broken
+  // query indistinguishable from an empty result.
   let q = supabase
     .from("profiles")
-    .select("id, role, full_name, phone, country, default_currency, created_at, avatar_url")
+    .select("id, role, full_name, country, default_currency, created_at, avatar_url, profile_contacts(phone)")
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -17,12 +24,19 @@ export default async function AdminUsersPage({
   if (params.country) q = q.eq("country", params.country);
   if (params.q) q = q.ilike("full_name", `%${params.q}%`);
 
-  const { data: rows } = await q;
+  const { data: rows, error } = await q;
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-6xl mx-auto">
       <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Users</h1>
-      <p className="text-sm text-slate-500 mt-1 mb-5">{rows?.length ?? 0} most recent</p>
+      {/* A failed query must not read as an empty table. */}
+      {error ? (
+        <p className="text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mt-2 mb-5">
+          Could not load users: {error.message}
+        </p>
+      ) : (
+        <p className="text-sm text-slate-500 mt-1 mb-5">{rows?.length ?? 0} most recent</p>
+      )}
 
       <form className="flex flex-wrap items-center gap-2 mb-4 text-sm" action="">
         <input
@@ -67,7 +81,7 @@ export default async function AdminUsersPage({
               </div>
               <span className={
                 r.role === "admin" ? "inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full w-fit"
-                : r.role === "provider" ? "inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full w-fit"
+                : isHelperRole(r.role) ? "inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full w-fit"
                 : "inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full w-fit"
               }>
                 {r.role === "admin" && <Shield className="w-3 h-3" />}

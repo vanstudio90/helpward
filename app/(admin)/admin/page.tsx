@@ -121,7 +121,7 @@ export default async function AdminOverviewPage() {
           delta={helperSignupsKPI.deltaVsPrev}
           sparkValues={helperSignupsKPI.values}
           sparkColor="#7c3aed"
-          href="/admin/providers"
+          href="/admin/helpers"
         />
         <KPI
           tone="bg-slate-100 text-slate-600"
@@ -147,7 +147,7 @@ export default async function AdminOverviewPage() {
           label="Helpers awaiting approval"
           value={snapshot.pendingProviders}
           warn={snapshot.pendingProviders > 5 ? "Queue building — review onboarding pipeline" : undefined}
-          href="/admin/providers"
+          href="/admin/helpers"
         />
         <Attention
           icon={<Users className="w-4 h-4 text-brand-600" />}
@@ -159,7 +159,7 @@ export default async function AdminOverviewPage() {
           icon={<ShieldCheck className="w-4 h-4 text-emerald-600" />}
           label="Approved helpers"
           value={snapshot.approvedProviders}
-          href="/admin/providers"
+          href="/admin/helpers"
         />
       </div>
 
@@ -231,7 +231,7 @@ export default async function AdminOverviewPage() {
                 sub: funnel.applied > 0 ? `${pct(funnel.bgCleared, funnel.applied)}% pass-through` : undefined },
               { label: "Approved", value: funnel.approved, color: "#059669",
                 sub: funnel.applied > 0 ? `${pct(funnel.approved, funnel.applied)}% pass-through` : undefined,
-                href: "/admin/providers" },
+                href: "/admin/helpers" },
             ]}
           />
         </ChartCard>

@@ -58,7 +58,7 @@ export function LiveProviderMap({
   }, [providerId]);
 
   return (
-    <div className="relative rounded-xl overflow-hidden h-44 bg-slate-100">
+    <div className="relative rounded-field overflow-hidden h-44 bg-slate-100">
       <MapBackdrop />
       {/* Helper marker - center map. Real positioning needs Mapbox tiles + lat/lng → pixel projection.
           For now we just animate the marker presence + show "live" indicator + last-seen timestamp. */}
@@ -74,18 +74,18 @@ export function LiveProviderMap({
           )}
         </div>
       </div>
-      <div className="absolute bottom-2 right-2 bg-white text-xs rounded-lg px-2.5 py-1.5 shadow">
+      <div className="absolute bottom-2 right-2 bg-white text-[13px] rounded-field px-2.5 py-1.5 shadow">
         {loc ? (
           <>
             <div className="font-bold text-emerald-600">Live</div>
-            <div className="text-[10px] text-slate-500">
+            <div className="text-[12px] text-slate-500">
               {lastSeen ? `Updated ${timeSince(lastSeen)} ago` : "—"}
             </div>
           </>
         ) : (
           <>
             <div className="font-bold text-slate-500">Awaiting GPS</div>
-            <div className="text-[10px] text-slate-400">Helper hasn&apos;t shared location yet</div>
+            <div className="text-[12px] text-slate-400">Helper hasn&apos;t shared location yet</div>
           </>
         )}
       </div>

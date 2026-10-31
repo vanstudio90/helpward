@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 export function MarketingShell({
   title, subtitle, children, width = "narrow", prose = true, hero,
@@ -19,7 +20,7 @@ export function MarketingShell({
       <header className="border-b border-slate-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">H</div>
+            <Logo size={32} />
             <span className="text-lg font-bold tracking-tight">Helpward</span>
           </Link>
           <nav className="flex items-center gap-2 text-sm">
@@ -44,8 +45,21 @@ export function MarketingShell({
 
       <footer className="border-t border-slate-100 py-8">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <span>© {new Date().getFullYear()} Helpward</span>
+          <span className="flex flex-col sm:flex-row items-center gap-x-3 gap-y-1">
+            <span>© {new Date().getFullYear()} Helpward</span>
+            {/* The one address a customer or helper can reach a person at.
+                It was printed on Stripe receipts and both legal pages but
+                appeared nowhere a visitor would actually look. */}
+            <a href="mailto:support@helpward.com" className="hover:text-slate-900 underline underline-offset-2">
+              support@helpward.com
+            </a>
+          </span>
           <nav className="flex items-center gap-5 flex-wrap justify-center">
+            {/* The directories lead; the rest is about the company. A
+                service page reachable only from the sitemap is reachable
+                only by a crawler that already knows about it. */}
+            <Link href="/our-services" className="hover:text-slate-900">Services</Link>
+            <Link href="/cities" className="hover:text-slate-900">Where we work</Link>
             <Link href="/about" className="hover:text-slate-900">About</Link>
             <Link href="/careers" className="hover:text-slate-900">Careers</Link>
             <Link href="/blog" className="hover:text-slate-900">Blog</Link>

@@ -66,12 +66,12 @@ export function OnboardingTour({ open: initialOpen }: { open: boolean }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-6 bg-slate-900/40 backdrop-blur-sm">
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div className="relative w-full max-w-md bg-white rounded-card shadow-2xl border border-slate-200 overflow-hidden">
         <button
           type="button"
           onClick={dismiss}
           aria-label="Close welcome"
-          className="absolute top-3 right-3 p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 z-10"
+          className="absolute top-3 right-3 p-1.5 rounded-chip text-slate-400 hover:text-slate-700 hover:bg-slate-100 z-10"
         >
           <X className="w-4 h-4" />
         </button>
@@ -90,16 +90,16 @@ export function OnboardingTour({ open: initialOpen }: { open: boolean }) {
         </div>
 
         <div className="px-6 pt-5 pb-6">
-          <div className="w-14 h-14 rounded-2xl bg-slate-50 inline-flex items-center justify-center mb-4">
+          <div className="w-14 h-14 rounded-card bg-slate-50 inline-flex items-center justify-center mb-4">
             {current.icon}
           </div>
           <h2 className="text-xl font-bold text-slate-900">{current.title}</h2>
-          <p className="text-sm text-slate-600 mt-2 leading-relaxed">{current.body}</p>
+          <p className="text-[15px] text-slate-600 mt-2 leading-relaxed">{current.body}</p>
 
           {current.bullets && (
             <ul className="mt-4 space-y-1.5">
               {current.bullets.map((b) => (
-                <li key={b} className="text-xs text-slate-700 inline-flex items-start gap-2">
+                <li key={b} className="text-[13px] text-slate-700 inline-flex items-start gap-2">
                   <span className="w-1 h-1 rounded-full bg-brand-600 mt-1.5 shrink-0" />
                   <span>{b}</span>
                 </li>
@@ -111,7 +111,7 @@ export function OnboardingTour({ open: initialOpen }: { open: boolean }) {
             <Link
               href={current.cta.href}
               onClick={dismiss}
-              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 transition"
+              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-field bg-slate-900 text-white text-[15px] font-bold hover:bg-slate-800 transition"
             >
               {current.cta.label} <ArrowRight className="w-4 h-4" />
             </Link>
@@ -123,7 +123,7 @@ export function OnboardingTour({ open: initialOpen }: { open: boolean }) {
             type="button"
             onClick={() => setStep((s) => Math.max(0, s - 1))}
             disabled={step === 0 || pending}
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 disabled:opacity-0 hover:bg-slate-100"
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-field text-[13px] font-semibold text-slate-600 disabled:opacity-0 hover:bg-slate-100"
           >
             <ArrowLeft className="w-3 h-3" /> Back
           </button>
@@ -132,7 +132,7 @@ export function OnboardingTour({ open: initialOpen }: { open: boolean }) {
               type="button"
               onClick={dismiss}
               disabled={pending}
-              className="text-xs font-semibold text-slate-400 hover:text-slate-700 px-2"
+              className="text-[13px] font-semibold text-slate-400 hover:text-slate-700 px-2"
             >
               Skip
             </button>
@@ -141,7 +141,7 @@ export function OnboardingTour({ open: initialOpen }: { open: boolean }) {
                 type="button"
                 onClick={dismiss}
                 disabled={pending}
-                className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-brand-600 text-white text-xs font-bold disabled:opacity-50"
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-field bg-brand-600 text-white text-[13px] font-bold disabled:opacity-50"
               >
                 {pending ? "Saving…" : "Got it"}
               </button>
@@ -150,7 +150,7 @@ export function OnboardingTour({ open: initialOpen }: { open: boolean }) {
                 type="button"
                 onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
                 disabled={pending}
-                className="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-brand-600 text-white text-xs font-bold"
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-field bg-brand-600 text-white text-[13px] font-bold"
               >
                 Next <ArrowRight className="w-3 h-3" />
               </button>

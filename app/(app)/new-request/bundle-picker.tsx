@@ -81,7 +81,7 @@ export function BundlePicker({
   }))), [items]);
 
   return (
-    <fieldset className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <fieldset className="mt-4 rounded-card border border-slate-200 bg-slate-50 p-4">
       <input type="hidden" name="is_bundle" value={enabled ? "1" : "0"} />
       {enabled && <input type="hidden" name="bundle_items" value={serialised} />}
 
@@ -92,16 +92,16 @@ export function BundlePicker({
           onChange={(e) => onEnabledChange(e.target.checked)}
           className="w-4 h-4 rounded text-brand-600"
         />
-        <span className="inline-flex items-center gap-2 text-sm font-bold text-slate-900">
+        <span className="inline-flex items-center gap-2 text-[15px] font-bold text-slate-900">
           <Layers className="w-4 h-4 text-brand-600" />
           Bundle multiple tasks in one trip
         </span>
-        <span className="text-xs text-slate-500">Up to {MAX_BUNDLE_ITEMS} stops, one helper.</span>
+        <span className="text-[13px] text-slate-500">Up to {MAX_BUNDLE_ITEMS} stops, one helper.</span>
       </label>
 
       {enabled && (
         <div className="mt-4 space-y-3">
-          <p className="text-[11px] text-slate-600 leading-relaxed">
+          <p className="text-[13px] text-slate-600 leading-relaxed">
             Use one helper for several errands on the same trip — groceries + dry cleaning + a package return, for
             example. You pay one service fee for the whole bundle.
           </p>
@@ -109,16 +109,16 @@ export function BundlePicker({
           {/* Item rows */}
           <ol className="space-y-2">
             {items.map((it, idx) => (
-              <li key={it.draftId} className="rounded-xl bg-white border border-slate-200 p-3">
+              <li key={it.draftId} className="rounded-field bg-white border border-slate-200 p-3">
                 <div className="flex items-start gap-2">
-                  <span className="w-6 h-6 rounded-full bg-brand-50 text-brand-700 text-xs font-bold inline-flex items-center justify-center shrink-0 mt-1">
+                  <span className="w-6 h-6 rounded-full bg-brand-50 text-brand-700 text-[13px] font-bold inline-flex items-center justify-center shrink-0 mt-1">
                     {idx + 1}
                   </span>
                   <div className="min-w-0 flex-1 space-y-2">
                     <select
                       value={it.serviceId}
                       onChange={(e) => pickService(it.draftId, e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+                      className="w-full px-3 py-2 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
                     >
                       <option value="">Pick a service…</option>
                       {services.map((s) => (
@@ -135,7 +135,7 @@ export function BundlePicker({
                       placeholder={idx === 0
                         ? "Stop 1 notes (address, specific store, items…)"
                         : `Stop ${idx + 1} notes (address, specific store, items…)`}
-                      className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400"
+                      className="w-full px-3 py-2 rounded-field bg-white border border-slate-200 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-400"
                     />
                   </div>
                   <button
@@ -144,7 +144,7 @@ export function BundlePicker({
                     disabled={items.length <= 2}
                     title={items.length <= 2 ? "Bundles need at least 2 stops" : "Remove this stop"}
                     aria-label="Remove stop"
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                    className="p-1.5 rounded-field text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -159,7 +159,7 @@ export function BundlePicker({
             onClick={addItem}
             disabled={items.length >= MAX_BUNDLE_ITEMS}
             className={cn(
-              "w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border-2 border-dashed text-xs font-semibold transition",
+              "w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-field border-2 border-dashed text-[13px] font-semibold transition",
               items.length >= MAX_BUNDLE_ITEMS
                 ? "border-slate-200 text-slate-400 cursor-not-allowed"
                 : "border-brand-200 text-brand-700 hover:bg-brand-50",
@@ -172,8 +172,8 @@ export function BundlePicker({
           </button>
 
           {/* Pricing summary */}
-          <div className="rounded-xl bg-white border border-slate-200 p-3 text-xs">
-            <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-2 font-bold">
+          <div className="rounded-field bg-white border border-slate-200 p-3 text-[13px]">
+            <div className="text-[12px] uppercase tracking-widest text-slate-500 mb-2 font-bold">
               Bundle price
             </div>
             <dl className="space-y-1">
@@ -198,8 +198,8 @@ export function BundlePicker({
                 </dd>
               </div>
               <div className="flex justify-between gap-2 pt-1.5 border-t border-slate-100">
-                <dt className="text-sm font-bold text-slate-900">Total estimate</dt>
-                <dd className="text-sm font-bold text-brand-700 tabular-nums">
+                <dt className="text-[15px] font-bold text-slate-900">Total estimate</dt>
+                <dd className="text-[15px] font-bold text-brand-700 tabular-nums">
                   ${(price.totalCents / 100).toFixed(2)}
                 </dd>
               </div>
@@ -207,11 +207,11 @@ export function BundlePicker({
           </div>
 
           {validationError ? (
-            <div className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+            <div className="flex items-start gap-2 text-[13px] text-amber-800 bg-amber-50 border border-amber-200 rounded-field p-2.5">
               <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {validationError}
             </div>
           ) : (
-            <div className="flex items-start gap-2 text-xs text-slate-600 bg-white border border-slate-200 rounded-lg p-2.5">
+            <div className="flex items-start gap-2 text-[13px] text-slate-600 bg-white border border-slate-200 rounded-field p-2.5">
               <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-brand-600" />
               One helper handles all {items.length} stops in one trip. They&apos;ll see each item and can mark them
               done as they go — you&apos;ll watch the progress on the booking page.

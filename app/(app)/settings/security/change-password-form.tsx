@@ -16,12 +16,12 @@ export function ChangePasswordForm() {
   return (
     <form action={formAction} className="space-y-3">
       {state?.error && (
-        <div className="flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-3">
+        <div className="flex items-start gap-2 text-[15px] text-rose-700 bg-rose-50 border border-rose-100 rounded-field p-3">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {state.error}
         </div>
       )}
       {state?.success && (
-        <div className="flex items-start gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+        <div className="flex items-start gap-2 text-[15px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-field p-3">
           <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> {state.success} You stay signed in on this device.
         </div>
       )}
@@ -58,7 +58,7 @@ export function ChangePasswordForm() {
                 }`}
               />
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">{strength.label}</div>
+            <div className="text-[13px] text-slate-500 mt-1">{strength.label}</div>
           </div>
         )}
       </div>
@@ -66,12 +66,12 @@ export function ChangePasswordForm() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold disabled:opacity-50"
+        className="w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-field bg-slate-900 text-white text-[15px] font-semibold disabled:opacity-50"
       >
         {pending ? "Updating…" : "Update password"}
       </button>
 
-      <p className="text-[11px] text-slate-400">
+      <p className="text-[13px] text-slate-400">
         Forgot your current password? Use{" "}
         <a href="/forgot-password" className="text-brand-700 font-semibold hover:underline">Forgot password</a>{" "}
         on the login page instead.
@@ -89,7 +89,7 @@ function PasswordField({
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-semibold text-slate-700">{label}</span>
+      <span className="text-[13px] font-semibold text-slate-700">{label}</span>
       <div className="mt-1 relative">
         <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
@@ -101,7 +101,7 @@ function PasswordField({
           autoComplete={autoComplete}
           value={value}
           onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+          className="w-full pl-10 pr-10 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
         />
         <button
           type="button"

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Heart, Plus, Sparkles, ArrowRight, ExternalLink } from "lucide-react";
 import { UnfavoriteServiceButton } from "./unfavorite-button";
 import { FavoriteHelperButton } from "@/components/FavoriteHelperButton";
-import { AvailabilityBadge } from "@/app/providers/[id]/availability";
+import { AvailabilityBadge } from "@/app/helpers/[id]/availability";
+import { PageHeader } from "@/components/ui/kit";
 
 export default async function FavoritesPage() {
   // saved_addresses, NOT addresses. `addresses` is one row per request —
@@ -31,10 +32,8 @@ export default async function FavoritesPage() {
   return (
     <div className="px-4 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl lg:text-3xl font-bold text-slate-900 flex items-center gap-2">
-          <Heart className="w-5 h-5 lg:w-6 lg:h-6 text-rose-500 fill-rose-500" /> Favorites
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">Your favorite helpers and services for quick access.</p>
+        <PageHeader title="Favorites" className="mb-0" />
+        <p className="text-[15px] text-slate-500 mt-1">Your favorite helpers and services for quick access.</p>
       </div>
 
       {total === 0 ? (
@@ -45,9 +44,9 @@ export default async function FavoritesPage() {
             <Section title={`Saved helpers (${providers.length})`}>
               <ul className="grid sm:grid-cols-2 gap-3">
                 {providers.map((p) => (
-                  <li key={p.user_id} className="rounded-2xl bg-white border border-slate-100 p-4">
+                  <li key={p.user_id} className="bg-white rounded-card border border-slate-100 shadow-soft p-4">
                     <div className="flex items-center gap-3">
-                      <Link href={`/providers/${p.slug ?? p.user_id}`} className="shrink-0">
+                      <Link href={`/helpers/${p.slug ?? p.user_id}`} className="shrink-0">
                         {p.profile.avatar_url ? (
                           <img src={p.profile.avatar_url} className="w-14 h-14 rounded-full" alt="" />
                         ) : (
@@ -57,14 +56,14 @@ export default async function FavoritesPage() {
                         )}
                       </Link>
                       <div className="min-w-0 flex-1">
-                        <Link href={`/providers/${p.slug ?? p.user_id}`} className="text-sm font-bold text-slate-900 truncate hover:underline block">
+                        <Link href={`/helpers/${p.slug ?? p.user_id}`} className="text-[15px] font-bold text-slate-900 truncate hover:underline block">
                           {p.profile.full_name}
                         </Link>
-                        <div className="text-xs text-slate-500 mt-0.5">
+                        <div className="text-[13px] text-slate-500 mt-0.5">
                           {p.rating_avg ? `★ ${p.rating_avg} (${p.rating_count} reviews)` : "New helper"}
                         </div>
                         {p.tasks_completed > 0 && (
-                          <div className="text-[11px] text-slate-400 mt-0.5">
+                          <div className="text-[13px] text-slate-400 mt-0.5">
                             {p.tasks_completed} task{p.tasks_completed === 1 ? "" : "s"} completed
                           </div>
                         )}
@@ -85,13 +84,13 @@ export default async function FavoritesPage() {
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <Link
                         href={`/new-request?preferred_helper=${p.user_id}`}
-                        className="inline-flex items-center justify-center gap-1.5 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 text-white text-xs font-bold"
+                        className="inline-flex items-center justify-center gap-1.5 py-2 rounded-field bg-gradient-to-r from-brand-600 to-violet-600 text-white text-[13px] font-bold"
                       >
                         Book again <ArrowRight className="w-3 h-3" />
                       </Link>
                       <Link
-                        href={`/providers/${p.slug ?? p.user_id}`}
-                        className="inline-flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50"
+                        href={`/helpers/${p.slug ?? p.user_id}`}
+                        className="inline-flex items-center justify-center gap-1.5 py-2 rounded-field border border-slate-200 text-slate-700 text-[13px] font-semibold hover:bg-slate-50"
                       >
                         View profile <ExternalLink className="w-3 h-3" />
                       </Link>
@@ -109,20 +108,20 @@ export default async function FavoritesPage() {
                     booked, opened or removed from the one page dedicated to
                     saved things (HW-14). */}
                 {favServices.map((s) => (
-                  <li key={s.id} className="rounded-2xl bg-white border border-slate-100 p-4 flex flex-col">
-                    <div className="text-sm font-bold text-slate-900">{s.title}</div>
-                    <div className="text-xs text-slate-500 mt-1 line-clamp-2">{s.blurb}</div>
-                    <div className="text-xs font-semibold text-brand-700 mt-3">From ${(s.base_price_cents / 100).toFixed(0)}</div>
+                  <li key={s.id} className="bg-white rounded-card border border-slate-100 shadow-soft p-4 flex flex-col">
+                    <div className="text-[15px] font-bold text-slate-900">{s.title}</div>
+                    <div className="text-[13px] text-slate-500 mt-1 line-clamp-2">{s.blurb}</div>
+                    <div className="text-[13px] font-semibold text-brand-700 mt-3">From ${(s.base_price_cents / 100).toFixed(0)}</div>
                     <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
                       <Link
                         href={`/new-request?service=${s.id}`}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-white bg-brand-600 hover:bg-brand-700 px-2.5 py-1.5 rounded-lg"
+                        className="inline-flex items-center gap-1 text-[13px] font-semibold text-white bg-brand-600 hover:bg-brand-700 px-2.5 py-1.5 rounded-field"
                       >
                         Request this <ArrowRight className="w-3 h-3" />
                       </Link>
                       <Link
                         href={`/services/${s.id}`}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-50"
+                        className="inline-flex items-center gap-1 text-[13px] font-semibold text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-field hover:bg-slate-50"
                       >
                         Details <ExternalLink className="w-3 h-3" />
                       </Link>
@@ -138,21 +137,21 @@ export default async function FavoritesPage() {
             <Section title={`Saved addresses (${savedAddresses.length})`}>
               <ul className="space-y-2">
                 {savedAddresses.map((a) => (
-                  <li key={a.id} className="rounded-2xl bg-white border border-slate-100 p-4 flex items-start gap-3">
+                  <li key={a.id} className="bg-white rounded-card border border-slate-100 shadow-soft p-4 flex items-start gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <div className="text-[15px] font-bold text-slate-900 flex items-center gap-2">
                         {a.label}
                         {a.is_default && (
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+                          <span className="text-[12px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
                             Default
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">{a.formatted}</div>
+                      <div className="text-[13px] text-slate-500 mt-0.5">{a.formatted}</div>
                     </div>
                     <Link
                       href="/settings"
-                      className="shrink-0 text-[11px] font-semibold text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-slate-50"
+                      className="shrink-0 text-[13px] font-semibold text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded-field hover:bg-slate-50"
                     >
                       Manage
                     </Link>
@@ -170,7 +169,7 @@ export default async function FavoritesPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-sm font-bold text-slate-900 mb-3">{title}</h2>
+      <h2 className="text-[15px] font-bold text-slate-900 mb-3">{title}</h2>
       {children}
     </section>
   );
@@ -178,15 +177,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Empty() {
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-violet-50 border border-brand-100 p-8 sm:p-12 text-center">
-      <span className="inline-flex w-14 h-14 rounded-2xl bg-white items-center justify-center mb-3">
+    <div className="rounded-card bg-gradient-to-br from-brand-50 to-violet-50 border border-brand-100 p-8 sm:p-12 text-center">
+      <span className="inline-flex w-14 h-14 rounded-card bg-white items-center justify-center mb-3">
         <Heart className="w-7 h-7 text-rose-500 fill-rose-500" />
       </span>
-      <h2 className="text-lg font-bold text-slate-900">No favorites yet</h2>
-      <p className="mt-1 text-sm text-slate-600 max-w-sm mx-auto">
+      <h2 className="text-[20px] font-extrabold text-slate-900">No favorites yet</h2>
+      <p className="mt-1 text-[15px] text-slate-600 max-w-sm mx-auto">
         Tap the heart on any helper, service, or address to save it here for quick re-booking later.
       </p>
-      <Link href="/services" className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-semibold">
+      <Link href="/services" className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-field bg-slate-900 text-white text-[15px] font-semibold">
         <Sparkles className="w-4 h-4" /> Browse services
       </Link>
     </div>

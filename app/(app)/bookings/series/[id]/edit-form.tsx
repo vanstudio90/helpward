@@ -70,17 +70,17 @@ export function SeriesEditForm({
 
   if (!open) {
     return (
-      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50/60 border border-amber-100 p-4">
+      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-card bg-amber-50/60 border border-amber-100 p-4">
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold text-amber-900 inline-flex items-center gap-1.5">
+          <div className="text-[15px] font-bold text-amber-900 inline-flex items-center gap-1.5">
             <Pencil className="w-3.5 h-3.5" /> Series is paused
           </div>
-          <div className="text-xs text-amber-800/80 mt-0.5 leading-snug">
+          <div className="text-[13px] text-amber-800/80 mt-0.5 leading-snug">
             Make changes to the cadence, time, notes, or end conditions while it&apos;s safe to do so —
             no occurrence will be materialised until you resume.
           </div>
           {success && (
-            <div className="mt-2 flex items-start gap-2 text-xs text-emerald-700 bg-white border border-emerald-100 rounded-lg p-2">
+            <div className="mt-2 flex items-start gap-2 text-[13px] text-emerald-700 bg-white border border-emerald-100 rounded-field p-2">
               <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {success}
             </div>
           )}
@@ -88,7 +88,7 @@ export function SeriesEditForm({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-amber-200 text-amber-700 text-xs font-bold hover:bg-amber-50 shrink-0"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-field bg-white border border-amber-200 text-amber-700 text-[13px] font-bold hover:bg-amber-50 shrink-0"
         >
           <Pencil className="w-3.5 h-3.5" /> Edit series
         </button>
@@ -97,9 +97,9 @@ export function SeriesEditForm({
   }
 
   return (
-    <div className="mb-5 rounded-2xl bg-white border border-amber-200 p-4 sm:p-5 ring-2 ring-amber-100">
+    <div className="mb-5 rounded-card bg-white border border-amber-200 p-4 sm:p-5 ring-2 ring-amber-100">
       <div className="flex items-center justify-between mb-3">
-        <div className="text-sm font-bold text-slate-900 inline-flex items-center gap-1.5">
+        <div className="text-[15px] font-bold text-slate-900 inline-flex items-center gap-1.5">
           <Pencil className="w-4 h-4 text-amber-600" /> Editing &ldquo;{serviceTitle}&rdquo;
         </div>
         <button
@@ -113,7 +113,7 @@ export function SeriesEditForm({
       </div>
 
       {err && (
-        <div className="mb-3 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2.5">
+        <div className="mb-3 flex items-start gap-2 text-[13px] text-rose-700 bg-rose-50 border border-rose-100 rounded-field p-2.5">
           <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {err}
         </div>
       )}
@@ -121,7 +121,7 @@ export function SeriesEditForm({
       <div className="space-y-4">
         {/* Cadence */}
         <div>
-          <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">Cadence</div>
+          <div className="text-[13px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">Cadence</div>
           <div className="grid grid-cols-3 gap-1.5">
             {(["weekly", "biweekly", "monthly"] as const).map((c) => (
               <button
@@ -130,7 +130,7 @@ export function SeriesEditForm({
                 onClick={() => setCadence(c)}
                 disabled={pending}
                 className={cn(
-                  "py-2 rounded-lg text-xs font-bold border capitalize",
+                  "py-2 rounded-field text-[13px] font-bold border capitalize",
                   cadence === c
                     ? "bg-brand-600 text-white border-brand-600"
                     : "bg-white text-slate-700 border-slate-200",
@@ -145,7 +145,7 @@ export function SeriesEditForm({
         {/* Weekday or day-of-month */}
         {cadence !== "monthly" ? (
           <div>
-            <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+            <div className="text-[13px] font-bold text-slate-600 uppercase tracking-wide mb-1.5">
               {cadence === "weekly" ? "Every" : "Every other"}
             </div>
             <div className="grid grid-cols-7 gap-1">
@@ -156,7 +156,7 @@ export function SeriesEditForm({
                   onClick={() => setWeekday(i)}
                   disabled={pending}
                   className={cn(
-                    "py-2 rounded-lg text-[11px] font-bold border",
+                    "py-2 rounded-field text-[13px] font-bold border",
                     weekday === i
                       ? "bg-brand-600 text-white border-brand-600"
                       : "bg-white text-slate-700 border-slate-200",
@@ -170,19 +170,19 @@ export function SeriesEditForm({
         ) : (
           <div>
             <label className="block">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Day of the month</span>
+              <span className="text-[13px] font-bold text-slate-600 uppercase tracking-wide">Day of the month</span>
               <select
                 value={dayOfMonth}
                 onChange={(e) => setDayOfMonth(Number(e.target.value))}
                 disabled={pending}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white"
+                className="mt-1 w-full px-3 py-2 rounded-field border border-slate-200 text-[15px] bg-white"
               >
                 {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
             </label>
-            <p className="text-[10px] text-slate-500 mt-1 leading-snug">
+            <p className="text-[12px] text-slate-500 mt-1 leading-snug">
               If a month doesn&apos;t have that day (e.g. 31 in February), it clamps to the last day.
             </p>
           </div>
@@ -190,7 +190,7 @@ export function SeriesEditForm({
 
         {/* Time of day */}
         <label className="block">
-          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Time of day</span>
+          <span className="text-[13px] font-bold text-slate-600 uppercase tracking-wide">Time of day</span>
           <div className="mt-1 relative">
             <Clock className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -198,19 +198,19 @@ export function SeriesEditForm({
               value={timeOfDay}
               onChange={(e) => setTimeOfDay(e.target.value)}
               disabled={pending}
-              className="w-full pl-8 pr-3 py-2 rounded-lg border border-slate-200 text-sm bg-white"
+              className="w-full pl-8 pr-3 py-2 rounded-field border border-slate-200 text-[15px] bg-white"
             />
           </div>
         </label>
 
         {/* End conditions */}
-        <details className="rounded-lg border border-slate-200 p-3">
-          <summary className="text-xs font-bold text-slate-700 cursor-pointer">
+        <details className="rounded-field border border-slate-200 p-3">
+          <summary className="text-[13px] font-bold text-slate-700 cursor-pointer">
             End conditions {endDate || maxOcc ? "·" : ""} {endDate && `ends ${endDate}`} {maxOcc && `cap ${maxOcc}`}
           </summary>
           <div className="mt-3 space-y-3">
             <label className="block">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide inline-flex items-center gap-1">
+              <span className="text-[13px] font-bold text-slate-600 uppercase tracking-wide inline-flex items-center gap-1">
                 <Calendar className="w-3 h-3" /> End date (optional)
               </span>
               <input
@@ -218,11 +218,11 @@ export function SeriesEditForm({
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 disabled={pending}
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white"
+                className="mt-1 w-full px-3 py-2 rounded-field border border-slate-200 text-[15px] bg-white"
               />
             </label>
             <label className="block">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Max occurrences (optional)</span>
+              <span className="text-[13px] font-bold text-slate-600 uppercase tracking-wide">Max occurrences (optional)</span>
               <input
                 type="number"
                 min={Math.max(1, initial.occurrencesCreated)}
@@ -230,9 +230,9 @@ export function SeriesEditForm({
                 onChange={(e) => setMaxOcc(e.target.value)}
                 disabled={pending}
                 placeholder="No cap"
-                className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white"
+                className="mt-1 w-full px-3 py-2 rounded-field border border-slate-200 text-[15px] bg-white"
               />
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-[12px] text-slate-500 mt-1">
                 You&apos;ve already had {initial.occurrencesCreated} occurrence{initial.occurrencesCreated === 1 ? "" : "s"} — the cap must be at least that.
               </p>
             </label>
@@ -241,16 +241,16 @@ export function SeriesEditForm({
 
         {/* Notes */}
         <label className="block">
-          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Notes for the helper</span>
+          <span className="text-[13px] font-bold text-slate-600 uppercase tracking-wide">Notes for the helper</span>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value.slice(0, 1000))}
             rows={3}
             disabled={pending}
             placeholder="Anything they should know each time"
-            className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white"
+            className="mt-1 w-full px-3 py-2 rounded-field border border-slate-200 text-[15px] bg-white"
           />
-          <div className="text-[10px] text-slate-500 mt-0.5 text-right">{notes.length}/1000</div>
+          <div className="text-[12px] text-slate-500 mt-0.5 text-right">{notes.length}/1000</div>
         </label>
 
         <div className="flex gap-2 pt-1">
@@ -258,7 +258,7 @@ export function SeriesEditForm({
             type="button"
             onClick={onSave}
             disabled={pending}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-brand-600 text-white text-sm font-bold disabled:opacity-50"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 rounded-field bg-brand-600 text-white text-[15px] font-bold disabled:opacity-50"
           >
             {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {pending ? "Saving…" : "Save changes"}
@@ -267,7 +267,7 @@ export function SeriesEditForm({
             type="button"
             onClick={() => { setOpen(false); setErr(null); }}
             disabled={pending}
-            className="px-4 py-2.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700"
+            className="px-4 py-2.5 rounded-field border border-slate-200 text-[15px] font-semibold text-slate-700"
           >
             Cancel
           </button>

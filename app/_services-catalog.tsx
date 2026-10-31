@@ -138,6 +138,7 @@ export function ServicesCatalog({
                           neither, and the service fee appeared only much
                           later in the journey. */}
                       <ServicePriceLine
+                        countryPricing={s.country_pricing}
                         baseCents={s.base_price_cents}
                         rule={pricingRules?.[s.id]}
                         currency={currency}

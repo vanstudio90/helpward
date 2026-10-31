@@ -32,8 +32,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    *
    * Service and city-service pages are generated from the catalogue, so
    * "when did this page last change" is "when did the catalogue or the
-   * template last change" — 2026-10-28, when four services were activated
-   * and the templates were revised. Bump this deliberately when the
+   * template last change" — 2026-10-29, when every service and
+   * city-service page gained service-specific editorial content in place
+   * of the shared block that made two different services read 78%
+   * identical. Bump this deliberately when the
    * catalogue or the templates change; do not wire it back to new Date(),
    * which is how every page came to claim it was edited today. */
   /* 2026-10-31: both templates materially rewritten — per-service
@@ -107,7 +109,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Prefer slug URL when present — the loader 301s UUID → slug anyway,
     // so emitting the canonical form keeps Google from chasing redirects.
     providerRoutes = (providers ?? []).map((p) => ({
-      url: `${BASE}/providers/${p.slug ?? p.user_id}`,
+      url: `${BASE}/helpers/${p.slug ?? p.user_id}`,
       lastModified: new Date(p.created_at),
       changeFrequency: "weekly",
       priority: 0.7,

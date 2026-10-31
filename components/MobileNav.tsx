@@ -11,6 +11,7 @@ import {
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import { NotificationBell } from "@/components/NotificationBell";
 import { cn } from "@/lib/cn";
+import { Logo } from "@/components/Logo";
 
 // `badge` stays in the type so a real unread count can be dropped in once
 // it is derived per-account, but no item carries one today (HW-18).
@@ -64,14 +65,14 @@ export function MobileTopBar({
   return (
     <header className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-100">
       <div className="flex items-center gap-3 px-4 h-14">
-        <button aria-label="Open menu" onClick={onOpen} className="p-2 -ml-2 rounded-lg hover:bg-slate-100">
+        <button aria-label="Open menu" onClick={onOpen} className="p-2 -ml-2 rounded-field hover:bg-slate-100">
           <Menu className="w-5 h-5" />
         </button>
         <Link href="/" className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center font-bold text-sm">H</div>
-          <span className="text-base font-bold truncate">Helpward</span>
+          <Logo size={28} />
+          <span className="text-[18px] font-extrabold truncate">Helpward</span>
         </Link>
-        <Link href="/messages" aria-label="Messages" className="p-2 rounded-lg hover:bg-slate-100">
+        <Link href="/messages" aria-label="Messages" className="p-2 rounded-field hover:bg-slate-100">
           <MessageSquare className="w-5 h-5 text-slate-700" />
         </Link>
         {userId && <NotificationBell userId={userId} initialUnread={initialUnread ?? 0} />}
@@ -82,7 +83,7 @@ export function MobileTopBar({
             <span className="sr-only">Profile</span>
           </Link>
         ) : (
-          <Link href="/settings" className="shrink-0 relative w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">
+          <Link href="/settings" className="shrink-0 relative w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-[15px] font-bold">
             {fullName?.[0] ?? "?"}
             <span className="sr-only">Profile</span>
           </Link>
@@ -126,7 +127,7 @@ export function MobileBottomNav() {
                   {item.badge}
                 </span>
               ) : null}
-              <span className={cn("text-[10px] mt-1", active ? "text-brand-700 font-semibold" : "text-slate-500")}>
+              <span className={cn("text-[12px] mt-1", active ? "text-brand-700 font-semibold" : "text-slate-500")}>
                 {item.label}
               </span>
             </Link>
@@ -156,10 +157,10 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
       >
         <div className="flex items-center justify-between px-5 h-14 border-b border-slate-100">
           <Link href="/" className="flex items-center gap-2" onClick={onClose}>
-            <div className="w-7 h-7 rounded-md bg-brand-600 text-white flex items-center justify-center font-bold text-sm">H</div>
-            <span className="text-base font-bold">Helpward</span>
+            <Logo size={28} />
+            <span className="text-[18px] font-extrabold">Helpward</span>
           </Link>
-          <button onClick={onClose} className="p-2 -mr-2 rounded-lg hover:bg-slate-100" aria-label="Close menu">
+          <button onClick={onClose} className="p-2 -mr-2 rounded-field hover:bg-slate-100" aria-label="Close menu">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -174,19 +175,19 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium",
+                  "flex items-center gap-3 px-3 py-2.5 rounded-field text-[15px] font-medium",
                   active ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-50"
                 )}
               >
                 <Icon className={cn("w-5 h-5", active ? "text-brand-600" : "text-slate-400")} />
                 <span className="flex-1">{item.label}</span>
                 {item.badge ? (
-                  <span className="bg-rose-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
+                  <span className="bg-rose-500 text-white text-[12px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
                     {item.badge}
                   </span>
                 ) : null}
                 {item.tag ? (
-                  <span className="bg-brand-600 text-white text-[10px] font-semibold rounded-md px-1.5 py-0.5">
+                  <span className="bg-brand-600 text-white text-[12px] font-semibold rounded-chip px-1.5 py-0.5">
                     {item.tag}
                   </span>
                 ) : null}
@@ -196,16 +197,16 @@ export function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => 
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-3 space-y-3 border-t border-slate-100 bg-white">
-          <div className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-4">
+          <div className="rounded-card border border-brand-100 bg-gradient-to-br from-brand-50 to-white p-4">
             <div className="flex items-center gap-2 mb-1">
               <Gift className="w-4 h-4 text-brand-600" />
-              <span className="text-sm font-semibold text-slate-900">Refer & Earn</span>
+              <span className="text-[15px] font-semibold text-slate-900">Refer & Earn</span>
             </div>
           </div>
           <form action={logoutAction}>
             <button
               type="submit"
-              className="w-full inline-flex items-center justify-center gap-2 text-sm font-semibold text-rose-600 border border-slate-200 rounded-xl py-2.5 hover:bg-rose-50"
+              className="w-full inline-flex items-center justify-center gap-2 text-[15px] font-semibold text-rose-600 border border-slate-200 rounded-field py-2.5 hover:bg-rose-50"
             >
               <LogOut className="w-4 h-4" /> Log out
             </button>

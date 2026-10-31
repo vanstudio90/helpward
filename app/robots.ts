@@ -16,7 +16,7 @@ const PRIVATE_PATHS = [
   "/settings",
   "/business",
   "/new-request",
-  "/provider/",
+  "/helper/",
 ];
 
 // AI/generative-engine crawlers we explicitly invite. Same allowlist applies

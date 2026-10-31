@@ -1,5 +1,6 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { one, type Embed } from "@/lib/supabase/relation";
+import { isHelperRole } from "@/lib/roles";
 
 // Admin analytics aggregations. Service-role because admins read across all
 // tenants; the page itself enforces role === 'admin' before calling these.
@@ -133,7 +134,10 @@ export async function getSignupsSeries(days = DEFAULT_DAYS): Promise<{
     const role = one(r.role);
     if (typeof ts !== "string") continue;
     const key = ts.slice(0, 10);
-    if (role === "provider") {
+    // isHelperRole, not a literal: once 0081 renames the enum this
+    // comparison stops matching and every helper signup is silently
+    // tallied as a customer. The chart would keep drawing, just wrong.
+    if (isHelperRole(role)) {
       const b = providers.find((p) => p.date === key);
       if (b) b.count += 1;
     } else {

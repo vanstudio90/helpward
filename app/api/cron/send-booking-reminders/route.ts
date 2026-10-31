@@ -16,7 +16,7 @@ import { one, type Embed } from "@/lib/supabase/relation";
 // insert. A concurrent re-entrant tick that read the same row would
 // fail the eq("reminder_sent_at", null) on the compare-and-swap update.
 //
-// Helpers get `helper_booking_reminder` (deep-link → /provider/active)
+// Helpers get `helper_booking_reminder` (deep-link → /helper/active)
 // while customers get `booking_reminder` (→ /bookings/{id}). Two types
 // because the bell hrefFor needs different destinations based on which
 // side of the marketplace the recipient is on.
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
       sendPushToUser(b.provider_id, {
         title: "You have a task starting soon",
         body: `${payload.service_title} is coming up in ~30 minutes`,
-        url: "https://helpward.com/provider/active",
+        url: "https://helpward.com/helper/active",
       }, { pref: "push_booking" }),
     ]);
 

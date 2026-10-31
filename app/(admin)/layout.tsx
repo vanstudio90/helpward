@@ -5,20 +5,21 @@ import { logoutAction } from "@/app/(auth)/auth/actions";
 import {
   LayoutDashboard, Users, ShieldCheck, Calendar, AlertOctagon,
   CreditCard, RefreshCw, Sparkles, FileText, LogOut, MessageSquare, Shield,
-  Inbox,
-} from "lucide-react";
+  Inbox, MapPin,} from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/inbox", label: "Inbox", icon: Inbox },
   { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/providers", label: "Helper queue", icon: ShieldCheck },
+  { href: "/admin/helpers", label: "Helper queue", icon: ShieldCheck },
   { href: "/admin/bookings", label: "Bookings", icon: Calendar },
   { href: "/admin/disputes", label: "Disputes", icon: AlertOctagon },
   { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/refunds", label: "Refunds", icon: RefreshCw },
   { href: "/admin/services", label: "Service catalog", icon: Sparkles },
+  { href: "/admin/venues", label: "Venue permissions", icon: MapPin },
   { href: "/admin/data-requests", label: "Data requests", icon: Shield },
   { href: "/admin/audit-log", label: "Audit log", icon: FileText },
 ];
@@ -41,7 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen lg:flex bg-slate-50">
       <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-slate-200 bg-slate-900 text-white">
         <Link href="/" className="flex items-center gap-2 px-6 h-16 border-b border-white/10">
-          <div className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center font-bold">H</div>
+          <Logo size={32} tone="light" />
           <div>
             <div className="text-base font-bold leading-tight">Helpward</div>
             <div className="text-[10px] text-rose-400 font-semibold uppercase tracking-wide">Admin</div>

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { loginAction } from "../auth/actions";
+import { ResendConfirmation } from "./resend-confirmation";
 import { Mail, Lock, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
@@ -16,7 +17,10 @@ export default function LoginPage() {
       {state?.error && (
         <div className="mt-5 flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>{state.error}</span>
+          <div className="min-w-0">
+            <span>{state.error}</span>
+            {state.resendEmail && <ResendConfirmation email={state.resendEmail} />}
+          </div>
         </div>
       )}
 

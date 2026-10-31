@@ -89,7 +89,7 @@ export default async function AdminInboxPage() {
       icon: <UserPlus className="w-5 h-5" />,
       tone: "brand",
       blurb: "ID + background check verdicts to approve or reject. Don't let this queue age — slow approvals are the #1 reason promising helpers churn before their first task.",
-      href: "/admin/providers",
+      href: "/admin/helpers",
     },
     {
       key: "due-deletions", priority: 6,

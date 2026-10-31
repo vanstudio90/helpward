@@ -40,7 +40,7 @@ export default async function ConversationPage({
     <div className="h-[calc(100vh-160px)] lg:h-[calc(100vh-80px)] flex flex-col max-w-3xl mx-auto">
       {/* Sticky header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-white">
-        <Link href="/messages" aria-label="Back" className="p-1.5 -ml-1 rounded-lg hover:bg-slate-100 shrink-0">
+        <Link href="/messages" aria-label="Back" className="p-1.5 -ml-1 rounded-field hover:bg-slate-100 shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         {otherPerson?.profile?.avatar_url ? (
@@ -51,14 +51,14 @@ export default async function ConversationPage({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-slate-900 truncate flex items-center gap-1.5">
+          <div className="text-[15px] font-bold text-slate-900 truncate flex items-center gap-1.5">
             {otherPerson?.profile?.full_name ?? "Provider"}
             {otherPerson?.rating_avg && (
-              <span className="text-brand-700 text-xs font-semibold">★ {otherPerson.rating_avg}</span>
+              <span className="text-brand-700 text-[13px] font-semibold">★ {otherPerson.rating_avg}</span>
             )}
           </div>
           {booking?.service?.title && (
-            <div className="text-[11px] text-slate-500 truncate">
+            <div className="text-[13px] text-slate-500 truncate">
               {booking.service.title} · Booking #{booking.id.slice(0, 8)}
             </div>
           )}

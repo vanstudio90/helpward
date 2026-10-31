@@ -26,6 +26,8 @@ import { SERVICE_FEE_CENTS, quoteOneShotCents, dollars } from "@/lib/pricing";
 import { pickInitialSelected } from "@/lib/new-request-selection";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
+import { displayBaseCents, localizeRule, type CountryPrice } from "@/lib/country-price";
+import { PageHeader } from "@/components/ui/kit";
 
 export type SavedAddressOption = {
   id: string;
@@ -267,20 +269,21 @@ export function NewRequestView({
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-5 lg:py-8 max-w-[1500px] mx-auto">
       <div className="flex items-center gap-3 mb-3 lg:mb-4">
-        <Link href="/dashboard" aria-label="Back" className="p-2 -ml-2 rounded-lg hover:bg-slate-100">
+        <Link href="/dashboard" aria-label="Back" className="p-2 -ml-2 rounded-field hover:bg-slate-100">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         {/* The title names what is being booked once a service is
             chosen — "New Request" told the customer nothing about which
             of 27 services the form in front of them was for. */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-          {selected ? `Book ${selected.title}` : "Book a service"}
-        </h1>
+        <PageHeader
+          title={selected ? `Book ${selected.title}` : "Book a service"}
+          className="mb-0"
+        />
         {selected && (
           <button
             type="button"
             onClick={() => { setSelected(null); setPricedAnswers({}); }}
-            className="text-xs font-semibold text-brand-700 underline underline-offset-2"
+            className="text-[13px] font-semibold text-brand-700 underline underline-offset-2"
           >
             Change service
           </button>
@@ -300,13 +303,13 @@ export function NewRequestView({
       </div>
 
       {state?.error && !state?.addressPrompt && (
-        <div className="mb-4 flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3">
+        <div className="mb-4 flex items-start gap-2 text-[15px] text-rose-700 bg-rose-50 border border-rose-100 rounded-field p-3">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {state.error}
         </div>
       )}
 
       {preferredHelper && (
-        <div className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-100 p-3">
+        <div className="mb-4 flex items-center gap-3 rounded-card bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-100 p-3">
           {preferredHelper.avatar_url ? (
             <img src={preferredHelper.avatar_url} className="w-10 h-10 rounded-full ring-2 ring-white shadow-sm" alt="" />
           ) : (
@@ -315,10 +318,10 @@ export function NewRequestView({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold text-rose-900">
+            <div className="text-[15px] font-bold text-rose-900">
               Booking again with {preferredHelper.full_name.split(" ")[0]}
             </div>
-            <div className="text-[11px] text-rose-700/80 leading-snug">
+            <div className="text-[13px] text-rose-700/80 leading-snug">
               They&apos;ll be offered this task first. If they don&apos;t accept within 2 minutes
               (or aren&apos;t online), it opens up to other nearby helpers automatically.
             </div>
@@ -387,7 +390,7 @@ export function NewRequestView({
               placeholder="Search services..."
               value={serviceQuery}
               onChange={(e) => setServiceQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+              className="w-full pl-11 pr-4 py-3 rounded-full bg-white border border-slate-200 text-[15px] placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
             />
           </div>
 
@@ -398,7 +401,7 @@ export function NewRequestView({
                 key={c}
                 onClick={() => setTab(c)}
                 className={cn(
-                  "shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition border whitespace-nowrap",
+                  "shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-field text-[15px] font-semibold transition border whitespace-nowrap",
                   tab === c
                     ? "bg-brand-50 text-brand-700 border-brand-200"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -410,7 +413,7 @@ export function NewRequestView({
           </div>
 
           {queryUnresolved && !selected && (
-            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="mt-4 rounded-card border border-amber-200 bg-amber-50 p-3 text-[15px] text-amber-900">
               We couldn&rsquo;t match {initialQuery ? <>&ldquo;{initialQuery}&rdquo;</> : "that search"} to
               one service, so nothing is selected. Pick the closest one below &mdash; your
               description is kept in the notes.
@@ -431,7 +434,7 @@ export function NewRequestView({
                   key={s.id}
                   onClick={() => setSelected(s)}
                   className={cn(
-                    "relative text-left rounded-2xl overflow-hidden bg-white border transition group",
+                    "relative text-left rounded-card overflow-hidden bg-white border transition group",
                     isSel
                       ? "border-brand-500 ring-2 ring-brand-200"
                       : "border-slate-100 hover:border-slate-300 hover:shadow-lg hover:-translate-y-0.5"
@@ -442,7 +445,7 @@ export function NewRequestView({
                       <img src={s.image_url} alt={s.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
                     )}
                     {s.popular && (
-                      <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wide bg-violet-600 text-white px-2 py-1 rounded-md">
+                      <span className="absolute top-2 left-2 text-[12px] font-bold uppercase tracking-wide bg-violet-600 text-white px-2 py-1 rounded-chip">
                         Popular
                       </span>
                     )}
@@ -455,14 +458,14 @@ export function NewRequestView({
                   <div className="p-3 sm:p-4">
                     {/* Two lines, never truncated. A service whose name
                         is cut off cannot be chosen on purpose. */}
-                    <div className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">
+                    <div className="text-[15px] font-bold text-slate-900 leading-snug line-clamp-2">
                       {s.title}
                     </div>
-                    <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-2">{s.blurb}</div>
+                    <div className="text-[13px] sm:text-[13px] text-slate-500 mt-0.5 line-clamp-2">{s.blurb}</div>
                     {/* The price with its unit and currency. "From $20"
                         alone said neither what it buys nor in what money,
                         and the $4.50 fee only appeared much later. */}
-                    <div className="mt-2 sm:mt-3 text-[11px] sm:text-xs">
+                    <div className="mt-2 sm:mt-3 text-[13px] sm:text-[13px]">
                       <div className="font-semibold text-brand-700">
                         From {formatMoney(s.base_price_cents, currency)}
                         <span className="font-normal text-slate-500">
@@ -480,7 +483,7 @@ export function NewRequestView({
           </div>
 
           {serviceQuery.trim() && filtered.length === 0 && (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+            <div className="mt-4 rounded-card border border-slate-200 bg-white p-4 text-[15px] text-slate-600">
               No service matches &ldquo;{serviceQuery.trim()}&rdquo;. Clear the search to
               browse all services, or describe what you need in the notes below and
               pick the closest match.
@@ -489,20 +492,20 @@ export function NewRequestView({
 
           {/* Details section */}
           <div className="mt-7 lg:mt-8 space-y-4">
-            <h3 className="text-base font-bold text-slate-900">When &amp; where</h3>
+            <h3 className="text-[18px] font-extrabold text-slate-900">When &amp; where</h3>
 
-            <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 space-y-4">
+            <div className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5 space-y-4">
               <label className="block">
                 {/* Named for what this address MEANS to the chosen
                     service. For a delivery it is the collection point,
                     and calling it "Address" led customers to read it as
                     their own and put the real collection point in an
                     intake answer, where nothing checked it. */}
-                <span className="text-xs font-semibold text-slate-700">
+                <span className="text-[13px] font-semibold text-slate-700">
                   {(selected && intakeFor(selected.id)?.addressLabel) || "Address"}
                 </span>
                 {selected && intakeFor(selected.id)?.addressHint && (
-                  <span className="mt-0.5 block text-[11px] text-slate-500">
+                  <span className="mt-0.5 block text-[13px] text-slate-500">
                     {intakeFor(selected.id)!.addressHint}
                   </span>
                 )}
@@ -525,7 +528,7 @@ export function NewRequestView({
                               nextConfirmedCountry(c, { type: "saved_address", country: a.country }));
                           }}
                           className={cn(
-                            "inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-full border transition",
+                            "inline-flex items-center gap-1 text-[13px] font-semibold px-2.5 py-1.5 rounded-full border transition",
                             active
                               ? "bg-brand-600 text-white border-brand-600"
                               : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50",
@@ -541,7 +544,7 @@ export function NewRequestView({
                     })}
                     <Link
                       href="/settings"
-                      className="inline-flex items-center text-[11px] font-semibold text-slate-500 px-2 py-1.5 hover:text-brand-700"
+                      className="inline-flex items-center text-[13px] font-semibold text-slate-500 px-2 py-1.5 hover:text-brand-700"
                     >
                       Manage →
                     </Link>
@@ -557,7 +560,7 @@ export function NewRequestView({
                     value={address}
                     onChange={(e) => onAddressChange(e.target.value)}
                     placeholder="123 Main St, Vancouver, BC"
-                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+                    className="w-full pl-10 pr-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
                   />
                 </div>
                 {coords && (
@@ -575,7 +578,7 @@ export function NewRequestView({
                     setConfirmedCountry((c) => nextConfirmedCountry(c, { type: "gps", country }));
                   }}
                 />
-                <p className="text-[11px] text-slate-500 mt-1 inline-flex items-center gap-1">
+                <p className="text-[13px] text-slate-500 mt-1 inline-flex items-center gap-1">
                   <Info className="w-3 h-3" />
                   {coords
                     ? <>Location pinned — your helper will be matched against the real coordinates.</>
@@ -615,13 +618,13 @@ export function NewRequestView({
               )}
 
               <fieldset>
-                <legend className="text-xs font-semibold text-slate-700">When</legend>
+                <legend className="text-[13px] font-semibold text-slate-700">When</legend>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setScheduled("asap")}
                     className={cn(
-                      "py-2.5 rounded-xl text-sm font-semibold border",
+                      "py-2.5 rounded-field text-[15px] font-semibold border",
                       scheduled === "asap"
                         ? "bg-brand-600 text-white border-brand-600"
                         : "bg-white text-slate-700 border-slate-200"
@@ -633,7 +636,7 @@ export function NewRequestView({
                     type="button"
                     onClick={() => setScheduled("later")}
                     className={cn(
-                      "py-2.5 rounded-xl text-sm font-semibold border",
+                      "py-2.5 rounded-field text-[15px] font-semibold border",
                       scheduled === "later"
                         ? "bg-brand-600 text-white border-brand-600"
                         : "bg-white text-slate-700 border-slate-200"
@@ -650,7 +653,7 @@ export function NewRequestView({
               </fieldset>
 
               <label className="block">
-                <span className="text-xs font-semibold text-slate-700">Notes (optional)</span>
+                <span className="text-[13px] font-semibold text-slate-700">Notes (optional)</span>
                 <textarea
                   name="notes"
                   rows={3}
@@ -661,7 +664,7 @@ export function NewRequestView({
                   key={`notes-${state?.submitted ? "restored" : "fresh"}`}
                   defaultValue={state?.submitted?.notes ?? initialQuery ?? ""}
                   placeholder="Any special instructions..."
-                  className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+                  className="mt-1 w-full px-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
                 />
               </label>
 
@@ -738,7 +741,7 @@ function StepDot({ n, label, active, done }: { n: number; label: string; active:
   return (
     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
       <span className={cn(
-        "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border-2 shrink-0",
+        "w-6 h-6 rounded-full flex items-center justify-center text-[13px] font-bold border-2 shrink-0",
         active ? "bg-brand-600 text-white border-brand-600" :
         done ? "bg-emerald-500 text-white border-emerald-500" :
         "bg-white text-slate-400 border-slate-300"
@@ -746,7 +749,7 @@ function StepDot({ n, label, active, done }: { n: number; label: string; active:
         {done ? <Check className="w-3 h-3" /> : n}
       </span>
       <span className={cn(
-        "text-[11px] sm:text-xs whitespace-nowrap",
+        "text-[13px] sm:text-[13px] whitespace-nowrap",
         active ? "text-brand-700 font-semibold" : "text-slate-500"
       )}>{label}</span>
     </div>
@@ -766,9 +769,9 @@ function SummaryCard({ selected, rule, answers, currency, bundle }: {
 }) {
   if (!selected) {
     return (
-      <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-        <h3 className="text-sm font-bold text-slate-900 mb-3">Request Summary</h3>
-        <div className="text-sm text-slate-500">Pick a service to continue.</div>
+      <div className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
+        <h3 className="text-[15px] font-bold text-slate-900 mb-3">Request Summary</h3>
+        <div className="text-[15px] text-slate-500">Pick a service to continue.</div>
       </div>
     );
   }
@@ -777,34 +780,55 @@ function SummaryCard({ selected, rule, answers, currency, bundle }: {
   // Priced from the customer's answers. The same rules run in SQL at
   // acceptance (price_service_cents, migration 0053); parity across both
   // is asserted by scripts/verify-pricing-parity.mjs.
-  const priced = priceService(selected.base_price_cents, rule, answers);
+  // Derived from the quote currency rather than passed separately, so the
+  // number and the symbol can never disagree: a card reading "CA$" shows
+  // the Canadian price, and both switch together when an address resolves.
+  const quotedCountry = currency === "CAD" ? "CA" : "US";
+
+  // The base the CUSTOMER is quoted must be the base the database charges.
+  // price_service_cents applies the country override server-side; reading
+  // services.base_price_cents here showed $15 for a job billed at CA$40.
+  const quotedBase = displayBaseCents(
+    selected.base_price_cents,
+    (selected.country_pricing ?? undefined) as CountryPrice[] | undefined,
+    quotedCountry,
+  );
+  // The WHOLE rule, not just the time block: per-dog and per-helper money
+  // vary by market too, and localising them one field at a time is how the
+  // display drifts from the charge.
+  const quotedRule = localizeRule(
+    rule,
+    (selected.country_pricing ?? undefined) as CountryPrice[] | undefined,
+    quotedCountry,
+  );
+  const priced = priceService(quotedBase, quotedRule, answers);
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-100 overflow-hidden">
+    <div className="bg-white rounded-card border border-slate-100 shadow-soft overflow-hidden">
       {selected.image_url && (
         <div className="relative h-32 bg-slate-100">
           <img src={selected.image_url} alt={selected.title} className="w-full h-full object-cover" />
           {selected.popular && (
-            <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wide bg-violet-600 text-white px-2 py-1 rounded-md">
+            <span className="absolute top-2 left-2 text-[12px] font-bold uppercase tracking-wide bg-violet-600 text-white px-2 py-1 rounded-chip">
               Popular
             </span>
           )}
         </div>
       )}
       <div className="p-4 sm:p-5">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Request Summary</div>
-        <div className="text-base font-bold text-slate-900">
+        <div className="text-[13px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Request Summary</div>
+        <div className="text-[18px] font-extrabold text-slate-900">
           {bundle ? `${filledStops.length}-stop bundle` : selected.title}
         </div>
-        <div className="text-[11px] text-slate-500 mt-0.5">
+        <div className="text-[13px] text-slate-500 mt-0.5">
           {bundle ? "One helper, one trip, one service fee" : selected.category.label}
         </div>
-        {!bundle && <p className="mt-2 text-xs text-slate-600 leading-relaxed">{selected.blurb}</p>}
+        {!bundle && <p className="mt-2 text-[13px] text-slate-600 leading-relaxed">{selected.blurb}</p>}
 
         {/* An "Available Now" pill and a flat 4.9 rating used to render here
             for every service, with nothing behind either (HW-10). */}
         {!bundle && selected.eta_label && (
-          <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-semibold">
+          <div className="mt-3 flex flex-wrap gap-1.5 text-[13px] font-semibold">
             <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
               <Clock className="w-3 h-3" /> Typically {selected.eta_label}
             </span>
@@ -813,8 +837,8 @@ function SummaryCard({ selected, rule, answers, currency, bundle }: {
 
         {/* What's included */}
         <div className="mt-4 border-t border-slate-100 pt-4">
-          <div className="text-xs font-bold text-slate-900 mb-2">What&apos;s included</div>
-          <ul className="space-y-1.5 text-xs text-slate-700">
+          <div className="text-[13px] font-bold text-slate-900 mb-2">What&apos;s included</div>
+          <ul className="space-y-1.5 text-[13px] text-slate-700">
             {/* Only what is true today.
                 "Background-checked" required Checkr, which is not wired —
                 background_verified_at is written solely by its webhook,
@@ -839,8 +863,8 @@ function SummaryCard({ selected, rule, answers, currency, bundle }: {
         {/* Price estimate — reads the same quote the bundle panel shows, so
             the two can no longer disagree (HW-07). */}
         <div className="mt-4 border-t border-slate-100 pt-4">
-          <div className="text-xs font-bold text-slate-900 mb-2">Price estimate</div>
-          <dl className="text-xs space-y-1.5">
+          <div className="text-[13px] font-bold text-slate-900 mb-2">Price estimate</div>
+          <dl className="text-[13px] space-y-1.5">
             {bundle ? (
               <>
                 {filledStops.map((it, idx) => (
@@ -857,8 +881,8 @@ function SummaryCard({ selected, rule, answers, currency, bundle }: {
                   <dd className="font-semibold text-slate-900 tabular-nums">${dollars(bundle.price.serviceFeeCents)}</dd>
                 </div>
                 <div className="flex justify-between pt-1.5 border-t border-slate-100">
-                  <dt className="text-sm font-bold text-slate-900">Total estimate</dt>
-                  <dd className="text-sm font-bold text-brand-700 tabular-nums">${dollars(bundle.price.totalCents)}</dd>
+                  <dt className="text-[15px] font-bold text-slate-900">Total estimate</dt>
+                  <dd className="text-[15px] font-bold text-brand-700 tabular-nums">${dollars(bundle.price.totalCents)}</dd>
                 </div>
               </>
             ) : (
@@ -876,12 +900,12 @@ function SummaryCard({ selected, rule, answers, currency, bundle }: {
                   <dd className="font-semibold text-slate-900 tabular-nums">{formatMoney(SERVICE_FEE_CENTS, currency)}</dd>
                 </div>
                 <div className="flex justify-between pt-1.5 border-t border-slate-100">
-                  <dt className="text-sm font-bold text-slate-900">Total</dt>
-                  <dd className="text-sm font-bold text-brand-700 tabular-nums">
+                  <dt className="text-[15px] font-bold text-slate-900">Total</dt>
+                  <dd className="text-[15px] font-bold text-brand-700 tabular-nums">
                     {formatMoney(quoteOneShotCents(priced.subtotalCents), currency)}
                   </dd>
                 </div>
-                <div className="text-[11px] text-slate-500 pt-0.5">
+                <div className="text-[13px] text-slate-500 pt-0.5">
                   {formatMoney(quoteOneShotCents(priced.subtotalCents), currency)} total before an optional tip.
                 </div>
               </>
@@ -889,15 +913,15 @@ function SummaryCard({ selected, rule, answers, currency, bundle }: {
           </dl>
           {/* Said BEFORE submitting, not discovered afterwards: a hold
               appearing on a statement with no warning reads as a charge. */}
-          <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-2.5">
-            <p className="text-[11px] text-slate-600 leading-relaxed">
+          <div className="mt-3 rounded-field bg-slate-50 border border-slate-100 p-2.5">
+            <p className="text-[13px] text-slate-600 leading-relaxed">
               We&rsquo;ll find a nearby helper. A <strong className="font-semibold">temporary hold</strong>{" "}
               is placed on your card when one accepts — not a charge. You pay after the task is
               marked complete, and nothing is taken if it&rsquo;s cancelled.
             </p>
           </div>
 
-          <p className="text-[10px] text-slate-400 mt-2 leading-snug">
+          <p className="text-[12px] text-slate-400 mt-2 leading-snug">
             This is the amount saved with your request. A tip is optional and goes to your helper in full. You&apos;re
             only charged after the task is marked complete.
           </p>
@@ -927,7 +951,7 @@ function ScheduledPicker() {
         type="datetime-local"
         value={local}
         onChange={(e) => setLocal(e.target.value)}
-        className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-white border border-slate-200 text-sm focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
+        className="w-full pl-10 pr-3 py-2.5 rounded-field bg-white border border-slate-200 text-[15px] focus:outline-none focus:ring-4 focus:ring-brand-100 focus:border-brand-400"
       />
       <input type="hidden" name="scheduled_for" value={iso} />
     </div>
@@ -950,7 +974,7 @@ function ContinueButtons({ pending, disabledReason, awaitingAddress }: {
       <button
         type="submit"
         disabled={pending || !!awaitingAddress}
-        className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 text-white font-semibold shadow-lg shadow-brand-900/10 disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-field bg-gradient-to-r from-brand-600 to-violet-600 text-white font-semibold shadow-lg shadow-brand-900/10 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {pending
           ? "Submitting…"
@@ -961,7 +985,7 @@ function ContinueButtons({ pending, disabledReason, awaitingAddress }: {
             : <>Submit request <ArrowRight className="w-4 h-4" aria-hidden="true" /></>}
       </button>
       {disabledReason && (
-        <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 leading-snug">
+        <p className="text-[13px] text-amber-800 bg-amber-50 border border-amber-200 rounded-field p-2 leading-snug">
           {disabledReason}
         </p>
       )}

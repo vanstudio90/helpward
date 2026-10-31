@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     .update({
       status: "cancelled",
       cancelled_at: new Date().toISOString(),
-      cancel_reason: "Provider did not arrive — auto-cancelled by system",
+      cancel_reason: "Helper did not arrive — auto-cancelled by system",
     })
     .in("id", ids);
   if (updErr) return NextResponse.json({ ok: false, error: updErr.message }, { status: 500 });

@@ -7,10 +7,11 @@ import { signupAction } from "../auth/actions";
 import { Mail, Lock, User, AlertCircle, Globe } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ReferralBanner } from "./referral-banner";
+import { NEW_HELPER_ROLE } from "@/lib/roles";
 
 export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signupAction, undefined);
-  const [role, setRole] = useState<"customer" | "provider">("customer");
+  const [role, setRole] = useState<"customer" | "helper">("customer");
   // Mirrored so the "not your city" waitlist can use it without a second ask.
   const [email, setEmail] = useState("");
   const [country, setCountry] = useState("US");
@@ -36,10 +37,10 @@ export default function SignupPage() {
         </button>
         <button
           type="button"
-          onClick={() => setRole("provider")}
+          onClick={() => setRole("helper")}
           className={cn(
             "py-2 rounded-lg text-sm font-semibold transition",
-            role === "provider" ? "bg-white text-brand-700 shadow-sm" : "text-slate-500"
+            role === "helper" ? "bg-white text-brand-700 shadow-sm" : "text-slate-500"
           )}
         >
           I want to earn
@@ -49,12 +50,24 @@ export default function SignupPage() {
       {state?.error && (
         <div className="mt-5 flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-100 rounded-xl p-3">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-          <span>{state.error}</span>
+          <div className="min-w-0">
+            <span>{state.error}</span>
+            {state.accountExists && (
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                <Link href="/login" className="text-xs font-semibold text-rose-800 underline underline-offset-2 hover:text-rose-900">
+                  Log in
+                </Link>
+                <Link href="/forgot-password" className="text-xs font-semibold text-rose-800 underline underline-offset-2 hover:text-rose-900">
+                  Reset my password
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       <form action={formAction} className="mt-5 space-y-4">
-        <input type="hidden" name="role" value={role} />
+        <input type="hidden" name="role" value={role === "helper" ? NEW_HELPER_ROLE : role} />
 
         <label className="block">
           <span className="text-xs font-semibold text-slate-700">Full Name</span>
@@ -124,7 +137,7 @@ export default function SignupPage() {
             onboarding, connect a Stripe payout account and wait for an
             approval that leads nowhere. Customers already get this check at
             booking; helpers did not. */}
-        {role === "provider" && <WhereYouWork country={country} email={email} />}
+        {role === "helper" && <WhereYouWork country={country} email={email} />}
 
         <button
           type="submit"

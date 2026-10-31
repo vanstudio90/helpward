@@ -35,9 +35,9 @@ export function ServiceIcon({
   const Icon = MAP[name] ?? Sparkles;
   const tone = TONES[name] ?? "bg-slate-100 text-slate-700";
   const dims =
-    size === "sm" ? "w-9 h-9 rounded-lg" :
-    size === "lg" ? "w-14 h-14 rounded-2xl" :
-    "w-11 h-11 rounded-xl";
+    size === "sm" ? "w-9 h-9 rounded-field" :
+    size === "lg" ? "w-14 h-14 rounded-card" :
+    "w-11 h-11 rounded-field";
   const ic = size === "sm" ? "w-4 h-4" : size === "lg" ? "w-7 h-7" : "w-5 h-5";
   return (
     <span className={`inline-flex items-center justify-center ${dims} ${tone} ${className}`}>

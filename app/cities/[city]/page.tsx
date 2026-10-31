@@ -6,6 +6,7 @@ import { listServicesPublic, listCategoriesPublic } from "@/lib/data/services";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../_landing-header";
 import { CITIES, getCity } from "@/lib/marketing";
+import { SiteFooter } from "@/components/SiteFooter";
 
 // One landing page per city. Lists every service available in that city
 // (currently the same catalog everywhere — switch to per-city when supply
@@ -192,6 +193,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

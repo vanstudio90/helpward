@@ -69,7 +69,7 @@ function StaticMap({ lng, lat, label }: { lng: number; lat: number; label: strin
   // unnecessary here, and the pin's job is to let the customer sanity-check
   // the location, which the coordinates and the city do.
   return (
-    <div className="shrink-0 w-20 h-20 rounded-xl bg-brand-50 border border-brand-100 flex flex-col items-center justify-center text-center">
+    <div className="shrink-0 w-20 h-20 rounded-field bg-brand-50 border border-brand-100 flex flex-col items-center justify-center text-center">
       <MapPin className="w-5 h-5 text-brand-600" aria-hidden="true" />
       <div className="text-[9px] text-brand-800 font-mono leading-tight mt-1 px-1">
         {lat.toFixed(4)}
@@ -135,7 +135,7 @@ export function AddressConfirm({
       ref={panel}
       role="alert"
       aria-live="assertive"
-      className="mt-4 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 shadow-sm"
+      className="mt-4 rounded-card border-2 border-amber-300 bg-amber-50 p-4 shadow-sm"
       aria-labelledby="addr-confirm-heading"
     >
       <div className="flex items-start gap-2">
@@ -145,17 +145,17 @@ export function AddressConfirm({
             id="addr-confirm-heading"
             data-confirm-heading
             tabIndex={-1}
-            className="text-sm font-bold text-amber-950 outline-none"
+            className="text-[15px] font-bold text-amber-950 outline-none"
           >
             One more step: {multiple ? "which address did you mean?" : "confirm your address"}
           </h3>
-          <p className="text-xs text-amber-900/90 mt-0.5">
+          <p className="text-[13px] text-amber-900/90 mt-0.5">
             {message ??
               (multiple
                 ? "More than one address matches what you typed. Choose the right one."
                 : "We matched what you typed to the address below. Confirm it before we send a helper.")}
           </p>
-          <p className="text-[11px] text-amber-900/70 mt-1">
+          <p className="text-[13px] text-amber-900/70 mt-1">
             You typed: <span className="font-mono">{typed}</span>
           </p>
         </div>
@@ -164,7 +164,7 @@ export function AddressConfirm({
       {significant.length > 0 && (
         <ul className="mt-3 space-y-1">
           {significant.map((c, i) => (
-            <li key={i} className="text-xs text-amber-950 flex items-start gap-1.5">
+            <li key={i} className="text-[13px] text-amber-950 flex items-start gap-1.5">
               <span aria-hidden="true" className="mt-[3px] w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
               {c.note}
             </li>
@@ -179,7 +179,7 @@ export function AddressConfirm({
             <li key={c.token}>
               <label
                 className={cn(
-                  "flex items-start gap-3 rounded-xl border bg-white p-3 cursor-pointer transition",
+                  "flex items-start gap-3 rounded-field border bg-white p-3 cursor-pointer transition",
                   selected ? "border-brand-500 ring-2 ring-brand-200" : "border-slate-200 hover:border-slate-300",
                 )}
               >
@@ -194,11 +194,11 @@ export function AddressConfirm({
                 )}
                 <StaticMap lng={c.lng} lat={c.lat} label={c.formatted} />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-slate-900 leading-snug">
+                  <span className="block text-[15px] font-semibold text-slate-900 leading-snug">
                     <Highlighted formatted={c.formatted} emphasise={emphasise} />
                   </span>
                   {c.postalCode && (
-                    <span className="block text-[11px] text-slate-500 mt-0.5">
+                    <span className="block text-[13px] text-slate-500 mt-0.5">
                       {c.city}
                       {c.region ? `, ${c.region}` : ""} {c.postalCode}
                     </span>
@@ -218,19 +218,19 @@ export function AddressConfirm({
             const c = candidates.find((x) => x.token === chosen);
             if (c) onConfirm(c.token, c.formatted, c.country);
           }}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-field bg-brand-600 text-white text-[15px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Check className="w-4 h-4" aria-hidden="true" /> Confirm address
         </button>
         <button
           type="button"
           onClick={onEdit}
-          className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          className="px-3 py-2 rounded-field border border-slate-300 bg-white text-[15px] font-semibold text-slate-700 hover:bg-slate-50"
         >
           Edit address
         </button>
         {multiple && !chosen && (
-          <span className="text-[11px] text-amber-900">Pick one to continue.</span>
+          <span className="text-[13px] text-amber-900">Pick one to continue.</span>
         )}
       </div>
     </section>

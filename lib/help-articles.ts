@@ -243,7 +243,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "helpers",
     title: "Becoming a Helpward helper",
     summary:
-      "Sign up as a helper, complete ID verification + background check, link a bank for payouts, and once approved you can go online from /provider/active to start accepting tasks.",
+      "Sign up as a helper, complete ID verification + background check, link a bank for payouts, and once approved you can go online from /helper/active to start accepting tasks.",
     body: [
       { type: "ol", items: [
         "Sign up at /signup?role=provider with your full name, email, and password.",
@@ -253,7 +253,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         "Pass the background check (typically 24–72 hours).",
         "Link your bank for payouts via Stripe Connect.",
         "A human at Helpward reviews and approves your application.",
-        "Go online from /provider/active to start receiving offers.",
+        "Go online from /helper/active to start receiving offers.",
       ] },
       { type: "p", text:
         "Helpers keep 80% of the base + distance fee, plus 100% of any tip. Helpward takes 20% to cover dispatch, support, identity verification, and platform costs." },
@@ -394,7 +394,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     body: [
       { type: "h2", text: "Weekly hours" },
       { type: "p", text:
-        "Open /provider/schedule and add a shift for each day you work. You can add multiple shifts on the same day (a split shift like 9-12 plus 5-9pm), and the editor totals your weekly hours so you can see at a glance how much you've scheduled." },
+        "Open /helper/schedule and add a shift for each day you work. You can add multiple shifts on the same day (a split shift like 9-12 plus 5-9pm), and the editor totals your weekly hours so you can see at a glance how much you've scheduled." },
       { type: "h2", text: "One-off dates" },
       { type: "p", text:
         "Mark a single date as off (vacation, sick day) or add an extra shift outside your weekly hours. Overrides win over the weekly rule for that date, so a Tuesday-off override hides your normal Tuesday shifts only for that one Tuesday." },
@@ -403,7 +403,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         "Going away for a stretch? Toggle vacation mode and optionally pick a return date. Your weekly schedule stays saved — you just appear as Away on your public profile until you flip it back." },
       { type: "h2", text: "Does this auto-decline tasks I'm offered outside my hours?" },
       { type: "p", text:
-        "Not yet. The schedule is currently informational — it shapes the badge on your public profile and helps customers see when you usually work. Wiring the matching engine to filter on schedule lands in a future release. For now, going Offline from /provider/active is what stops the offers." },
+        "Not yet. The schedule is currently informational — it shapes the badge on your public profile and helps customers see when you usually work. Wiring the matching engine to filter on schedule lands in a future release. For now, going Offline from /helper/active is what stops the offers." },
     ],
     faqs: [
       { q: "Can I have a different schedule each week?", a: "The weekly schedule represents your typical week. For exceptions — a one-off Saturday shift, a Wednesday off, a holiday — use the One-off dates section. Anything you add there wins over the weekly rule for that date." },
@@ -556,7 +556,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         "Most customers settle on a small handful of helpers they trust — the one who always nails the grocery list, the one who's great with the dog, the one who's been at three of their kids' birthdays. Saved helpers turn that recurring trust into a single tap." },
       { type: "h2", text: "How to save a helper" },
       { type: "ul", items: [
-        "From any helper's public profile (/providers/[id]): tap the \"Save helper\" pill under their name.",
+        "From any helper's public profile (/helpers/[id]): tap the \"Save helper\" pill under their name.",
         "From your booking page (/bookings/[id]): tap the heart icon on the helper row.",
         "Hearts turn rose-pink when saved. Tap again to un-save.",
       ] },
@@ -584,9 +584,9 @@ export const HELP_ARTICLES: HelpArticle[] = [
         "Helpers with portfolio photos on their profile get noticeably more direct-booking traffic than helpers without — prospective customers want to see real work, not just stars and a tagline. The proof photos you already snap to wrap up tasks double as portfolio content with one tap." },
       { type: "h2", text: "How to add a photo to your portfolio" },
       { type: "ol", items: [
-        "Open /provider/portfolio from the nav.",
+        "Open /helper/portfolio from the nav.",
         "You'll see every proof photo from every booking you've ever completed.",
-        "Tap \"Feature on profile\" on any photo. It instantly appears on your public /providers/[id] profile under \"Recent work\".",
+        "Tap \"Feature on profile\" on any photo. It instantly appears on your public /helpers/[id] profile under \"Recent work\".",
         "Optionally rewrite the caption — the original is customer-facing (\"left at side door\") but for portfolio it's better to describe the work (\"mulched + edged 200 sqft front yard, 2 hrs\").",
         "Tap \"Hide from profile\" any time to pull a photo back to private.",
       ] },
@@ -605,7 +605,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     faqs: [
       { q: "Do I need to ask the customer before featuring a photo?", a: "Not in advance — you can feature any photo you took on a completed booking. The customer gets visibility on every photo you've featured via their booking page and can revoke any of them instantly. We send them a notification when you feature a photo from their booking so they're never surprised." },
       { q: "Can I feature photos from in-progress bookings?", a: "No. Only photos from bookings that have hit 'completed' status are eligible. The RLS policy on the database enforces this — you can't accidentally feature a half-done task." },
-      { q: "What happens to my portfolio if I take a break and pause my account?", a: "Auto-hidden. The public-read RLS policy checks your provider_profiles.status = 'approved' on every read, so the moment you pause, your portfolio vanishes from /providers/[id]. When you come back online, it re-appears — no manual re-flagging needed." },
+      { q: "What happens to my portfolio if I take a break and pause my account?", a: "Auto-hidden. The public-read RLS policy checks your provider_profiles.status = 'approved' on every read, so the moment you pause, your portfolio vanishes from /helpers/[id]. When you come back online, it re-appears — no manual re-flagging needed." },
       { q: "How many photos can I feature?", a: "No hard cap, but we render the 12 most recent on your profile. Older featured photos still count as portfolio content (and remain on individual booking pages) — we just don't surface more than 12 in the gallery to keep it scannable." },
     ],
     updatedAt: "2026-06-01",
