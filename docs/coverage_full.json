@@ -1,0 +1,245 @@
+{
+ "services": [
+  {
+   "id": "appliance-repair",
+   "title": "Appliance Repair",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "car-battery-jump",
+   "title": "Car Battery Jump",
+   "byCall": false,
+   "offers": 1,
+   "approved": 1,
+   "payout": 1,
+   "online": 0
+  },
+  {
+   "id": "date-companion",
+   "title": "Date Companion",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "designated-driver",
+   "title": "Designated Driver",
+   "byCall": false,
+   "offers": 1,
+   "approved": 1,
+   "payout": 1,
+   "online": 0
+  },
+  {
+   "id": "dog-walking",
+   "title": "Dog Walking",
+   "byCall": false,
+   "offers": 1,
+   "approved": 1,
+   "payout": 1,
+   "online": 0
+  },
+  {
+   "id": "elder-assistance",
+   "title": "Elder Assistance",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "errand-runner",
+   "title": "Errand Runner",
+   "byCall": false,
+   "offers": 1,
+   "approved": 1,
+   "payout": 1,
+   "online": 0
+  },
+  {
+   "id": "event-companion",
+   "title": "Event Companion",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "family-standin",
+   "title": "Family Stand-in",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "furniture-assembly",
+   "title": "Furniture Assembly",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "grocery-pickup",
+   "title": "Grocery Pickup",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "house-check-in",
+   "title": "House Check-In",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "listening-service",
+   "title": "Listening Service",
+   "byCall": true,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "maid-service",
+   "title": "Maid Service",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "motorcycle-taxi",
+   "title": "Motorcycle Taxi",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "moving-help",
+   "title": "Moving Help",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "package-delivery",
+   "title": "Package Delivery",
+   "byCall": false,
+   "offers": 1,
+   "approved": 1,
+   "payout": 1,
+   "online": 0
+  },
+  {
+   "id": "package-return",
+   "title": "Package Return",
+   "byCall": false,
+   "offers": 1,
+   "approved": 1,
+   "payout": 1,
+   "online": 0
+  },
+  {
+   "id": "property-inspection",
+   "title": "Property Inspection",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "rent-a-friend",
+   "title": "Rent-a-Friend",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "shopping-companion",
+   "title": "Shopping Companion",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "sleep-call-companion",
+   "title": "Sleep Call Companion",
+   "byCall": true,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "tech-setup",
+   "title": "Tech Setup",
+   "byCall": false,
+   "offers": 1,
+   "approved": 1,
+   "payout": 1,
+   "online": 0
+  },
+  {
+   "id": "tv-mounting",
+   "title": "TV Mounting",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "wait-in-line",
+   "title": "Wait in Line",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  },
+  {
+   "id": "wedding-guest",
+   "title": "Wedding Guest",
+   "byCall": false,
+   "offers": 0,
+   "approved": 0,
+   "payout": 0,
+   "online": 0
+  }
+ ],
+ "totals": {
+  "providers": 31,
+  "approved": 1,
+  "payout": 1,
+  "online": 0,
+  "everCompleted": 0
+ }
+}
