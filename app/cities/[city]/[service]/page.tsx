@@ -4,7 +4,17 @@ import {
   ArrowRight, CheckCircle2, Clock, ShieldCheck, Star, MapPin, Users, Sparkles,
 } from "lucide-react";
 import type { Metadata } from "next";
-import { listServicesPublic, listCategoriesPublic, getServicePublic } from "@/lib/data/services";
+import {
+  listServicesPublic,
+  listCategoriesPublic,
+  getServicePublic,
+  listCallDeliveredServiceIds,
+} from "@/lib/data/services";
+import {
+  publicServiceName,
+  publicServiceDescription,
+  includedPoints,
+} from "@/lib/public-service-copy";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../../_landing-header";
 import { CITIES, getCity } from "@/lib/marketing";
@@ -31,8 +41,9 @@ export async function generateMetadata({
   const service = await getServicePublic(serviceSlug);
   if (!city || !service) return { title: "Not found — Helpward" };
 
-  const title = `${service.title} in ${city.name}, ${city.region} | Helpward`;
-  const description = `Book a ${service.title.toLowerCase()} in ${city.name} via Helpward. Approved local helpers, $${(service.base_price_cents / 100).toFixed(0)} base price, payment only after the task is complete.`;
+  const name = publicServiceName(service.id, service.title);
+  const title = `${name} in ${city.name}, ${city.region} | Helpward`;
+  const description = `Book ${name.toLowerCase()} in ${city.name} via Helpward. Approved local helpers, $${(service.base_price_cents / 100).toFixed(0)} base price (${city.country === "CA" ? "CAD" : "USD"}), payment only after the task is complete.`;
   const url = `https://helpward.com/cities/${city.slug}/${service.id}`;
   return {
     title,
@@ -50,12 +61,18 @@ export default async function CityServicePage({
   const city = getCity(citySlug);
   if (!city) notFound();
 
-  const [service, allServices, categories] = await Promise.all([
+  const [service, allServices, categories, callDelivered] = await Promise.all([
     getServicePublic(serviceSlug),
     listServicesPublic(),
     listCategoriesPublic(),
+    listCallDeliveredServiceIds(),
   ]);
   if (!service) notFound();
+
+  const name = publicServiceName(service.id, service.title);
+  const blurb = publicServiceDescription(service.id, service.blurb);
+  const deliveredByCall = callDelivered.has(service.id);
+  const currency = city.country === "CA" ? "CAD" : "USD";
 
   const related = allServices
     .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
@@ -69,8 +86,9 @@ export default async function CityServicePage({
   const SERVICE_LD = {
     "@context": "https://schema.org",
     "@type": "Service",
-    name: `${service.title} in ${city.name}`,
-    description: `${service.blurb} Available across ${city.metro ?? city.name}, ${city.region}.`,
+    name: `${name} in ${city.name}`,
+    alternateName: name === service.title ? undefined : `${service.title} in ${city.name}`,
+    description: `${blurb} Available across ${city.metro ?? city.name}, ${city.region}.`,
     serviceType: service.category?.label,
     provider: { "@id": "https://helpward.com/#organization" },
     areaServed: {
@@ -94,8 +112,8 @@ export default async function CityServicePage({
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "@id": `https://helpward.com/cities/${city.slug}/${service.id}#localbusiness`,
-    name: `Helpward ${service.title} — ${city.name}`,
-    description: `On-demand ${service.title.toLowerCase()} service in ${city.name}, ${city.region}. Approved helpers, transparent pricing, payment after completion.`,
+    name: `Helpward ${name} — ${city.name}`,
+    description: `On-demand ${name.toLowerCase()} in ${city.name}, ${city.region}. Approved helpers, transparent pricing, payment after completion.`,
     url: `https://helpward.com/cities/${city.slug}/${service.id}`,
     parentOrganization: { "@id": "https://helpward.com/#organization" },
     areaServed: {
@@ -109,16 +127,21 @@ export default async function CityServicePage({
 
   const FAQS = [
     {
-      q: `How do I book ${service.title.toLowerCase()} in ${city.name}?`,
+      q: `How do I book ${name.toLowerCase()} in ${city.name}?`,
       a: `Tap "Find a helper" on Helpward, pick ${service.title}, enter your ${city.name} address, and submit. The matching engine notifies nearby verified helpers in ${city.metro ?? city.name} in real time — the first to accept becomes yours and you can track their ETA live.`,
     },
+    deliveredByCall
+      ? {
+          q: `How soon will a helper call in ${city.name}?`,
+          a: `${service.title} is delivered by phone call, so no helper travels to your ${city.name} address. Requests are offered to approved helpers straight away and typically answered in ${service.eta_label ?? "around 18 minutes"} during normal hours, and the call itself happens at the time you booked.`,
+        }
+      : {
+          q: `How fast can a helper arrive in ${city.name}?`,
+          a: `Average response time for ${service.title} in ${city.name} is ${service.eta_label ?? "around 18 minutes"} during normal hours. Helper supply is densest in ${city.metro ?? city.name} so ${city.name}-based requests typically match faster than the platform-wide average.`,
+        },
     {
-      q: `How fast can a helper arrive in ${city.name}?`,
-      a: `Average response time for ${service.title} in ${city.name} is ${service.eta_label ?? "around 18 minutes"} during normal hours. Helper supply is densest in ${city.metro ?? city.name} so ${city.name}-based requests typically match faster than the platform-wide average.`,
-    },
-    {
-      q: `How much does ${service.title.toLowerCase()} cost in ${city.name}?`,
-      a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)} (${city.country === "CA" ? "CAD" : "USD"}). A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. Pricing is the same across ${city.name} — no surge fees, no per-block markup. You're only charged after the helper marks the task complete.`,
+      q: `How much does ${name.toLowerCase()} cost in ${city.name}?`,
+      a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)} (${currency}). A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. Pricing is the same across ${city.name} — no surge fees, no per-block markup. You're only charged after the helper marks the task complete.`,
     },
     {
       q: `Are Helpward helpers in ${city.name} approved?`,
@@ -163,7 +186,7 @@ export default async function CityServicePage({
             <li className="text-slate-300">/</li>
             <li><Link href={`/cities/${city.slug}`} className="hover:text-slate-900">{city.name}</Link></li>
             <li className="text-slate-300">/</li>
-            <li><Link href={`/services/${service.id}`} className="hover:text-slate-900">{service.title}</Link></li>
+            <li><Link href={`/services/${service.id}`} className="hover:text-slate-900">{name}</Link></li>
             <li className="text-slate-300">/</li>
             <li className="text-slate-900 font-semibold">in {city.name}</li>
           </ol>
@@ -189,11 +212,11 @@ export default async function CityServicePage({
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
-                {service.title} in {city.name}
+                {name} in {city.name}
               </h1>
               <p className="mt-3 text-base sm:text-lg text-slate-700 max-w-2xl leading-relaxed">
-                Book a verified, approved {service.title.toLowerCase()} in {city.metro ?? city.name} via
-                Helpward. {service.blurb} Pricing is upfront, payment is held until the task is marked complete,
+                Book {name.toLowerCase()} in {city.metro ?? city.name} via
+                Helpward. {blurb} Pricing is upfront, your card is authorised when a helper accepts and charged once the job is marked complete,
                 and payment is held until the task is marked complete.
               </p>
 
@@ -257,14 +280,7 @@ export default async function CityServicePage({
             <div>
               <h2 className="text-2xl font-bold text-slate-900">What&apos;s included for every {city.name} booking</h2>
               <ul className="mt-4 space-y-3 text-sm text-slate-700">
-                {[
-                  `Approved local helper in ${city.name}`,
-                  "Real-time GPS tracking and in-app chat",
-                  "Card held when a helper accepts, charged when they mark it complete",
-                  "Card held when a helper accepts, charged when they mark it complete",
-                  "24-hour dispute window with human support review",
-                  "24/7 customer support — call, chat, or email",
-                ].map((i) => (
+                {includedPoints({ cityName: city.name, deliveredByCall }).map((i) => (
                   <li key={i} className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> {i}
                   </li>
@@ -285,8 +301,8 @@ export default async function CityServicePage({
 
         {/* Same service, other cities */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h2 className="text-xl font-bold text-slate-900">{service.title} in other cities</h2>
-          <p className="text-sm text-slate-600 mt-1">Helpward offers {service.title.toLowerCase()} across {CITIES.length} cities in the U.S. and Canada.</p>
+          <h2 className="text-xl font-bold text-slate-900">{name} in other cities</h2>
+          <p className="text-sm text-slate-600 mt-1">Helpward offers {name.toLowerCase()} across {CITIES.length} cities in the U.S. and Canada.</p>
           <ul className="mt-4 flex flex-wrap gap-2">
             {CITIES.filter((c) => c.slug !== city.slug).map((c) => (
               <li key={c.slug}>
@@ -294,7 +310,7 @@ export default async function CityServicePage({
                   href={`/cities/${c.slug}/${service.id}`}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:border-brand-300 hover:text-brand-700"
                 >
-                  <MapPin className="w-3 h-3" /> {service.title} in {c.name}
+                  <MapPin className="w-3 h-3" /> {name} in {c.name}
                 </Link>
               </li>
             ))}
@@ -328,7 +344,7 @@ export default async function CityServicePage({
         {/* FAQ */}
         <section className="bg-white border-t border-slate-100 py-12">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">Frequently asked about {service.title.toLowerCase()} in {city.name}</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">Frequently asked about {name.toLowerCase()} in {city.name}</h2>
             <dl className="space-y-3">
               {FAQS.map((f) => (
                 <details key={f.q} className="group rounded-2xl bg-slate-50 border border-slate-100 p-4 sm:p-5 open:shadow-md transition">
@@ -346,7 +362,7 @@ export default async function CityServicePage({
         {/* CTA */}
         <section className="bg-gradient-to-br from-brand-600 to-violet-700 text-white">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold">Need {service.title.toLowerCase()} in {city.name} right now?</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold">Need {name.toLowerCase()} in {city.name} right now?</h2>
             <p className="mt-2 text-sm sm:text-base text-white/90">A verified helper is probably online within a few blocks.</p>
             <Link
               href={`/new-request?service=${service.id}`}

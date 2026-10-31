@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { listServicesPublic, listCategoriesPublic } from "@/lib/data/services";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../_landing-header";
+import { publicServiceName, publicServiceDescription } from "@/lib/public-service-copy";
 
 /*
   THE PUBLIC SERVICE DIRECTORY.
@@ -74,6 +75,9 @@ export default async function OurServicesPage() {
             what you need, see the full price before you request, and pay only once
             the task is done.
           </p>
+          <p className="mt-3 text-sm text-slate-500">
+            Choose a service, add your details, then review your price before sending a request.
+          </p>
         </header>
 
         <div className="mt-10 space-y-12">
@@ -100,11 +104,11 @@ export default async function OurServicesPage() {
                       </span>
                       <span className="min-w-0">
                         <span className="block text-sm font-bold text-slate-900">
-                          {service.title}
+                          {publicServiceName(service.id, service.title)}
                         </span>
-                        {service.blurb && (
+                        {publicServiceDescription(service.id, service.blurb) && (
                           <span className="mt-1 block text-[13px] leading-snug text-slate-600">
-                            {service.blurb}
+                            {publicServiceDescription(service.id, service.blurb)}
                           </span>
                         )}
                         <span className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-700">

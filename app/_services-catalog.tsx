@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { categorySummary } from "@/lib/marketing";
 import { bookingBadge } from "@/lib/booking-badge";
+import { publicServiceName, publicServiceDescription } from "@/lib/public-service-copy";
 import type { ServiceWithCategory } from "@/lib/data/services";
 import type { ServiceCategory } from "@/lib/supabase/types";
 import type { PricingRule } from "@/lib/service-pricing";
@@ -117,8 +118,8 @@ export function ServicesCatalog({
                       </div>
                     )}
                     <div className="p-3 sm:p-4 flex-1 flex flex-col">
-                      <div className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{s.title}</div>
-                      <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-2 flex-1">{s.blurb}</div>
+                      <div className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{publicServiceName(s.id, s.title)}</div>
+                      <div className="text-[11px] sm:text-xs text-slate-500 mt-0.5 line-clamp-2 flex-1">{publicServiceDescription(s.id, s.blurb)}</div>
                       {(() => {
                         const badge = bookingBadge(bookingCounts[s.id] ?? 0);
                         const Icon = badge.tone === "new" ? Sparkles : TrendingUp;

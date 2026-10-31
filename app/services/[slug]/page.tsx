@@ -2,7 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, CheckCircle2, Clock, ShieldCheck, Star, Users, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
-import { listServicesPublic, listCategoriesPublic, getServicePublic } from "@/lib/data/services";
+import {
+  listServicesPublic,
+  listCategoriesPublic,
+  getServicePublic,
+  listCallDeliveredServiceIds,
+} from "@/lib/data/services";
+import {
+  PUBLIC_SERVICE_COPY,
+  publicServiceName,
+  publicServiceDescription,
+  includedPoints,
+  coverageNote,
+} from "@/lib/public-service-copy";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../_landing-header";
 import { CITIES } from "@/lib/marketing";
@@ -25,8 +37,10 @@ export async function generateMetadata({
   const { slug } = await params;
   const service = await getServicePublic(slug);
   if (!service) return { title: "Service not found — Helpward" };
-  const title = `${service.title} — Book a verified helper | Helpward`;
-  const description = `${service.blurb} Approved local helpers. From $${(service.base_price_cents / 100).toFixed(0)}, paid only after the task is complete.`;
+  const copy = PUBLIC_SERVICE_COPY[service.id];
+  const name = publicServiceName(service.id, service.title);
+  const title = copy?.title ?? `${name} — Book a verified helper | Helpward`;
+  const description = `${publicServiceDescription(service.id, service.blurb)} Approved local helpers. From $${(service.base_price_cents / 100).toFixed(0)}, paid only after the task is complete.`;
   return {
     title,
     description,
@@ -40,12 +54,21 @@ export default async function ServiceDetailPage({
   params,
 }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [service, allServices, categories] = await Promise.all([
+  const [service, allServices, categories, callDelivered] = await Promise.all([
     getServicePublic(slug),
     listServicesPublic(),
     listCategoriesPublic(),
+    listCallDeliveredServiceIds(),
   ]);
   if (!service) notFound();
+
+  // The public name, and the catalogue title it belongs to. Both appear:
+  // the search phrase leads, the product is named once so the page and
+  // the app are plainly the same thing.
+  const copy = PUBLIC_SERVICE_COPY[service.id];
+  const name = publicServiceName(service.id, service.title);
+  const description = publicServiceDescription(service.id, service.blurb);
+  const deliveredByCall = callDelivered.has(service.id);
 
   const related = allServices
     .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
@@ -57,8 +80,9 @@ export default async function ServiceDetailPage({
   const SERVICE_LD = {
     "@context": "https://schema.org",
     "@type": "Service",
-    name: service.title,
-    description: service.blurb,
+    name,
+    alternateName: name === service.title ? undefined : service.title,
+    description,
     serviceType: service.category?.label,
     provider: { "@id": "https://helpward.com/#organization" },
     areaServed: CITIES.map((c) => ({ "@type": "City", name: c.name })),
@@ -73,17 +97,22 @@ export default async function ServiceDetailPage({
 
   const SERVICE_FAQS = [
     {
-      q: `What is ${service.title.toLowerCase()} on Helpward?`,
-      a: `${service.blurb} Helpward matches your request with a nearby helper who has been reviewed and approved by a person at Helpward before they can take work.`,
+      q: `What is ${name.toLowerCase()} on Helpward?`,
+      a: `${description} Helpward matches your request with a nearby helper who has been reviewed and approved by a person at Helpward before they can take work.`,
     },
     {
-      q: `How much does ${service.title.toLowerCase()} cost?`,
+      q: `How much does ${name.toLowerCase()} cost?`,
       a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)}. A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. Final pricing depends on distance, time, and any tip you add. You're only charged after the helper marks the task complete.`,
     },
-    {
-      q: `How fast can a helper arrive?`,
-      a: `Average response time for ${service.title} is ${service.eta_label ?? "around 18 minutes"} during normal hours. The matching engine notifies all nearby qualified helpers at once; the first to accept becomes yours and you can track their ETA live.`,
-    },
+    deliveredByCall
+      ? {
+          q: `How soon will a helper call?`,
+          a: `${service.title} is delivered by phone call, so nobody travels to you. Requests are offered to approved helpers straight away and typically answered in ${service.eta_label ?? "around 18 minutes"} during normal hours. The call happens at the time you booked.`,
+        }
+      : {
+          q: `How fast can a helper arrive?`,
+          a: `Average response time for ${service.title} is ${service.eta_label ?? "around 18 minutes"} during normal hours. The matching engine notifies all nearby qualified helpers at once; the first to accept becomes yours and you can track their ETA live.`,
+        },
     {
       q: `Are Helpward helpers verified?`,
       a: `Every helper is reviewed and approved by a person at Helpward before they can take a task, and no unapproved helper is ever offered work. Automated ID verification and background checks are not running yet — we will say so here when they are, rather than before. Helpward does not currently carry platform insurance.`,
@@ -137,10 +166,10 @@ export default async function ServiceDetailPage({
               {service.category?.label}
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
-              {service.title}
+              {copy?.h1 ?? service.title}
             </h1>
             <p className="mt-3 text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
-              {service.blurb}
+              {copy?.intro ?? description}
             </p>
 
             <div className="mt-5 flex flex-wrap items-center gap-3 text-xs">
@@ -175,7 +204,7 @@ export default async function ServiceDetailPage({
             <p className="mt-6 text-sm text-slate-500 leading-relaxed max-w-2xl">
               <strong className="text-slate-700">{service.title} on Helpward</strong> is an on-demand{" "}
               {service.category?.label.toLowerCase()} service that connects you with an approved
-              human in your city. Pricing starts at ${baseDollars.toFixed(0)}, a flat $4.50 service fee applies, and
+              human {deliveredByCall ? "by phone" : "in your city"}. Pricing starts at ${baseDollars.toFixed(0)}, a flat $4.50 service fee applies, and
               you only pay once the helper marks the task complete. Service is available in our launch areas
               in the U.S. and Canada.
             </p>
@@ -195,6 +224,7 @@ export default async function ServiceDetailPage({
               </dl>
               <p className="text-[11px] text-slate-400 mt-2 leading-snug">
                 Final price depends on distance, time, and any tip. You&apos;re only charged after the task is marked complete.
+                Shown in USD; Canadian bookings are charged the same figure in CAD.
               </p>
               <Link
                 href={`/new-request?service=${service.id}`}
@@ -212,14 +242,7 @@ export default async function ServiceDetailPage({
             <div>
               <h2 className="text-2xl font-bold text-slate-900">What&apos;s included</h2>
               <ul className="mt-4 space-y-3 text-sm text-slate-700">
-                {[
-                  "Approved local helper in your city",
-                  "Real-time GPS tracking and in-app chat",
-                  "Card held when a helper accepts, charged when they mark it complete",
-                  "Payment held until you confirm the task is complete",
-                  "24-hour dispute window with human support review",
-                  "24/7 customer support — call, chat, or email",
-                ].map((i) => (
+                {includedPoints({ deliveredByCall }).map((i) => (
                   <li key={i} className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> {i}
                   </li>
@@ -240,8 +263,8 @@ export default async function ServiceDetailPage({
 
         {/* Where it's available */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h2 className="text-2xl font-bold text-slate-900">Where {service.title.toLowerCase()} is available</h2>
-          <p className="text-sm text-slate-600 mt-1">Where {service.title} is available today. The two California areas cover city limits only.</p>
+          <h2 className="text-2xl font-bold text-slate-900">Where {name.toLowerCase()} is available</h2>
+          <p className="text-sm text-slate-600 mt-1">Where {service.title} is available today. {coverageNote()}</p>
           <ul className="mt-4 flex flex-wrap gap-2">
             {CITIES.map((c) => (
               <li key={c.slug}>
@@ -249,7 +272,7 @@ export default async function ServiceDetailPage({
                   href={`/cities/${c.slug}/${service.id}`}
                   className="inline-flex items-center px-3 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:border-brand-300 hover:text-brand-700"
                 >
-                  {service.title} in {c.name}
+                  {name} in {c.name}
                 </Link>
               </li>
             ))}
@@ -285,7 +308,7 @@ export default async function ServiceDetailPage({
                   href={`/services/${r.id}`}
                   className="rounded-xl border border-slate-100 bg-white p-3 hover:border-brand-300 hover:shadow transition"
                 >
-                  <div className="text-sm font-bold text-slate-900 truncate">{r.title}</div>
+                  <div className="text-sm font-bold text-slate-900 truncate">{publicServiceName(r.id, r.title)}</div>
                   <div className="text-[11px] text-slate-500 mt-0.5">From ${(r.base_price_cents / 100).toFixed(0)} · {r.eta_label}</div>
                 </Link>
               ))}
@@ -299,7 +322,7 @@ export default async function ServiceDetailPage({
         {/* Bottom CTA */}
         <section className="bg-gradient-to-br from-brand-600 to-violet-700 text-white">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
-            <h2 className="text-2xl sm:text-3xl font-bold">Ready to book {service.title.toLowerCase()}?</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold">Ready to book {name.toLowerCase()}?</h2>
             <p className="mt-2 text-sm sm:text-base text-white/90">Real humans. Real help. Right now.</p>
             <Link
               href={`/new-request?service=${service.id}`}

@@ -129,3 +129,26 @@ export async function listPricingRules(): Promise<Record<string, PricingRule>> {
   }
   return out;
 }
+
+/*
+  Which services are delivered entirely by phone call.
+
+  Public pages used to promise "Real-time GPS tracking" and answer "How
+  fast can a helper arrive?" on services where nobody travels anywhere.
+  Read rather than hardcoded, so flipping `delivered_by_call` on a
+  service is enough to correct its page.
+*/
+export async function listCallDeliveredServiceIds(): Promise<Set<string>> {
+  const supabase = createSupabaseServiceClient();
+  const { data, error } = await supabase
+    .from("service_completion_requirements")
+    .select("service_id")
+    .eq("delivered_by_call", true);
+  if (error) {
+    // An empty set means every page keeps the in-person wording, which
+    // is the wrong answer for two services but a safe one for 24.
+    console.error("listCallDeliveredServiceIds error:", error.message);
+    return new Set();
+  }
+  return new Set((data ?? []).map((r) => r.service_id as string));
+}
