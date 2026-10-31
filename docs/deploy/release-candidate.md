@@ -112,6 +112,29 @@ both outputs with this candidate.
 Service scope stays separately reversible at any time:
 `node scripts/service-scope.mjs restore <id> --apply`.
 
+## Verified against the isolated environment
+
+**Account deletion, the whole lifecycle** — not just that a row appears.
+
+| step | result |
+|---|---|
+| `POST /api/v1/account/deletion`, no token | 401 |
+| confirm word `delete` instead of `DELETE` | 400 |
+| wrong password | 401 — step-up holds |
+| correct | 200, `graceUntil` 30 days out |
+| sent again | 200 `already:true`, exactly ONE row in the database |
+| cron, unauthorised | 401 |
+| cron, authorised, grace window already past | 200 `{checked:1, deleted:1}` |
+| auth user afterwards | erased |
+| `profiles` row | cascaded away |
+| deletion request rows | 0 |
+
+The grace window was back-dated for the test, because a 30-day wait
+would otherwise hide whether the cron does anything at all.
+
+Test users and rows were removed afterwards and `.env.local` restored to
+production.
+
 ## Not yet done
 
 1. The upgrade rehearsal from `0080` — needs a throwaway database.
