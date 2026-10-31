@@ -43,9 +43,35 @@ export default async function PricingPage() {
   ]);
 
   // Real examples, generated from the rules that price the booking.
-  const examples = ["dog-walking", "moving-help", "package-return", "car-battery-jump"]
-    .map((id) => services.find((s) => s.id === id))
-    .filter((s): s is NonNullable<typeof s> => Boolean(s))
+  /*
+    Examples chosen from whatever is actually on sale, not a hardcoded
+    list. Four ids were pinned here and two of them were withdrawn when
+    the catalogue was cut to the app's launch set, which silently left
+    this page with two examples instead of four.
+
+    Picking one of each pricing SHAPE is what makes the section useful:
+    a service with extra units, one with extra helpers, a plain
+    time-priced one, and a flat-price visit. Falls back to filling from
+    the top of the catalogue if a shape is not represented.
+  */
+  const shape = (id: string) => {
+    const r = rules[id];
+    if (!r) return "flat";
+    if (r.perExtraUnitCents != null) return "units";
+    if (r.perExtraCrewCents != null) return "crew";
+    return "time";
+  };
+  const chosen: typeof services = [];
+  for (const want of ["units", "crew", "time", "flat"]) {
+    const hit = services.find((s) => shape(s.id) === want && !chosen.includes(s));
+    if (hit) chosen.push(hit);
+  }
+  for (const s of services) {
+    if (chosen.length >= 4) break;
+    if (!chosen.includes(s)) chosen.push(s);
+  }
+  const examples = chosen
+    .slice(0, 4)
     .map((service) => ({
       service,
       name: publicServiceName(service.id, service.title),

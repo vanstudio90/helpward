@@ -1,0 +1,834 @@
+{
+ "takenAt": "2026-10-31T20:25:28.586508+00:00",
+ "reason": "iOS first submission ships 8 services; the site is cut to match. Reversible.",
+ "launchSet": [
+  "errand-runner",
+  "furniture-assembly",
+  "grocery-pickup",
+  "maid-service",
+  "moving-help",
+  "package-delivery",
+  "package-return",
+  "wait-in-line"
+ ],
+ "withdrawn": [
+  "appliance-repair",
+  "car-battery-jump",
+  "date-companion",
+  "designated-driver",
+  "dog-walking",
+  "elder-assistance",
+  "event-companion",
+  "family-standin",
+  "house-check-in",
+  "listening-service",
+  "motorcycle-taxi",
+  "property-inspection",
+  "rent-a-friend",
+  "shopping-companion",
+  "sleep-call-companion",
+  "tech-setup",
+  "tv-mounting",
+  "wedding-guest"
+ ],
+ "services": [
+  {
+   "id": "appliance-repair",
+   "category_id": "home-help",
+   "title": "Appliance Repair",
+   "blurb": "A visit to work out what is wrong with one appliance, and a written explanation of what repairing it would involve. Parts and the repair itself are quoted afterwards, so you decide once the fault is known.",
+   "base_price_cents": 9900,
+   "eta_label": "Same day",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1754732693535-7ffb5e1a51d6?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "car-battery-jump",
+   "category_id": "transportation",
+   "title": "Car Battery Jump",
+   "blurb": "A roadside helper arrives with cables and a portable jump pack to start your dead battery \u2014 no tow needed.",
+   "base_price_cents": 6500,
+   "eta_label": "25 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1597766321604-9de3ff9e93e2?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "date-companion",
+   "category_id": "lifestyle",
+   "title": "Date Companion",
+   "blurb": "A poised platonic plus-one for dinners, weddings and family events. Fully professional, no romance involved.",
+   "base_price_cents": 9000,
+   "eta_label": "Today",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1771408662071-21d1846058bf?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "designated-driver",
+   "category_id": "transportation",
+   "title": "Designated Driver",
+   "blurb": "A licensed driver meets you and drives YOUR car home \u2014 ideal after drinks, late nights or long days.",
+   "base_price_cents": 6000,
+   "eta_label": "20 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": true,
+   "image_url": "https://images.unsplash.com/photo-1532974297617-c0f05fe48bff?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "dog-walking",
+   "category_id": "lifestyle",
+   "title": "Dog Walking",
+   "blurb": "Vetted walker takes your dog out for 30 or 60 minutes \u2014 fresh water, treats, GPS-tracked route and photo update.",
+   "base_price_cents": 2500,
+   "eta_label": "Starts in 15 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "elder-assistance",
+   "category_id": "presence",
+   "title": "Elder Assistance",
+   "blurb": "Background-checked companion for seniors \u2014 grocery trips, doctor visits, conversation, light housekeeping.",
+   "base_price_cents": 7600,
+   "eta_label": "45 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1704475686860-ab71b444df6b?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "errand-runner",
+   "category_id": "errands",
+   "title": "Errand Runner",
+   "blurb": "Anything, anywhere \u2014 drop-offs, pickups, bank runs, post office, dry cleaning. Pay by the hour or by task.",
+   "base_price_cents": 3500,
+   "eta_label": "20-40 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1633862712714-95b52023514e?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "event-companion",
+   "category_id": "lifestyle",
+   "title": "Event Companion",
+   "blurb": "Polished plus-one for galas, work parties or networking \u2014 dress code, talking points and exit time all coordinated.",
+   "base_price_cents": 15000,
+   "eta_label": "Schedule",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "family-standin",
+   "category_id": "lifestyle",
+   "title": "Family Stand-in",
+   "blurb": "Trained actors play a parent, spouse or sibling \u2014 weddings, hospital visits, formal events. Discreet and rehearsed.",
+   "base_price_cents": 30000,
+   "eta_label": "Schedule",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "furniture-assembly",
+   "category_id": "home-help",
+   "title": "Furniture Assembly",
+   "blurb": "A vetted handyperson assembles your flat-pack furniture \u2014 IKEA, beds, desks, dressers, shelves. Tools included.",
+   "base_price_cents": 5500,
+   "eta_label": "30 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1772338537689-056082f100a9?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "grocery-pickup",
+   "category_id": "errands",
+   "title": "Grocery Pickup",
+   "blurb": "Collect a grocery order you have already placed and paid for, and bring it to your door. Tell us the store, the branch and the collection reference. If you need someone to choose the items instead, book an errand.",
+   "base_price_cents": 2000,
+   "eta_label": "30-60 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": true,
+   "image_url": "https://images.unsplash.com/photo-1543168256-418811576931?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "house-check-in",
+   "category_id": "home-help",
+   "title": "House Check-In",
+   "blurb": "Someone visits your home while you're away \u2014 checks locks, waters plants, takes in mail, sends a photo report.",
+   "base_price_cents": 3000,
+   "eta_label": "30 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "listening-service",
+   "category_id": "presence",
+   "title": "Listening Service",
+   "blurb": "An audio call with someone whose job is to listen, for the length you book. Voice only. No therapy and no advice \u2014 just somebody paying attention for as long as you need.",
+   "base_price_cents": 2000,
+   "eta_label": "Today",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1758598306251-f68bda7168a2?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "maid-service",
+   "category_id": "home-help",
+   "title": "Maid Service",
+   "blurb": "Insured cleaner for dusting, vacuuming, kitchens, bathrooms and laundry \u2014 same cleaner can be re-booked weekly.",
+   "base_price_cents": 8000,
+   "eta_label": "Today",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "motorcycle-taxi",
+   "category_id": "transportation",
+   "title": "Motorcycle Taxi",
+   "blurb": "A ride across the city on the back of a licensed rider's motorcycle, with a helmet provided if you ask for one. One passenger, one journey.",
+   "base_price_cents": 2500,
+   "eta_label": "10 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "moving-help",
+   "category_id": "home-help",
+   "title": "Moving Help",
+   "blurb": "Two strong helpers for loading, unloading and heavy lifting \u2014 by the hour. Truck rental optional.",
+   "base_price_cents": 10000,
+   "eta_label": "Arrives in 30 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1790085093188-0d274083cdc1?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "package-delivery",
+   "category_id": "errands",
+   "title": "Package Delivery",
+   "blurb": "One parcel collected and delivered across town \u2014 documents, a forgotten key, a gift. Say where it is going and who should receive it.",
+   "base_price_cents": 2000,
+   "eta_label": "30 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "package-return",
+   "category_id": "errands",
+   "title": "Package Return",
+   "blurb": "We pick up your unwanted online orders and drop them at UPS, FedEx, USPS or Amazon \u2014 tracking sent to your phone.",
+   "base_price_cents": 2500,
+   "eta_label": "20-40 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1758351507026-71ad3645cb43?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "professional-cuddler",
+   "category_id": "lifestyle",
+   "title": "Professional Cuddler",
+   "blurb": "Certified cuddlers offer non-sexual hugs, hand-holding and quiet company \u2014 clearly consented, fully clothed.",
+   "base_price_cents": 10000,
+   "eta_label": "Today",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1573497019418-b400bb3ab074?auto=format&fit=crop&w=800&q=70",
+   "active": false,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "property-inspection",
+   "category_id": "business",
+   "title": "Property Inspection",
+   "blurb": "A visit to a property with photographs and a written note of its condition on the day. A record of what was visible \u2014 not a technical, pre-purchase or licensed building inspection.",
+   "base_price_cents": 8500,
+   "eta_label": "60 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "rent-a-friend",
+   "category_id": "lifestyle",
+   "title": "Rent-a-Friend",
+   "blurb": "Book a friendly local to hang out \u2014 explore the city, share a meal, attend an event or just talk over coffee.",
+   "base_price_cents": 7000,
+   "eta_label": "Today",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "shopping-companion",
+   "category_id": "lifestyle",
+   "title": "Shopping Companion",
+   "blurb": "A second opinion at the mall \u2014 fashion eye, carries bags, keeps you company. Personal stylists available for a premium.",
+   "base_price_cents": 7000,
+   "eta_label": "Today",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "sleep-call-companion",
+   "category_id": "presence",
+   "title": "Sleep Call Companion",
+   "blurb": "Quiet audio company while you fall asleep, ending at a time you set beforehand. Audio only, one person, nothing recorded.",
+   "base_price_cents": 3000,
+   "eta_label": "Tonight",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1668706936367-2bef7e0e38db?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "tech-setup",
+   "category_id": "home-help",
+   "title": "Tech Setup",
+   "blurb": "Set up your new TV, Wi-Fi, printer, smart home or migrate your old computer \u2014 every device, every brand.",
+   "base_price_cents": 7500,
+   "eta_label": "45 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1648737964965-7eda17871196?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "tv-mounting",
+   "category_id": "home-help",
+   "title": "TV Mounting",
+   "blurb": "Securely wall-mount any TV up to 85\" on drywall, brick or concrete \u2014 mount bracket available on request.",
+   "base_price_cents": 9900,
+   "eta_label": "30-45 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1701421048182-2a628d927578?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "wait-in-line",
+   "category_id": "presence",
+   "title": "Wait in Line",
+   "blurb": "A helper waits in an eligible queue for as long as you book, then hands their place to you where the venue allows it. You are paying for their time \u2014 admission, stock and appointments are not guaranteed.",
+   "base_price_cents": 3500,
+   "eta_label": "Starts in 15 min",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1743324754696-c636e1aed0b6?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  },
+  {
+   "id": "wedding-guest",
+   "category_id": "lifestyle",
+   "title": "Wedding Guest",
+   "blurb": "Trained guests fill seats at your wedding \u2014 smile, applaud, take group photos. Rehearsed roles on request.",
+   "base_price_cents": 13500,
+   "eta_label": "Schedule",
+   "countries": [
+    "US",
+    "CA"
+   ],
+   "popular": false,
+   "image_url": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=70",
+   "active": true,
+   "created_at": "2026-05-27T04:38:38.131621+00:00"
+  }
+ ],
+ "service_pricing": [
+  {
+   "service_id": "professional-cuddler",
+   "included_minutes": 60,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 2500,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-28T19:42:17.244349+00:00"
+  },
+  {
+   "service_id": "wait-in-line",
+   "included_minutes": 60,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 900,
+   "duration_field": "expected_wait",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-28T19:42:17.244349+00:00"
+  },
+  {
+   "service_id": "errand-runner",
+   "included_minutes": 60,
+   "extra_block_minutes": 15,
+   "extra_block_cents": 875,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "furniture-assembly",
+   "included_minutes": 60,
+   "extra_block_minutes": 15,
+   "extra_block_cents": 1375,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "tech-setup",
+   "included_minutes": 60,
+   "extra_block_minutes": 15,
+   "extra_block_cents": 1875,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "house-check-in",
+   "included_minutes": 30,
+   "extra_block_minutes": 15,
+   "extra_block_cents": 1500,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "date-companion",
+   "included_minutes": 120,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 2250,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "event-companion",
+   "included_minutes": 180,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 2500,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "family-standin",
+   "included_minutes": 180,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 5000,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "rent-a-friend",
+   "included_minutes": 120,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 1750,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "shopping-companion",
+   "included_minutes": 120,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 1750,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "elder-assistance",
+   "included_minutes": 120,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 1900,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "wedding-guest",
+   "included_minutes": 180,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 2250,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "maid-service",
+   "included_minutes": 120,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 2000,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": "crew_size",
+   "included_crew": 1,
+   "per_extra_crew_cents": 8000,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "moving-help",
+   "included_minutes": 120,
+   "extra_block_minutes": 15,
+   "extra_block_cents": 1250,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": "crew_size",
+   "included_crew": 1,
+   "per_extra_crew_cents": 10000,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "listening-service",
+   "included_minutes": 30,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 1500,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "sleep-call-companion",
+   "included_minutes": 60,
+   "extra_block_minutes": 30,
+   "extra_block_cents": 1500,
+   "duration_field": "duration_min",
+   "unit_field": null,
+   "included_units": 1,
+   "per_extra_unit_cents": null,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "dog-walking",
+   "included_minutes": 30,
+   "extra_block_minutes": 15,
+   "extra_block_cents": 800,
+   "duration_field": "duration_min",
+   "unit_field": "dog_count",
+   "included_units": 1,
+   "per_extra_unit_cents": 800,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  },
+  {
+   "service_id": "package-return",
+   "included_minutes": null,
+   "extra_block_minutes": null,
+   "extra_block_cents": null,
+   "duration_field": "duration_min",
+   "unit_field": "parcel_count",
+   "included_units": 3,
+   "per_extra_unit_cents": 300,
+   "crew_field": null,
+   "included_crew": 1,
+   "per_extra_crew_cents": null,
+   "updated_at": "2026-10-29T00:54:38.016704+00:00"
+  }
+ ],
+ "service_completion_requirements": [
+  {
+   "service_id": "property-inspection",
+   "requires_report": true,
+   "delivered_by_call": false
+  },
+  {
+   "service_id": "listening-service",
+   "requires_report": false,
+   "delivered_by_call": true
+  },
+  {
+   "service_id": "sleep-call-companion",
+   "requires_report": false,
+   "delivered_by_call": true
+  }
+ ],
+ "provider_services": [
+  {
+   "provider_id": "1df76098-1939-451f-adad-1b878e998ffb",
+   "service_id": "designated-driver",
+   "custom_price_cents": null
+  },
+  {
+   "provider_id": "1df76098-1939-451f-adad-1b878e998ffb",
+   "service_id": "car-battery-jump",
+   "custom_price_cents": null
+  },
+  {
+   "provider_id": "1df76098-1939-451f-adad-1b878e998ffb",
+   "service_id": "errand-runner",
+   "custom_price_cents": null
+  },
+  {
+   "provider_id": "1df76098-1939-451f-adad-1b878e998ffb",
+   "service_id": "package-delivery",
+   "custom_price_cents": null
+  },
+  {
+   "provider_id": "1df76098-1939-451f-adad-1b878e998ffb",
+   "service_id": "package-return",
+   "custom_price_cents": null
+  },
+  {
+   "provider_id": "1df76098-1939-451f-adad-1b878e998ffb",
+   "service_id": "tech-setup",
+   "custom_price_cents": null
+  },
+  {
+   "provider_id": "1df76098-1939-451f-adad-1b878e998ffb",
+   "service_id": "dog-walking",
+   "custom_price_cents": null
+  }
+ ],
+ "service_categories": [
+  {
+   "id": "transportation",
+   "label": "Transportation",
+   "icon": "car",
+   "sort_order": 1,
+   "active": true
+  },
+  {
+   "id": "home-help",
+   "label": "Home Help",
+   "icon": "home",
+   "sort_order": 2,
+   "active": true
+  },
+  {
+   "id": "errands",
+   "label": "Errands",
+   "icon": "bag",
+   "sort_order": 3,
+   "active": true
+  },
+  {
+   "id": "presence",
+   "label": "Presence",
+   "icon": "user",
+   "sort_order": 4,
+   "active": true
+  },
+  {
+   "id": "lifestyle",
+   "label": "Lifestyle",
+   "icon": "heart",
+   "sort_order": 5,
+   "active": true
+  },
+  {
+   "id": "business",
+   "label": "Business",
+   "icon": "briefcase",
+   "sort_order": 6,
+   "active": true
+  }
+ ]
+}
