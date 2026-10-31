@@ -18,6 +18,8 @@ import {
   pricingExplanation,
   relatedPrompt,
 } from "@/lib/public-service-copy";
+import { staticPriceLabel, displayBaseCents } from "@/lib/country-price";
+import { formatMoney } from "@/lib/money";
 import { servicePrep, prepHeading, HANDOVER_LINE } from "@/lib/public-service-prep";
 import { SERVICE_PAGE_COPY, SERVICE_SCOPE, servicePageFaqs } from "@/lib/public-service-pages";
 import { ServiceIcon } from "@/components/ServiceIcon";
@@ -99,7 +101,22 @@ export default async function ServiceDetailPage({
     : allServices
         .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
         .slice(0, 6);
-  const baseDollars = service.base_price_cents / 100;
+  /*
+    TWO PRICES, NOT ONE PRICE WITH TWO SYMBOLS.
+
+    service_country_pricing gives every launch service a different figure
+    in Canada — errand running is US$35 and CA$40, moving help US$100 and
+    CA$110. This page is force-static with ISR, built once and served to
+    San Diego and Vancouver alike, so there is no request to take a
+    country from. It therefore has to show both: picking one would
+    advertise a number half the visitors will never be charged.
+  */
+  const overrides = service.country_pricing ?? undefined;
+  const usCents = displayBaseCents(service.base_price_cents, overrides, "US");
+  const caCents = displayBaseCents(service.base_price_cents, overrides, "CA");
+  const priceLabel = staticPriceLabel(service.base_price_cents, overrides, formatMoney);
+  const differsByCountry = usCents !== caCents;
+  const baseDollars = usCents / 100;
   const serviceFee = 4.5;
   const total = baseDollars + serviceFee;
 
@@ -118,7 +135,10 @@ export default async function ServiceDetailPage({
     serviceType: service.category?.label,
     provider: { "@id": "https://helpward.com/#organization" },
     areaServed: CITIES.map((c) => ({ "@type": "City", name: c.name })),
-    offers: {
+    offers: [
+      { country: "US" as const, cents: usCents, currency: "USD", region: "US" },
+      { country: "CA" as const, cents: caCents, currency: "CAD", region: "CA" },
+    ].map((o) => ({
       "@type": "Offer",
       /*
         The BASE price, and it says so. It is not an all-in total: a
@@ -129,14 +149,15 @@ export default async function ServiceDetailPage({
         available, which nothing here measures — the honest shape is to
         omit it rather than publish a supply promise.
       */
-      price: baseDollars.toFixed(2),
-      priceCurrency: "USD",
+      price: (o.cents / 100).toFixed(2),
+      priceCurrency: o.currency,
+      eligibleRegion: { "@type": "Country", name: o.region },
       description:
         `Base price before the flat $${serviceFee.toFixed(2)} service fee`
         + `${pricingRules[service.id]?.includedMinutes != null ? `, covering the first booked period` : ``}`
         + `. Final total depends on the answers given when booking.`,
       url: `https://helpward.com/new-request?service=${service.id}`,
-    },
+    })),
   };
 
   /*
@@ -169,7 +190,7 @@ export default async function ServiceDetailPage({
         ]),
     {
       q: `How much does ${name.toLowerCase()} cost?`,
-      a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)}. A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. ${pricing.points.slice(0, -1).join(" ")}`,
+      a: `Base price for ${service.title} is ${priceLabel}${differsByCountry ? " — it is not the same number in both countries" : ""}. A flat $${serviceFee.toFixed(2)} service fee is added. ${pricing.points.slice(0, -1).join(" ")}`,
     },
     {
       q: `Are Helpward helpers verified?`,
@@ -248,7 +269,7 @@ export default async function ServiceDetailPage({
                 href={`/new-request?service=${service.id}`}
                 className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition"
               >
-                Book {service.title} — from ${baseDollars.toFixed(0)} <ArrowRight className="w-4 h-4" />
+                Book {service.title} — from {priceLabel} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/our-services"
@@ -262,7 +283,7 @@ export default async function ServiceDetailPage({
             <p className="mt-6 text-sm text-slate-500 leading-relaxed max-w-2xl">
               <strong className="text-slate-700">{service.title} on Helpward</strong> is an on-demand{" "}
               {service.category?.label.toLowerCase()} service that connects you with an approved
-              human {deliveredByCall ? "by phone" : "in your city"}. Pricing starts at ${baseDollars.toFixed(0)}, a flat $4.50 service fee applies, and
+              human {deliveredByCall ? "by phone" : "in your city"}. Pricing starts at {priceLabel}, a flat $4.50 service fee applies, and
               you only pay once the helper marks the task complete. Service is available in our launch areas
               in the U.S. and Canada.
             </p>
@@ -293,15 +314,19 @@ export default async function ServiceDetailPage({
               <img src={service.image_url} alt="" loading="lazy" className="w-full aspect-[5/3] object-cover" />
             )}
             <div className="p-5">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Price estimate</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+                Price estimate{differsByCountry ? " · US$ / CA$" : ""}
+              </div>
               <dl className="text-sm space-y-1.5">
-                <div className="flex justify-between"><dt className="text-slate-500">Base fare</dt><dd className="font-semibold text-slate-900">${baseDollars.toFixed(2)}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="text-slate-500">Base fare</dt><dd className="font-semibold text-slate-900 text-right">{priceLabel}</dd></div>
                 <div className="flex justify-between"><dt className="text-slate-500">Service fee</dt><dd className="font-semibold text-slate-900">${serviceFee.toFixed(2)}</dd></div>
-                <div className="flex justify-between pt-2 border-t border-slate-100"><dt className="font-bold text-slate-900">Total estimate</dt><dd className="font-bold text-brand-700">${total.toFixed(2)}</dd></div>
+                <div className="flex justify-between gap-3 pt-2 border-t border-slate-100"><dt className="font-bold text-slate-900">Total estimate</dt><dd className="font-bold text-brand-700 text-right">{formatMoney(usCents + Math.round(serviceFee * 100), "USD")}{differsByCountry ? ` · ${formatMoney(caCents + Math.round(serviceFee * 100), "CAD")}` : ""}</dd></div>
               </dl>
               <p className="text-[11px] text-slate-400 mt-2 leading-snug">
                 {pricing.lead} Distance does not change it. You&apos;re only charged after the task is marked complete.
-                Shown in USD; Canadian bookings are charged the same figure in CAD.
+                {differsByCountry
+                  ? "Two figures because this service is priced differently in each country — not one price with two symbols. You are charged the one for the city you book in."
+                  : "Charged in the currency of the city you book in."}
               </p>
               <Link
                 href={`/new-request?service=${service.id}`}

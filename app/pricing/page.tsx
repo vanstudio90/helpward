@@ -136,9 +136,10 @@ export default async function PricingPage() {
         <section className="mt-12">
           <h2 className="text-2xl font-bold text-slate-900">Which currency you are charged in</h2>
           <p className="mt-2 text-sm text-slate-700 max-w-3xl">
-            The number is the same in both areas; the currency is the one your booking is in.
-            A base price of 25 means CA$25 on a Vancouver booking and US$25 on a San Diego one
-            — we do not convert between them, so the figure you see is the figure charged.
+            Each service has its own price in each country — these are two prices, not one price
+            with two symbols. Errand running is US$35 in San Diego and CA$40 in Vancouver; moving
+            help is US$100 and CA$110. Nothing is converted between them: you are charged the
+            figure for the city you book in.
           </p>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2 max-w-3xl">
             {CITIES.map((city) => (
@@ -170,8 +171,8 @@ export default async function PricingPage() {
             something different depending on where the job is.
           */}
           <p className="mt-1 text-sm font-semibold text-slate-900">
-            Figures shown as <span className="whitespace-nowrap">US$ / CA$</span>: the amount is the
-            same number in both, and you are charged in the currency of the city you book in.
+            Where two figures are shown as <span className="whitespace-nowrap">US$ · CA$</span>, they
+            are the separate prices for San Diego and Vancouver.
           </p>
           <div className="mt-4 space-y-4">
             {examples.map(({ service, name, pricing }) => (
