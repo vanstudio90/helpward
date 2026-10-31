@@ -57,6 +57,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "The on-demand economy already exists. We didn't need another marketplace — we needed a marketplace that earned the booking instead of optimising for it.",
     author: FOUNDER,
     publishedAt: "2026-05-29",
+    updatedAt: "2026-10-31",
     tags: ["Founding story", "Mission"],
     readingMinutes: 6,
     heroImage: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=70",
@@ -101,6 +102,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "The end-to-end path from application to approved: identity verification, background checks, adjudication policy, and the human review that runs through all of it.",
     author: TS_TEAM,
     publishedAt: "2026-05-27",
+    updatedAt: "2026-10-31",
     tags: ["Trust & Safety", "Operations"],
     readingMinutes: 7,
     heroImage: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&q=70",
@@ -152,6 +154,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Why we publish a quarterly transparency report from launch, what's in it, and what we'll commit to publishing even when the numbers look bad.",
     author: FOUNDER,
     publishedAt: "2026-05-25",
+    updatedAt: "2026-10-31",
     tags: ["Transparency", "Operations"],
     readingMinutes: 5,
     body: [
@@ -245,6 +248,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Surge solves a coordination problem cleverly. It also passes the cost of that problem from the platform to the customer at the moment they can least afford it. Here's why Helpward doesn't.",
     author: FOUNDER,
     publishedAt: "2026-05-20",
+    updatedAt: "2026-10-31",
     tags: ["Pricing", "Mission"],
     readingMinutes: 6,
     body: [

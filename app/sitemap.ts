@@ -36,15 +36,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * and the templates were revised. Bump this deliberately when the
    * catalogue or the templates change; do not wire it back to new Date(),
    * which is how every page came to claim it was edited today. */
-  const CATALOGUE_UPDATED = d("2026-10-28");
+  /* 2026-10-31: both templates materially rewritten — per-service
+     titles, H1s, openings, FAQs, scope blocks, pricing explanations,
+     need-based related links, trust links, and the fabricated
+     LocalBusiness and InStock nodes removed. */
+  const CATALOGUE_UPDATED = d("2026-10-31");
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${BASE}/`,            lastModified: d("2026-10-28"), changeFrequency: "weekly",  priority: 1.0 },
+    { url: `${BASE}/`,            lastModified: d("2026-10-31"), changeFrequency: "weekly",  priority: 1.0 },
     // The public directory. High priority because it is the hub every
     // service page now links back to — /services is the signed-in
     // browse and 307s a crawler to the login form.
     { url: `${BASE}/our-services`, lastModified: CATALOGUE_UPDATED, changeFrequency: "weekly", priority: 0.9 },
     { url: `${BASE}/cities`,      lastModified: d("2026-10-28"), changeFrequency: "monthly", priority: 0.8 },
-    { url: `${BASE}/about`,       lastModified: d("2026-10-24"), changeFrequency: "monthly", priority: 0.6 },
+    { url: `${BASE}/about`,       lastModified: d("2026-10-31"), changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE}/safety`,      lastModified: d("2026-10-26"), changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/help`,        lastModified: d("2026-10-26"), changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE}/terms`,       lastModified: d("2026-10-28"), changeFrequency: "yearly",  priority: 0.3 },
