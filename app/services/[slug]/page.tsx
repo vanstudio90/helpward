@@ -17,7 +17,7 @@ import {
   coverageNote,
   pricingExplanation,
 } from "@/lib/public-service-copy";
-import { SERVICE_PAGE_COPY } from "@/lib/public-service-pages";
+import { SERVICE_PAGE_COPY, servicePageFaqs } from "@/lib/public-service-pages";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../_landing-header";
 import { CITIES } from "@/lib/marketing";
@@ -126,13 +126,23 @@ export default async function ServiceDetailPage({
     they are genuinely the same answer everywhere, and the arrival
     question is gone.
   */
+  // Figures resolved from this service's live base price and pricing
+  // rule, so the copy cannot outlive a rate-card change.
+  const serviceFaqs = servicePageFaqs(service.id, {
+    baseCents: service.base_price_cents,
+    serviceFeeCents: Math.round(serviceFee * 100),
+    rule: pricingRules[service.id] ?? null,
+  });
+
   const SERVICE_FAQS = [
-    ...(SERVICE_PAGE_COPY[service.id]?.faqs ?? [
-      {
-        q: `What is ${name.toLowerCase()} on Helpward?`,
-        a: `${description} Helpward matches your request with a nearby helper who has been reviewed and approved by a person at Helpward before they can take work.`,
-      },
-    ]),
+    ...(serviceFaqs.length > 0
+      ? serviceFaqs
+      : [
+          {
+            q: `What is ${name.toLowerCase()} on Helpward?`,
+            a: `${description} Helpward matches your request with a nearby helper who has been reviewed and approved by a person at Helpward before they can take work.`,
+          },
+        ]),
     {
       q: `How much does ${name.toLowerCase()} cost?`,
       a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)}. A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. ${pricing.points.slice(0, -1).join(" ")}`,

@@ -112,7 +112,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "How is the final price shown?",
-        a: "It is a flat price for the visit, plus the usual $4.50 service fee, and it does not change "
+        a: "It is a flat price for the visit, plus the usual {fee} service fee, and it does not change "
           + "with distance or how long the attempt takes. You see the whole figure before the request "
           + "reaches a helper.",
       },
@@ -171,13 +171,13 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
     faqs: [
       {
         q: "How long can I book a walk?",
-        a: "$25 covers the first 30 minutes, and longer walks add $8 per extra 15 minutes. A 60-minute "
-          + "walk is therefore $25 plus two blocks. Blocks are started rather than metered, because a "
+        a: "{base} covers the first {inclTime}, and longer walks add {blockPrice} per extra {blockTime}. "
+          + "A longer walk adds whole blocks rather than part of one, because a "
           + "walker's time is booked rather than clocked.",
       },
       {
         q: "Can I book more than one dog?",
-        a: "Yes. One dog is included and each additional dog is $8. The form asks how many are going so "
+        a: "Yes. One dog is included and each additional dog is {unitPrice}. The form asks how many are going so "
           + "the walker knows what they are agreeing to — three dogs on three leads is a different walk "
           + "from one.",
       },
@@ -220,7 +220,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "How many hours should I book?",
-        a: "$80 covers the first two hours, and longer bookings add $20 per extra 30 minutes. Bedrooms "
+        a: "{base} covers the first {inclTime}, and longer bookings add {blockPrice} per extra {blockTime}. Bedrooms "
           + "and bathrooms are questions on the form, which is the honest way to work out how much time "
           + "a home needs — a three-bathroom house is not a two-hour job.",
       },
@@ -237,7 +237,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "Can I book more than one cleaner?",
-        a: "Yes. One cleaner is included and each extra is $80, which is the sensible way to halve the "
+        a: "Yes. One cleaner is included and each extra is {crewPrice}, which is the sensible way to halve the "
           + "clock on a large home rather than booking twice the hours.",
       },
       {
@@ -264,13 +264,13 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       {
         q: "How many helpers should I book?",
         a: "The form asks, and your answer is what the price is built from: one helper is included and "
-          + "each additional helper is $100. A sofa down three flights is a two-person job whatever the "
+          + "each additional helper is {crewPrice}. A sofa down three flights is a two-person job whatever the "
           + "quote says.",
       },
       {
         q: "Is the price per helper or per crew?",
-        a: "Per crew, built up from the base. $100 covers the first two hours of the crew's time, with "
-          + "$12.50 per extra 15 minutes, and extra helpers add $100 each. One figure, shown in full "
+        a: "Per crew, built up from the base. {base} covers the first {inclTime} of the crew's time, with "
+          + "{blockPrice} per extra {blockTime}, and extra helpers add {crewPrice} each. One figure, shown in full "
           + "before you request.",
       },
       {
@@ -330,7 +330,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "How is it priced?",
-        a: "$55 covers the first hour, then $13.75 per extra 15 minutes. Item count drives how much time "
+        a: "{base} covers the first {inclTime}, then {blockPrice} per extra {blockTime}. Item count drives how much time "
           + "to book rather than adding a separate charge, so the total you see is the total.",
       },
     ],
@@ -410,7 +410,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "How is it priced?",
-        a: "$75 covers the first hour, then $18.75 per extra 15 minutes, plus the flat $4.50 service fee. "
+        a: "{base} covers the first {inclTime}, then {blockPrice} per extra {blockTime}, plus the flat {fee} service fee. "
           + "Book the time you think it needs; the figure is on screen before you send it.",
       },
     ],
@@ -499,8 +499,8 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "Is waiting time included?",
-        a: "It is part of the booked time, so yes, within it. $35 covers the first hour and each extra 15 "
-          + "minutes is $8.75 — a queue you expect to be long is worth booking time for up front.",
+        a: "It is part of the booked time, so yes, within it. {base} covers the first {inclTime} and each "
+          + "extra {blockTime} is {blockPrice} — a queue you expect to be long is worth booking time for up front.",
       },
     ],
   },
@@ -617,7 +617,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "Can I return multiple parcels?",
-        a: "Yes. Three parcels are included in the $25 and each one after that is $3. The form asks how "
+        a: "Yes. {inclUnits} parcels are included in the {base} and each one after that is {unitPrice}. The form asks how "
           + "many, so the count on the booking matches the pile on the doorstep.",
       },
       {
@@ -651,7 +651,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
     faqs: [
       {
         q: "What happens during a home check-in?",
-        a: "A visit of the length you book — $30 covers 30 minutes — working through what you asked for: "
+        a: "A visit of the length you book — {base} covers {inclTime} — working through what you asked for: "
           + "doors and windows, plants, post, taps, anything visibly wrong. You get a photo report at the "
           + "end, which is the point of it.",
       },
@@ -752,7 +752,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "Can I extend the waiting time?",
-        a: "Yes. $35 covers the first hour and each extra 30 minutes is $9. Arrange it with the helper "
+        a: "Yes. {base} covers the first {inclTime} and each extra {blockTime} is {blockPrice}. Arrange it with the helper "
           + "through the booking — their time is theirs, so an extension is an agreement rather than "
           + "something you can impose.",
       },
@@ -794,7 +794,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       {
         q: "What activities are included?",
         a: "Conversation, a walk, a grocery trip, light housekeeping, help with post and forms, company "
-          + "for an outing. $76 covers the first two hours, with $19 per extra 30 minutes.",
+          + "for an outing. {base} covers the first {inclTime}, with {blockPrice} per extra {blockTime}.",
       },
       {
         q: "Can a helper accompany an appointment?",
@@ -836,7 +836,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "How long can I book?",
-        a: "$20 covers the first 30 minutes, with $15 per extra 30 minutes. Book the length you want "
+        a: "{base} covers the first {inclTime}, with {blockPrice} per extra {blockTime}. Book the length you want "
           + "rather than planning to extend mid-call.",
       },
       {
@@ -868,8 +868,8 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
     faqs: [
       {
         q: "How long does the call last?",
-        a: "As long as you booked, and no longer. $30 covers the first hour, with $15 per extra 30 "
-          + "minutes. There is no open-ended or all-night call — the end time is fixed before it starts.",
+        a: "As long as you booked, and no longer. {base} covers the first {inclTime}, with {blockPrice} per "
+          + "extra {blockTime}. There is no open-ended or all-night call — the end time is fixed before it starts.",
       },
       {
         q: "Is this audio only?",
@@ -913,8 +913,8 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "Which activities can I book?",
-        a: "Ordinary public things: a coffee, a walk, a meal, an exhibition, a match, a shopping trip. $70 "
-          + "covers the first two hours and each extra 30 minutes is $17.50.",
+        a: "Ordinary public things: a coffee, a walk, a meal, an exhibition, a match, a shopping trip. {base} "
+          + "covers the first {inclTime} and each extra {blockTime} is {blockPrice}.",
       },
       {
         q: "Are meals and tickets included?",
@@ -948,7 +948,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "Can I book a dinner plus-one?",
-        a: "Yes — that is the central case. $90 covers the first two hours, with $22.50 per extra 30 "
+        a: "Yes — that is the central case. {base} covers the first {inclTime}, with {blockPrice} per extra "
           + "minutes, so book through to when the evening actually ends.",
       },
       {
@@ -980,7 +980,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       {
         q: "Which events can I book for?",
         a: "Networking evenings, work functions, receptions, parties, launches — anything you are "
-          + "attending and would rather not attend alone. $150 covers the first three hours, with $25 per "
+          + "attending and would rather not attend alone. {base} covers the first {inclTime}, with {blockPrice} per "
           + "extra 30 minutes.",
       },
       {
@@ -1035,8 +1035,8 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "Are purchases included?",
-        a: "No. You buy what you buy; the booking is the companion's time. $70 covers the first two hours, "
-          + "with $17.50 per extra 30 minutes.",
+        a: "No. You buy what you buy; the booking is the companion's time. {base} covers the first "
+          + "{inclTime}, with {blockPrice} per extra {blockTime}.",
       },
       {
         q: "Can we visit more than one store?",
@@ -1056,8 +1056,8 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
     faqs: [
       {
         q: "Can I book more than one guest?",
-        a: "Yes, as separate bookings — one per person. $135 covers the first three hours of each, with "
-          + "$22.50 per extra 30 minutes.",
+        a: "Yes, as separate bookings — one per person. {base} covers the first {inclTime} of each, with "
+          + "{blockPrice} per extra {blockTime}.",
       },
       {
         q: "What should I include in the briefing?",
@@ -1106,7 +1106,7 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       {
         q: "How much briefing is included?",
         a: "As much as the booked time allows, and more is better here than anywhere else in the "
-          + "catalogue. $300 covers the first three hours, with $50 per extra 30 minutes.",
+          + "catalogue. {base} covers the first {inclTime}, with {blockPrice} per extra {blockTime}.",
       },
       {
         q: "What is outside the scope?",
@@ -1126,3 +1126,81 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
     ],
   },
 };
+
+/*
+  PRICES COME FROM THE RATE CARD, NOT FROM THIS FILE.
+
+  The copy above contains no figures. It contains tokens, and they are
+  filled in from the service's own base price and pricing rule when the
+  page renders.
+
+  This is not fussiness. The rate card has moved twice in a single day
+  before, and an answer that reads "$25 covers the first 30 minutes" is
+  a sentence that goes quietly wrong the moment somebody edits a number
+  in the database — the page keeps serving it, confidently, for as long
+  as nobody notices. A token cannot drift.
+
+  tests/public-service-copy.test.ts asserts no literal price survives in
+  the copy, so this cannot be undone by accident.
+*/
+
+export type PriceFacts = {
+  baseCents: number;
+  serviceFeeCents: number;
+  rule: {
+    includedMinutes: number | null;
+    extraBlockMinutes: number | null;
+    extraBlockCents: number | null;
+    includedUnits: number;
+    perExtraUnitCents: number | null;
+    perExtraCrewCents: number | null;
+  } | null;
+};
+
+function money(cents: number): string {
+  return cents % 100 === 0 ? `$${(cents / 100).toFixed(0)}` : `$${(cents / 100).toFixed(2)}`;
+}
+
+/** "30 minutes", "hour", "two hours" — reads after "covers the first …". */
+function duration(mins: number): string {
+  if (mins < 60) return `${mins} minutes`;
+  const hours = mins / 60;
+  const words: Record<number, string> = { 1: "hour", 2: "two hours", 3: "three hours", 4: "four hours" };
+  return words[hours] ?? `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hours`;
+}
+
+const WORDS: Record<number, string> = { 1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five" };
+
+/**
+ * One service's questions, with every figure resolved from live pricing.
+ *
+ * A token with nothing behind it would print as itself, so a service
+ * whose rule loses a field drops the sentence rather than publishing
+ * "{blockPrice} per extra {blockTime}".
+ */
+export function servicePageFaqs(serviceId: string, facts: PriceFacts): { q: string; a: string }[] {
+  const page = SERVICE_PAGE_COPY[serviceId];
+  if (!page) return [];
+  const { baseCents, serviceFeeCents, rule } = facts;
+
+  const values: Record<string, string | null> = {
+    base: money(baseCents),
+    fee: money(serviceFeeCents),
+    inclTime: rule?.includedMinutes != null ? duration(rule.includedMinutes) : null,
+    blockPrice: rule?.extraBlockCents != null ? money(rule.extraBlockCents) : null,
+    blockTime: rule?.extraBlockMinutes != null ? duration(rule.extraBlockMinutes) : null,
+    unitPrice: rule?.perExtraUnitCents != null ? money(rule.perExtraUnitCents) : null,
+    inclUnits: rule ? (WORDS[rule.includedUnits] ?? String(rule.includedUnits)) : null,
+    crewPrice: rule?.perExtraCrewCents != null ? money(rule.perExtraCrewCents) : null,
+  };
+
+  return page.faqs
+    .map(({ q, a }) => {
+      // A sentence whose figures are unavailable is dropped, never
+      // served with the token showing.
+      const needed = Array.from(a.matchAll(/\{(\w+)\}/g)).map((m) => m[1]);
+      if (needed.some((key) => !values[key])) return null;
+      return { q, a: a.replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? "") };
+    })
+    .filter((f): f is { q: string; a: string } => f !== null);
+}
