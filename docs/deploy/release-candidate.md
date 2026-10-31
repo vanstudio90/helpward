@@ -55,20 +55,61 @@ the deploy go together — not one then the other.
   per-service FAQs
 - A footer on all 78 public pages, which had none
 
-## Recovery
+## Recovery — re-promoting the old deployment is NOT safe after 0085
 
-The site deploys by `vercel --prod --force`; the previous deployment
-stays addressable in Vercel and can be re-promoted, so the web half
-rolls back in one action.
+This needed checking rather than assuming, and the assumption was wrong.
 
-**The migrations do not.** `0085` changes a policy and `0087` changes
-`services.active`. Before applying, take a Supabase backup — Database →
-Backups — and note its timestamp here. Rolling the code back without
-rolling the database back leaves the old code reading objects `0083`
-onwards introduced, so if the cutover is abandoned both halves go back
-together.
+`0085` replaces the `req_read` policy. Before it, the policy ended with
+a clause letting any helper in `match_attempts` select the whole
+request row. After it, the policy is customer, admin, or
+`is_booked_helper_for_request(id)` — **a merely offered helper cannot
+read the row at all** and is expected to call `my_offers()` instead.
 
-Service scope is separately reversible at any time:
+The currently deployed helper inbox
+(`app/(provider)/provider/inbox/page.tsx`) selects from `requests`
+directly, `intake` included. Against a database migrated to `0085`, that
+select returns nothing for a candidate helper.
+
+**So re-promoting the previous Vercel deployment after the migrations
+would leave every helper with an empty inbox and no way to accept work.**
+The site would be up and the marketplace would be dead. That is worse
+than the failure it was meant to recover from.
+
+### What recovery actually is
+
+**Roll forward by default.** The deployment that ships with these
+migrations is the one that reads `my_offers()`. If something is wrong
+after cutover, fix it on top of this release and deploy again.
+
+**Roll back only as a pair.** Going back to pre-`0085` code means
+restoring the database to its pre-migration state as well. The two move
+together or not at all.
+
+### Before anything is applied to production
+
+Take a Supabase backup — Database → Backups — and record it here:
+
+```
+Backup identity:   ____________________   (Supabase backup id)
+Taken at:          ____________________   (UTC)
+Restore procedure: Supabase dashboard → Database → Backups → Restore,
+                   then re-promote the Vercel deployment that was live
+                   immediately before cutover (recorded below).
+Deployment live before cutover: ____________________
+```
+
+Left blank deliberately. Taking the backup and recording its identity is
+the owner's action, and a procedure written from a backup nobody has
+taken is not a procedure.
+
+### Confirm it in the rehearsal
+
+The `0080` rehearsal is where to prove this rather than reason about it:
+after applying `0085`, query `requests` as a merely-offered helper and
+confirm zero rows, then confirm `my_offers()` returns the offer. Record
+both outputs with this candidate.
+
+Service scope stays separately reversible at any time:
 `node scripts/service-scope.mjs restore <id> --apply`.
 
 ## Not yet done
