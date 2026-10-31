@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { listServicesPublic, listCategoriesPublic } from "@/lib/data/services";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../_landing-header";
+import { SiteFooter } from "@/components/SiteFooter";
 import { publicServiceName, publicServiceDescription } from "@/lib/public-service-copy";
 
 /*
@@ -180,6 +181,7 @@ export default async function OurServicesPage() {
           </div>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

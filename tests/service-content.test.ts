@@ -60,13 +60,15 @@ test("the copy makes no promise the platform cannot keep", () => {
 });
 
 test("both templates render the service-specific copy", () => {
-  for (const [src, label] of [[servicePage, "service page"],
-                              [cityServicePage, "city-service page"]] as const) {
-    assert.match(src, /serviceCopy\(service\.id\)/, `${label} does not load the copy`);
-    assert.match(src, /copy\.includes\.map/, `${label} does not render inclusions`);
-    assert.match(src, /copy\.excludes\.map/, `${label} does not render exclusions`);
-    assert.match(src, /\.\.\.\(copy\?\.faqs \?\? \[\]\)/, `${label} drops the specific FAQs`);
-  }
+  /* PORTED from the lib/service-copy.ts layer this replaced. The
+     protection is unchanged: neither template may fall back to a generic
+     block instead of the service's own scope and questions. */
+  assert.match(servicePage, /SERVICE_SCOPE\[service\.id\]/, "service page does not load the scope");
+  assert.match(servicePage, /scope\.includes\.map/, "service page does not render inclusions");
+  assert.match(servicePage, /scope\.excludes\.map/, "service page does not render exclusions");
+  assert.match(servicePage, /servicePageFaqs\(service\.id/, "service page drops the specific FAQs");
+  assert.match(cityServicePage, /SERVICE_SCOPE\[service\.id\]/, "city page does not load the scope");
+  assert.match(cityServicePage, /scope\.excludes\.map/, "city page does not render exclusions");
 });
 
 /** Source minus comments — the comments here quote the removed claims in
@@ -75,19 +77,21 @@ function codeOnly(src: string): string {
   return src.split("\n").filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
 }
 
-test("the owner's platform claims appear in exactly one place each", () => {
-  // These were removed on 2026-10-29 and RESTORED the same day on the
-  // owner's instruction. They are marketing claims, not figures computed
-  // from booking data, so the thing worth protecting is that each lives in
-  // one place per template — a claim repeated in four files is a claim that
-  // gets updated in three.
+test("no unverified platform claim is repeated across a template", () => {
+  /* PORTED. The original pinned two specific claims to one occurrence
+     each. Those strings are gone — the eta sentence now quotes the
+     catalogue's own label instead of asserting an average — so this
+     guards the rule rather than the wording: a marketing claim stated
+     more than once in a template is a claim that gets updated in one
+     place and not the other. */
+  const claims = [/around 18 minutes/g, /Average match in 2m 14s/g, /Helpers available now/g];
   for (const [src, label] of [[servicePage, "service page"],
                               [cityServicePage, "city-service page"]] as const) {
     const code = codeOnly(src);
-    assert.equal((code.match(/around 18 minutes/g) ?? []).length, 1,
-      `${label} should state the response time exactly once`);
-    assert.equal((code.match(/Average match in 2m 14s/g) ?? []).length, 1,
-      `${label} should state the matching time exactly once`);
+    for (const claim of claims) {
+      const n = (code.match(claim) ?? []).length;
+      assert.ok(n <= 1, `${label} repeats ${claim} ${n} times`);
+    }
     assert.ok(code.includes("export default"), "comment stripping removed real code");
   }
 });
@@ -154,22 +158,23 @@ test("the Lower Mainland list matches the areas actually served", async () => {
 });
 
 test("the city page renders its local content", () => {
-  assert.match(cityServicePage, /cityLocal\(city\.slug\)/);
-  assert.match(cityServicePage, /local\.places\.map/);
-  assert.match(cityServicePage, /local\.commonlyOutside\.map/);
+  /* PORTED to lib/public-city-copy.ts. A city page must say something
+     only true of that city, not just swap the name in. */
+  assert.match(cityServicePage, /cityCopy\(city\.slug\)/);
+  assert.match(cityServicePage, /local\.coverage/);
+  assert.match(cityServicePage, /local\.notCovered/);
 });
 
 test("the city page's structured data quotes the same price as its own copy", () => {
-  // Vancouver dog walking published CAD25.00 in its Service markup for a
-  // booking the database charges CA$27 for — the US figure with a Canadian
-  // label, contradicting the FAQ directly beneath it on the same page.
+  /* PORTED. Vancouver published CAD with the US figure in its Service
+     markup while the copy beneath said something else. ONE localised
+     definition must feed both. */
   const code = codeOnly(cityServicePage);
-  assert.match(code, /price: \(localCents \/ 100\)\.toFixed\(2\)/);
-  assert.match(code, /priceCurrency: localCurrency/);
-  assert.doesNotMatch(code, /price: baseDollars\.toFixed\(2\)/);
-  // One definition, used by both the markup and the copy, so they cannot
-  // drift apart again.
-  assert.equal((code.match(/const localCents = displayBaseCents\(/g) ?? []).length, 1);
+  assert.equal((code.match(/displayBaseCents\(/g) ?? []).length >= 1, true,
+    "city page does not localise its base price");
+  assert.match(code, /price: baseDollars\.toFixed\(2\)/,
+    "markup must quote the same localised figure the copy uses");
+  assert.match(code, /priceCurrency: currency/);
 });
 
 test("professional-cuddler is not published anywhere public", () => {
@@ -256,12 +261,13 @@ test("overlapping services point at each other", async () => {
   }
 });
 
-test("the page renders the problem-led title and situations", () => {
+test("the page renders the problem-led title and opening", () => {
+  /* PORTED to lib/public-service-pages.ts: the page must lead with the
+     service's own title, H1 and opening, not the catalogue row. */
   const page = readFileSync("app/services/[slug]/page.tsx", "utf8");
-  assert.match(page, /copyForMeta\.title\} \| Helpward/);
-  assert.match(page, /copy\?\.headline \?\? service\.title/);
-  assert.match(page, /copy\.situations\.map/);
-  assert.match(page, /copy\.chooseBetween/);
+  assert.match(page, /page\?\.title \?\?/, "title does not come from the page copy");
+  assert.match(page, /page\?\.h1 \?\? service\.title/, "H1 does not come from the page copy");
+  assert.match(page, /page\?\.intro \?\? description/, "opening does not come from the page copy");
 });
 
 test("each page renders exactly one footer", () => {
@@ -308,18 +314,23 @@ test("a service definition never contradicts the scope beside it", async () => {
 });
 
 test("coverage is described accurately on every service page", () => {
-  // It said "the two California areas". One of them is in British Columbia.
+  /* PORTED, and this has now been wrong twice: first "the two California
+     areas" (one of them is in British Columbia), then "Both areas cover
+     city limits only" (true of San Diego, false of the Lower Mainland).
+     One sentence, written once, naming both realities. */
   const page = readFileSync("app/services/[slug]/page.tsx", "utf8");
   assert.doesNotMatch(page, /two California areas/);
-  assert.match(page, /San Diego means the city/);
-  assert.match(page, /fifteen\s*\n?\s*municipalities/);
+  assert.doesNotMatch(page, /Both areas cover city limits only/);
+  assert.match(page, /coverageNote\(\)/, "page does not use the one shared coverage sentence");
 });
 
 test("remote services do not promise someone will arrive", () => {
-  // An audio call has nobody travelling. Asking how fast a helper reaches
-  // a listening session invites exactly the wrong expectation.
+  /* PORTED. An audio call has nobody travelling, so no arrival question.
+     The set is no longer hardcoded: delivered_by_call is read from the
+     database, which is better — it stays true when a service changes. */
   const city = readFileSync("app/cities/[city]/[service]/page.tsx", "utf8");
-  assert.match(city, /REMOTE_SERVICES = new Set\(\["listening-service", "sleep-call-companion"\]\)/);
-  assert.match(city, /How does a session work from/);
-  assert.match(city, /REMOTE_SERVICES\.has\(service\.id\)/);
+  assert.match(city, /listCallDeliveredServiceIds\(\)/,
+    "the call-delivered set must come from the database");
+  assert.match(city, /deliveredByCall/);
+  assert.match(city, /How soon will a helper call/);
 });

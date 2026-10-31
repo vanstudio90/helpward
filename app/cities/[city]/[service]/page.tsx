@@ -26,6 +26,7 @@ import { servicePrep, prepHeading, HANDOVER_LINE } from "@/lib/public-service-pr
 import { SERVICE_SCOPE } from "@/lib/public-service-pages";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../../_landing-header";
+import { SiteFooter } from "@/components/SiteFooter";
 import { CITIES, getCity } from "@/lib/marketing";
 
 // One landing page per city × service — each ranks for
@@ -649,6 +650,7 @@ export default async function CityServicePage({
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

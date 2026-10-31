@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { listServicesPublic } from "@/lib/data/services";
 import { SERVICE_FEE_CENTS } from "@/lib/pricing";
 import { LandingHeader } from "../_landing-header";
+import { SiteFooter } from "@/components/SiteFooter";
 
 /*
   THE ACTUAL BOOKING JOURNEY.
@@ -176,6 +177,7 @@ export default async function HowItWorksPage() {
           </div>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }

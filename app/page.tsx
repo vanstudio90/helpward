@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ScrollLink } from "./_scroll-link";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import {
   Sparkles, Shield, MapPin, Lock, ArrowRight, Star, HelpCircle, Headphones,
   Users, Clock, ShieldCheck, DollarSign, CheckCircle, Activity, Zap, MessageSquare,
@@ -440,6 +441,15 @@ export default async function LandingPage() {
             >
               Contact support
             </Link>
+            {/* The address itself, not only a route to a form: it was on
+                Stripe receipts and the legal pages and nowhere a visitor
+                would think to look. */}
+            <p className="mt-2 text-xs text-slate-500">
+              Or email{" "}
+              <a href="mailto:support@helpward.com" className="font-semibold text-brand-700 hover:underline">
+                support@helpward.com
+              </a>
+            </p>
           </aside>
         </div>
       </section>
@@ -486,7 +496,8 @@ export default async function LandingPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-10">
             <div className="col-span-2 lg:col-span-2">
               <Link href="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center font-bold">H</div>
+                {/* Dark ground: the purple glyph is ~2:1 there. */}
+                <Logo size={32} tone="light" />
                 <span className="text-lg font-bold text-white">Helpward</span>
               </Link>
               <p className="mt-3 text-xs text-slate-400 max-w-xs leading-relaxed">

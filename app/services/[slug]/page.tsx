@@ -29,6 +29,7 @@ import { servicePrep, prepHeading, HANDOVER_LINE } from "@/lib/public-service-pr
 import { SERVICE_PAGE_COPY, SERVICE_SCOPE, servicePageFaqs } from "@/lib/public-service-pages";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../_landing-header";
+import { SiteFooter } from "@/components/SiteFooter";
 import { CITIES } from "@/lib/marketing";
 
 // One landing page per active service. Each emits Service + FAQPage +
@@ -60,7 +61,12 @@ export async function generateMetadata({
   */
   const blurb = publicServiceDescription(service.id, service.blurb);
   const firstSentence = blurb.split(/(?<=\.)\s/)[0] ?? blurb;
-  const description = `${firstSentence} From $${(service.base_price_cents / 100).toFixed(0)}, paid only once the job is done.`;
+  /*
+    The preview is served to both countries, so it cannot quote one
+    country's figure with a bare dollar sign.
+  */
+  const metaPrice = staticPriceLabel(service.base_price_cents, service.country_pricing ?? undefined, formatMoney);
+  const description = `${firstSentence} From ${metaPrice}, paid only once the job is done.`;
   return {
     title,
     description,
@@ -607,6 +613,7 @@ export default async function ServiceDetailPage({
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

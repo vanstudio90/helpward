@@ -8,6 +8,7 @@ import { countryMoneyForService, bothCountries } from "@/lib/country-price";
 import { formatMoney } from "@/lib/money";
 import { CITIES } from "@/lib/marketing";
 import { LandingHeader } from "../_landing-header";
+import { SiteFooter } from "@/components/SiteFooter";
 
 /*
   HOW A HELPWARD PRICE IS PUT TOGETHER.
@@ -291,6 +292,7 @@ export default async function PricingPage() {
           </div>
         </section>
       </main>
+      <SiteFooter />
     </>
   );
 }
