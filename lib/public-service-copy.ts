@@ -51,6 +51,63 @@ export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
     related: ["designated-driver", "errand-runner"],
   },
 
+  "errand-runner": {
+    /*
+      The catalogue blurb opens "Anything, anywhere" and offers to "pay
+      by the hour or by task". There is no by-task price — service_pricing
+      makes this time-booked — and "anywhere" is not a scope.
+    */
+    description:
+      "Drop-offs, collections, post office and counter queues, and shopping within a spending "
+      + "limit you set. Booked by the time you need, within the areas we cover.",
+    related: ["grocery-pickup", "package-delivery", "package-return", "wait-in-line"],
+  },
+
+  "furniture-assembly": {
+    /*
+      The blurb says "Tools included". The booking form asks whether
+      tools are needed, which means it is a question, not an inclusion.
+      One rule, and it is the one the product actually implements.
+    */
+    description:
+      "Flat-pack furniture built for you — beds, desks, dressers, shelves. The booking form "
+      + "asks what the items are and whether tools are needed.",
+    related: ["moving-help"],
+  },
+
+  "moving-help": {
+    /*
+      The blurb promises "Two strong helpers". service_pricing includes
+      ONE and charges $100 for each additional helper, so the promise and
+      the price disagreed on every page, card and schema description.
+      The price engine is right; the sentence was wrong.
+    */
+    description:
+      "Labour-only help with loading, unloading and carrying. One helper is included and you "
+      + "can add more; the vehicle is yours to arrange.",
+    related: ["furniture-assembly", "maid-service", "package-delivery"],
+  },
+
+  "package-delivery": {
+    description:
+      "One parcel collected and delivered across the areas we cover — documents, a key, a gift. "
+      + "You give the collection point, the destination and who receives it.",
+    related: ["package-return", "errand-runner", "grocery-pickup"],
+  },
+
+  "package-return": {
+    /*
+      The blurb named UPS, FedEx, USPS and Amazon — USPS does not operate
+      in Vancouver — and promised "tracking sent to your phone", which
+      nothing sends. The proof is a receipt the customer asks the helper
+      for.
+    */
+    description:
+      "Prepared returns collected and taken to the drop-off point you choose. You start the "
+      + "return and supply the label or accepted QR code; the retailer decides the refund.",
+    related: ["package-delivery", "errand-runner"],
+  },
+
   "maid-service": {
     name: "House Cleaning & Maid Service",
     // "Insured cleaner" removed — Helpward carries no platform insurance,
@@ -87,12 +144,7 @@ export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
   },
   "designated-driver": { related: ["car-battery-jump", "event-companion"] },
   "dog-walking": { related: ["house-check-in", "errand-runner"] },
-  "moving-help": { related: ["furniture-assembly", "maid-service", "package-delivery"] },
-  "furniture-assembly": { related: ["moving-help", "tv-mounting", "tech-setup"] },
-  "errand-runner": { related: ["grocery-pickup", "package-delivery", "package-return", "wait-in-line"] },
   "grocery-pickup": { related: ["errand-runner", "package-delivery"] },
-  "package-delivery": { related: ["package-return", "errand-runner", "grocery-pickup"] },
-  "package-return": { related: ["package-delivery", "errand-runner"] },
   "appliance-repair": { related: ["tech-setup", "house-check-in"] },
   "tv-mounting": { related: ["tech-setup", "furniture-assembly", "moving-help"] },
   "tech-setup": { related: ["tv-mounting", "appliance-repair", "furniture-assembly"] },
@@ -159,16 +211,21 @@ export function includedPoints(opts: {
 }
 
 /*
-  Where we operate, written from the city list rather than from memory.
+  WHERE WE OPERATE — one sentence, used on every service page.
 
-  The hardcoded line said "The two California areas cover city limits
-  only" on all 26 service pages. There is one California area. Vancouver
-  is in British Columbia.
+  This has now been wrong twice in opposite directions. It began as "the
+  two California areas cover city limits only" (there is one California
+  area). I replaced that with "Both areas cover city limits only", which
+  is accurate for San Diego and wrong for Vancouver: /cities correctly
+  explains that coverage there spans several Lower Mainland
+  municipalities, so every main page contradicted the coverage page.
+
+  Written once, here, and it points at /cities rather than trying to
+  summarise a multi-municipality area in a clause.
 */
 export function coverageNote(): string {
-  return CITIES.length === 1
-    ? "Coverage is city limits only."
-    : `${CITIES.length === 2 ? "Both" : "All"} areas cover city limits only.`;
+  return "Available in the City of San Diego and supported municipalities across "
+    + "Vancouver's Lower Mainland. Check your service address before requesting.";
 }
 
 /*

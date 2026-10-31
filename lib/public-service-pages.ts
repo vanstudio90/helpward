@@ -482,9 +482,11 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "How are purchases paid for?",
-        a: "Separately from the booking fee, and the spending limit is the control: it is the number a "
-          + "helper is not meant to exceed. Keep receipts in the conversation so what was bought and what "
-          + "it cost are both on the record.",
+        a: "Not through Helpward. Your card is charged for the booked time and the service fee only — the "
+          + "cost of the goods never passes through us and there is no reimbursement step in the app. Agree "
+          + "with your helper before they set off how the items will be paid for, set the spending limit as "
+          + "the ceiling they should not exceed, and ask for receipts in the booking conversation so what "
+          + "was bought and what it cost are both on the record.",
       },
       {
         q: "Can I add multiple stops?",
@@ -532,9 +534,9 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "What happens if the order is not ready?",
-        a: "The helper cannot make a shop faster. Message them through the booking and decide together "
-          + "whether to wait — waiting is part of the booked time — and if the collection genuinely "
-          + "cannot happen, you have 24 hours after completion to raise a dispute.",
+        a: "The helper cannot make a shop faster. Message them through the booking and agree whether "
+          + "to wait; because this is a flat price, waiting does not add to your bill. If the "
+          + "collection genuinely cannot happen, you have 24 hours after completion to raise a dispute.",
       },
       {
         q: "What about chilled or frozen items?",
@@ -543,8 +545,9 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "How is it priced?",
-        a: "By the time booked rather than the size of the order or the distance travelled, with the "
-          + "complete figure shown before the request is sent.",
+        a: "A flat {base} for the collection, plus the {fee} service fee. It does not change with the "
+          + "size of the order, the distance travelled, or how long the shop keeps the helper waiting. "
+          + "The whole figure is shown before the request is sent.",
       },
     ],
   },
@@ -578,20 +581,23 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "What proof of delivery is provided?",
-        a: "The helper marks the job complete and you can message them for a photo, which is the sensible "
-          + "ask for anything left rather than handed over. The booking keeps a record of when it happened.",
+        a: "The booking records who the helper was and when they marked it complete. A photo is not sent "
+          + "automatically — ask for one in the conversation, which is worth doing for anything left rather "
+          + "than handed over.",
       },
       {
         q: "Can I send documents or keys?",
-        a: "Yes, and people do. Nothing illegal, hazardous, or valuable beyond what you would be relaxed "
-          + "about losing — there is no platform insurance behind the parcel, so an irreplaceable item is "
-          + "better couriered by somebody who insures it.",
+        a: "Yes. Nothing illegal, hazardous or perishable, and the booking form caps the weight at 50 kg. "
+          + "There is no platform insurance behind the parcel, so anything irreplaceable or high in value "
+          + "is better sent by a courier that insures it.",
       },
       {
         q: "What happens if the recipient is unavailable?",
-        a: "Message the helper and sort it out while they are still there — that is what the conversation "
-          + "is for. Say up front what should happen if nobody answers; it is a worse question to answer "
-          + "from a doorstep.",
+        a: "Say up front what should happen if nobody answers — left with a concierge, left in a named safe "
+          + "place, or brought back to you — because the helper will follow what the booking says. If nothing "
+          + "was agreed they will message you from the door and wait. A return journey is not included in the "
+          + "price: bringing the parcel back is something to agree with the helper, or to book as a second "
+          + "delivery.",
       },
     ],
   },
@@ -622,9 +628,10 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "Will I receive a drop-off receipt?",
-        a: "Ask the helper for a photo of the receipt or the counter scan through the booking conversation. "
-          + "It is the only evidence that matters if a retailer later says a parcel never arrived, so it is "
-          + "worth asking for every time.",
+        a: "Nothing is sent to you automatically, and Helpward generates no tracking number. Ask the helper "
+          + "in the booking conversation for a photo of the carrier receipt or the counter scan. It is the "
+          + "only evidence that matters if a retailer later says a parcel never arrived, so it is worth "
+          + "asking every time.",
       },
       {
         q: "Who issues my refund?",
@@ -746,9 +753,9 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
       },
       {
         q: "What if the helper reaches the front first?",
-        a: "Then the booking has run out of usefulness unless you are there. A helper cannot buy, enter, "
-          + "register or sign on your behalf — plan to arrive before the front, and extend the booking if "
-          + "the queue moves slower than you thought.",
+        a: "Arrange to arrive before the helper reaches the front. A helper cannot buy, enter, register "
+          + "or sign on your behalf, so the place is only useful while you are there to take it. Watch "
+          + "the queue through the booking and agree an extension early if it moves faster than expected.",
       },
       {
         q: "Can I extend the waiting time?",

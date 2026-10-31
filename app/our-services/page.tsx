@@ -111,8 +111,14 @@ export default async function OurServicesPage() {
                             {publicServiceDescription(service.id, service.blurb)}
                           </span>
                         )}
+                        {/*
+                          Descriptive per card. Eight links all reading
+                          "See what's included" tell a screen-reader user
+                          moving link to link nothing about where any of
+                          them goes.
+                        */}
                         <span className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-700">
-                          See what&rsquo;s included
+                          {publicServiceName(service.id, service.title)} details
                           <ArrowRight className="w-3.5 h-3.5 transition group-hover:translate-x-0.5" />
                         </span>
                       </span>

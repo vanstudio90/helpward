@@ -9,6 +9,7 @@ import {
   listCategoriesPublic,
   getServicePublic,
   listCallDeliveredServiceIds,
+  listPricingRulesPublic,
 } from "@/lib/data/services";
 import {
   PUBLIC_SERVICE_COPY,
@@ -68,11 +69,12 @@ export default async function CityServicePage({
   const city = getCity(citySlug);
   if (!city) notFound();
 
-  const [service, allServices, categories, callDelivered] = await Promise.all([
+  const [service, allServices, categories, callDelivered, pricingRules] = await Promise.all([
     getServicePublic(serviceSlug),
     listServicesPublic(),
     listCategoriesPublic(),
     listCallDeliveredServiceIds(),
+    listPricingRulesPublic(),
   ]);
   if (!service) notFound();
 
@@ -83,6 +85,8 @@ export default async function CityServicePage({
   const prep = servicePrep(service.id);
   const local = cityCopy(city.slug);
   const currency = local?.currency ?? (city.country === "CA" ? "CAD" : "USD");
+  // Flat-priced services must not be given the time-and-traffic note.
+  const timePriced = pricingRules[service.id]?.includedMinutes != null;
 
   /*
     The same need-based map the main pages use, kept local: a San Diego
@@ -157,8 +161,17 @@ export default async function CityServicePage({
           a: `${service.title} is delivered by phone call, so no helper travels to your ${city.name} address. Requests are offered to approved helpers straight away and typically answered in ${service.eta_label ?? "around 18 minutes"} during normal hours, and the call itself happens at the time you booked.`,
         }
       : {
-          q: `How fast can a helper arrive in ${city.name}?`,
-          a: `Average response time for ${service.title} in ${city.name} is ${service.eta_label ?? "around 18 minutes"} during normal hours. Helper supply is densest in ${city.metro ?? city.name} so ${city.name}-based requests typically match faster than the platform-wide average.`,
+          q: `How soon can a helper come in ${city.name}?`,
+          /*
+            eta_label is free text on the service row — "Today",
+            "Arrives in 30 min", "20-40 min" — so it cannot be dropped
+            into "response time is X during normal hours" without
+            producing sentences like "is Today during normal hours".
+            It is quoted as the catalogue's own guide instead, and the
+            answer separates getting a helper from how long the job
+            itself takes.
+          */
+          a: `The catalogue lists ${service.title} as "${service.eta_label ?? "varies"}" for getting started in ${city.metro ?? city.name}. That is how soon a helper may be available, not how long the task takes — the time you book is what decides that. A request is offered to approved helpers straight away, and nothing is charged if none accepts.`
         },
     {
       q: `How much does ${name.toLowerCase()} cost in ${city.name}?`,
@@ -373,10 +386,14 @@ export default async function CityServicePage({
               </div>
               <div className="rounded-2xl border border-slate-100 bg-white p-5">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {deliveredByCall ? "Nobody travels" : "Getting there"}
+                  {deliveredByCall ? "Nobody travels" : timePriced ? "Getting there" : "Distance and this price"}
                 </div>
                 <p className="mt-2 text-slate-700">
-                  {deliveredByCall ? local.remoteNote : local.travelNote}
+                  {deliveredByCall
+                    ? local.remoteNote
+                    : timePriced
+                      ? local.travelNote
+                      : local.flatNote}
                 </p>
               </div>
             </div>
@@ -475,6 +492,14 @@ export default async function CityServicePage({
                 </span>
               </li>
               <li>
+                <Link href="/help" className="font-semibold text-brand-700 hover:underline">
+                  Help and contact a person
+                </Link>
+                <span className="block text-slate-600 text-[13px]">
+                  Support by call, chat or email, answered by a human.
+                </span>
+              </li>
+              <li>
                 <Link href="/pricing" className="font-semibold text-brand-700 hover:underline">
                   How pricing works
                 </Link>
@@ -516,7 +541,7 @@ export default async function CityServicePage({
         {related.length > 0 && (
           <section className="bg-slate-50 border-t border-slate-100 py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <h2 className="text-xl font-bold text-slate-900">What people book next in {city.name}</h2>
+              <h2 className="text-xl font-bold text-slate-900">Related services in {city.name}</h2>
               <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {related.map((r) => (
                   <Link

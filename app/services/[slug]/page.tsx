@@ -519,7 +519,7 @@ export default async function ServiceDetailPage({
         {/* Related services */}
         {related.length > 0 && (
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">More {service.category?.label.toLowerCase()} services</h2>
+            <h2 className="text-xl font-bold text-slate-900 mb-4">Related services</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {related.map((r) => (
                 <Link
@@ -539,7 +539,7 @@ export default async function ServiceDetailPage({
               ))}
             </div>
             <p className="mt-6 text-xs text-slate-500">
-              Browse the <Link href="/our-services" className="text-brand-700 font-semibold hover:underline">full catalog</Link> of {allServices.length} services across {categories.length} categories.
+              Browse the <Link href="/our-services" className="text-brand-700 font-semibold hover:underline">full catalog</Link> of all {allServices.length} services.
             </p>
           </section>
         )}

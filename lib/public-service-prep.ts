@@ -83,7 +83,7 @@ export const SERVICE_PREP: Record<string, ServicePrep> = {
   },
   "furniture-assembly": {
     items: [
-      "Have the boxes in the room where the furniture will live. Built furniture rarely fits through a door.",
+      "Have the boxes in the room where the furniture will live, so nothing has to be carried through a doorway once built.",
       "Check the parts and fittings are all there — a missing cam lock is between you and the retailer, and it stops the job.",
       "Say what the items are, ideally by product name, and how many.",
       "Clear floor space to work in, and say on the form whether you want the packaging broken down.",
@@ -123,7 +123,7 @@ export const SERVICE_PREP: Record<string, ServicePrep> = {
   },
   "grocery-pickup": {
     items: [
-      "Place and pay for the order first. This service collects an order that already exists.",
+      "Place and pay for the order first — this service collects an order that already exists, at a flat price.",
       "Have the order reference and the exact store branch — a wrong branch is the most common way this goes wrong.",
       "Check the collection slot, and tell the shop someone else is picking up if they require it.",
       "Flag chilled or frozen items when you book, so the route is planned around them.",
