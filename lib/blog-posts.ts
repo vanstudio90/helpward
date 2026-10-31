@@ -25,6 +25,15 @@ export type BlogPost = {
   readingMinutes: number;
   heroImage?: string;    // unsplash URL
   body: BlogBlock[];
+  /*
+    A way back into the service journey.
+
+    None of the articles linked to a single /services/ page, so a reader
+    who finished one had nowhere useful to go. These are per-post and
+    chosen for relevance — an article about vetting points at the safety
+    explanation, not at six services for the sake of the links.
+  */
+  nextSteps?: { href: string; label: string; why: string }[];
 };
 
 export type BlogBlock =
@@ -80,6 +89,10 @@ export const BLOG_POSTS: BlogPost[] = [
       { type: "p", text:
         "If you want to read the operational craft in more detail, the safety microsite at /safety is where we go deep. If you want to help build it, we're hiring across operations, trust & safety, engineering, design, and community at /careers. If you have feedback — even harsh feedback — hello@helpward.com reads everything." },
     ],
+    nextSteps: [
+      { href: "/our-services", label: "Browse every service", why: "The 26 things you can actually book, grouped by what you need." },
+      { href: "/safety", label: "How we keep bookings safe", why: "Who gets approved, and what happens when something goes wrong." },
+    ],
   },
   {
     slug: "how-we-vet-every-helper",
@@ -127,6 +140,10 @@ export const BLOG_POSTS: BlogPost[] = [
       { type: "note", text:
         "The customer-facing summary of this process lives at /safety. The deep operational detail is at /safety/background-checks. If you're considering applying as a helper, we recommend reading both before submitting." },
     ],
+    nextSteps: [
+      { href: "/safety", label: "The full safety explanation", why: "What we check, what we do not yet check, and the dispute process." },
+      { href: "/our-services", label: "Book an approved helper", why: "Every service, with what each one covers and excludes." },
+    ],
   },
   {
     slug: "transparency-as-a-feature",
@@ -171,6 +188,10 @@ export const BLOG_POSTS: BlogPost[] = [
       { type: "h2", text: "Read the launch report" },
       { type: "p", text:
         "The Q2 2026 launch report is live at /safety/transparency-report. Most figures show '—' because we're publishing the table structure before we have a full quarter of data — Q3 is the first report with real numbers. We thought publishing the empty baseline first was more honest than waiting three months and showing up with a polished report nobody had any prior expectation of." },
+    ],
+    nextSteps: [
+      { href: "/our-services", label: "See what each service covers", why: "Scope, exclusions and how each price is worked out." },
+      { href: "/terms", label: "Cancellations and refunds", why: "The terms in full, including the 24-hour dispute window." },
     ],
   },
   {
@@ -253,6 +274,10 @@ export const BLOG_POSTS: BlogPost[] = [
         "We don't know yet. The honest answer is that no on-demand marketplace has run at scale without surge as a release valve, so we can't point to a 10-year case study and say 'yes, the economics hold'. What we can say is that the operational costs of running without surge are bounded — pre-positioning incentives and over-recruitment are line items with knowable budgets — and that the trust signal from running without surge has measurable value in the parts of the booking funnel we can observe." },
       { type: "p", text:
         "We'll know in a year. The transparency report will surface the data either way — if it turns out that running without surge isn't sustainable at our scale, we'll say so and revise the position publicly. The position itself isn't the point; the willingness to defend it with operational mechanics rather than press releases is." },
+    ],
+    nextSteps: [
+      { href: "/our-services", label: "Check a price for yourself", why: "Pick a service and see the whole figure before you request." },
+      { href: "/vs/pricing", label: "How our pricing compares", why: "The flat fee, the split, and what we do not charge for." },
     ],
   },
 ];

@@ -3,10 +3,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   SERVICE_PAGE_COPY,
+  SERVICE_SCOPE,
   servicePageFaqs,
   type PriceFacts,
 } from "../lib/public-service-pages.ts";
-import { PUBLIC_SERVICE_COPY, includedPoints, pricingExplanation } from "../lib/public-service-copy.ts";
+import {
+  PUBLIC_SERVICE_COPY,
+  RELATED_PROMPT,
+  includedPoints,
+  pricingExplanation,
+} from "../lib/public-service-copy.ts";
 import { CITY_COPY } from "../lib/public-city-copy.ts";
 
 /*
@@ -161,6 +167,51 @@ test("the places listed as not covered are never also claimed as covered", () =>
         !copy.coverage.includes(place),
         `${slug} lists ${place} as both covered and not covered`,
       );
+    }
+  }
+});
+
+test("every service states what it does NOT cover", () => {
+  for (const id of Object.keys(SERVICE_PAGE_COPY)) {
+    const scope = SERVICE_SCOPE[id];
+    assert.ok(scope, `${id} has no scope block`);
+    assert.ok(scope.includes.length >= 2, `${id} lists too little as included`);
+    assert.ok(scope.excludes.length >= 2, `${id} does not say what is excluded`);
+  }
+});
+
+test("no two services share an exclusion list", () => {
+  const seen = new Map<string, string>();
+  for (const [id, scope] of Object.entries(SERVICE_SCOPE)) {
+    const key = scope.excludes.join("|");
+    const prior = seen.get(key);
+    assert.equal(prior, undefined, `${id} and ${prior} share their exclusions`);
+    seen.set(key, id);
+  }
+});
+
+test("the services most often confused say so in their exclusions", () => {
+  // The misdirected-customer cases the audit named: a mortgage
+  // inspection, a complete appliance repair, a shop instead of a
+  // collection, a taxi instead of an own-car driver.
+  const required: Record<string, RegExp> = {
+    "property-inspection": /licensed|mortgage/i,
+    "appliance-repair": /repair itself|quoted separately/i,
+    "grocery-pickup": /Errand Runner/,
+    "designated-driver": /taxi/i,
+    "moving-help": /vehicle|labour only/i,
+    "shopping-companion": /Errand Runner/,
+  };
+  for (const [id, pattern] of Object.entries(required)) {
+    const text = SERVICE_SCOPE[id].excludes.join(" ");
+    assert.match(text, pattern, `${id} does not rule out the thing it is confused with`);
+  }
+});
+
+test("every service a page can link to has a reason to follow the link", () => {
+  for (const [id, copy] of Object.entries(PUBLIC_SERVICE_COPY)) {
+    for (const target of copy.related ?? []) {
+      assert.ok(RELATED_PROMPT[target], `${id} links to ${target} with no reason given`);
     }
   }
 });

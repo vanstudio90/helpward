@@ -1204,3 +1204,364 @@ export function servicePageFaqs(serviceId: string, facts: PriceFacts): { q: stri
     })
     .filter((f): f is { q: string; a: string } => f !== null);
 }
+
+/*
+  WHAT IS AND IS NOT IN SCOPE, IN THE BODY OF THE PAGE.
+
+  The audit's bar for a finished service page is that a visitor can tell
+  "what they are booking … what is excluded and what to do next". Most of
+  that was reachable only by reading an FAQ, and an exclusion buried in a
+  collapsed answer is an exclusion a customer meets for the first time on
+  their doorstep.
+
+  So it goes in the body. The exclusions are the useful half: they are
+  what stops an appliance-repair customer booking a diagnosis, or a
+  mortgage lender's inspection landing on a photo visit.
+
+  No prices here — those come from the rate card, same rule as the FAQs.
+*/
+
+export type ServiceScope = { includes: string[]; excludes: string[] };
+
+export const SERVICE_SCOPE: Record<string, ServiceScope> = {
+  "designated-driver": {
+    includes: [
+      "A driver who comes to you and drives your own car",
+      "You and your passengers travelling in your own vehicle",
+      "Automatic or manual, whichever you tell us on the form",
+      "Booked now or scheduled for a time you choose",
+    ],
+    excludes: [
+      "A car supplied for you — that is a taxi, not this",
+      "Driving anyone who is not travelling with you",
+      "Long-distance trips outside the areas we cover",
+    ],
+  },
+  "car-battery-jump": {
+    includes: [
+      "A helper with jump leads and a portable jump pack",
+      "An attempt to start the car where it is parked",
+      "Batteries in the engine bay, boot or under a seat",
+    ],
+    excludes: [
+      "A replacement battery, or any part supplied or fitted",
+      "Any guarantee the car will start",
+      "Towing, recovery or garage work",
+      "A battery no second vehicle or pack can reach",
+    ],
+  },
+  "motorcycle-taxi": {
+    includes: [
+      "One passenger, between two addresses you give",
+      "Luggage you can carry safely on a bike",
+    ],
+    excludes: [
+      "More than one passenger per booking",
+      "Riding without a legal helmet",
+      "Airport runs or anything outside the areas we cover",
+      "Any obligation to ride in unsafe weather",
+    ],
+  },
+  "dog-walking": {
+    includes: [
+      "A walk of the length you book",
+      "More than one dog, if you say so on the form",
+      "A photo update and the route taken",
+      "Entry using the access details you leave",
+    ],
+    excludes: [
+      "Veterinary care, medication or grooming",
+      "Overnight stays or daycare",
+      "Training, or managing a dog you have not described honestly",
+    ],
+  },
+  "maid-service": {
+    includes: [
+      "Dusting, vacuuming, kitchen and bathroom surfaces",
+      "Laundry within the time you book",
+      "The rooms and focus you choose on the form",
+      "Extra cleaners, if you ask for them",
+    ],
+    excludes: [
+      "Deep cleaning or end-of-tenancy work inspected by a landlord",
+      "Carpet machines, pressure washing or specialist equipment",
+      "Exterior windows, lofts, or anything needing a ladder",
+      "Clearing hazardous or biological waste",
+    ],
+  },
+  "moving-help": {
+    includes: [
+      "Loading, unloading, carrying and stairs",
+      "The crew size you choose",
+      "Packing a van or truck you have hired",
+    ],
+    excludes: [
+      "A vehicle — this is labour only",
+      "Pianos, safes, gun cabinets or hazardous goods",
+      "Packing materials, or dismantling that needs a trade",
+      "Anything not listed in your inventory answer",
+    ],
+  },
+  "furniture-assembly": {
+    includes: [
+      "Flat-pack assembly from the instructions in the box",
+      "The number of items you book time for",
+      "Breaking down and bagging the packaging",
+      "Straightforward wall anchoring where you supply the fixings",
+    ],
+    excludes: [
+      "Missing or damaged parts, which only the retailer can replace",
+      "Drilling into an unknown wall, or load-bearing fixing",
+      "Taking packaging away beyond your own bins",
+      "Electrical or plumbing connection",
+    ],
+  },
+  "tv-mounting": {
+    includes: [
+      "Mounting the television on the bracket you supply",
+      "Tidy routing of the cables you already have",
+      "Drywall, brick or concrete, as described on the form",
+    ],
+    excludes: [
+      "Supplying the bracket",
+      "Cutting into a wall to hide cables",
+      "Any new electrical work or added sockets",
+      "Aerial, satellite or in-wall wiring",
+    ],
+  },
+  "tech-setup": {
+    includes: [
+      "Setting up Wi-Fi, printers, phones, laptops and smart devices",
+      "Configuring the accounts and subscriptions you already pay for",
+      "Moving files across, as far as the booked time allows",
+    ],
+    excludes: [
+      "Buying hardware, software or subscriptions for you",
+      "Hardware repair or recovering a failed drive",
+      "Business or network administration",
+      "Storing or keeping any password of yours",
+    ],
+  },
+  "appliance-repair": {
+    includes: [
+      "A visit to assess the fault",
+      "A plain explanation of what is wrong",
+      "A quote for the repair, which is yours to accept or refuse",
+    ],
+    excludes: [
+      "The repair itself — it is quoted separately after the visit",
+      "Parts, which are not supplied under this booking",
+      "Gas, sealed-refrigerant or certified electrical work",
+      "Any guarantee the fault can be fixed",
+    ],
+  },
+  "errand-runner": {
+    includes: [
+      "The tasks and stops you list, in order",
+      "Buying items within a spending limit you set",
+      "Waiting time, within the time you book",
+      "Handover using the instructions saved on the booking",
+    ],
+    excludes: [
+      "Anything unlawful, or age-restricted without you present",
+      "Spending beyond the limit you set",
+      "Prescription collection or anything needing your ID",
+      "Carrying more than one person reasonably can",
+    ],
+  },
+  "grocery-pickup": {
+    includes: [
+      "Collecting an order you have already placed and paid for",
+      "Bringing it to the address you give",
+      "Chilled items, if you say so when booking",
+    ],
+    excludes: [
+      "Choosing or buying the groceries — that is Errand Runner",
+      "Paying for the order on your behalf",
+      "Making a shop have your order ready on time",
+      "Returns or refunds for missing items",
+    ],
+  },
+  "package-delivery": {
+    includes: [
+      "Collection from you and delivery to the person you name",
+      "Parcels of the size and weight you describe",
+      "A local trip within the area we cover",
+    ],
+    excludes: [
+      "Postal, intercity, interprovincial or cross-border shipping",
+      "Insurance on the contents — there is none",
+      "Anything illegal, hazardous, perishable or live",
+      "Anything heavier or bulkier than you described",
+    ],
+  },
+  "package-return": {
+    includes: [
+      "Collecting your parcels and dropping them at the carrier",
+      "A printed label or a return QR code you provide",
+      "Several parcels in one booking",
+    ],
+    excludes: [
+      "Authorising the return with the retailer — that is yours",
+      "Your refund, which is the retailer's decision alone",
+      "Packing the items, unless you ask within the booked time",
+      "A carrier or drop-off point that will not accept the return",
+    ],
+  },
+  "house-check-in": {
+    includes: [
+      "A visit of the length you book",
+      "Doors, windows, plants, post and anything visibly wrong",
+      "A photo report sent through the booking",
+      "Entry using the access details you leave",
+    ],
+    excludes: [
+      "Overnight house sitting — nobody stays",
+      "Arranging repairs or letting tradespeople in",
+      "Pet care beyond what you have booked separately",
+      "Any compliance or insurance inspection",
+    ],
+  },
+  "property-inspection": {
+    includes: [
+      "A visit to the property on the day you book",
+      "Photographs of the areas you nominate",
+      "A written note of the condition that was visible",
+    ],
+    excludes: [
+      "A licensed, pre-purchase, structural or code inspection",
+      "Anything valid for a mortgage, insurer or regulator",
+      "Opinion on value, compliance or cause of a defect",
+      "Entry without the occupier's consent",
+    ],
+  },
+  "wait-in-line": {
+    includes: [
+      "A helper holding a place for the time you book",
+      "Updates as the queue moves",
+      "Handover to you where the venue allows it",
+      "An extension, if the helper agrees to it",
+    ],
+    excludes: [
+      "Any promise the venue will permit a handover",
+      "Tickets, admission, stock or appointments",
+      "Buying, registering or signing on your behalf",
+      "The place, if you are not there when it reaches the front",
+    ],
+  },
+  "elder-assistance": {
+    includes: [
+      "Company and conversation",
+      "Grocery trips, errands and light housekeeping",
+      "Going along to an appointment as company",
+      "The same helper again, if you save them as a favourite",
+    ],
+    excludes: [
+      "Medication, personal care or any nursing task",
+      "Speaking, consenting or deciding on anyone's behalf",
+      "Lifting or transferring a person",
+      "Anything a licensed care provider should be doing",
+    ],
+  },
+  "listening-service": {
+    includes: [
+      "An audio call for the length you book",
+      "A listener whose job for that time is to listen",
+      "A call placed inside Helpward, with no numbers exchanged",
+    ],
+    excludes: [
+      "Therapy, counselling, diagnosis or treatment",
+      "Crisis or emergency support",
+      "Video, or anyone travelling to you",
+      "Recording, by either side",
+    ],
+  },
+  "sleep-call-companion": {
+    includes: [
+      "An audio call with a fixed end time you set",
+      "Quiet company or conversation, whichever you choose",
+    ],
+    excludes: [
+      "Any treatment for insomnia or a medical condition",
+      "An open-ended or all-night call",
+      "Video, or anyone travelling to you",
+      "Recording, by either side",
+    ],
+  },
+  "rent-a-friend": {
+    includes: [
+      "Platonic company for an ordinary public activity",
+      "The hours you book, from an agreed public meeting point",
+    ],
+    excludes: [
+      "Anything romantic or sexual, without exception",
+      "Meals, tickets, entry or transport",
+      "Meeting anywhere but a public place",
+      "Continuing past the hours booked",
+    ],
+  },
+  "date-companion": {
+    includes: [
+      "One platonic companion for a dinner or occasion",
+      "A dress code and plan you set in the booking",
+      "The hours you book, from an agreed public meeting point",
+    ],
+    excludes: [
+      "Anything romantic or sexual, without exception",
+      "Food, drink, entry or transport costs",
+      "Private residences as a meeting point",
+      "Continuing past the hours booked",
+    ],
+  },
+  "event-companion": {
+    includes: [
+      "A platonic plus-one attending with you",
+      "A briefing on the dress code and running order",
+      "The hours you book",
+    ],
+    excludes: [
+      "Anything romantic or sexual, without exception",
+      "Their ticket or venue access, which you arrange",
+      "Travel, food and drink",
+      "Staffing, hosting or working your event",
+    ],
+  },
+  "shopping-companion": {
+    includes: [
+      "Company on the trip, with you there",
+      "A hand with bags one person can reasonably carry",
+      "More than one store, within the time you book",
+    ],
+    excludes: [
+      "Shopping done without you — that is Errand Runner",
+      "Professional styling or wardrobe consulting",
+      "Your purchases",
+      "Pushing a wheelchair or any personal care",
+    ],
+  },
+  "wedding-guest": {
+    includes: [
+      "One briefed guest per booking, attending for the hours you book",
+      "A dress code, running order and briefing you provide",
+    ],
+    excludes: [
+      "Meals, drinks or venue access, which you arrange",
+      "Venue permission — that is between you and the venue",
+      "Speeches, officiating, hosting or event staffing",
+      "Any legal or official role",
+    ],
+  },
+  "family-standin": {
+    includes: [
+      "A consensual, briefed social role at your event",
+      "Briefing and rehearsal time, booked as time",
+      "The hours you book",
+    ],
+    excludes: [
+      "Anything legal, medical, financial or official",
+      "Signing, consenting or speaking to an institution",
+      "Identity documents, or presenting as a real named person",
+      "Deceiving anyone whose decision depends on it",
+    ],
+  },
+};

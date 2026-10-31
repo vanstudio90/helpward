@@ -61,10 +61,9 @@ const ORG_LD = {
     "Senior check-ins",
     "Approved local helpers",
   ],
-  sameAs: [
-    "https://helpward.com/about",
-    "https://helpward.com/safety",
-  ],
+  // No sameAs. It is for a genuine identity profile on another service,
+  // and pointing it at our own /about and /safety asserted nothing while
+  // looking like it did.
 };
 
 const WEBSITE_LD = {

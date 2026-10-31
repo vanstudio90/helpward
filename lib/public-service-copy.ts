@@ -260,3 +260,48 @@ export function pricingExplanation(opts: {
     points,
   };
 }
+
+/*
+  WHY THE NEXT LINK IS USEFUL.
+
+  A related-services block that prints six names and six prices tells a
+  reader nothing about why any of them is here. These are one line each,
+  phrased as the question the TARGET service answers, so the link earns
+  its place: "Need your home checked while you are away? → Home Check-In".
+
+  Keyed by the service being linked TO, so one line serves every page
+  that points at it.
+*/
+export const RELATED_PROMPT: Record<string, string> = {
+  "designated-driver": "Had a drink, with your own car to get home?",
+  "car-battery-jump": "Dead battery instead?",
+  "motorcycle-taxi": "Just need to get across town?",
+  "dog-walking": "Dog needs a walk while you are out?",
+  "maid-service": "Want the place cleaned afterwards?",
+  "moving-help": "Need hands for the lifting?",
+  "furniture-assembly": "Need furniture assembled after the move?",
+  "tv-mounting": "Television still to go on the wall?",
+  "tech-setup": "Devices that will not talk to each other?",
+  "appliance-repair": "Something stopped working and you do not know why?",
+  "errand-runner": "Need someone to choose and buy the items?",
+  "grocery-pickup": "Order already placed and paid for?",
+  "package-delivery": "One parcel to get across town?",
+  "package-return": "Returns waiting by the door?",
+  "house-check-in": "Need your home checked while you are away?",
+  "property-inspection": "Want photographs and a note on the condition?",
+  "wait-in-line": "A queue you would rather not stand in?",
+  "elder-assistance": "Someone who could use company and a hand?",
+  "listening-service": "Want somebody to talk to?",
+  "sleep-call-companion": "Quiet company while you fall asleep?",
+  "rent-a-friend": "Want company for something ordinary?",
+  "date-companion": "Need a plus-one for dinner?",
+  "event-companion": "Need a plus-one for the evening?",
+  "shopping-companion": "Want company at the shops?",
+  "wedding-guest": "Seats to fill at your own wedding?",
+  "family-standin": "A briefed role to fill at your event?",
+};
+
+/** The reason a link is worth following, or null if nobody wrote one. */
+export function relatedPrompt(id: string): string | null {
+  return RELATED_PROMPT[id] ?? null;
+}

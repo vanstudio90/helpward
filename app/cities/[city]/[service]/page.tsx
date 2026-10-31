@@ -11,11 +11,14 @@ import {
   listCallDeliveredServiceIds,
 } from "@/lib/data/services";
 import {
+  PUBLIC_SERVICE_COPY,
   publicServiceName,
   publicServiceDescription,
   includedPoints,
+  relatedPrompt,
 } from "@/lib/public-service-copy";
 import { cityCopy } from "@/lib/public-city-copy";
+import { SERVICE_SCOPE } from "@/lib/public-service-pages";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../../_landing-header";
 import { CITIES, getCity } from "@/lib/marketing";
@@ -45,8 +48,8 @@ export async function generateMetadata({
   const name = publicServiceName(service.id, service.title);
   const title = `${name} in ${city.name}, ${city.region} | Helpward`;
   const local = cityCopy(city.slug);
-  const area = local ? local.coverage.replace(/\.$/, "") : `${city.metro ?? city.name}`;
-  const description = `Book ${name.toLowerCase()} in ${city.name} via Helpward. Covers ${area.charAt(0).toLowerCase() + area.slice(1)}. $${(service.base_price_cents / 100).toFixed(0)} base price in ${local?.currency ?? (city.country === "CA" ? "CAD" : "USD")}, payment only after the task is complete.`;
+  const money = local?.currency ?? (city.country === "CA" ? "CAD" : "USD");
+  const description = `Book ${name.toLowerCase()} in ${city.name}. From $${(service.base_price_cents / 100).toFixed(0)} ${money}, approved local helpers, paid only once the job is done.`;
   const url = `https://helpward.com/cities/${city.slug}/${service.id}`;
   return {
     title,
@@ -75,12 +78,23 @@ export default async function CityServicePage({
   const name = publicServiceName(service.id, service.title);
   const blurb = publicServiceDescription(service.id, service.blurb);
   const deliveredByCall = callDelivered.has(service.id);
+  const scope = SERVICE_SCOPE[service.id];
   const local = cityCopy(city.slug);
   const currency = local?.currency ?? (city.country === "CA" ? "CAD" : "USD");
 
-  const related = allServices
-    .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
-    .slice(0, 6);
+  /*
+    The same need-based map the main pages use, kept local: a San Diego
+    moving page points at San Diego furniture assembly, not the national
+    one. The category list stays as a fallback.
+  */
+  const curated = (PUBLIC_SERVICE_COPY[service.id]?.related ?? [])
+    .map((id) => allServices.find((s) => s.id === id))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s));
+  const related = curated.length > 0
+    ? curated
+    : allServices
+        .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
+        .slice(0, 6);
   const baseDollars = service.base_price_cents / 100;
   const serviceFee = 4.5;
   const total = baseDollars + serviceFee;
@@ -104,30 +118,31 @@ export default async function CityServicePage({
       },
     },
     offers: {
+      // Base price, labelled as such, in the currency actually charged
+      // here. No `availability`: InStock would claim a helper is free,
+      // which nothing measures.
       "@type": "Offer",
       price: baseDollars.toFixed(2),
-      priceCurrency: city.country === "CA" ? "CAD" : "USD",
-      availability: "https://schema.org/InStock",
+      priceCurrency: currency,
+      description: `Base price in ${currency}, before the flat $${serviceFee.toFixed(2)} service fee. Final total depends on the answers given when booking.`,
       url: `https://helpward.com/new-request?service=${service.id}`,
     },
   };
 
-  const LOCAL_LD = {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "@id": `https://helpward.com/cities/${city.slug}/${service.id}#localbusiness`,
-    name: `Helpward ${name} — ${city.name}`,
-    description: `On-demand ${name.toLowerCase()} in ${city.name}, ${city.region}. Approved helpers, transparent pricing, payment after completion.`,
-    url: `https://helpward.com/cities/${city.slug}/${service.id}`,
-    parentOrganization: { "@id": "https://helpward.com/#organization" },
-    areaServed: {
-      "@type": "City",
-      name: city.name,
-      containedInPlace: { "@type": city.country === "CA" ? "AdministrativeArea" : "State", name: city.region },
-    },
-    priceRange: "$$",
-    openingHours: "Mo-Su 00:00-23:59",
-  };
+  /*
+    NO LocalBusiness NODE.
+
+    Each of these 52 pages used to emit its own LocalBusiness: no
+    address, priceRange "$$", and openingHours "Mo-Su 00:00-23:59".
+    Together they asserted fifty-two around-the-clock physical branches
+    that do not exist, and Google's own LocalBusiness rich-result
+    requirements want an address — which is exactly the thing never to
+    fabricate to satisfy a validator.
+
+    Helpward is one marketplace organisation, declared once in the root
+    layout. Where it operates belongs on the Service node's areaServed,
+    which is what it now says and all it says.
+  */
 
   const FAQS = [
     {
@@ -191,7 +206,6 @@ export default async function CityServicePage({
   return (
     <div className="min-h-screen bg-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(SERVICE_LD) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(LOCAL_LD) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_LD) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(BREADCRUMB_LD) }} />
       <LandingHeader />
@@ -367,6 +381,79 @@ export default async function CityServicePage({
           </section>
         )}
 
+        {/*
+          WHAT IS AND IS NOT INCLUDED, in the body rather than inside an
+          FAQ. An exclusion a customer first meets on their doorstep is
+          an exclusion that was published in the wrong place.
+        */}
+        {scope && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <h2 className="text-2xl font-bold text-slate-900">
+              What {name.toLowerCase()} covers in {city.name}
+            </h2>
+            <div className="mt-4 grid gap-5 md:grid-cols-2 max-w-5xl">
+              <div className="rounded-2xl border border-slate-100 bg-white p-5">
+                <h3 className="text-sm font-bold text-slate-900">Included</h3>
+                <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                  {scope.includes.map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-5">
+                <h3 className="text-sm font-bold text-slate-900">Not included</h3>
+                <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                  {scope.excludes.map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <span aria-hidden="true" className="mt-0.5 text-amber-700 font-bold leading-none">&times;</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/*
+          Trust statements get a path here too — the same gap the main
+          pages had.
+        */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-2">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 sm:p-6 max-w-4xl">
+            <h2 className="text-base font-bold text-slate-900">Before you book in {city.name}</h2>
+            <ul className="mt-3 grid gap-2 sm:grid-cols-3 text-sm">
+              <li>
+                <Link href="/safety" className="font-semibold text-brand-700 hover:underline">
+                  How we keep bookings safe
+                </Link>
+                <span className="block text-slate-600 text-[13px]">
+                  Who gets approved, and what happens if something goes wrong.
+                </span>
+              </li>
+              <li>
+                <Link href="/terms" className="font-semibold text-brand-700 hover:underline">
+                  Cancellations and refunds
+                </Link>
+                <span className="block text-slate-600 text-[13px]">
+                  When you can cancel, and the 24-hour dispute window.
+                </span>
+              </li>
+              <li>
+                <Link href={`/cities/${city.slug}`} className="font-semibold text-brand-700 hover:underline">
+                  Everything we cover in {city.name}
+                </Link>
+                <span className="block text-slate-600 text-[13px]">
+                  The full service area, and the services available in it.
+                </span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
         {/* Same service, other cities */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <h2 className="text-xl font-bold text-slate-900">{name} in other cities</h2>
@@ -389,7 +476,7 @@ export default async function CityServicePage({
         {related.length > 0 && (
           <section className="bg-slate-50 border-t border-slate-100 py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <h2 className="text-xl font-bold text-slate-900">More {service.category?.label.toLowerCase()} services in {city.name}</h2>
+              <h2 className="text-xl font-bold text-slate-900">What people book next in {city.name}</h2>
               <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {related.map((r) => (
                   <Link
@@ -397,7 +484,12 @@ export default async function CityServicePage({
                     href={`/cities/${city.slug}/${r.id}`}
                     className="rounded-xl bg-white border border-slate-100 p-3 hover:border-brand-300 hover:shadow transition"
                   >
-                    <div className="text-sm font-bold text-slate-900 truncate">{r.title}</div>
+                    {relatedPrompt(r.id) && (
+                      <div className="text-[11px] font-semibold text-brand-700 leading-snug">
+                        {relatedPrompt(r.id)}
+                      </div>
+                    )}
+                    <div className="text-sm font-bold text-slate-900 mt-0.5">{publicServiceName(r.id, r.title)}</div>
                     <div className="text-[11px] text-slate-500 mt-0.5">in {city.name} · from ${(r.base_price_cents / 100).toFixed(0)}</div>
                   </Link>
                 ))}

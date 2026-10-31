@@ -16,8 +16,9 @@ import {
   includedPoints,
   coverageNote,
   pricingExplanation,
+  relatedPrompt,
 } from "@/lib/public-service-copy";
-import { SERVICE_PAGE_COPY, servicePageFaqs } from "@/lib/public-service-pages";
+import { SERVICE_PAGE_COPY, SERVICE_SCOPE, servicePageFaqs } from "@/lib/public-service-pages";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../_landing-header";
 import { CITIES } from "@/lib/marketing";
@@ -43,7 +44,15 @@ export async function generateMetadata({
   const page = SERVICE_PAGE_COPY[service.id];
   const name = publicServiceName(service.id, service.title);
   const title = page?.title ?? `${name} — Book a verified helper | Helpward`;
-  const description = `${publicServiceDescription(service.id, service.blurb)} Approved local helpers. From $${(service.base_price_cents / 100).toFixed(0)}, paid only after the task is complete.`;
+  /*
+    A preview, not a paragraph. The audit measured these at 170-285
+    characters with the same generic ending; the distinct half was being
+    buried by the shared half. Trimmed to the service's own sentence plus
+    the one fact a searcher is weighing.
+  */
+  const blurb = publicServiceDescription(service.id, service.blurb);
+  const firstSentence = blurb.split(/(?<=\.)\s/)[0] ?? blurb;
+  const description = `${firstSentence} From $${(service.base_price_cents / 100).toFixed(0)}, paid only once the job is done.`;
   return {
     title,
     description,
@@ -73,6 +82,7 @@ export default async function ServiceDetailPage({
   const name = publicServiceName(service.id, service.title);
   const description = publicServiceDescription(service.id, service.blurb);
   const deliveredByCall = callDelivered.has(service.id);
+  const scope = SERVICE_SCOPE[service.id];
 
   /*
     Chosen by what someone books next, with the category as a fallback
@@ -108,9 +118,21 @@ export default async function ServiceDetailPage({
     areaServed: CITIES.map((c) => ({ "@type": "City", name: c.name })),
     offers: {
       "@type": "Offer",
+      /*
+        The BASE price, and it says so. It is not an all-in total: a
+        flat service fee is added, and time, units or crew can be added
+        on top by the answers on the booking form.
+
+        No `availability`. Emitting InStock is a claim that a helper is
+        available, which nothing here measures — the honest shape is to
+        omit it rather than publish a supply promise.
+      */
       price: baseDollars.toFixed(2),
       priceCurrency: "USD",
-      availability: "https://schema.org/InStock",
+      description:
+        `Base price before the flat $${serviceFee.toFixed(2)} service fee`
+        + `${pricingRules[service.id]?.includedMinutes != null ? `, covering the first booked period` : ``}`
+        + `. Final total depends on the answers given when booking.`,
       url: `https://helpward.com/new-request?service=${service.id}`,
     },
   };
@@ -296,6 +318,82 @@ export default async function ServiceDetailPage({
         </section>
 
         {/*
+          WHAT IS AND IS NOT INCLUDED, in the body rather than inside an
+          FAQ. An exclusion a customer first meets on their doorstep is
+          an exclusion that was published in the wrong place.
+        */}
+        {scope && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <h2 className="text-2xl font-bold text-slate-900">
+              What {name.toLowerCase()} covers
+            </h2>
+            <div className="mt-4 grid gap-5 md:grid-cols-2 max-w-5xl">
+              <div className="rounded-2xl border border-slate-100 bg-white p-5">
+                <h3 className="text-sm font-bold text-slate-900">Included</h3>
+                <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                  {scope.includes.map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-5">
+                <h3 className="text-sm font-bold text-slate-900">Not included</h3>
+                <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                  {scope.excludes.map((item) => (
+                    <li key={item} className="flex items-start gap-2">
+                      <span aria-hidden="true" className="mt-0.5 text-amber-700 font-bold leading-none">&times;</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/*
+          TRUST STATEMENTS NEED SOMEWHERE TO GO.
+
+          None of the 78 service pages linked to /safety or /help, on
+          pages that discuss screening, support and disputes. A trust
+          claim with no path to the explanation behind it is a dead end.
+        */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-2">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 sm:p-6 max-w-4xl">
+            <h2 className="text-base font-bold text-slate-900">Before you book</h2>
+            <ul className="mt-3 grid gap-2 sm:grid-cols-3 text-sm">
+              <li>
+                <Link href="/safety" className="font-semibold text-brand-700 hover:underline">
+                  How we keep bookings safe
+                </Link>
+                <span className="block text-slate-600 text-[13px]">
+                  Who gets approved, and what happens if something goes wrong.
+                </span>
+              </li>
+              <li>
+                <Link href="/terms" className="font-semibold text-brand-700 hover:underline">
+                  Cancellations and refunds
+                </Link>
+                <span className="block text-slate-600 text-[13px]">
+                  When you can cancel, and the 24-hour dispute window.
+                </span>
+              </li>
+              <li>
+                <Link href="/help" className="font-semibold text-brand-700 hover:underline">
+                  Help and contact a person
+                </Link>
+                <span className="block text-slate-600 text-[13px]">
+                  Support by call, chat or email, answered by a human.
+                </span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        {/*
           HOW THE PRICE IS WORKED OUT.
 
           The pricing card shows three numbers; this says what moves
@@ -364,7 +462,13 @@ export default async function ServiceDetailPage({
                   href={`/services/${r.id}`}
                   className="rounded-xl border border-slate-100 bg-white p-3 hover:border-brand-300 hover:shadow transition"
                 >
-                  <div className="text-sm font-bold text-slate-900 truncate">{publicServiceName(r.id, r.title)}</div>
+                  {/* The reason first: a name and a price is not a reason. */}
+                  {relatedPrompt(r.id) && (
+                    <div className="text-[11px] font-semibold text-brand-700 leading-snug">
+                      {relatedPrompt(r.id)}
+                    </div>
+                  )}
+                  <div className="text-sm font-bold text-slate-900 mt-0.5">{publicServiceName(r.id, r.title)}</div>
                   <div className="text-[11px] text-slate-500 mt-0.5">From ${(r.base_price_cents / 100).toFixed(0)} · {r.eta_label}</div>
                 </Link>
               ))}

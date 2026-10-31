@@ -153,6 +153,28 @@ export default async function BlogPostPage({
           </span>
         </div>
 
+        {/*
+          A way back into the service journey. None of these articles
+          linked to a single service page, so finishing one was a dead
+          end. Per-post and chosen for relevance, not a block of links
+          bolted onto every article.
+        */}
+        {post.nextSteps && post.nextSteps.length > 0 && (
+          <div className="not-prose mt-10 rounded-2xl border border-slate-100 bg-slate-50 p-5 sm:p-6">
+            <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Where to next</div>
+            <ul className="grid sm:grid-cols-2 gap-4">
+              {post.nextSteps.map((step) => (
+                <li key={step.href}>
+                  <Link href={step.href} className="text-sm font-semibold text-brand-700 hover:underline">
+                    {step.label}
+                  </Link>
+                  <p className="text-[13px] text-slate-600 mt-0.5">{step.why}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {related.length > 0 && (
           <div className="not-prose mt-10">
             <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Related reading</div>
