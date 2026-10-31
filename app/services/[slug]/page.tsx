@@ -17,6 +17,7 @@ import {
   coverageNote,
   pricingExplanation,
 } from "@/lib/public-service-copy";
+import { SERVICE_PAGE_COPY } from "@/lib/public-service-pages";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../_landing-header";
 import { CITIES } from "@/lib/marketing";
@@ -39,9 +40,9 @@ export async function generateMetadata({
   const { slug } = await params;
   const service = await getServicePublic(slug);
   if (!service) return { title: "Service not found — Helpward" };
-  const copy = PUBLIC_SERVICE_COPY[service.id];
+  const page = SERVICE_PAGE_COPY[service.id];
   const name = publicServiceName(service.id, service.title);
-  const title = copy?.title ?? `${name} — Book a verified helper | Helpward`;
+  const title = page?.title ?? `${name} — Book a verified helper | Helpward`;
   const description = `${publicServiceDescription(service.id, service.blurb)} Approved local helpers. From $${(service.base_price_cents / 100).toFixed(0)}, paid only after the task is complete.`;
   return {
     title,
@@ -68,7 +69,7 @@ export default async function ServiceDetailPage({
   // The public name, and the catalogue title it belongs to. Both appear:
   // the search phrase leads, the product is named once so the page and
   // the app are plainly the same thing.
-  const copy = PUBLIC_SERVICE_COPY[service.id];
+  const page = SERVICE_PAGE_COPY[service.id];
   const name = publicServiceName(service.id, service.title);
   const description = publicServiceDescription(service.id, service.blurb);
   const deliveredByCall = callDelivered.has(service.id);
@@ -114,24 +115,28 @@ export default async function ServiceDetailPage({
     },
   };
 
+  /*
+    THE SERVICE'S OWN QUESTIONS FIRST.
+
+    These four were asked on all twenty-six pages with the name slotted
+    in — questions nobody searches, answered identically every time, and
+    on a service delivered by phone call one of them asked about an
+    arrival that never happens. The per-service set in
+    lib/public-service-pages.ts leads; these two survive after it because
+    they are genuinely the same answer everywhere, and the arrival
+    question is gone.
+  */
   const SERVICE_FAQS = [
-    {
-      q: `What is ${name.toLowerCase()} on Helpward?`,
-      a: `${description} Helpward matches your request with a nearby helper who has been reviewed and approved by a person at Helpward before they can take work.`,
-    },
+    ...(SERVICE_PAGE_COPY[service.id]?.faqs ?? [
+      {
+        q: `What is ${name.toLowerCase()} on Helpward?`,
+        a: `${description} Helpward matches your request with a nearby helper who has been reviewed and approved by a person at Helpward before they can take work.`,
+      },
+    ]),
     {
       q: `How much does ${name.toLowerCase()} cost?`,
       a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)}. A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. ${pricing.points.slice(0, -1).join(" ")}`,
     },
-    deliveredByCall
-      ? {
-          q: `How soon will a helper call?`,
-          a: `${service.title} is delivered by phone call, so nobody travels to you. Requests are offered to approved helpers straight away and typically answered in ${service.eta_label ?? "around 18 minutes"} during normal hours. The call happens at the time you booked.`,
-        }
-      : {
-          q: `How fast can a helper arrive?`,
-          a: `Average response time for ${service.title} is ${service.eta_label ?? "around 18 minutes"} during normal hours. The matching engine notifies all nearby qualified helpers at once; the first to accept becomes yours and you can track their ETA live.`,
-        },
     {
       q: `Are Helpward helpers verified?`,
       a: `Every helper is reviewed and approved by a person at Helpward before they can take a task, and no unapproved helper is ever offered work. Automated ID verification and background checks are not running yet — we will say so here when they are, rather than before. Helpward does not currently carry platform insurance.`,
@@ -185,10 +190,10 @@ export default async function ServiceDetailPage({
               {service.category?.label}
             </div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
-              {copy?.h1 ?? service.title}
+              {page?.h1 ?? service.title}
             </h1>
             <p className="mt-3 text-base sm:text-lg text-slate-600 max-w-2xl leading-relaxed">
-              {copy?.intro ?? description}
+              {page?.intro ?? description}
             </p>
 
             <div className="mt-5 flex flex-wrap items-center gap-3 text-xs">

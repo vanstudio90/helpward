@@ -32,15 +32,6 @@ import { CITIES } from "@/lib/marketing";
 export type PublicServiceCopy = {
   /** Directory label, link text and the name in headings. */
   name?: string;
-  /** <title>. */
-  title?: string;
-  /** On-page H1. */
-  h1?: string;
-  /**
-    Opening paragraph. Leads with the need, then names the product once
-    so the bridge from search phrase to catalogue title is explicit.
-  */
-  intro?: string;
   /** Meta description and the `description` in Service structured data. */
   description?: string;
   /**
@@ -57,23 +48,11 @@ export type PublicServiceCopy = {
 export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
   "car-battery-jump": {
     name: "Car Jump-Start Service",
-    title: "Car Jump-Start Service — Mobile Battery Boost | Helpward",
-    h1: "Car jump-start service",
-    intro:
-      "A flat battery, someone there with cables and a portable jump pack, and no tow truck. "
-      + "On Helpward this is booked as the Car Battery Jump service: tell us where the car is "
-      + "and a nearby helper comes out to start it.",
     related: ["designated-driver", "errand-runner"],
   },
 
   "maid-service": {
     name: "House Cleaning & Maid Service",
-    title: "House Cleaning & Maid Service — Book a Local Cleaner | Helpward",
-    h1: "House cleaning and maid service",
-    intro:
-      "Dusting, vacuuming, kitchens, bathrooms and laundry, done by a cleaner you can book "
-      + "again next week. On Helpward this is the Maid Service: choose the rooms and the hours, "
-      + "and see the price before anything goes to a helper.",
     // "Insured cleaner" removed — Helpward carries no platform insurance,
     // which this page's own FAQ states.
     description:
@@ -84,12 +63,6 @@ export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
 
   "elder-assistance": {
     name: "Senior Companionship & Everyday Help",
-    title: "Senior Companionship & Everyday Help at Home | Helpward",
-    h1: "Senior companionship and everyday help",
-    intro:
-      "Company, and a hand with the ordinary things — grocery trips, doctor visits, conversation, "
-      + "light housekeeping. On Helpward this is the Elder Assistance service, booked by the hour "
-      + "for a parent or grandparent, or for yourself.",
     // "Background-checked" removed — automated background checks are not
     // running, which this page's own FAQ states.
     description:
@@ -100,34 +73,16 @@ export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
 
   "house-check-in": {
     name: "Home Check-In While You're Away",
-    title: "Home Check-In While You're Away — House Visits | Helpward",
-    h1: "Home check-in while you're away",
-    intro:
-      "Someone calls at your house while you are travelling: checks the locks, waters the plants, "
-      + "brings in the mail and sends you a photo report. On Helpward this is the House Check-In "
-      + "service — book a single visit, or one for each week you are gone.",
     related: ["dog-walking", "property-inspection", "maid-service"],
   },
 
   "wait-in-line": {
     name: "Hire Someone to Wait in Line",
-    title: "Hire Someone to Wait in Line — Queue Holding | Helpward",
-    h1: "Hire someone to wait in line",
-    intro:
-      "Spend someone else's hours in the queue instead of your own. On Helpward this is the "
-      + "Wait in Line service: a helper holds a place in an eligible queue for as long as you "
-      + "book, then hands it over where the venue allows it. You are paying for their time.",
     related: ["errand-runner", "event-companion"],
   },
 
   "property-inspection": {
     name: "Property Photo & Condition Visit",
-    title: "Property Photo & Condition Visit — Dated Report | Helpward",
-    h1: "Property photo and condition visit",
-    intro:
-      "A visit to a property, photographs, and a written note of what was visible on the day. "
-      + "On Helpward this is the Property Inspection service. It is a record of a visit — not a "
-      + "technical, pre-purchase or code inspection, and the helper is not a licensed inspector.",
     related: ["house-check-in", "maid-service"],
   },
   "designated-driver": { related: ["car-battery-jump", "event-companion"] },
