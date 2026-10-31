@@ -1,6 +1,7 @@
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { one } from "@/lib/supabase/relation";
 import { describeIntake } from "@/lib/service-intake";
+import { servicePrep } from "@/lib/public-service-prep";
 import { MapBackdrop } from "@/components/MapBackdrop";
 import { Activity, MessageSquare, Phone, CheckCircle2, Play } from "lucide-react";
 import { OnlineToggle, BookingActions } from "./client";
@@ -82,6 +83,19 @@ export default async function ProviderActivePage() {
     ? describeIntake(booking.service?.id ?? "", booking.intake)
     : [];
   const customerNotes = booking ? one(bookingRow!.pickup_addr)?.notes ?? null : null;
+
+  /*
+    What the customer was asked to have ready — the same list from
+    lib/public-service-prep.ts that the service page and their booking
+    show them.
+
+    It is here so the helper knows what was promised and can say
+    "you mentioned the lead would be by the door" rather than guessing
+    what the customer was told. It contains no customer data at all: it
+    is the generic list for the service, and the private half still
+    lives only in the handover instructions.
+  */
+  const expected = booking ? servicePrep(booking.service?.id ?? "") : null;
 
   // The customer's number, released by profile_contacts' policy only
   // while this booking is live (migration 0050). It used to ride on the
@@ -355,6 +369,21 @@ export default async function ProviderActivePage() {
                   <p className="mt-2 text-xs text-slate-700 whitespace-pre-wrap border-t border-amber-100 pt-2">
                     <span className="text-slate-500">Notes: </span>{customerNotes}
                   </p>
+                )}
+                {expected && expected.length > 0 && (
+                  <details className="mt-2 border-t border-amber-100 pt-2">
+                    <summary className="text-xs text-slate-600 cursor-pointer">
+                      What the customer was asked to have ready
+                    </summary>
+                    <ul className="mt-1.5 space-y-1 text-xs text-slate-700">
+                      {expected.map((item) => (
+                        <li key={item} className="flex items-start gap-2">
+                          <span aria-hidden="true" className="mt-1.5 w-1 h-1 rounded-full bg-amber-400 shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
                 )}
               </div>
             )}

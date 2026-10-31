@@ -4,11 +4,12 @@ import { InspectionView } from "./inspection-view";
 import { bookingStatusLabel, bookingStatusTone } from "@/lib/booking-status";
 import { CallPanel } from "@/components/CallPanel";
 import { describeIntake } from "@/lib/service-intake";
+import { servicePrep, prepHeading } from "@/lib/public-service-prep";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, MessageSquare, Phone, Star, MapPin, Calendar, AlertOctagon,
-  CheckCircle2, Camera,
+  CheckCircle2, Camera, ClipboardCheck,
 } from "lucide-react";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { MapBackdrop } from "@/components/MapBackdrop";
@@ -418,6 +419,34 @@ export default async function BookingDetailPage({
               >
                 Confirm payment
               </Link>
+            </div>
+          )}
+
+          {/*
+            The same preparation list the service page shows, surfaced
+            where it is actually actionable: on a booking that has not
+            started yet. Once a job is running or finished, telling
+            someone to find the lead is noise, so it stops then.
+
+            One source, lib/public-service-prep.ts, so the public page
+            and the booking cannot drift apart.
+          */}
+          {b.status === "scheduled" && servicePrep(b.service_id) && (
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="w-4 h-4 text-brand-600" />
+                <div className="text-sm font-bold text-slate-900">
+                  {prepHeading(isCallService)}
+                </div>
+              </div>
+              <ul className="mt-2.5 space-y-1.5 text-xs text-slate-700">
+                {servicePrep(b.service_id)!.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span aria-hidden="true" className="mt-1.5 w-1 h-1 rounded-full bg-slate-400 shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

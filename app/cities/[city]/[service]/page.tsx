@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowRight, CheckCircle2, Clock, ShieldCheck, Star, MapPin, Users, Sparkles,
+  ArrowRight, ClipboardCheck, CheckCircle2, Clock, ShieldCheck, Star, MapPin, Users, Sparkles,
 } from "lucide-react";
 import type { Metadata } from "next";
 import {
@@ -18,6 +18,7 @@ import {
   relatedPrompt,
 } from "@/lib/public-service-copy";
 import { cityCopy } from "@/lib/public-city-copy";
+import { servicePrep, prepHeading, HANDOVER_LINE } from "@/lib/public-service-prep";
 import { SERVICE_SCOPE } from "@/lib/public-service-pages";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../../_landing-header";
@@ -79,6 +80,7 @@ export default async function CityServicePage({
   const blurb = publicServiceDescription(service.id, service.blurb);
   const deliveredByCall = callDelivered.has(service.id);
   const scope = SERVICE_SCOPE[service.id];
+  const prep = servicePrep(service.id);
   const local = cityCopy(city.slug);
   const currency = local?.currency ?? (city.country === "CA" ? "CAD" : "USD");
 
@@ -378,6 +380,36 @@ export default async function CityServicePage({
                 </p>
               </div>
             </div>
+          </section>
+        )}
+
+        {/*
+          WHAT TO HAVE READY.
+
+          Grounded in what the booking form asks and what a job actually
+          stalls on — a lead nobody can find, a bracket never bought, a
+          password in somebody's head. The PRIVATE half is deliberately
+          absent: codes and key locations go in the handover instructions
+          on the booking, which only the booked helper can read.
+        */}
+        {prep && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <h2 className="text-2xl font-bold text-slate-900">
+              {prepHeading(deliveredByCall)} in {city.name}
+            </h2>
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2 max-w-4xl text-sm text-slate-700">
+              {prep.map((item) => (
+                <li key={item} className="flex items-start gap-2.5 rounded-xl border border-slate-100 bg-white p-4">
+                  <ClipboardCheck className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            {!deliveredByCall && (
+              <p className="mt-4 max-w-3xl text-[13px] text-slate-600 border-l-2 border-slate-200 pl-3">
+                {HANDOVER_LINE}
+              </p>
+            )}
           </section>
         )}
 

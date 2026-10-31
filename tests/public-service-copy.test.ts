@@ -14,6 +14,7 @@ import {
   pricingExplanation,
 } from "../lib/public-service-copy.ts";
 import { CITY_COPY } from "../lib/public-city-copy.ts";
+import { SERVICE_PREP, servicePrep, prepHeading, HANDOVER_LINE } from "../lib/public-service-prep.ts";
 
 /*
   Guards for the public marketing copy.
@@ -242,5 +243,59 @@ test("every service a page can link to has a reason to follow the link", () => {
     for (const target of copy.related ?? []) {
       assert.ok(RELATED_PROMPT[target], `${id} links to ${target} with no reason given`);
     }
+  }
+});
+
+test("every service tells the customer what to prepare", () => {
+  for (const id of Object.keys(SERVICE_PAGE_COPY)) {
+    const items = servicePrep(id);
+    assert.ok(items, `${id} has no preparation guidance`);
+    assert.ok(items!.length >= 3, `${id} lists only ${items!.length} things to prepare`);
+    for (const item of items!) {
+      assert.ok(item.split(/\s+/).length >= 5, `${id} has a preparation line too terse to act on: "${item}"`);
+    }
+  }
+});
+
+test("preparation guidance never contains a private detail", () => {
+  /*
+    The lists say WHAT to prepare. The thing itself — a gate code, an
+    alarm code, a key location — belongs in the handover instructions on
+    a booking, which only the booked helper can read. A real value
+    appearing here would be published on a static public page and sent
+    to every helper an open request reaches.
+  */
+  const looksPrivate = [
+    /\b\d{4,}\b/,                      // a bare numeric code
+    /\bcode is\b/i,
+    /\bpassword is\b/i,
+    /\bkey is (?:under|in|behind)\b/i,
+    /\bunit \d/i,
+    /@[a-z0-9.-]+\.[a-z]{2,}/i,         // an email address
+    /\+?\d[\d\s().-]{7,}\d/,          // a phone number
+  ];
+  for (const [id, prep] of Object.entries(SERVICE_PREP)) {
+    for (const item of prep.items) {
+      for (const pattern of looksPrivate) {
+        assert.ok(
+          !pattern.test(item),
+          `${id} preparation line looks like it contains a private detail: "${item}"`,
+        );
+      }
+    }
+  }
+  assert.ok(!/\d{4,}/.test(HANDOVER_LINE));
+});
+
+test("an audio service is never told to prepare for an arrival", () => {
+  assert.equal(prepHeading(true), "Before your session");
+  assert.equal(prepHeading(false), "Before your helper arrives");
+  for (const id of ["listening-service", "sleep-call-companion"]) {
+    const text = servicePrep(id)!.join(" ");
+    assert.ok(
+      !/\barriv|\bdoor\b|\bparking\b|\bkeys?\b/i.test(text),
+      `${id} preparation mentions a physical arrival: ${text}`,
+    );
+    assert.match(text, /microphone/i, `${id} should mention microphone permission`);
   }
 });
