@@ -54,9 +54,17 @@ minutes. It is also disposable afterwards.
 
 ```bash
 cd ~/sites/helpward           # on the release branch
-REHEARSAL_DATABASE_URL='<throwaway connection string>' \
-  node scripts/rehearse-upgrade.mjs
+
+# Both are required. The ref is declared separately on purpose: it has to
+# be stated, and then proved against the connection string.
+export REHEARSAL_PROJECT_REF='<the scratch project ref>'
+export REHEARSAL_DATABASE_URL='<its connection string>'
+node scripts/rehearse-upgrade.mjs
 ```
+
+Put these in the shell or the deployment environment. **Not in a
+document, a commit or a chat message** — a connection string is a
+credential.
 
 It will:
 
@@ -68,9 +76,29 @@ It will:
    that `offer_summary`, which the code shipping alongside it reads,
    exists.
 
-It **refuses to run** against a database with rows in `bookings`, so it
-cannot be pointed at production or at the real rehearsal project by
-mistake.
+## How it refuses the wrong database
+
+The first version of this guard refused any database holding bookings.
+**That protected nothing** — production has never had a booking, so it
+would have sailed straight past the one database it most needed to stop
+at. A guard has to assert the target's identity, not a property it
+happens to share with everything else.
+
+It now refuses, before any write:
+
+- a connection string or declared ref matching **production** or the
+  **existing rehearsal project**, whichever of the two inputs names it;
+- a declared ref that disagrees with the ref in the connection string —
+  one of them is wrong and guessing is not safe;
+- a database that is not blank: any applied migrations, or any
+  `auth.users`. A scratch project has neither.
+
+The bookings check stays as a last line, correctly described now as
+corroboration rather than protection.
+
+Verified by pointing it at production's ref, at production's URL with a
+scratch ref declared, at the existing rehearsal project, and at a
+mismatched pair. All four refused.
 
 Keep its output with the release candidate: that transcript is the
 evidence that the sequence works from `0080`.
