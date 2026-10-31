@@ -18,7 +18,12 @@ import {
   pricingExplanation,
   relatedPrompt,
 } from "@/lib/public-service-copy";
-import { staticPriceLabel, displayBaseCents } from "@/lib/country-price";
+import {
+  staticPriceLabel,
+  displayBaseCents,
+  countryMoneyForService,
+  bothCountries,
+} from "@/lib/country-price";
 import { formatMoney } from "@/lib/money";
 import { servicePrep, prepHeading, HANDOVER_LINE } from "@/lib/public-service-prep";
 import { SERVICE_PAGE_COPY, SERVICE_SCOPE, servicePageFaqs } from "@/lib/public-service-pages";
@@ -120,10 +125,25 @@ export default async function ServiceDetailPage({
   const serviceFee = 4.5;
   const total = baseDollars + serviceFee;
 
+  /*
+    Every money component in both countries, not just the base. The block,
+    the per-unit and the per-crew amounts all differ too, and
+    price_service_cents coalesces each one separately.
+  */
+  const money = countryMoneyForService(
+    service.base_price_cents,
+    overrides,
+    pricingRules[service.id] ?? null,
+  );
+  const amount = bothCountries(formatMoney);
   const pricing = pricingExplanation({
-    baseCents: service.base_price_cents,
+    base: money.base,
+    block: money.block,
+    unit: money.unit,
+    crew: money.crew,
     serviceFeeCents: Math.round(serviceFee * 100),
     rule: pricingRules[service.id] ?? null,
+    amount,
   });
 
   const SERVICE_LD = {
@@ -174,9 +194,13 @@ export default async function ServiceDetailPage({
   // Figures resolved from this service's live base price and pricing
   // rule, so the copy cannot outlive a rate-card change.
   const serviceFaqs = servicePageFaqs(service.id, {
-    baseCents: service.base_price_cents,
+    base: money.base,
+    block: money.block,
+    unit: money.unit,
+    crew: money.crew,
     serviceFeeCents: Math.round(serviceFee * 100),
     rule: pricingRules[service.id] ?? null,
+    amount,
   });
 
   const SERVICE_FAQS = [
@@ -190,7 +214,7 @@ export default async function ServiceDetailPage({
         ]),
     {
       q: `How much does ${name.toLowerCase()} cost?`,
-      a: `Base price for ${service.title} is ${priceLabel}${differsByCountry ? " — it is not the same number in both countries" : ""}. A flat $${serviceFee.toFixed(2)} service fee is added. ${pricing.points.slice(0, -1).join(" ")}`,
+      a: `Base price for ${service.title} is ${priceLabel}${differsByCountry ? " — a separate price in each country, not a conversion" : ""}. A flat $${serviceFee.toFixed(2)} service fee is added. ${pricing.points.slice(0, -1).join(" ")}`,
     },
     {
       q: `Are Helpward helpers verified?`,

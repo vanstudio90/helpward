@@ -157,3 +157,80 @@ export function localizeRule<
     perExtraCrewCents: row.per_extra_crew_cents ?? rule.perExtraCrewCents,
   };
 }
+
+/*
+  THE WHOLE RULE, IN BOTH COUNTRIES, PLUS HOW TO PRINT IT.
+
+  Built in one place so a page cannot localise the base and forget the
+  block, which is the bug that put a US block price on a Canadian page.
+  `price_service_cents` coalesces each component separately, and this
+  mirrors that exactly: a country row's field wins only when it is not
+  null.
+*/
+export type CountryAmount = { us: number; ca: number };
+
+function pick(
+  overrides: CountryPrice[] | null | undefined,
+  field: keyof CountryPrice,
+  fallback: number | null,
+): CountryAmount | null {
+  const us = overrides?.find((o) => o.country === "US");
+  const ca = overrides?.find((o) => o.country === "CA");
+  const u = (us?.[field] as number | null | undefined) ?? fallback;
+  const c = (ca?.[field] as number | null | undefined) ?? fallback;
+  if (u == null || c == null) return null;
+  return { us: u, ca: c };
+}
+
+export type RuleMoney = {
+  base: CountryAmount;
+  block: CountryAmount | null;
+  unit: CountryAmount | null;
+  crew: CountryAmount | null;
+};
+
+export function countryMoneyForService(
+  serviceBaseCents: number,
+  overrides: CountryPrice[] | null | undefined,
+  rule: {
+    extraBlockCents: number | null;
+    perExtraUnitCents: number | null;
+    perExtraCrewCents: number | null;
+  } | null | undefined,
+): RuleMoney {
+  return {
+    base: pick(overrides, "base_price_cents", serviceBaseCents) ?? {
+      us: serviceBaseCents,
+      ca: serviceBaseCents,
+    },
+    block: pick(overrides, "extra_block_cents", rule?.extraBlockCents ?? null),
+    unit: pick(overrides, "per_extra_unit_cents", rule?.perExtraUnitCents ?? null),
+    crew: pick(overrides, "per_extra_crew_cents", rule?.perExtraCrewCents ?? null),
+  };
+}
+
+/**
+ * How a money amount reads where the country is unknown — both figures
+ * when they differ, one when they do not.
+ *
+ * NEVER collapse differing amounts to a single figure with a note that
+ * it is "the same in both currencies". It is not, for any launch
+ * service, and tests/public-service-copy.test.ts fails on that wording.
+ */
+export function bothCountries(
+  format: (cents: number, currency: string) => string,
+): (a: CountryAmount) => string {
+  return (a) =>
+    a.us === a.ca
+      ? format(a.us, "USD").replace(/^US\$/, "$")
+      : `${format(a.us, "USD")} · ${format(a.ca, "CAD")}`;
+}
+
+/** The same, where the country IS known. */
+export function oneCountry(
+  format: (cents: number, currency: string) => string,
+  country: string | null | undefined,
+): (a: CountryAmount) => string {
+  const ca = country === "CA";
+  return (a) => format(ca ? a.ca : a.us, ca ? "CAD" : "USD");
+}

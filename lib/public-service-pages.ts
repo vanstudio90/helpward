@@ -1157,21 +1157,20 @@ export const SERVICE_PAGE_COPY: Record<string, ServicePageCopy> = {
 */
 
 export type PriceFacts = {
-  baseCents: number;
+  /** Every money amount, already resolved for both countries. */
+  base: { us: number; ca: number };
+  block?: { us: number; ca: number } | null;
+  unit?: { us: number; ca: number } | null;
+  crew?: { us: number; ca: number } | null;
   serviceFeeCents: number;
   rule: {
     includedMinutes: number | null;
     extraBlockMinutes: number | null;
-    extraBlockCents: number | null;
     includedUnits: number;
-    perExtraUnitCents: number | null;
-    perExtraCrewCents: number | null;
   } | null;
+  /** Prints one amount — both countries, or just this one. */
+  amount: (a: { us: number; ca: number }) => string;
 };
-
-function money(cents: number): string {
-  return cents % 100 === 0 ? `$${(cents / 100).toFixed(0)}` : `$${(cents / 100).toFixed(2)}`;
-}
 
 /** "30 minutes", "hour", "two hours" — reads after "covers the first …". */
 function duration(mins: number): string {
@@ -1184,32 +1183,35 @@ function duration(mins: number): string {
 const WORDS: Record<number, string> = { 1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five" };
 
 /**
- * One service's questions, with every figure resolved from live pricing.
+ * One service's questions, with every figure resolved from live pricing
+ * IN BOTH COUNTRIES.
  *
- * A token with nothing behind it would print as itself, so a service
- * whose rule loses a field drops the sentence rather than publishing
- * "{blockPrice} per extra {blockTime}".
+ * The tokens used to resolve from service_pricing alone, which is the US
+ * rate card — so a Canadian reading "each extra 15 minutes is $8.75" was
+ * reading a number they would never be charged. Every money token now
+ * goes through `amount`, which prints both figures where they differ.
+ *
+ * A token with nothing behind it drops the sentence rather than printing
+ * itself.
  */
 export function servicePageFaqs(serviceId: string, facts: PriceFacts): { q: string; a: string }[] {
   const page = SERVICE_PAGE_COPY[serviceId];
   if (!page) return [];
-  const { baseCents, serviceFeeCents, rule } = facts;
+  const { base, block, unit, crew, serviceFeeCents, rule, amount } = facts;
 
   const values: Record<string, string | null> = {
-    base: money(baseCents),
-    fee: money(serviceFeeCents),
+    base: amount(base),
+    fee: amount({ us: serviceFeeCents, ca: serviceFeeCents }),
     inclTime: rule?.includedMinutes != null ? duration(rule.includedMinutes) : null,
-    blockPrice: rule?.extraBlockCents != null ? money(rule.extraBlockCents) : null,
+    blockPrice: block ? amount(block) : null,
     blockTime: rule?.extraBlockMinutes != null ? duration(rule.extraBlockMinutes) : null,
-    unitPrice: rule?.perExtraUnitCents != null ? money(rule.perExtraUnitCents) : null,
+    unitPrice: unit ? amount(unit) : null,
     inclUnits: rule ? (WORDS[rule.includedUnits] ?? String(rule.includedUnits)) : null,
-    crewPrice: rule?.perExtraCrewCents != null ? money(rule.perExtraCrewCents) : null,
+    crewPrice: crew ? amount(crew) : null,
   };
 
   return page.faqs
     .map(({ q, a }) => {
-      // A sentence whose figures are unavailable is dropped, never
-      // served with the token showing.
       const needed = Array.from(a.matchAll(/\{(\w+)\}/g)).map((m) => m[1]);
       if (needed.some((key) => !values[key])) return null;
       return { q, a: a.replace(/\{(\w+)\}/g, (_, key: string) => values[key] ?? "") };

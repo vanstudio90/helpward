@@ -233,73 +233,81 @@ export function coverageNote(): string {
 
   Every page carried the same sentence: "Final pricing depends on
   distance, time, and any tip you add." Distance does not enter the
-  price. `bookings.distance_cents` exists, defaults to zero, and no code
-  path in the app, the API or any migration ever sets it — so a customer
-  reading that sentence was being told their fare moves with a number
-  that is always nought.
+  price. `bookings.distance_cents` exists, defaults to zero, and nothing
+  ever sets it.
 
-  Time only enters it where the service has a pricing rule, and seven of
-  the twenty-six do not: those are a flat price for the visit. Rather
-  than find a phrasing vague enough to be true of all of them, this
-  builds the explanation from the rule itself, so it cannot drift from
-  what price_service_cents() actually charges.
+  EVERY MONEY AMOUNT IS PER COUNTRY, not just the base. service_country_pricing
+  overrides base_price_cents, extra_block_cents, per_extra_unit_cents and
+  per_extra_crew_cents, and price_service_cents coalesces each one
+  individually, so a page that localises the base and leaves the block at
+  the catalogue value quotes a Canadian a US block price. Only the
+  included time, the block length and the included quantities are shared.
+
+  The caller supplies `amount`, which decides how a figure reads: both
+  countries on a static page that cannot know who is looking, one on a
+  city page that can.
 */
-export function pricingExplanation(opts: {
-  baseCents: number;
+
+export type CountryAmount = { us: number; ca: number };
+
+export type PricingFacts = {
+  base: CountryAmount;
   serviceFeeCents: number;
+  /** Per-country money for the rule, where the rule has that component. */
+  block?: CountryAmount | null;
+  unit?: CountryAmount | null;
+  crew?: CountryAmount | null;
   rule: {
     includedMinutes: number | null;
     extraBlockMinutes: number | null;
-    extraBlockCents: number | null;
     unitField: string | null;
     includedUnits: number;
-    perExtraUnitCents: number | null;
-    crewField: string | null;
     includedCrew: number;
-    perExtraCrewCents: number | null;
   } | null;
-}): { lead: string; points: string[] } {
-  const { baseCents, serviceFeeCents, rule } = opts;
-  const money = (c: number) =>
-    c % 100 === 0 ? `$${(c / 100).toFixed(0)}` : `$${(c / 100).toFixed(2)}`;
+  /** Renders one money amount — both figures, or just this country's. */
+  amount: (a: CountryAmount) => string;
+};
+
+export function pricingExplanation(facts: PricingFacts): { lead: string; points: string[] } {
+  const { base, serviceFeeCents, block, unit, crew, rule, amount } = facts;
   const mins = (m: number) => {
     if (m < 60) return `${m} minutes`;
     const h = m / 60;
-    return `${Number.isInteger(h) ? h : h.toFixed(1)} hour${h === 1 ? "" : "s"}`;
+    // "the first 1 hour" reads as a bug; "the first hour" is English.
+    if (h === 1) return "hour";
+    const words: Record<number, string> = { 2: "two hours", 3: "three hours", 4: "four hours" };
+    return words[h] ?? `${Number.isInteger(h) ? h : h.toFixed(1)} hours`;
   };
-
+  const fee = amount({ us: serviceFeeCents, ca: serviceFeeCents });
   const points: string[] = [];
 
-  if (rule?.includedMinutes != null && rule.extraBlockMinutes && rule.extraBlockCents != null) {
+  if (rule?.includedMinutes != null && rule.extraBlockMinutes && block) {
+    points.push(`${amount(base)} covers the first ${mins(rule.includedMinutes)}.`);
     points.push(
-      `${money(baseCents)} covers the first ${mins(rule.includedMinutes)}.`,
-    );
-    points.push(
-      `Longer than that is ${money(rule.extraBlockCents)} per extra `
-      + `${mins(rule.extraBlockMinutes)}. Blocks are started, not metered: `
-      + `a job that runs ${rule.extraBlockMinutes + 1} minutes over is charged two blocks, `
-      + `because a helper's time is booked rather than clocked.`,
+      `Longer than that is ${amount(block)} per extra ${mins(rule.extraBlockMinutes)}. `
+      + `Blocks are started, not metered: a job that runs ${rule.extraBlockMinutes + 1} minutes over `
+      + `is charged two blocks, because a helper's time is booked rather than clocked.`,
     );
   } else {
-    points.push(`${money(baseCents)} is the price for the visit, however long it takes.`);
+    points.push(`${amount(base)} is the price for the visit, however long it takes.`);
   }
 
-  if (rule?.unitField && rule.perExtraUnitCents != null) {
-    const unit = rule.unitField.replace(/_count$/, "").replace(/_/g, " ");
+  if (rule?.unitField && unit) {
+    const word = rule.unitField.replace(/_count$/, "").replace(/_/g, " ");
     points.push(
-      `${rule.includedUnits} ${unit}${rule.includedUnits === 1 ? "" : "s"} included; `
-      + `${money(rule.perExtraUnitCents)} for each one after that.`,
+      `${rule.includedUnits} ${word}${rule.includedUnits === 1 ? "" : "s"} included; `
+      + `${amount(unit)} for each one after that.`,
     );
   }
 
-  if (rule?.crewField && rule.perExtraCrewCents != null) {
+  if (crew) {
     points.push(
-      `${rule.includedCrew} helper${rule.includedCrew === 1 ? "" : "s"} included; `
-      + `${money(rule.perExtraCrewCents)} for each extra helper you ask for.`,
+      `${rule?.includedCrew ?? 1} helper${(rule?.includedCrew ?? 1) === 1 ? "" : "s"} included; `
+      + `${amount(crew)} for each extra helper you ask for.`,
     );
   }
 
-  points.push(`A flat ${money(serviceFeeCents)} service fee is added once, whatever the job.`);
+  points.push(`A flat ${fee} service fee is added once, whatever the job.`);
   points.push(
     "Distance does not change the price, and there is no surge pricing or "
     + "peak-hour markup. A tip is optional and entirely yours to set.",

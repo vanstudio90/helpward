@@ -19,7 +19,9 @@ import {
   relatedPrompt,
 } from "@/lib/public-service-copy";
 import { cityCopy } from "@/lib/public-city-copy";
-import { displayBaseCents } from "@/lib/country-price";
+import { displayBaseCents, countryMoneyForService, oneCountry } from "@/lib/country-price";
+import { pricingExplanation } from "@/lib/public-service-copy";
+import { formatMoney } from "@/lib/money";
 import { servicePrep, prepHeading, HANDOVER_LINE } from "@/lib/public-service-prep";
 import { SERVICE_SCOPE } from "@/lib/public-service-pages";
 import { ServiceIcon } from "@/components/ServiceIcon";
@@ -115,6 +117,27 @@ export default async function CityServicePage({
   const baseDollars = displayBaseCents(service.base_price_cents, service.country_pricing ?? undefined, city.country) / 100;
   const serviceFee = 4.5;
   const total = baseDollars + serviceFee;
+
+  /*
+    The whole quote in THIS country, not just the base. A city page knows
+    where it is, so unlike the main service pages it shows one figure per
+    line — and every line is the local one, because the block, per-unit
+    and per-crew amounts differ by country as well.
+  */
+  const localMoney = countryMoneyForService(
+    service.base_price_cents,
+    service.country_pricing ?? undefined,
+    pricingRules[service.id] ?? null,
+  );
+  const localPricing = pricingExplanation({
+    base: localMoney.base,
+    block: localMoney.block,
+    unit: localMoney.unit,
+    crew: localMoney.crew,
+    serviceFeeCents: Math.round(serviceFee * 100),
+    rule: pricingRules[service.id] ?? null,
+    amount: oneCountry(formatMoney, city.country),
+  });
 
   // JSON-LD: Service scoped to this one city, LocalBusiness for the city,
   // FAQPage with location-aware Q&A, and BreadcrumbList for the deep path.
@@ -477,6 +500,23 @@ export default async function CityServicePage({
             </div>
           </section>
         )}
+
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <h2 className="text-2xl font-bold text-slate-900">
+            What {name.toLowerCase()} costs in {city.name}
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            {localPricing.lead} Every figure below is in {currency}.
+          </p>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2 max-w-4xl text-sm text-slate-700">
+            {localPricing.points.map((point) => (
+              <li key={point} className="flex items-start gap-2 rounded-xl bg-white border border-slate-100 p-3.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         {/*
           Trust statements get a path here too — the same gap the main
