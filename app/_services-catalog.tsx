@@ -106,7 +106,7 @@ export function ServicesCatalog({
                       <div className="relative aspect-[5/3] bg-slate-100 overflow-hidden">
                         <img
                           src={s.image_url}
-                          alt={s.title}
+                          alt=""
                           loading="lazy"
                           className="w-full h-full object-cover group-hover:scale-105 transition"
                         />

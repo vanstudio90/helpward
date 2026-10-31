@@ -268,8 +268,27 @@ export default async function ServiceDetailPage({
 
           {/* Pricing card */}
           <aside className="rounded-2xl border border-slate-100 bg-white shadow-xl shadow-brand-900/5 overflow-hidden">
+            {/*
+              DECORATIVE, so alt="".
+
+              Stock photographs, with a heading beside each one that
+              already names the service, so they carry nothing a screen
+              reader needs. Describing them would be worse than silence:
+              all 26 were reviewed against the actual files on
+              2026-10-31 and 14 do not show the service at all — a
+              humanoid robot on Car Battery Jump, a fulfilment warehouse
+              on a page that says there is no postal network behind it, a
+              clinical white coat on a service that states it provides no
+              medical care, a television on a stand on the page about
+              mounting one to a wall. Announcing those as the page's
+              content would publish the mismatch, not fix it.
+
+              The descriptions and the replacement list went to the
+              designer. Give a photograph real alt text once it genuinely
+              shows the work.
+            */}
             {service.image_url && (
-              <img src={service.image_url} alt={service.title} loading="lazy" className="w-full aspect-[5/3] object-cover" />
+              <img src={service.image_url} alt="" loading="lazy" className="w-full aspect-[5/3] object-cover" />
             )}
             <div className="p-5">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Price estimate</div>

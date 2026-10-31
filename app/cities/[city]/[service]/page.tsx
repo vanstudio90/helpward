@@ -283,7 +283,7 @@ export default async function CityServicePage({
             {/* Pricing card */}
             <aside className="rounded-2xl border border-slate-100 bg-white shadow-xl shadow-brand-900/5 overflow-hidden">
               {service.image_url && (
-                <img src={service.image_url} alt={`${service.title} in ${city.name}`} loading="lazy" className="w-full aspect-[5/3] object-cover" />
+                <img src={service.image_url} alt="" loading="lazy" className="w-full aspect-[5/3] object-cover" />
               )}
               <div className="p-5">
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Price estimate · {city.country === "CA" ? "CAD" : "USD"}</div>
