@@ -180,9 +180,15 @@ export default async function PricingPage() {
               The authorisation is captured. This is the point at which you are charged.
             </li>
             <li>
-              <span className="font-semibold text-slate-900">If the booking is cancelled first,</span>{" "}
-              the authorisation is voided rather than refunded. A void never appears on your
-              statement; a refund would, and would take days to clear.
+              <span className="font-semibold text-slate-900">If the booking is cancelled before that,</span>{" "}
+              we release the card hold. Your bank may continue to show it as pending for a short
+              time — that is the hold clearing, not a charge. Nothing has been taken.
+            </li>
+            <li>
+              <span className="font-semibold text-slate-900">Releasing a hold is not a refund.</span>{" "}
+              A hold that was never captured is released and the money never leaves your account.
+              A payment already captured — a completed job — is refunded instead, which does appear
+              on your statement and takes several days to clear.
             </li>
             <li>
               <span className="font-semibold text-slate-900">A tip is a separate charge,</span>{" "}

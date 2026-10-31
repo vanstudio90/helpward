@@ -99,9 +99,13 @@ export async function cancelBookingAction(bookingId: string, reason?: string) {
   });
   if (error) return { error: error.message };
 
-  // Release the hold rather than refunding it. A void never reaches the
-  // customer's statement; a refund appears as a charge and then a credit
-  // days later, which reads as being charged for a job that never happened.
+  // Release the hold rather than refunding it: releasing means the money is
+  // never taken, where capturing and refunding shows the customer a charge
+  // and then a credit days later for a job that never happened.
+  //
+  // Do NOT describe this to a customer as "never appears on your statement".
+  // We do not control the issuer, and a released authorization commonly keeps
+  // showing as pending for a few days before it drops off.
   if (stripeConfigured()) {
     const released = await voidBookingAuthorization(bookingId);
     if (!released.ok && released.code !== "already_captured") {

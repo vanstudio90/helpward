@@ -25,9 +25,14 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
  *      so it cannot ride on the original authorization.
  *
  * Authorizing at acceptance rather than charging is what makes "you only
- * pay when the job is done" true: a cancelled booking is a void, which
- * never appears on the customer's statement, rather than a refund, which
- * does and takes days to clear.
+ * pay when the job is done" true: a cancelled booking releases the hold,
+ * so no money is ever taken, rather than capturing and refunding it.
+ *
+ * DO NOT tell a customer the hold "never appears on your statement". We
+ * do not control the issuer, and a released authorization commonly keeps
+ * showing as pending for a few days before it drops off. The honest
+ * wording, used on /pricing, is that the hold is released and the bank
+ * may show it as pending for a short time.
  */
 
 export type PaymentFailure = { ok: false; code: string; message: string };
