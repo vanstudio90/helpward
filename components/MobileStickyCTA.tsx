@@ -45,7 +45,7 @@ export function MobileStickyCTA({ heroSentinelId }: { heroSentinelId: string }) 
     >
       <div className="mx-3 mb-3 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg shadow-slate-900/10 p-2 flex items-center gap-2">
         <Link
-          href="/services"
+          href="/our-services"
           className="flex-1 inline-flex items-center justify-center px-3 py-3 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50"
         >
           Browse services

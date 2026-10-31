@@ -123,7 +123,7 @@ export default async function ServiceDetailPage({
           <ol className="flex items-center gap-1.5 flex-wrap">
             <li><Link href="/" className="hover:text-slate-900">Home</Link></li>
             <li className="text-slate-300">/</li>
-            <li><Link href="/services" className="hover:text-slate-900">Services</Link></li>
+            <li><Link href="/our-services" className="hover:text-slate-900">Services</Link></li>
             <li className="text-slate-300">/</li>
             <li className="text-slate-900 font-semibold">{service.title}</li>
           </ol>
@@ -164,7 +164,7 @@ export default async function ServiceDetailPage({
                 Book {service.title} — from ${baseDollars.toFixed(0)} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                href="/services"
+                href="/our-services"
                 className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl border border-slate-300 text-slate-900 font-semibold hover:bg-slate-50 transition"
               >
                 Browse all services
@@ -291,7 +291,7 @@ export default async function ServiceDetailPage({
               ))}
             </div>
             <p className="mt-6 text-xs text-slate-500">
-              Browse the <Link href="/services" className="text-brand-700 font-semibold hover:underline">full catalog</Link> of {allServices.length} services across {categories.length} categories.
+              Browse the <Link href="/our-services" className="text-brand-700 font-semibold hover:underline">full catalog</Link> of {allServices.length} services across {categories.length} categories.
             </p>
           </section>
         )}

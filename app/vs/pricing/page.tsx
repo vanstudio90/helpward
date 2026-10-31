@@ -187,7 +187,7 @@ export default function PricingPage() {
           <Sparkles className="w-4 h-4" /> Sign up free <ArrowRight className="w-4 h-4" />
         </Link>
         <Link
-          href="/services"
+          href="/our-services"
           className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50"
         >
           See all services + prices

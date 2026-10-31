@@ -39,6 +39,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const CATALOGUE_UPDATED = d("2026-10-28");
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${BASE}/`,            lastModified: d("2026-10-28"), changeFrequency: "weekly",  priority: 1.0 },
+    // The public directory. High priority because it is the hub every
+    // service page now links back to — /services is the signed-in
+    // browse and 307s a crawler to the login form.
+    { url: `${BASE}/our-services`, lastModified: CATALOGUE_UPDATED, changeFrequency: "weekly", priority: 0.9 },
     { url: `${BASE}/cities`,      lastModified: d("2026-10-28"), changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE}/about`,       lastModified: d("2026-10-24"), changeFrequency: "monthly", priority: 0.6 },
     { url: `${BASE}/safety`,      lastModified: d("2026-10-26"), changeFrequency: "monthly", priority: 0.7 },

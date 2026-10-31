@@ -47,7 +47,7 @@ export function ServicesCatalog({
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Explore all services</h2>
             <p className="text-sm text-slate-500 mt-1">{services.length} services across {grouped.length} categories</p>
           </div>
-          <Link href="/services" className="text-xs sm:text-sm font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1">
+          <Link href="/our-services" className="text-xs sm:text-sm font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1">
             View all services →
           </Link>
         </div>
