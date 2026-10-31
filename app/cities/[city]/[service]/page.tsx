@@ -24,7 +24,7 @@ import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../../_landing-header";
 import { CITIES, getCity } from "@/lib/marketing";
 
-// 270 programmatic landing pages (10 cities × 27 services) — each ranks for
+// One landing page per city × service — each ranks for
 // the long-tail query "<service> in <city>". Generated at build time with
 // service-role fetches; ISR refresh every hour so admin-added services land
 // without a deploy.

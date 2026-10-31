@@ -297,8 +297,8 @@ export default function Terms() {
                 through Helpward rather than through pressure to continue.
               </Callout>
               <p>
-                Companionship and listening services are not emergency response and not a
-                substitute for qualified healthcare.
+                No Helpward service is emergency response, and none is a substitute for
+                qualified healthcare.
               </p>
             </Sub>
             <Sub title="Emergencies">

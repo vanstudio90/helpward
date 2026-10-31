@@ -64,7 +64,7 @@ export default function About() {
 
         <h2>How Helpward actually works</h2>
         <ol>
-          <li>You describe what you need — a designated driver, a wait-in-line errand, a furniture assembly, a check-in on an elderly relative. Anything legal and safe that a human nearby can do.</li>
+          <li>You describe what you need — a flat-pack wardrobe built, a grocery order collected, returns taken to the carrier, hands for a move. Anything legal and safe that a human nearby can do.</li>
           <li>Our matching engine notifies nearby qualified helpers in real time. The first to accept becomes yours.</li>
           <li>You see their identity, rating, and live ETA before they arrive. In-app chat and live GPS run end-to-end.</li>
           <li>You confirm the task is complete. Only then is payment captured. A 24-hour dispute window keeps that capture pausable if something needs review.</li>

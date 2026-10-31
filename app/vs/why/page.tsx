@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Sparkles, Layers, Compass, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { MarketingShell } from "@/components/MarketingShell";
-import { COMPETITORS } from "@/lib/competitors";
+import { activeCompetitors } from "@/lib/competitors";
 
 export const metadata: Metadata = {
   title: "Why we built Helpward — the case against single-vertical task apps",
@@ -51,9 +51,9 @@ export default function WhyPage() {
 
       <p className="lead">
         Open the apps tray on a typical urban-renter phone and count the task apps. Grocery delivery.
-        Restaurant delivery. Dog walker. Moving. Cleaning. Handyman. The bid-quote app you used once
-        for the leaky sink. Maybe a babysitter app and a senior-care app for parents who don&apos;t
-        live nearby. Each one works fine in isolation. Stacked, they fragment what is conceptually
+        Restaurant delivery. Moving. Cleaning. Handyman. A returns app. The bid-quote app you used
+        once for the leaky sink. Each one wants its own account, its own card and its own support
+        queue. Each one works fine in isolation. Stacked, they fragment what is conceptually
         one job — <strong>getting through Saturday</strong> — into half a dozen separate transactions
         with half a dozen separate verifications and half a dozen separate strangers in your space.
       </p>
@@ -93,9 +93,9 @@ export default function WhyPage() {
       </p>
       <ol>
         <li>
-          <strong>One catalogue instead of six apps.</strong> A ride, a grocery run, a dog walk
-          and furniture assembly are all requests on the same account, with the same helpers,
-          payment and dispute process behind them. Multi-stop bundling — one helper doing several
+          <strong>One catalogue instead of six apps.</strong> A grocery collection, a parcel
+          return, a clean and furniture assembly are all requests on the same account, with the
+          same helpers, payment and dispute process behind them. Multi-stop bundling — one helper doing several
           of them on a single trip — is built but not switched on yet: it skips the per-task
           questions each service asks, so it would hand a helper a priced job with no brief.
           Today each task is its own request.
@@ -184,7 +184,7 @@ export default function WhyPage() {
           href="/vs"
           className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-slate-200 text-slate-700 text-sm font-bold hover:bg-slate-50"
         >
-          See all {COMPETITORS.length} comparisons
+          See all {activeCompetitors().length} comparisons
         </Link>
       </div>
 

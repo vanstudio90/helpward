@@ -12,11 +12,15 @@ import { publicServiceName } from "@/lib/public-service-copy";
   /services/tv-mounting from a search is not lost — they wanted a
   specific thing, and we are not selling it this week.
 
-  So this page answers that rather than shrugging. 404 is the right
-  status: not available now, ask again later. It is NOT 410, which would
-  claim they are never coming back, and they are not redirected to
-  another service, which would answer a different question from the one
-  the visitor asked.
+  So this page answers that rather than shrugging.
+
+  404 is the right status here: not available now, ask again later. 410
+  would also be defensible and is NOT irreversible — either status can
+  return 200 later — but 410 states that the resource is deliberately
+  gone, which overstates a pause. 404 says less, and less is accurate.
+
+  They are not redirected to another service either: that would answer a
+  different question from the one the visitor asked.
 
   The list is read from the catalogue, so it cannot drift from what is
   actually on sale, and it needs no edit when the eighteen return.

@@ -118,7 +118,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     body: [
       { type: "h2", text: "Base price" },
       { type: "p", text:
-        "Each service has a base price published on the catalog page — for example, a designated driver might start at $29. The base price covers the helper's time for the typical task in that category." },
+        "Each service has a base price published on its page — errand running starts at $35, a clean at $80. The base price covers the helper's time for the typical task in that category." },
       { type: "h2", text: "Service fee" },
       { type: "p", text:
         "Helpward adds a flat $4.50 service fee to every booking. It funds dispatch, payments, support and running the platform, and it is the same $4.50 whatever the task, whatever the time, wherever you are." },
@@ -269,7 +269,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     body: [
       { type: "h2", text: "Why use a recurring series" },
       { type: "p", text:
-        "If you need the same thing on a predictable cadence — Tuesday dog walks, the third of the month elder check-in, biweekly grocery pickup — a recurring series saves you from re-entering the same details every time. You set the rule once; Helpward turns it into individual bookings on the right dates." },
+        "If you need the same thing on a predictable cadence — a Tuesday clean, the third of the month grocery collection, a weekly run of returns — a recurring series saves you from re-entering the same details every time. You set the rule once; Helpward turns it into individual bookings on the right dates." },
       { type: "h2", text: "How to set one up" },
       { type: "ol", items: [
         "Open /new-request and pick a service.",
@@ -470,7 +470,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     ],
     faqs: [
       { q: "What if my helper can't complete one of the stops?", a: "The helper can mark any individual stop as skipped from their checklist — for example if a store is closed or an item is out of stock. You're refunded for the skipped item's price (the bundle service fee is non-refundable as long as at least one stop completes)." },
-      { q: "Can the stops be in different service categories?", a: "Yes. A bundle can mix categories — grocery pickup + dog walk + dry-cleaning return is fine. The matching engine routes the whole bundle to a helper qualified for the primary (first) service in the list." },
+      { q: "Can the stops be in different service categories?", a: "Yes. A bundle can mix categories — a grocery collection, a parcel return and an errand on the same trip is fine. The matching engine routes the whole bundle to a helper qualified for the primary (first) service in the list." },
       { q: "Is there a discount for bundling?", a: "You pay one $4.50 service fee for the whole bundle instead of one per task. On a 3-stop bundle that's effectively a $9.00 saving versus three separate requests, before factoring in the helper's travel time." },
       { q: "What's the maximum bundle size?", a: "Five stops. We cap it there because past 5 the helper's time blows out our distance and ETA estimates, and the upfront price starts to feel less honest. If you need more, split into two bookings." },
       { q: "Can I add a stop after the booking starts?", a: "Not yet. Once a helper has accepted the bundle the list is locked so the helper can plan their route. You can always create a second small request and message your helper to ask if they're available right after." },

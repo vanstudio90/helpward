@@ -39,7 +39,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How much does it cost?",
-    a: "Each service has a published base price (for example $20 for a designated driver). Helpward adds a flat $4.50 service fee and the total is shown before you submit. There is no surge pricing, no hidden fees, and no charge until the task is marked complete.",
+    a: "Each service has a published base price — errand running starts at $35, moving help at $100 — and the service page shows how the rest is worked out. Helpward adds a flat $4.50 service fee and the total is shown before you submit. There is no surge pricing, no hidden fees, and no charge until the task is marked complete.",
   },
   {
     q: "Is my payment secure?",

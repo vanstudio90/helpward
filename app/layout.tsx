@@ -50,15 +50,22 @@ const ORG_LD = {
     height: 512,
   },
   description:
-    "Helpward is an on-demand marketplace of approved local helpers for rides, errands, home help, deliveries, and almost any real-world task in San Diego and Vancouver's Lower Mainland.",
+    "Helpward is an on-demand marketplace of approved local helpers for cleaning, moving help, errands, deliveries and returns in San Diego and Vancouver's Lower Mainland.",
   areaServed: ["US", "CA"],
+  /*
+    These must name services we actually sell. Two of them — designated
+    driver and senior check-ins — stayed here after the catalogue was cut
+    to the app's launch set, which told search engines we offer things
+    that 404. Keep this list in step with the active catalogue.
+  */
   knowsAbout: [
     "On-demand local help",
+    "House cleaning",
+    "Moving help",
     "Errand running",
-    "Designated driver services",
     "Furniture assembly",
-    "Grocery delivery",
-    "Senior check-ins",
+    "Grocery collection",
+    "Local parcel delivery and returns",
     "Approved local helpers",
   ],
   // No sameAs. It is for a genuine identity profile on another service,

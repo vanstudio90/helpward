@@ -6,7 +6,7 @@ import { HELP_ARTICLES } from "@/lib/help-articles";
 import { SAFETY_PAGES } from "./safety/_safety-shell";
 import { JOBS } from "@/lib/careers";
 import { BLOG_POSTS } from "@/lib/blog-posts";
-import { COMPETITORS } from "@/lib/competitors";
+import { activeCompetitors } from "@/lib/competitors";
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://helpward.com";
 
@@ -149,7 +149,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/vs/why`, lastModified: CATALOGUE_UPDATED, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/vs/trust`, lastModified: CATALOGUE_UPDATED, changeFrequency: "monthly", priority: 0.7 },
     { url: `${BASE}/vs/pricing`, lastModified: CATALOGUE_UPDATED, changeFrequency: "monthly", priority: 0.7 },
-    ...COMPETITORS.map((c) => ({
+    ...activeCompetitors().map((c) => ({
       url: `${BASE}/vs/${c.slug}`,
       lastModified: CATALOGUE_UPDATED,
       changeFrequency: "monthly" as const,

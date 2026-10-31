@@ -3,10 +3,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowRight, Check, Minus, Sparkles } from "lucide-react";
 import { MarketingShell } from "@/components/MarketingShell";
-import { COMPETITORS, getCompetitor } from "@/lib/competitors";
+import { activeCompetitors, getCompetitor } from "@/lib/competitors";
 
 export function generateStaticParams() {
-  return COMPETITORS.map((c) => ({ slug: c.slug }));
+  return activeCompetitors().map((c) => ({ slug: c.slug }));
 }
 
 export async function generateMetadata({
@@ -137,7 +137,7 @@ export default async function VersusPage({
 
       <h2>More comparisons</h2>
       <ul className="not-prose grid sm:grid-cols-2 gap-2">
-        {COMPETITORS.filter((x) => x.slug !== c.slug).map((other) => (
+        {activeCompetitors().filter((x) => x.slug !== c.slug).map((other) => (
           <li key={other.slug}>
             <Link
               href={`/vs/${other.slug}`}

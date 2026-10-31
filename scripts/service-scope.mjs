@@ -14,10 +14,21 @@
   script with `restore`.
 
     node scripts/service-scope.mjs status
-    node scripts/service-scope.mjs cut      --apply
-    node scripts/service-scope.mjs restore  --apply
+    node scripts/service-scope.mjs cut --apply
+    node scripts/service-scope.mjs restore <service-id> [<service-id>…] --apply
 
   Without --apply it prints what it would do and changes nothing.
+
+  RESTORE IS DELIBERATELY ONE SERVICE AT A TIME. There is no "put
+  everything back" button, because approval is not the same as
+  readiness: each service needs its own check that it still works end to
+  end, that its public copy is accurate, and that nothing about it
+  raises an App Store question — the call services, for instance, are
+  withheld for a guideline reason that approval of this build does not
+  resolve. A single sweeping restore would quietly undo that reasoning.
+
+  While a submission is in review, do not restore anything. The scope
+  Apple is looking at is the scope that should be live.
 
   The launch set is duplicated from the iOS app's AppStorePolicy.swift
   on purpose: this repo cannot import Swift, and a wrong list here is
@@ -103,11 +114,35 @@ let targets;
 if (mode === "cut") {
   targets = rows.filter((r) => r.active && !LAUNCH.has(r.id)).map((r) => [r.id, false]);
 } else if (mode === "restore") {
-  targets = rows
-    .filter((r) => !r.active && !KEEP_INACTIVE.has(r.id))
-    .map((r) => [r.id, true]);
+  const asked = process.argv.slice(3).filter((a) => !a.startsWith("--"));
+  if (asked.length === 0) {
+    const off = rows.filter((r) => !r.active && !KEEP_INACTIVE.has(r.id)).map((r) => r.id);
+    console.error("Name the service(s) to restore. There is no restore-everything.\n");
+    console.error("Before restoring one, confirm:");
+    console.error("  1. it works end to end in the app and on the site");
+    console.error("  2. its public copy is accurate and its photograph shows the service");
+    console.error("  3. no App Store guideline blocks it (the call services are held for");
+    console.error("     a 3.1.1 reason that approving this build does not resolve)");
+    console.error("  4. no submission is currently in review\n");
+    console.error(`currently withdrawn:\n  ${off.join("\n  ")}`);
+    process.exit(1);
+  }
+  const known = new Set(rows.map((r) => r.id));
+  const unknown = asked.filter((id) => !known.has(id));
+  if (unknown.length) {
+    console.error(`unknown service id(s): ${unknown.join(", ")}`);
+    process.exit(1);
+  }
+  const blocked = asked.filter((id) => KEEP_INACTIVE.has(id));
+  if (blocked.length) {
+    console.error(`refusing: ${blocked.join(", ")} is held inactive by an earlier decision`);
+    process.exit(1);
+  }
+  const already = asked.filter((id) => rows.find((r) => r.id === id)?.active);
+  if (already.length) console.log(`already active, skipping: ${already.join(", ")}`);
+  targets = asked.filter((id) => !already.includes(id)).map((id) => [id, true]);
 } else {
-  console.error("usage: service-scope.mjs status|cut|restore [--apply]");
+  console.error("usage: service-scope.mjs status | cut --apply | restore <id…> --apply");
   process.exit(1);
 }
 

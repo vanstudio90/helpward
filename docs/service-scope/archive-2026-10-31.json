@@ -1,0 +1,4926 @@
+{
+ "takenAt": "2026-10-31T21:01:16.607Z",
+ "purpose": "Everything needed to restore a withdrawn Helpward service exactly as it was published. Withdrawn for the iOS first submission; see docs/service-scope/README.md.",
+ "codeRevision": {
+  "sha": "52e67e78b261998ed93b4dca71e5e6cfc8814035",
+  "shortSha": "52e67e78b2",
+  "committedAt": "2026-10-31T13:32:05-07:00"
+ },
+ "counts": {
+  "total": 27,
+  "active": 8,
+  "withdrawn": 19
+ },
+ "activeServices": [
+  "errand-runner",
+  "furniture-assembly",
+  "grocery-pickup",
+  "maid-service",
+  "moving-help",
+  "package-delivery",
+  "package-return",
+  "wait-in-line"
+ ],
+ "withdrawnServices": [
+  "appliance-repair",
+  "car-battery-jump",
+  "date-companion",
+  "designated-driver",
+  "dog-walking",
+  "elder-assistance",
+  "event-companion",
+  "family-standin",
+  "house-check-in",
+  "listening-service",
+  "motorcycle-taxi",
+  "professional-cuddler",
+  "property-inspection",
+  "rent-a-friend",
+  "shopping-companion",
+  "sleep-call-companion",
+  "tech-setup",
+  "tv-mounting",
+  "wedding-guest"
+ ],
+ "withdrawnComparisons": [
+  {
+   "slug": "rover",
+   "entry": {
+    "slug": "rover",
+    "brandName": "Rover",
+    "categoryLine": "Pet-care marketplace specialised in dog walking, boarding, drop-in visits, and house-sitting.",
+    "trafficContext": "Rover is the right call when the task is specifically dog walking or pet boarding and you want a sitter you can vet on profile pages. Helpward is the right call when pet care is part of a broader trip or one-off.",
+    "matrix": [
+     {
+      "feature": "Category breadth",
+      "helpward": "Errands, deliveries, home help, transportation, presence, business — pet care is one category among many",
+      "competitor": "Pet care only (dog walking, boarding, sitting, daycare)"
+     },
+     {
+      "feature": "Multi-day overnight boarding in the sitter's home",
+      "helpward": "Not advertised",
+      "competitor": "Yes",
+      "notes": "If you need overnight boarding while you travel, Rover is built around that flow; Helpward is per-task bookings."
+     },
+     {
+      "feature": "Background-checked workers",
+      "helpward": "Not yet — helpers are reviewed and approved by a person",
+      "competitor": "Yes",
+      "notes": "Parity."
+     },
+     {
+      "feature": "Insurance on every booking",
+      "helpward": "No — Helpward does not carry platform insurance",
+      "competitor": "Yes",
+      "notes": "Parity."
+     },
+     {
+      "feature": "Real-time GPS tracking",
+      "helpward": "Yes — live map from accept to complete",
+      "competitor": "Yes",
+      "notes": "Both ship live walk tracking."
+     },
+     {
+      "feature": "Photo proof of completion",
+      "helpward": "Up to 3 photos per booking; customer can revoke from portfolio",
+      "competitor": "Yes",
+      "notes": "Both ship walk-summary photos; Helpward additionally surfaces them as opt-in portfolio for repeat-booking trust."
+     },
+     {
+      "feature": "Bundle dog walk + grocery + dry-cleaning in one trip",
+      "helpward": "Up to 5 stops across categories, one helper, one service fee",
+      "competitor": "Not advertised"
+     },
+     {
+      "feature": "Recurring weekly / biweekly bookings",
+      "helpward": "Native recurring series for any service",
+      "competitor": "Yes",
+      "notes": "Parity — both offer recurring walks/visits."
+     },
+     {
+      "feature": "Save favorite helper + re-book first",
+      "helpward": "Star helper → next request routes to them first for 2 minutes",
+      "competitor": "Yes",
+      "notes": "Both support re-booking by name; Helpward also gives the favourite a 2-minute exclusive offer window before broader broadcast."
+     }
+    ],
+    "cta": "Pick Rover when you specifically need a dedicated dog walker or overnight pet boarder. Pick Helpward when pet care is one of several errands on the same trip, or for a one-off check-in attached to a non-pet task."
+   }
+  },
+  {
+   "slug": "wag",
+   "entry": {
+    "slug": "wag",
+    "brandName": "Wag",
+    "categoryLine": "App-based on-demand dog walking + pet care marketplace.",
+    "trafficContext": "Wag's wheelhouse is the spur-of-the-moment dog walk you didn't plan on. Helpward overlaps on the convenience layer but extends to the rest of the day's tasks.",
+    "matrix": [
+     {
+      "feature": "Category breadth",
+      "helpward": "Errands, deliveries, home help, transportation, presence, business — pet care is one of many",
+      "competitor": "Pet care only (walking, sitting, training, vet visits)"
+     },
+     {
+      "feature": "Vet telehealth integration",
+      "helpward": "No",
+      "competitor": "Yes",
+      "notes": "Wag bundles a vet-chat feature; Helpward is task-marketplace only."
+     },
+     {
+      "feature": "Background-checked workers",
+      "helpward": "Not yet — helpers are reviewed and approved by a person",
+      "competitor": "Yes",
+      "notes": "Parity."
+     },
+     {
+      "feature": "Real-time GPS tracking",
+      "helpward": "Yes — live map from accept to complete",
+      "competitor": "Yes",
+      "notes": "Parity."
+     },
+     {
+      "feature": "Photo proof of completion",
+      "helpward": "Up to 3 photos per booking; customer can revoke from portfolio",
+      "competitor": "Yes",
+      "notes": "Both ship walk-summary photos."
+     },
+     {
+      "feature": "Bundle dog walk with non-pet errands in one trip",
+      "helpward": "Up to 5 stops across categories, one helper, one service fee",
+      "competitor": "Not advertised"
+     },
+     {
+      "feature": "Recurring weekly walks",
+      "helpward": "Native recurring series for any service",
+      "competitor": "Yes",
+      "notes": "Parity."
+     },
+     {
+      "feature": "Insurance on every booking",
+      "helpward": "No — Helpward does not carry platform insurance",
+      "competitor": "Yes",
+      "notes": "Parity."
+     }
+    ],
+    "cta": "Pick Wag when you need a walker on 30 minutes notice and want the vet-chat bundle. Pick Helpward when the walk is part of a stack of other tasks or when you want a single helper for the whole day's life-admin."
+   }
+  }
+ ],
+ "services": [
+  {
+   "id": "appliance-repair",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "appliance-repair",
+     "category_id": "home-help",
+     "title": "Appliance Repair",
+     "blurb": "A visit to work out what is wrong with one appliance, and a written explanation of what repairing it would involve. Parts and the repair itself are quoted afterwards, so you decide once the fault is known.",
+     "base_price_cents": 9900,
+     "eta_label": "Same day",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1754732693535-7ffb5e1a51d6?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": null,
+    "completionRequirements": null,
+    "category": {
+     "id": "home-help",
+     "label": "Home Help",
+     "icon": "home",
+     "sort_order": 2,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Appliance Diagnostics — Book a Fault Assessment | Helpward",
+     "h1": "Book an appliance diagnostic visit",
+     "intro": "Something has stopped working and you do not yet know why. This booking buys the finding out: a helper comes, assesses the fault and explains it. On Helpward it is the Appliance Repair service, and what it delivers is a diagnosis — any actual repair is quoted afterwards and is yours to accept or refuse.",
+     "faqs": [
+      {
+       "q": "Is the repair included in this price?",
+       "a": "No, and this is the thing worth reading twice. You are booking an assessment: the visit, the diagnosis and an explanation of what is wrong. Parts and labour to fix it are quoted separately once somebody has actually looked at it."
+      },
+      {
+       "q": "Which appliances can you assess?",
+       "a": "Ordinary household machines — washers, dryers, dishwashers, fridges, ovens. The form asks which appliance, its make and model, and what it is doing, so a helper can tell before accepting whether it is something they know."
+      },
+      {
+       "q": "What model details do you need?",
+       "a": "Make, model, and the symptom in your own words. An error code, if the machine shows one, is worth more than a paragraph of description."
+      },
+      {
+       "q": "How are parts and further work quoted?",
+       "a": "By the helper, after the visit, as a separate arrangement. Helpward's booking covers the assessment; it is not a price cap on a repair and does not commit you to one."
+      },
+      {
+       "q": "Can I decline the repair quote?",
+       "a": "Yes, with nothing further owed. You have paid for the diagnosis and the diagnosis is yours — take it to whoever you like."
+      },
+      {
+       "q": "Where is the appliance, and can it be moved?",
+       "a": "The form asks, because a built-in oven and a freestanding one are different problems. Say whether it can be pulled out and whether there is room to work behind it."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "A visit to assess the fault",
+      "A plain explanation of what is wrong",
+      "A quote for the repair, which is yours to accept or refuse"
+     ],
+     "excludes": [
+      "The repair itself — it is quoted separately after the visit",
+      "Parts, which are not supplied under this booking",
+      "Gas, sealed-refrigerant or certified electrical work",
+      "Any guarantee the fault can be fixed"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "tech-setup",
+      "house-check-in"
+     ]
+    },
+    "relatedPrompt": "Something stopped working and you do not know why?",
+    "preparation": {
+     "items": [
+      "Find the make, model and any error code the machine shows. It is worth more than a paragraph of description.",
+      "Clear access to the appliance, and say whether it can be pulled out and whether there is room behind it.",
+      "Know that this booking buys the diagnosis. Parts and repair are quoted afterwards, and you can decline.",
+      "Do not run the appliance just before the visit if it is leaking or tripping power."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "A clear fault description decides whether a part is needed.",
+    "fields": [
+     {
+      "key": "appliance",
+      "label": "Which appliance?",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "washer",
+        "label": "Washing machine"
+       },
+       {
+        "value": "dryer",
+        "label": "Dryer"
+       },
+       {
+        "value": "dishwasher",
+        "label": "Dishwasher"
+       },
+       {
+        "value": "fridge",
+        "label": "Fridge or freezer"
+       },
+       {
+        "value": "oven",
+        "label": "Oven or stove"
+       },
+       {
+        "value": "other",
+        "label": "Something else"
+       }
+      ]
+     },
+     {
+      "key": "make_model",
+      "label": "Make and model",
+      "required": true,
+      "type": "text",
+      "placeholder": "Usually on a sticker inside the door",
+      "maxLength": 160
+     },
+     {
+      "key": "fault",
+      "label": "What's it doing?",
+      "required": true,
+      "type": "textarea",
+      "placeholder": "Noises, error codes, when it started",
+      "maxLength": 1000
+     },
+     {
+      "key": "access_detail",
+      "label": "Where is it, and can it be moved?",
+      "required": false,
+      "type": "text",
+      "maxLength": 200
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1754732693535-7ffb5e1a51d6?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "car-battery-jump",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "car-battery-jump",
+     "category_id": "transportation",
+     "title": "Car Battery Jump",
+     "blurb": "A roadside helper arrives with cables and a portable jump pack to start your dead battery — no tow needed.",
+     "base_price_cents": 6500,
+     "eta_label": "25 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1597766321604-9de3ff9e93e2?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": null,
+    "completionRequirements": null,
+    "category": {
+     "id": "transportation",
+     "label": "Transportation",
+     "icon": "car",
+     "sort_order": 1,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Car Jump-Start Service — Dead Battery Help | Helpward",
+     "h1": "Request a car jump-start for a dead battery",
+     "intro": "A flat battery, someone there with cables and a portable jump pack, and no tow truck. On Helpward this is booked as the Car Battery Jump service: say where the car is and a nearby helper comes out to try to start it.",
+     "faqs": [
+      {
+       "q": "Can you jump-start my car where it is parked?",
+       "a": "Usually, and the form asks where the car is precisely so a helper can judge that before accepting. Tell us the parkade level, the street or the driveway, and whether a second car can pull alongside — a battery that cannot be reached by another vehicle is the one case that tends to defeat a jump pack."
+      },
+      {
+       "q": "What vehicle details do you need?",
+       "a": "Make and model, and where the battery sits — engine bay, boot, or under a seat. \"Not sure\" is an option; the helper brings leads for the common cases either way."
+      },
+      {
+       "q": "What if the battery will not start?",
+       "a": "Then it will not start. This is an attempt by someone with cables and a jump pack, not a guaranteed repair: a battery that has failed outright, or a fault that is not the battery, needs a garage or a tow. You are paying for the visit and the attempt, and if something goes wrong with how it was handled you have 24 hours to open a dispute."
+      },
+      {
+       "q": "Is a replacement battery included?",
+       "a": "No. The service is a jump-start. No part is supplied, fitted or sold as part of it."
+      },
+      {
+       "q": "How is the final price shown?",
+       "a": "It is a flat price for the visit, plus the usual {fee} service fee, and it does not change with distance or how long the attempt takes. You see the whole figure before the request reaches a helper."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "A helper with jump leads and a portable jump pack",
+      "An attempt to start the car where it is parked",
+      "Batteries in the engine bay, boot or under a seat"
+     ],
+     "excludes": [
+      "A replacement battery, or any part supplied or fitted",
+      "Any guarantee the car will start",
+      "Towing, recovery or garage work",
+      "A battery no second vehicle or pack can reach"
+     ]
+    },
+    "nameAndLinks": {
+     "name": "Car Jump-Start Service",
+     "related": [
+      "designated-driver",
+      "errand-runner"
+     ]
+    },
+    "relatedPrompt": "Dead battery instead?",
+    "preparation": {
+     "items": [
+      "Say exactly where the car is parked, and whether a second vehicle can pull alongside it.",
+      "Know your make and model, and where the battery sits — engine bay, boot, or under a seat. \"Not sure\" is a fine answer.",
+      "Make sure the car is reachable: unlocked, or with someone there to open it.",
+      "Switch everything off — lights, heater, radio — before the helper arrives."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "So your helper brings the right leads and finds the car.",
+    "fields": [
+     {
+      "key": "vehicle",
+      "label": "Make and model",
+      "required": true,
+      "type": "text",
+      "placeholder": "e.g. 2015 Honda Civic",
+      "maxLength": 120
+     },
+     {
+      "key": "battery_location",
+      "label": "Where is the battery?",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "engine-bay",
+        "label": "Engine bay"
+       },
+       {
+        "value": "boot",
+        "label": "Boot / trunk"
+       },
+       {
+        "value": "under-seat",
+        "label": "Under a seat"
+       },
+       {
+        "value": "unsure",
+        "label": "Not sure"
+       }
+      ]
+     },
+     {
+      "key": "vehicle_location",
+      "label": "Where is the car parked?",
+      "hint": "Parkade level, street, driveway — and whether a second car can pull alongside.",
+      "required": true,
+      "type": "textarea",
+      "maxLength": 400
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1597766321604-9de3ff9e93e2?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "date-companion",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "date-companion",
+     "category_id": "lifestyle",
+     "title": "Date Companion",
+     "blurb": "A poised platonic plus-one for dinners, weddings and family events. Fully professional, no romance involved.",
+     "base_price_cents": 9000,
+     "eta_label": "Today",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1771408662071-21d1846058bf?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "date-companion",
+     "included_minutes": 120,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 2250,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "lifestyle",
+     "label": "Lifestyle",
+     "icon": "heart",
+     "sort_order": 5,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Platonic Date Companion — Book a Dinner Plus-One | Helpward",
+     "h1": "Book a platonic plus-one for dinner or an occasion",
+     "intro": "A plus-one for a dinner or an occasion where turning up alone is the awkward part. On Helpward this is the Date Companion service: one person, accompanying you, for the hours you book. The name describes the occasion, not the relationship — it is platonic.",
+     "faqs": [
+      {
+       "q": "Is this a romantic or sexual service?",
+       "a": "No, and this is not a soft boundary. It is accompaniment and conversation in public, nothing else, ever. Any approach otherwise ends the booking and the account."
+      },
+      {
+       "q": "Can I book a dinner plus-one?",
+       "a": "Yes — that is the central case. {base} covers the first {inclTime}, with {blockPrice} per extra minutes, so book through to when the evening actually ends."
+      },
+      {
+       "q": "Are food and event costs included?",
+       "a": "No. The booking buys time. Dinner, drinks, entry and transport are separate, and worth settling in advance so neither of you is working it out at the table."
+      },
+      {
+       "q": "Can I specify a dress code?",
+       "a": "Yes, and you should if the venue has one. Put it in the booking rather than mentioning it on the night."
+      },
+      {
+       "q": "Where does the booking begin and end?",
+       "a": "At the public meeting point and the time you agreed, and it ends when the booked hours do. Nobody is obliged to continue past it and nobody should be asked to."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "One platonic companion for a dinner or occasion",
+      "A dress code and plan you set in the booking",
+      "The hours you book, from an agreed public meeting point"
+     ],
+     "excludes": [
+      "Anything romantic or sexual, without exception",
+      "Food, drink, entry or transport costs",
+      "Private residences as a meeting point",
+      "Continuing past the hours booked"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "event-companion",
+      "rent-a-friend",
+      "shopping-companion"
+     ]
+    },
+    "relatedPrompt": "Need a plus-one for dinner?",
+    "preparation": {
+     "items": [
+      "Book the restaurant yourself, and book the hours through to when the evening really ends.",
+      "Share the dress code when you book, not on the night.",
+      "Agree the public meeting point in advance.",
+      "Agree how the bill is handled beforehand, so neither of you is working it out at the table."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "So your helper arrives prepared and dressed for it.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "meeting_point",
+      "label": "Where should you meet?",
+      "hint": "The venue name or a specific spot — not just the street.",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "dress_code",
+      "label": "Dress code",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "casual",
+        "label": "Casual"
+       },
+       {
+        "value": "smart-casual",
+        "label": "Smart casual"
+       },
+       {
+        "value": "business",
+        "label": "Business"
+       },
+       {
+        "value": "formal",
+        "label": "Formal / black tie"
+       }
+      ]
+     },
+     {
+      "key": "context",
+      "label": "What should your helper know?",
+      "hint": "Names, how you know each other, anything to avoid.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 1000
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1771408662071-21d1846058bf?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "designated-driver",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "designated-driver",
+     "category_id": "transportation",
+     "title": "Designated Driver",
+     "blurb": "A licensed driver meets you and drives YOUR car home — ideal after drinks, late nights or long days.",
+     "base_price_cents": 6000,
+     "eta_label": "20 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": true,
+     "image_url": "https://images.unsplash.com/photo-1532974297617-c0f05fe48bff?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": null,
+    "completionRequirements": null,
+    "category": {
+     "id": "transportation",
+     "label": "Transportation",
+     "icon": "car",
+     "sort_order": 1,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Designated Driver — Get You & Your Car Home | Helpward",
+     "h1": "Hire a designated driver to drive your car home",
+     "intro": "A taxi brings its own car, which leaves yours where you left it. This is the other way round: a driver comes to you and drives your own car, with you in it, to wherever you are going. On Helpward it is the Designated Driver service.",
+     "faqs": [
+      {
+       "q": "Will the driver drive my own car?",
+       "a": "Yes — that is the whole point of it. You travel as a passenger in your own vehicle, and the car ends up wherever you do. If you want a car supplied for you, that is a taxi, not this."
+      },
+      {
+       "q": "Can I book after drinking?",
+       "a": "Yes. Getting home without driving yourself is the most common reason people book it. You are the passenger; nothing about the booking asks you to drive."
+      },
+      {
+       "q": "Can I request a driver for a manual car?",
+       "a": "The booking form asks whether your car is automatic or manual, so a helper knows which they are accepting before they accept it. Say manual if it is manual — the request then only suits a driver who can drive one."
+      },
+      {
+       "q": "How is the trip price calculated?",
+       "a": "By time booked, not by distance. The base price covers a set stretch of driving time and longer trips add whole blocks on top. Distance does not enter the figure at all, and the full total is on screen before the request goes anywhere."
+      },
+      {
+       "q": "Can I schedule a pickup?",
+       "a": "Yes. A request can be for now or for a time you choose, which is the sensible way to book an evening out before the evening starts."
+      },
+      {
+       "q": "What vehicle details do you need?",
+       "a": "Transmission, make and model, how many passengers are travelling, and exactly where the car is — a parkade level is not a street address. Every one of those is a question on the form, and the helper reads your answers before deciding to accept."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "A driver who comes to you and drives your own car",
+      "You and your passengers travelling in your own vehicle",
+      "Automatic or manual, whichever you tell us on the form",
+      "Booked now or scheduled for a time you choose"
+     ],
+     "excludes": [
+      "A car supplied for you — that is a taxi, not this",
+      "Driving anyone who is not travelling with you",
+      "Long-distance trips outside the areas we cover"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "car-battery-jump",
+      "event-companion"
+     ]
+    },
+    "relatedPrompt": "Had a drink, with your own car to get home?",
+    "preparation": {
+     "items": [
+      "Have your keys and the car where you said it would be — a parkade level is not a street address.",
+      "Know whether the car is automatic or manual, and say so on the form. A manual needs a driver who can drive one.",
+      "Make sure the car is legal to drive: insured, registered, and with enough fuel for the trip.",
+      "Count your passengers before booking. Everyone travelling has to fit, belted, in your own car."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "Your helper drives your car, so they need the route and the vehicle.",
+    "fields": [
+     {
+      "key": "destination",
+      "label": "Where to?",
+      "hint": "The drop-off address. Shared with your helper once they accept.",
+      "required": true,
+      "type": "destination",
+      "placeholder": "e.g. 1055 Canada Pl, Vancouver, BC",
+      "maxLength": 300,
+      "sensitive": true
+     },
+     {
+      "key": "transmission",
+      "label": "Transmission",
+      "hint": "Not every driver can drive a manual — this decides who can accept.",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "automatic",
+        "label": "Automatic"
+       },
+       {
+        "value": "manual",
+        "label": "Manual"
+       }
+      ]
+     },
+     {
+      "key": "vehicle",
+      "label": "Make and model",
+      "required": true,
+      "type": "text",
+      "placeholder": "e.g. 2019 Toyota RAV4",
+      "maxLength": 120
+     },
+     {
+      "key": "passengers",
+      "label": "Passengers travelling",
+      "required": true,
+      "type": "number",
+      "min": 1,
+      "max": 7,
+      "unit": "people"
+     },
+     {
+      "key": "pickup_detail",
+      "label": "Where exactly is the car?",
+      "hint": "Parkade level, street side, building entrance.",
+      "required": false,
+      "type": "text",
+      "maxLength": 200
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1532974297617-c0f05fe48bff?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "dog-walking",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "dog-walking",
+     "category_id": "lifestyle",
+     "title": "Dog Walking",
+     "blurb": "Vetted walker takes your dog out for 30 or 60 minutes — fresh water, treats, GPS-tracked route and photo update.",
+     "base_price_cents": 2500,
+     "eta_label": "Starts in 15 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "dog-walking",
+     "included_minutes": 30,
+     "extra_block_minutes": 15,
+     "extra_block_cents": 800,
+     "duration_field": "duration_min",
+     "unit_field": "dog_count",
+     "included_units": 1,
+     "per_extra_unit_cents": 800,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "lifestyle",
+     "label": "Lifestyle",
+     "icon": "heart",
+     "sort_order": 5,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Dog Walking — Book a Local Dog Walker | Helpward",
+     "h1": "Book a dog walker for your dog's next walk",
+     "intro": "Your dog gets out, on a day you cannot take them. On Helpward this is the Dog Walking service: pick 30 or 60 minutes, say how many dogs are going, and the walker sends a photo update and a GPS-tracked route when they are done.",
+     "faqs": [
+      {
+       "q": "How long can I book a walk?",
+       "a": "{base} covers the first {inclTime}, and longer walks add {blockPrice} per extra {blockTime}. A longer walk adds whole blocks rather than part of one, because a walker's time is booked rather than clocked."
+      },
+      {
+       "q": "Can I book more than one dog?",
+       "a": "Yes. One dog is included and each additional dog is {unitPrice}. The form asks how many are going so the walker knows what they are agreeing to — three dogs on three leads is a different walk from one."
+      },
+      {
+       "q": "What should I leave for the walker?",
+       "a": "A lead, fresh water, and treats if your dog has them. Leave anything the walker needs where you say it will be, and say where that is in the handover instructions."
+      },
+      {
+       "q": "How do I share access instructions?",
+       "a": "Through the handover instructions on the booking. They are saved with the booking rather than sent in a message, and only the helper actually booked for the job can read them — not every walker who was offered it."
+      },
+      {
+       "q": "Will I receive an update?",
+       "a": "Yes — a photo update and the route taken, which is the part most people book this for. You can also message the walker while the walk is on."
+      },
+      {
+       "q": "Can I book the same walker again?",
+       "a": "Yes. A walker you have used before can be saved as a favourite, and new requests can be routed to them first rather than to whoever is nearest."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "A walk of the length you book",
+      "More than one dog, if you say so on the form",
+      "A photo update and the route taken",
+      "Entry using the access details you leave"
+     ],
+     "excludes": [
+      "Veterinary care, medication or grooming",
+      "Overnight stays or daycare",
+      "Training, or managing a dog you have not described honestly"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "house-check-in",
+      "errand-runner"
+     ]
+    },
+    "relatedPrompt": "Dog needs a walk while you are out?",
+    "preparation": {
+     "items": [
+      "Leave the lead and harness where you said they would be, and say where that is on the form.",
+      "Put out fresh water, and treats if your dog has them.",
+      "Tell us anything the walker should know: reactivity to other dogs, pulling, recall, a sore leg. Honesty here keeps everyone safe.",
+      "Say how many dogs are going and what size they are, so the walker knows what they are agreeing to."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "So your helper can handle your dog safely.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "dog_count",
+      "label": "How many dogs?",
+      "required": true,
+      "type": "number",
+      "min": 1,
+      "max": 4,
+      "unit": "dogs"
+     },
+     {
+      "key": "dog_size",
+      "label": "Size",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "small",
+        "label": "Small — under 10kg"
+       },
+       {
+        "value": "medium",
+        "label": "Medium — 10 to 25kg"
+       },
+       {
+        "value": "large",
+        "label": "Large — 25kg or more"
+       }
+      ]
+     },
+     {
+      "key": "leash_location",
+      "label": "Where are the lead and harness?",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "behaviour",
+      "label": "Anything your helper should know?",
+      "hint": "Pulling, reactivity to other dogs, recall, medication.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 600
+     },
+     {
+      "key": "access",
+      "label": "How does your helper get in?",
+      "hint": "Buzzer, lockbox, gate code, where to park, who to ask for.",
+      "required": true,
+      "type": "textarea",
+      "maxLength": 600,
+      "sensitive": true
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "elder-assistance",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "elder-assistance",
+     "category_id": "presence",
+     "title": "Elder Assistance",
+     "blurb": "Background-checked companion for seniors — grocery trips, doctor visits, conversation, light housekeeping.",
+     "base_price_cents": 7600,
+     "eta_label": "45 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1704475686860-ab71b444df6b?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "elder-assistance",
+     "included_minutes": 120,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 1900,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "presence",
+     "label": "Presence",
+     "icon": "user",
+     "sort_order": 4,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Senior Companionship — Everyday Help for Older Adults | Helpward",
+     "h1": "Book companionship and everyday help for an older adult",
+     "intro": "Company, and a hand with the ordinary things — grocery trips, doctor visits, conversation, light housekeeping. On Helpward this is the Elder Assistance service, booked by the hour for a parent or grandparent, or for yourself. It is companionship and practical help, not care.",
+     "faqs": [
+      {
+       "q": "Is this medical or personal care?",
+       "a": "No. No medication is given or managed, no personal or intimate care, no nursing, no clinical task of any kind. Helpers are approved by a person at Helpward, not licensed care professionals, and anything in that territory needs a home-care provider instead."
+      },
+      {
+       "q": "Can I book for a family member?",
+       "a": "Yes, and most people do. Say in the booking who the visit is for and how to reach them, and tell them a helper is coming — arriving unannounced at an older person's door is nobody's idea of help."
+      },
+      {
+       "q": "What activities are included?",
+       "a": "Conversation, a walk, a grocery trip, light housekeeping, help with post and forms, company for an outing. {base} covers the first {inclTime}, with {blockPrice} per extra {blockTime}."
+      },
+      {
+       "q": "Can a helper accompany an appointment?",
+       "a": "They can go along and be company, carry things, and take notes if asked. They cannot speak for the person, consent to treatment, or make a decision on anyone's behalf."
+      },
+      {
+       "q": "What accessibility details should I share?",
+       "a": "All of them, in the booking: stairs, mobility aids, hearing, memory, language, anything that shapes how the visit should go. A helper who knows before accepting is a helper who can actually help."
+      },
+      {
+       "q": "Can the same helper come back?",
+       "a": "Yes, and for this service it matters more than most. Save them as a favourite and send future requests to them first, so visits are from a familiar face rather than a new one each time."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Company and conversation",
+      "Grocery trips, errands and light housekeeping",
+      "Going along to an appointment as company",
+      "The same helper again, if you save them as a favourite"
+     ],
+     "excludes": [
+      "Medication, personal care or any nursing task",
+      "Speaking, consenting or deciding on anyone's behalf",
+      "Lifting or transferring a person",
+      "Anything a licensed care provider should be doing"
+     ]
+    },
+    "nameAndLinks": {
+     "name": "Senior Companionship & Everyday Help",
+     "description": "A companion for seniors — grocery trips, doctor visits, conversation and light housekeeping, booked by the hour.",
+     "related": [
+      "errand-runner",
+      "grocery-pickup",
+      "listening-service"
+     ]
+    },
+    "relatedPrompt": "Someone who could use company and a hand?",
+    "preparation": {
+     "items": [
+      "Tell the person a helper is coming. Arriving unannounced at an older person's door helps nobody.",
+      "Say what help is wanted: company, a grocery trip, light housekeeping, going along to an appointment.",
+      "Share mobility, hearing, memory and language needs honestly, so the helper knows before they accept.",
+      "Remember this is not care. No medication, no personal care, no nursing — that needs a home-care provider."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "So your helper can support safely and at the right pace.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "support_with",
+      "label": "Help with",
+      "required": true,
+      "type": "checkboxes",
+      "options": [
+       {
+        "value": "company",
+        "label": "Company and conversation"
+       },
+       {
+        "value": "errands",
+        "label": "Errands or shopping"
+       },
+       {
+        "value": "appointment",
+        "label": "Getting to an appointment"
+       },
+       {
+        "value": "meals",
+        "label": "Meal preparation"
+       },
+       {
+        "value": "light-housework",
+        "label": "Light housework"
+       }
+      ]
+     },
+     {
+      "key": "mobility",
+      "label": "Mobility",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "independent",
+        "label": "Fully mobile"
+       },
+       {
+        "value": "stick",
+        "label": "Uses a stick or frame"
+       },
+       {
+        "value": "wheelchair",
+        "label": "Uses a wheelchair"
+       },
+       {
+        "value": "assistance",
+        "label": "Needs steadying"
+       }
+      ]
+     },
+     {
+      "key": "notes",
+      "label": "Anything else your helper should know?",
+      "hint": "Hearing, memory, routines, what to avoid. No medical care is provided.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 1000
+     },
+     {
+      "key": "access",
+      "label": "How does your helper get in?",
+      "hint": "Buzzer, lockbox, gate code, where to park, who to ask for.",
+      "required": true,
+      "type": "textarea",
+      "maxLength": 600,
+      "sensitive": true
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1704475686860-ab71b444df6b?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "errand-runner",
+   "active": true,
+   "database": {
+    "row": {
+     "id": "errand-runner",
+     "category_id": "errands",
+     "title": "Errand Runner",
+     "blurb": "Anything, anywhere — drop-offs, pickups, bank runs, post office, dry cleaning. Pay by the hour or by task.",
+     "base_price_cents": 3500,
+     "eta_label": "20-40 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1633862712714-95b52023514e?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": true,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "errand-runner",
+     "included_minutes": 60,
+     "extra_block_minutes": 15,
+     "extra_block_cents": 875,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "errands",
+     "label": "Errands",
+     "icon": "bag",
+     "sort_order": 3,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Errand Runner — Hire Help With Everyday Errands | Helpward",
+     "h1": "Hire someone to run your errands",
+     "intro": "The list of small things that each take twenty minutes and together take an afternoon. On Helpward this is the Errand Runner service: write the tasks and the stops in order, set a spending limit if money is involved, and a helper works through them.",
+     "faqs": [
+      {
+       "q": "Which errands can I request?",
+       "a": "Anything lawful that a person on foot or in a car can do for you: collections, drop-offs, posting things, picking things up, queueing at a counter. The form takes one task per line, and the stops in the order they should happen."
+      },
+      {
+       "q": "Can a helper shop for items?",
+       "a": "Yes — set a spending limit on the form and the helper buys within it. If what you want is a grocery order you have already placed and paid for, Grocery Pickup is the better fit; if it is one parcel going one place, use Package Delivery."
+      },
+      {
+       "q": "How are purchases paid for?",
+       "a": "Separately from the booking fee, and the spending limit is the control: it is the number a helper is not meant to exceed. Keep receipts in the conversation so what was bought and what it cost are both on the record."
+      },
+      {
+       "q": "Can I add multiple stops?",
+       "a": "Yes, and the form asks for them in order. More stops means more time, and time beyond the first hour is what moves the price."
+      },
+      {
+       "q": "How do I share handover instructions?",
+       "a": "In the handover instructions on the booking — gate codes, which buzzer, where to leave things. They are saved with the booking and readable only by the helper actually booked, not by every helper the request was offered to."
+      },
+      {
+       "q": "Is waiting time included?",
+       "a": "It is part of the booked time, so yes, within it. {base} covers the first {inclTime} and each extra {blockTime} is {blockPrice} — a queue you expect to be long is worth booking time for up front."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "The tasks and stops you list, in order",
+      "Buying items within a spending limit you set",
+      "Waiting time, within the time you book",
+      "Handover using the instructions saved on the booking"
+     ],
+     "excludes": [
+      "Anything unlawful, or age-restricted without you present",
+      "Spending beyond the limit you set",
+      "Prescription collection or anything needing your ID",
+      "Carrying more than one person reasonably can"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "grocery-pickup",
+      "package-delivery",
+      "package-return",
+      "wait-in-line"
+     ]
+    },
+    "relatedPrompt": "Need someone to choose and buy the items?",
+    "preparation": {
+     "items": [
+      "Write one task per line, and list the stops in the order they should happen.",
+      "Set a spending limit if anything is being bought. It is the number the helper is not meant to exceed.",
+      "Have anything being dropped off packed and ready by the door.",
+      "Say what happens if a shop is closed or an item is out of stock, so nobody has to guess from the pavement."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "Tell your helper exactly what to do and where.",
+    "fields": [
+     {
+      "key": "tasks",
+      "label": "What needs doing?",
+      "required": true,
+      "type": "textarea",
+      "placeholder": "One task per line",
+      "maxLength": 1000
+     },
+     {
+      "key": "stops",
+      "label": "Where do they need to go?",
+      "hint": "Shops, offices or addresses, in order.",
+      "required": true,
+      "type": "textarea",
+      "maxLength": 600
+     },
+     {
+      "key": "spend_cap",
+      "label": "Spending limit",
+      "required": false,
+      "type": "number",
+      "min": 0,
+      "max": 2000,
+      "unit": "$"
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1633862712714-95b52023514e?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "event-companion",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "event-companion",
+     "category_id": "lifestyle",
+     "title": "Event Companion",
+     "blurb": "Polished plus-one for galas, work parties or networking — dress code, talking points and exit time all coordinated.",
+     "base_price_cents": 15000,
+     "eta_label": "Schedule",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "event-companion",
+     "included_minutes": 180,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 2500,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "lifestyle",
+     "label": "Lifestyle",
+     "icon": "heart",
+     "sort_order": 5,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Event Companion — Book a Platonic Event Plus-One | Helpward",
+     "h1": "Book a plus-one for your event",
+     "intro": "Somebody alongside you at an event — a work function, a reception, a party where you know two people. On Helpward this is the Event Companion service: they attend with you, for the hours you book, platonically.",
+     "faqs": [
+      {
+       "q": "Which events can I book for?",
+       "a": "Networking evenings, work functions, receptions, parties, launches — anything you are attending and would rather not attend alone. {base} covers the first {inclTime}, with {blockPrice} per extra 30 minutes."
+      },
+      {
+       "q": "Does the companion need a ticket?",
+       "a": "If the event needs one, yes, and that is yours to arrange. Make sure their name is on the list before the day; a companion turned away at the door is still a booking you made."
+      },
+      {
+       "q": "Can I share a dress code or an agenda?",
+       "a": "Yes, and it makes the difference between a plus-one who fits the room and one who does not. Put the dress code, the running order and anything they should know in the booking."
+      },
+      {
+       "q": "Are travel and event expenses included?",
+       "a": "No. Time only; tickets, travel, food and drink are separate and best agreed up front."
+      },
+      {
+       "q": "Is this a platonic service?",
+       "a": "Yes, without exception. It is attendance and conversation, and nothing in it is romantic or sexual."
+      },
+      {
+       "q": "How is it different from booking a wedding guest?",
+       "a": "Here the companion is with you. Wedding Guest fills seats at an event you are hosting, which is a different job with a different briefing."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "A platonic plus-one attending with you",
+      "A briefing on the dress code and running order",
+      "The hours you book"
+     ],
+     "excludes": [
+      "Anything romantic or sexual, without exception",
+      "Their ticket or venue access, which you arrange",
+      "Travel, food and drink",
+      "Staffing, hosting or working your event"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "date-companion",
+      "wedding-guest",
+      "rent-a-friend"
+     ]
+    },
+    "relatedPrompt": "Need a plus-one for the evening?",
+    "preparation": {
+     "items": [
+      "Sort the ticket or guest-list entry. A companion turned away at the door is still a booking you made.",
+      "Share the dress code, the running order and anything they should know about the room.",
+      "Agree where and when you are meeting, and for how long.",
+      "Settle expenses in advance — travel, food and drink are separate from the booking."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "So your helper arrives prepared and dressed for it.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "meeting_point",
+      "label": "Where should you meet?",
+      "hint": "The venue name or a specific spot — not just the street.",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "dress_code",
+      "label": "Dress code",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "casual",
+        "label": "Casual"
+       },
+       {
+        "value": "smart-casual",
+        "label": "Smart casual"
+       },
+       {
+        "value": "business",
+        "label": "Business"
+       },
+       {
+        "value": "formal",
+        "label": "Formal / black tie"
+       }
+      ]
+     },
+     {
+      "key": "event_type",
+      "label": "What kind of event?",
+      "required": true,
+      "type": "text",
+      "placeholder": "e.g. work Christmas party",
+      "maxLength": 160
+     },
+     {
+      "key": "context",
+      "label": "What should your helper know?",
+      "hint": "Names, how you know each other, anything to avoid.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 1000
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "family-standin",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "family-standin",
+     "category_id": "lifestyle",
+     "title": "Family Stand-in",
+     "blurb": "Trained actors play a parent, spouse or sibling — weddings, hospital visits, formal events. Discreet and rehearsed.",
+     "base_price_cents": 30000,
+     "eta_label": "Schedule",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "family-standin",
+     "included_minutes": 180,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 5000,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "lifestyle",
+     "label": "Lifestyle",
+     "icon": "heart",
+     "sort_order": 5,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Family Stand-In — Book a Briefed Event Role | Helpward",
+     "h1": "Discuss a family stand-in role for your event",
+     "intro": "A briefed, agreed role at an event where a family member will not be there. On Helpward this is the Family Stand-In service, and it is the most constrained thing in the catalogue: a social role at a social occasion, with everyone involved consenting, and nothing that strays into representing you in any official way.",
+     "faqs": [
+      {
+       "q": "Which roles are available?",
+       "a": "Social attendance roles at events — a seat filled, a person present, a briefed introduction. That is the extent of it, and the specifics are agreed with the helper before the booking goes ahead."
+      },
+      {
+       "q": "How much briefing is included?",
+       "a": "As much as the booked time allows, and more is better here than anywhere else in the catalogue. {base} covers the first {inclTime}, with {blockPrice} per extra {blockTime}."
+      },
+      {
+       "q": "What is outside the scope?",
+       "a": "Anything legal, medical, financial or official. No signing, no consenting, no speaking to institutions, no identity documents, no deceiving anyone whose decision depends on it. A helper will decline a request shaped like that, and so will Helpward."
+      },
+      {
+       "q": "How are rehearsal and event time priced?",
+       "a": "Both as booked time, at the same rate — a rehearsal is time somebody spends. Book the hours you need for both."
+      },
+      {
+       "q": "Can I request several people?",
+       "a": "Yes, as separate bookings with separate briefings. Each person sees their own."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "A consensual, briefed social role at your event",
+      "Briefing and rehearsal time, booked as time",
+      "The hours you book"
+     ],
+     "excludes": [
+      "Anything legal, medical, financial or official",
+      "Signing, consenting or speaking to an institution",
+      "Identity documents, or presenting as a real named person",
+      "Deceiving anyone whose decision depends on it"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "wedding-guest",
+      "event-companion"
+     ]
+    },
+    "relatedPrompt": "A briefed role to fill at your event?",
+    "preparation": {
+     "items": [
+      "Be clear about the role, and keep it social. Nothing legal, medical, financial or official.",
+      "Book time for the briefing as well as the event — a rehearsal is time somebody spends.",
+      "Make sure everyone whose decision depends on it is not being deceived. A helper will decline otherwise.",
+      "Book separately for each person, with their own briefing."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "So your helper arrives prepared and dressed for it.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "meeting_point",
+      "label": "Where should you meet?",
+      "hint": "The venue name or a specific spot — not just the street.",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "dress_code",
+      "label": "Dress code",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "casual",
+        "label": "Casual"
+       },
+       {
+        "value": "smart-casual",
+        "label": "Smart casual"
+       },
+       {
+        "value": "business",
+        "label": "Business"
+       },
+       {
+        "value": "formal",
+        "label": "Formal / black tie"
+       }
+      ]
+     },
+     {
+      "key": "role",
+      "label": "Which role are they playing?",
+      "required": true,
+      "type": "text",
+      "placeholder": "e.g. a cousin",
+      "maxLength": 160
+     },
+     {
+      "key": "context",
+      "label": "What should your helper know?",
+      "hint": "Names, how you know each other, anything to avoid.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 1000
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "furniture-assembly",
+   "active": true,
+   "database": {
+    "row": {
+     "id": "furniture-assembly",
+     "category_id": "home-help",
+     "title": "Furniture Assembly",
+     "blurb": "A vetted handyperson assembles your flat-pack furniture — IKEA, beds, desks, dressers, shelves. Tools included.",
+     "base_price_cents": 5500,
+     "eta_label": "30 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1772338537689-056082f100a9?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": true,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "furniture-assembly",
+     "included_minutes": 60,
+     "extra_block_minutes": 15,
+     "extra_block_cents": 1375,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "home-help",
+     "label": "Home Help",
+     "icon": "home",
+     "sort_order": 2,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Furniture Assembly — IKEA & Flat-Pack Help | Helpward",
+     "h1": "Book help assembling your furniture",
+     "intro": "The flat-pack box you have been stepping around for a fortnight, built. On Helpward this is the Furniture Assembly service: say what the items are and how many, and the helper works through them in the time you book.",
+     "faqs": [
+      {
+       "q": "Can you assemble IKEA furniture?",
+       "a": "Yes, and it is the most common request. Any flat-pack furniture with its own instructions and fittings is the same job — the brand matters less than whether all the parts are in the box."
+      },
+      {
+       "q": "What item details should I provide?",
+       "a": "What the items are and how many. A product name or model is worth adding: \"two Malm drawer units\" tells a helper what they are walking into, and \"furniture\" does not."
+      },
+      {
+       "q": "Does the helper bring tools?",
+       "a": "The form asks whether tools are needed, so answer it. Most flat-pack packs include the Allen key that builds them; a power driver is a different matter and worth flagging."
+      },
+      {
+       "q": "Is wall anchoring included?",
+       "a": "Only where it is straightforward and you have the fixings. Anything that means drilling into an unknown wall, or load-bearing fixing you would want certified, is outside an assembly booking — say what you need on the form so a helper can judge it before accepting."
+      },
+      {
+       "q": "Do you remove the packaging?",
+       "a": "The form asks whether you want the packaging dealt with, and the helper can break it down and take it out. Disposal beyond your own bins is not part of it."
+      },
+      {
+       "q": "How is it priced?",
+       "a": "{base} covers the first {inclTime}, then {blockPrice} per extra {blockTime}. Item count drives how much time to book rather than adding a separate charge, so the total you see is the total."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Flat-pack assembly from the instructions in the box",
+      "The number of items you book time for",
+      "Breaking down and bagging the packaging",
+      "Straightforward wall anchoring where you supply the fixings"
+     ],
+     "excludes": [
+      "Missing or damaged parts, which only the retailer can replace",
+      "Drilling into an unknown wall, or load-bearing fixing",
+      "Taking packaging away beyond your own bins",
+      "Electrical or plumbing connection"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "moving-help",
+      "tv-mounting",
+      "tech-setup"
+     ]
+    },
+    "relatedPrompt": "Need furniture assembled after the move?",
+    "preparation": {
+     "items": [
+      "Have the boxes in the room where the furniture will live. Built furniture rarely fits through a door.",
+      "Check the parts and fittings are all there — a missing cam lock is between you and the retailer, and it stops the job.",
+      "Say what the items are, ideally by product name, and how many.",
+      "Clear floor space to work in, and say on the form whether you want the packaging broken down."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "So your helper brings the right tools and enough time.",
+    "fields": [
+     {
+      "key": "items",
+      "label": "What needs assembling?",
+      "required": true,
+      "type": "textarea",
+      "placeholder": "e.g. 1 IKEA PAX wardrobe, 2 BILLY bookcases",
+      "maxLength": 800
+     },
+     {
+      "key": "item_count",
+      "label": "Number of items",
+      "required": true,
+      "type": "number",
+      "min": 1,
+      "max": 20,
+      "unit": "items"
+     },
+     {
+      "key": "tools",
+      "label": "Tools",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "helper",
+        "label": "Helper brings tools"
+       },
+       {
+        "value": "mine",
+        "label": "I have tools here"
+       }
+      ]
+     },
+     {
+      "key": "disposal",
+      "label": "Packaging disposal?",
+      "required": false,
+      "type": "select",
+      "options": [
+       {
+        "value": "yes",
+        "label": "Yes, take it away"
+       },
+       {
+        "value": "no",
+        "label": "No, leave it"
+       }
+      ]
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1772338537689-056082f100a9?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "grocery-pickup",
+   "active": true,
+   "database": {
+    "row": {
+     "id": "grocery-pickup",
+     "category_id": "errands",
+     "title": "Grocery Pickup",
+     "blurb": "Collect a grocery order you have already placed and paid for, and bring it to your door. Tell us the store, the branch and the collection reference. If you need someone to choose the items instead, book an errand.",
+     "base_price_cents": 2000,
+     "eta_label": "30-60 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": true,
+     "image_url": "https://images.unsplash.com/photo-1543168256-418811576931?auto=format&fit=crop&w=800&q=70",
+     "active": true,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": null,
+    "completionRequirements": null,
+    "category": {
+     "id": "errands",
+     "label": "Errands",
+     "icon": "bag",
+     "sort_order": 3,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Grocery Pickup — Collect Your Prepaid Order | Helpward",
+     "h1": "Have your prepaid grocery order picked up",
+     "intro": "You have placed and paid for a grocery order; somebody else collects it and brings it to you. On Helpward this is the Grocery Pickup service. It is a collection, not a shop — if you want someone to choose and buy the items, book Errand Runner instead.",
+     "faqs": [
+      {
+       "q": "Do I need to order and pay for the groceries first?",
+       "a": "For this service, yes. It collects an order that already exists and is already paid for, which is why the form asks for the store, the order and the collection details rather than for a shopping list."
+      },
+      {
+       "q": "Can the helper shop instead?",
+       "a": "Not under this booking. Use Errand Runner, which takes a list and a spending limit and has somebody buy the items for you."
+      },
+      {
+       "q": "Which collection details are required?",
+       "a": "Which store and branch, the order reference, and what the shop needs to see to release it. Those are questions on the form, and a wrong branch is the most common way one of these goes wrong."
+      },
+      {
+       "q": "What happens if the order is not ready?",
+       "a": "The helper cannot make a shop faster. Message them through the booking and decide together whether to wait — waiting is part of the booked time — and if the collection genuinely cannot happen, you have 24 hours after completion to raise a dispute."
+      },
+      {
+       "q": "What about chilled or frozen items?",
+       "a": "Say so when you book. A collection is a short trip, but a helper who knows there is ice cream in it plans the route differently from one who does not."
+      },
+      {
+       "q": "How is it priced?",
+       "a": "By the time booked rather than the size of the order or the distance travelled, with the complete figure shown before the request is sent."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Collecting an order you have already placed and paid for",
+      "Bringing it to the address you give",
+      "Chilled items, if you say so when booking"
+     ],
+     "excludes": [
+      "Choosing or buying the groceries — that is Errand Runner",
+      "Paying for the order on your behalf",
+      "Making a shop have your order ready on time",
+      "Returns or refunds for missing items"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "errand-runner",
+      "package-delivery"
+     ]
+    },
+    "relatedPrompt": "Order already placed and paid for?",
+    "preparation": {
+     "items": [
+      "Place and pay for the order first. This service collects an order that already exists.",
+      "Have the order reference and the exact store branch — a wrong branch is the most common way this goes wrong.",
+      "Check the collection slot, and tell the shop someone else is picking up if they require it.",
+      "Flag chilled or frozen items when you book, so the route is planned around them."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "Your shopping list and where to buy it.",
+    "fields": [
+     {
+      "key": "store",
+      "label": "Which store?",
+      "required": true,
+      "type": "text",
+      "placeholder": "e.g. Save-On-Foods, Cambie St",
+      "maxLength": 200
+     },
+     {
+      "key": "list",
+      "label": "Shopping list",
+      "required": true,
+      "type": "textarea",
+      "placeholder": "One item per line, with quantities",
+      "maxLength": 2000
+     },
+     {
+      "key": "spend_cap",
+      "label": "Spending limit",
+      "required": true,
+      "type": "number",
+      "min": 5,
+      "max": 1000,
+      "unit": "$"
+     },
+     {
+      "key": "substitutions",
+      "label": "If something is out of stock",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "similar",
+        "label": "Substitute something similar"
+       },
+       {
+        "value": "ask",
+        "label": "Message me first"
+       },
+       {
+        "value": "skip",
+        "label": "Skip it"
+       }
+      ]
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1543168256-418811576931?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "house-check-in",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "house-check-in",
+     "category_id": "home-help",
+     "title": "House Check-In",
+     "blurb": "Someone visits your home while you're away — checks locks, waters plants, takes in mail, sends a photo report.",
+     "base_price_cents": 3000,
+     "eta_label": "30 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "house-check-in",
+     "included_minutes": 30,
+     "extra_block_minutes": 15,
+     "extra_block_cents": 1500,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "home-help",
+     "label": "Home Help",
+     "icon": "home",
+     "sort_order": 2,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Home Check-In — Help While You Are Away | Helpward",
+     "h1": "Book a home check-in while you are away",
+     "intro": "Somebody calls at your house while you are travelling: checks the locks, waters the plants, brings in the mail, sends you a photo report. On Helpward this is the House Check-In service. It is a short visit, not overnight house sitting — book one for each week you are gone if you want regular eyes on the place.",
+     "faqs": [
+      {
+       "q": "What happens during a home check-in?",
+       "a": "A visit of the length you book — {base} covers {inclTime} — working through what you asked for: doors and windows, plants, post, taps, anything visibly wrong. You get a photo report at the end, which is the point of it."
+      },
+      {
+       "q": "Is this overnight house sitting?",
+       "a": "No. Nobody stays, sleeps, or remains in the property between visits. If what you need is a person living there, this is not that service."
+      },
+      {
+       "q": "Can I request repeat visits?",
+       "a": "Yes, as separate bookings. Save the helper who did the first one as a favourite and send the rest to them, so the same person comes back to a house they already know."
+      },
+      {
+       "q": "How do I share access details?",
+       "a": "In the handover instructions on the booking — where the key is, the alarm code, which door. They are stored with the booking and readable only by the helper actually booked for it, which is exactly why they do not belong in a chat message or on the public request."
+      },
+      {
+       "q": "Will I receive photos or a report?",
+       "a": "Yes. Photos and a note of what was found are what you are buying, and the helper sends them through the booking."
+      },
+      {
+       "q": "What if they find something wrong?",
+       "a": "They message you. A helper is not authorised to arrange repairs, let tradespeople in, or make decisions about your property — they tell you what they saw and you decide."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "A visit of the length you book",
+      "Doors, windows, plants, post and anything visibly wrong",
+      "A photo report sent through the booking",
+      "Entry using the access details you leave"
+     ],
+     "excludes": [
+      "Overnight house sitting — nobody stays",
+      "Arranging repairs or letting tradespeople in",
+      "Pet care beyond what you have booked separately",
+      "Any compliance or insurance inspection"
+     ]
+    },
+    "nameAndLinks": {
+     "name": "Home Check-In While You're Away",
+     "related": [
+      "dog-walking",
+      "property-inspection",
+      "maid-service"
+     ]
+    },
+    "relatedPrompt": "Need your home checked while you are away?",
+    "preparation": {
+     "items": [
+      "List what you want done: doors and windows, plants, post, taps, bins.",
+      "Say whether there is an alarm, and put the code in your handover instructions rather than anywhere public.",
+      "Tell us about pets, including any that will be in the house during the visit.",
+      "Leave the place reachable — a key where you said, or a neighbour who is expecting someone."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "You won't be there, so access and tasks have to be exact.",
+    "fields": [
+     {
+      "key": "access",
+      "label": "How does your helper get in?",
+      "hint": "Buzzer, lockbox, gate code, where to park, who to ask for.",
+      "required": true,
+      "type": "textarea",
+      "maxLength": 600,
+      "sensitive": true
+     },
+     {
+      "key": "tasks",
+      "label": "What should they do?",
+      "required": true,
+      "type": "checkboxes",
+      "options": [
+       {
+        "value": "mail",
+        "label": "Collect mail"
+       },
+       {
+        "value": "plants",
+        "label": "Water plants"
+       },
+       {
+        "value": "bins",
+        "label": "Put bins out or back"
+       },
+       {
+        "value": "lights",
+        "label": "Change lights / blinds"
+       },
+       {
+        "value": "walkthrough",
+        "label": "Walk through and photograph"
+       },
+       {
+        "value": "post-update",
+        "label": "Send me an update"
+       }
+      ]
+     },
+     {
+      "key": "alarm",
+      "label": "Alarm",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "none",
+        "label": "No alarm"
+       },
+       {
+        "value": "code-in-notes",
+        "label": "Code is in my access notes"
+       },
+       {
+        "value": "call-me",
+        "label": "Call me on arrival"
+       }
+      ]
+     },
+     {
+      "key": "pets",
+      "label": "Pets at home?",
+      "required": false,
+      "type": "text",
+      "maxLength": 160
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "listening-service",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "listening-service",
+     "category_id": "presence",
+     "title": "Listening Service",
+     "blurb": "An audio call with someone whose job is to listen, for the length you book. Voice only. No therapy and no advice — just somebody paying attention for as long as you need.",
+     "base_price_cents": 2000,
+     "eta_label": "Today",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1758598306251-f68bda7168a2?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "listening-service",
+     "included_minutes": 30,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 1500,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": {
+     "service_id": "listening-service",
+     "requires_report": false,
+     "delivered_by_call": true
+    },
+    "category": {
+     "id": "presence",
+     "label": "Presence",
+     "icon": "user",
+     "sort_order": 4,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Listening Service — Book Someone to Talk To | Helpward",
+     "h1": "Book an audio conversation with a listener",
+     "intro": "Half an hour of somebody's attention, on a call. On Helpward this is the Listening Service: audio only, for as long as you book, with a person whose whole job for that time is to listen. It is not therapy and no helper here is a therapist.",
+     "faqs": [
+      {
+       "q": "Is this therapy or counselling?",
+       "a": "No. There is no clinical training behind it, no diagnosis, no treatment and no care plan — it is a conversation with someone willing to listen. If you are in crisis or need clinical help, please contact a licensed professional or your local emergency or crisis line."
+      },
+      {
+       "q": "Is the session audio only?",
+       "a": "Yes. There is no video and nobody travels to you, which is why nothing on this booking has an arrival time or a route to track."
+      },
+      {
+       "q": "How long can I book?",
+       "a": "{base} covers the first {inclTime}, with {blockPrice} per extra {blockTime}. Book the length you want rather than planning to extend mid-call."
+      },
+      {
+       "q": "How do I join the call?",
+       "a": "Through the booking, at the time you chose — the call is placed within Helpward, so you do not exchange phone numbers to make it happen."
+      },
+      {
+       "q": "Is the conversation recorded?",
+       "a": "Not by Helpward. Nobody on either side should be recording it either, and if a helper suggests otherwise, end the call and tell support."
+      },
+      {
+       "q": "What if the call cannot connect?",
+       "a": "A call that did not happen is not a job done. Message through the booking, and if it genuinely could not go ahead you have 24 hours after completion to raise a dispute and have a person at Helpward look at it."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "An audio call for the length you book",
+      "A listener whose job for that time is to listen",
+      "A call placed inside Helpward, with no numbers exchanged"
+     ],
+     "excludes": [
+      "Therapy, counselling, diagnosis or treatment",
+      "Crisis or emergency support",
+      "Video, or anyone travelling to you",
+      "Recording, by either side"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "sleep-call-companion",
+      "rent-a-friend"
+     ]
+    },
+    "relatedPrompt": "Want somebody to talk to?",
+    "preparation": {
+     "items": [
+      "Find somewhere quiet where you can speak freely for the time you booked.",
+      "Allow your phone to use the microphone when the app asks, or the call cannot start.",
+      "Check your signal or Wi-Fi a few minutes before, and put your phone on charge.",
+      "Have a sense of what you want to talk about, though there is no obligation to stick to it."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "This one happens by call, so we need to know how to reach you.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "contact_method",
+      "label": "How should your helper reach you?",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "app-voice",
+        "label": "Voice call in the Helpward app"
+       },
+       {
+        "value": "phone",
+        "label": "My phone number"
+       }
+      ]
+     },
+     {
+      "key": "topic",
+      "label": "What would you like to talk about?",
+      "hint": "As much or as little as you want to say up front.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 800
+     },
+     {
+      "key": "context",
+      "label": "What should your helper know?",
+      "hint": "Names, how you know each other, anything to avoid.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 1000
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1758598306251-f68bda7168a2?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "maid-service",
+   "active": true,
+   "database": {
+    "row": {
+     "id": "maid-service",
+     "category_id": "home-help",
+     "title": "Maid Service",
+     "blurb": "Insured cleaner for dusting, vacuuming, kitchens, bathrooms and laundry — same cleaner can be re-booked weekly.",
+     "base_price_cents": 8000,
+     "eta_label": "Today",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=800&q=70",
+     "active": true,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "maid-service",
+     "included_minutes": 120,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 2000,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": "crew_size",
+     "included_crew": 1,
+     "per_extra_crew_cents": 8000,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "home-help",
+     "label": "Home Help",
+     "icon": "home",
+     "sort_order": 2,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "House Cleaning & Maid Service — Book a Cleaner | Helpward",
+     "h1": "Book a cleaner for your home",
+     "intro": "Dusting, vacuuming, kitchens, bathrooms and laundry, done by a cleaner you can book again next week. On Helpward this is the Maid Service: say how many rooms and how long, and see the price before anything goes to a helper.",
+     "faqs": [
+      {
+       "q": "What cleaning is included?",
+       "a": "Ordinary household cleaning: dusting, vacuuming, kitchen and bathroom surfaces, and laundry. The form asks what to focus on, so a cleaner spends the booked time where you want it spent."
+      },
+      {
+       "q": "How many hours should I book?",
+       "a": "{base} covers the first {inclTime}, and longer bookings add {blockPrice} per extra {blockTime}. Bedrooms and bathrooms are questions on the form, which is the honest way to work out how much time a home needs — a three-bathroom house is not a two-hour job."
+      },
+      {
+       "q": "Do I provide supplies?",
+       "a": "The form asks. Say whether you are supplying them or want the cleaner to bring their own, so nobody arrives to find an empty cupboard."
+      },
+      {
+       "q": "Is deep cleaning or end-of-tenancy work included?",
+       "a": "No. This is regular cleaning within the time you book. Specialist work — a move-out clean inspected by a landlord, carpet machines, anything requiring equipment a cleaner does not carry — is outside it."
+      },
+      {
+       "q": "Can I book more than one cleaner?",
+       "a": "Yes. One cleaner is included and each extra is {crewPrice}, which is the sensible way to halve the clock on a large home rather than booking twice the hours."
+      },
+      {
+       "q": "Can I book regular cleaning?",
+       "a": "Yes. Save the cleaner you liked as a favourite and send future requests to them first, so the same person comes back rather than a stranger each week."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Dusting, vacuuming, kitchen and bathroom surfaces",
+      "Laundry within the time you book",
+      "The rooms and focus you choose on the form",
+      "Extra cleaners, if you ask for them"
+     ],
+     "excludes": [
+      "Deep cleaning or end-of-tenancy work inspected by a landlord",
+      "Carpet machines, pressure washing or specialist equipment",
+      "Exterior windows, lofts, or anything needing a ladder",
+      "Clearing hazardous or biological waste"
+     ]
+    },
+    "nameAndLinks": {
+     "name": "House Cleaning & Maid Service",
+     "description": "A cleaner for dusting, vacuuming, kitchens, bathrooms and laundry — and the same cleaner can be re-booked weekly.",
+     "related": [
+      "house-check-in",
+      "moving-help",
+      "furniture-assembly"
+     ]
+    },
+    "relatedPrompt": "Want the place cleaned afterwards?",
+    "preparation": {
+     "items": [
+      "Decide what to focus on. Two hours spent where you want them beats two hours spread thin.",
+      "Say whether you are supplying cleaning products or want the cleaner to bring their own.",
+      "Clear surfaces of anything precious or personal before the visit.",
+      "Tell us about pets, and shut them somewhere safe if they would rather not meet a vacuum."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "Size of the place and what matters most to you.",
+    "fields": [
+     {
+      "key": "bedrooms",
+      "label": "Bedrooms",
+      "required": true,
+      "type": "number",
+      "min": 0,
+      "max": 10,
+      "unit": "rooms"
+     },
+     {
+      "key": "bathrooms",
+      "label": "Bathrooms",
+      "required": true,
+      "type": "number",
+      "min": 1,
+      "max": 10,
+      "unit": "rooms"
+     },
+     {
+      "key": "focus",
+      "label": "Focus on",
+      "required": true,
+      "type": "checkboxes",
+      "options": [
+       {
+        "value": "kitchen",
+        "label": "Kitchen"
+       },
+       {
+        "value": "bathrooms",
+        "label": "Bathrooms"
+       },
+       {
+        "value": "floors",
+        "label": "Floors"
+       },
+       {
+        "value": "laundry",
+        "label": "Laundry"
+       },
+       {
+        "value": "windows",
+        "label": "Windows"
+       },
+       {
+        "value": "tidy",
+        "label": "General tidy"
+       }
+      ]
+     },
+     {
+      "key": "supplies",
+      "label": "Cleaning supplies",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "mine",
+        "label": "I have supplies here"
+       },
+       {
+        "value": "helper",
+        "label": "Helper brings supplies"
+       }
+      ]
+     },
+     {
+      "key": "pets",
+      "label": "Pets at home?",
+      "required": false,
+      "type": "text",
+      "placeholder": "e.g. one friendly dog",
+      "maxLength": 120
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "motorcycle-taxi",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "motorcycle-taxi",
+     "category_id": "transportation",
+     "title": "Motorcycle Taxi",
+     "blurb": "A ride across the city on the back of a licensed rider's motorcycle, with a helmet provided if you ask for one. One passenger, one journey.",
+     "base_price_cents": 2500,
+     "eta_label": "10 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": null,
+    "completionRequirements": null,
+    "category": {
+     "id": "transportation",
+     "label": "Transportation",
+     "icon": "car",
+     "sort_order": 1,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Motorcycle Taxi — Request a Passenger Ride | Helpward",
+     "h1": "Request a motorcycle passenger ride",
+     "intro": "A ride as a passenger on a motorcycle, between two addresses you give. On Helpward it is the Motorcycle Taxi service. It depends entirely on an approved rider being available where you are, so it is worth checking the areas we cover before you plan around it.",
+     "faqs": [
+      {
+       "q": "Where can I request this service?",
+       "a": "Only within the areas Helpward covers — Vancouver and the surrounding Lower Mainland, and the City of San Diego within city limits. There is no airport arrangement and no service outside those areas."
+      },
+      {
+       "q": "How many passengers can ride?",
+       "a": "One. A motorcycle carries a single passenger, so a second person means a second booking and a second rider."
+      },
+      {
+       "q": "Is a helmet provided?",
+       "a": "The form asks whether you need one, so answer it honestly and the rider knows before they accept. Riding without a legal helmet is not an option in either area we operate in."
+      },
+      {
+       "q": "What luggage is permitted?",
+       "a": "Whatever you can carry safely on a bike, and the form asks what you will have with you. A suitcase is not a motorcycle load; a backpack generally is."
+      },
+      {
+       "q": "What happens in bad weather?",
+       "a": "A rider can decline, and should. Nothing in the booking obliges anyone to ride in conditions they judge unsafe, and a request that goes unaccepted is never charged."
+      },
+      {
+       "q": "How is the trip priced?",
+       "a": "By time booked rather than distance, with the full total shown before you send the request. Your card is authorised when a rider accepts and charged once the trip is complete."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "One passenger, between two addresses you give",
+      "Luggage you can carry safely on a bike"
+     ],
+     "excludes": [
+      "More than one passenger per booking",
+      "Riding without a legal helmet",
+      "Airport runs or anything outside the areas we cover",
+      "Any obligation to ride in unsafe weather"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "designated-driver",
+      "car-battery-jump"
+     ]
+    },
+    "relatedPrompt": "Just need to get across town?",
+    "preparation": {
+     "items": [
+      "Say on the form whether you need a helmet provided. Nobody rides without a legal one.",
+      "Dress for a motorcycle: covered arms and legs, closed shoes, nothing loose.",
+      "Keep luggage to what you can carry safely on a bike — a backpack, not a suitcase.",
+      "Be ready to postpone. A rider can decline conditions they judge unsafe, and should."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "A ride on the back of your helper's motorcycle.",
+    "fields": [
+     {
+      "key": "destination",
+      "label": "Where to?",
+      "hint": "The drop-off address. Shared with your helper once they accept.",
+      "required": true,
+      "type": "destination",
+      "placeholder": "e.g. 1055 Canada Pl, Vancouver, BC",
+      "maxLength": 300,
+      "sensitive": true
+     },
+     {
+      "key": "helmet",
+      "label": "Do you need a helmet provided?",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "yes",
+        "label": "Yes, please provide one"
+       },
+       {
+        "value": "no",
+        "label": "No, I have my own"
+       }
+      ]
+     },
+     {
+      "key": "luggage",
+      "label": "Anything you're carrying?",
+      "required": false,
+      "type": "text",
+      "placeholder": "e.g. a backpack",
+      "maxLength": 120
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "moving-help",
+   "active": true,
+   "database": {
+    "row": {
+     "id": "moving-help",
+     "category_id": "home-help",
+     "title": "Moving Help",
+     "blurb": "Two strong helpers for loading, unloading and heavy lifting — by the hour. Truck rental optional.",
+     "base_price_cents": 10000,
+     "eta_label": "Arrives in 30 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1790085093188-0d274083cdc1?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": true,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "moving-help",
+     "included_minutes": 120,
+     "extra_block_minutes": 15,
+     "extra_block_cents": 1250,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": "crew_size",
+     "included_crew": 1,
+     "per_extra_crew_cents": 10000,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "home-help",
+     "label": "Home Help",
+     "icon": "home",
+     "sort_order": 2,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Moving Help — Loading, Unloading & Lifting | Helpward",
+     "h1": "Book moving help for loading, unloading and lifting",
+     "intro": "Hands for the lifting part of a move: loading, unloading, carrying and stairs. On Helpward this is the Moving Help service, and it is labour only — a vehicle is not part of it, so book it alongside the van you have hired, not instead of one.",
+     "faqs": [
+      {
+       "q": "Does the booking include a truck?",
+       "a": "No. This is people, not a vehicle. If you need a van you hire one separately, and the helpers load it for you."
+      },
+      {
+       "q": "How many helpers should I book?",
+       "a": "The form asks, and your answer is what the price is built from: one helper is included and each additional helper is {crewPrice}. A sofa down three flights is a two-person job whatever the quote says."
+      },
+      {
+       "q": "Is the price per helper or per crew?",
+       "a": "Per crew, built up from the base. {base} covers the first {inclTime} of the crew's time, with {blockPrice} per extra {blockTime}, and extra helpers add {crewPrice} each. One figure, shown in full before you request."
+      },
+      {
+       "q": "Can you load a rental truck?",
+       "a": "Yes — that is the common case. Say so in the inventory and access answers so the crew arrives expecting a vehicle to pack rather than a room to carry things through."
+      },
+      {
+       "q": "How do stairs and access affect the job?",
+       "a": "They do not change the price on their own, but they change how long the job takes, and time beyond the first two hours does cost more. The form asks about access at both ends for exactly that reason — a fourth-floor walk-up is not the same job as a loading bay."
+      },
+      {
+       "q": "What items need special arrangements?",
+       "a": "Anything a person should not lift unaided or cannot legally move: pianos, safes, gun cabinets, hazardous goods. Put it in the inventory answer, honestly, so a crew can decline before arriving rather than after."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Loading, unloading, carrying and stairs",
+      "The crew size you choose",
+      "Packing a van or truck you have hired"
+     ],
+     "excludes": [
+      "A vehicle — this is labour only",
+      "Pianos, safes, gun cabinets or hazardous goods",
+      "Packing materials, or dismantling that needs a trade",
+      "Anything not listed in your inventory answer"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "furniture-assembly",
+      "maid-service",
+      "package-delivery"
+     ]
+    },
+    "relatedPrompt": "Need hands for the lifting?",
+    "preparation": {
+     "items": [
+      "Book the van separately. This is labour — helpers load and carry, they do not supply a vehicle.",
+      "Pack and seal your boxes first. The booked time is for moving things, not filling them.",
+      "List what is actually being moved, including anything heavy or awkward, so the crew can decline before arriving rather than after.",
+      "Sort out parking at both ends, and say what the access is: stairs, a lift, a long carry."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "Crew size and stairs are what make a move go right or badly.",
+    "fields": [
+     {
+      "key": "destination",
+      "label": "Where to?",
+      "hint": "The drop-off address. Shared with your helper once they accept.",
+      "required": true,
+      "type": "destination",
+      "placeholder": "e.g. 1055 Canada Pl, Vancouver, BC",
+      "maxLength": 300,
+      "sensitive": true
+     },
+     {
+      "key": "crew_size",
+      "label": "How many helpers do you need?",
+      "hint": "Two people for a one-bed; three or four for a house.",
+      "required": true,
+      "type": "number",
+      "min": 1,
+      "max": 4,
+      "unit": "helpers"
+     },
+     {
+      "key": "inventory",
+      "label": "What's being moved?",
+      "required": true,
+      "type": "textarea",
+      "placeholder": "Rough list — beds, sofa, 20 boxes, washing machine",
+      "maxLength": 1500
+     },
+     {
+      "key": "access_from",
+      "label": "Access at the pickup",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "ground",
+        "label": "Ground floor"
+       },
+       {
+        "value": "elevator",
+        "label": "Lift / elevator"
+       },
+       {
+        "value": "stairs-1",
+        "label": "One flight of stairs"
+       },
+       {
+        "value": "stairs-2plus",
+        "label": "Two or more flights"
+       }
+      ]
+     },
+     {
+      "key": "access_to",
+      "label": "Access at the destination",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "ground",
+        "label": "Ground floor"
+       },
+       {
+        "value": "elevator",
+        "label": "Lift / elevator"
+       },
+       {
+        "value": "stairs-1",
+        "label": "One flight of stairs"
+       },
+       {
+        "value": "stairs-2plus",
+        "label": "Two or more flights"
+       }
+      ]
+     },
+     {
+      "key": "vehicle",
+      "label": "Vehicle",
+      "required": true,
+      "type": "select",
+      "hint": "Helpward helpers do not provide trucks.",
+      "options": [
+       {
+        "value": "have-van",
+        "label": "I have a van or truck booked"
+       },
+       {
+        "value": "car-loads",
+        "label": "Car loads only"
+       },
+       {
+        "value": "need-advice",
+        "label": "I need advice on what to book"
+       }
+      ]
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1790085093188-0d274083cdc1?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "package-delivery",
+   "active": true,
+   "database": {
+    "row": {
+     "id": "package-delivery",
+     "category_id": "errands",
+     "title": "Package Delivery",
+     "blurb": "One parcel collected and delivered across town — documents, a forgotten key, a gift. Say where it is going and who should receive it.",
+     "base_price_cents": 2000,
+     "eta_label": "30 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": true,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": null,
+    "completionRequirements": null,
+    "category": {
+     "id": "errands",
+     "label": "Errands",
+     "icon": "bag",
+     "sort_order": 3,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Local Package Delivery — Send a Parcel Across Town | Helpward",
+     "h1": "Book local pickup and delivery for a parcel",
+     "intro": "One parcel, one trip, across the same city. On Helpward this is the Package Delivery service: a helper collects from you and hands it to the person you name. It is a local courier run, not postal shipping — there is no network behind it and nothing leaves the area we cover.",
+     "faqs": [
+      {
+       "q": "What size parcel can I send?",
+       "a": "The form asks for size and rough weight, and the answer sets who can take it: something that fits in a backpack suits almost any helper, a bulky box needs one with a car. Be accurate rather than optimistic — a helper who arrives to find something twice the size described can decline it."
+      },
+      {
+       "q": "What destinations are supported?",
+       "a": "Addresses within the area we operate in, which means Vancouver and the surrounding Lower Mainland, or the City of San Diego within city limits. There is no intercity, interprovincial or cross-border delivery."
+      },
+      {
+       "q": "Must someone receive the parcel?",
+       "a": "The form asks who receives it, so name a person and give a way to reach them. If you want it left somewhere instead, say exactly where in the handover instructions."
+      },
+      {
+       "q": "What proof of delivery is provided?",
+       "a": "The helper marks the job complete and you can message them for a photo, which is the sensible ask for anything left rather than handed over. The booking keeps a record of when it happened."
+      },
+      {
+       "q": "Can I send documents or keys?",
+       "a": "Yes, and people do. Nothing illegal, hazardous, or valuable beyond what you would be relaxed about losing — there is no platform insurance behind the parcel, so an irreplaceable item is better couriered by somebody who insures it."
+      },
+      {
+       "q": "What happens if the recipient is unavailable?",
+       "a": "Message the helper and sort it out while they are still there — that is what the conversation is for. Say up front what should happen if nobody answers; it is a worse question to answer from a doorstep."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Collection from you and delivery to the person you name",
+      "Parcels of the size and weight you describe",
+      "A local trip within the area we cover"
+     ],
+     "excludes": [
+      "Postal, intercity, interprovincial or cross-border shipping",
+      "Insurance on the contents — there is none",
+      "Anything illegal, hazardous, perishable or live",
+      "Anything heavier or bulkier than you described"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "package-return",
+      "errand-runner",
+      "grocery-pickup"
+     ]
+    },
+    "relatedPrompt": "One parcel to get across town?",
+    "preparation": {
+     "items": [
+      "Have the parcel sealed, labelled with the destination, and ready at the door.",
+      "Describe the size and weight honestly. A helper who arrives to find something twice the size described can decline it.",
+      "Name who receives it and give a way to reach them.",
+      "Say what should happen if nobody answers. That is a bad question to answer from a doorstep."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "Where it goes, and what they're carrying.",
+    "addressLabel": "Collect from",
+    "addressHint": "Where your helper picks the package up. This is where they are dispatched, so it has to be in a city we serve.",
+    "fields": [
+     {
+      "key": "deliver_to",
+      "label": "Deliver to",
+      "required": true,
+      "type": "destination",
+      "hint": "The drop-off address. It can be outside the collection city. Shared with your helper once they accept.",
+      "placeholder": "e.g. 1055 Canada Pl, Vancouver",
+      "maxLength": 300,
+      "sensitive": true
+     },
+     {
+      "key": "size",
+      "label": "Package size",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "envelope",
+        "label": "Envelope or document"
+       },
+       {
+        "value": "small",
+        "label": "Small — fits in a backpack"
+       },
+       {
+        "value": "medium",
+        "label": "Medium — two hands"
+       },
+       {
+        "value": "large",
+        "label": "Large — awkward to carry alone"
+       }
+      ]
+     },
+     {
+      "key": "weight_kg",
+      "label": "Rough weight",
+      "required": false,
+      "type": "number",
+      "min": 0,
+      "max": 50,
+      "unit": "kg"
+     },
+     {
+      "key": "recipient",
+      "label": "Who receives it?",
+      "required": false,
+      "type": "text",
+      "placeholder": "Name, or leave with concierge",
+      "maxLength": 160
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "package-return",
+   "active": true,
+   "database": {
+    "row": {
+     "id": "package-return",
+     "category_id": "errands",
+     "title": "Package Return",
+     "blurb": "We pick up your unwanted online orders and drop them at UPS, FedEx, USPS or Amazon — tracking sent to your phone.",
+     "base_price_cents": 2500,
+     "eta_label": "20-40 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1758351507026-71ad3645cb43?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": true,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "package-return",
+     "included_minutes": null,
+     "extra_block_minutes": null,
+     "extra_block_cents": null,
+     "duration_field": "duration_min",
+     "unit_field": "parcel_count",
+     "included_units": 3,
+     "per_extra_unit_cents": 300,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "errands",
+     "label": "Errands",
+     "icon": "bag",
+     "sort_order": 3,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Package Return Pickup — Get Your Returns Dropped Off | Helpward",
+     "h1": "Arrange pickup and drop-off for your returns",
+     "intro": "The returns pile by the door, taken to the carrier. On Helpward this is the Package Return service: a helper collects your parcels and drops them at the right place. What happens to your refund after that is the retailer's decision, not ours.",
+     "faqs": [
+      {
+       "q": "Do I need a return label?",
+       "a": "You need the parcels to be returnable — the form asks whether the label is printed, emailed as a QR code, or not sorted yet. Authorising the return with the retailer is your side of it; the helper does the journey."
+      },
+      {
+       "q": "Can the helper use a return QR code?",
+       "a": "Where the carrier accepts one, yes. Say on the form that is what you have, and make sure the code reaches the helper — in the handover instructions, which only the booked helper can read."
+      },
+      {
+       "q": "Can I return multiple parcels?",
+       "a": "Yes. {inclUnits} parcels are included in the {base} and each one after that is {unitPrice}. The form asks how many, so the count on the booking matches the pile on the doorstep."
+      },
+      {
+       "q": "Will I receive a drop-off receipt?",
+       "a": "Ask the helper for a photo of the receipt or the counter scan through the booking conversation. It is the only evidence that matters if a retailer later says a parcel never arrived, so it is worth asking for every time."
+      },
+      {
+       "q": "Who issues my refund?",
+       "a": "The retailer, on their own timetable and by their own rules. Helpward moved the parcel; we have no part in whether, when, or how much they refund you."
+      },
+      {
+       "q": "Which carriers can you drop off with?",
+       "a": "The form asks which carrier and your preferred drop-off point. Pick one that is actually open and actually accepts returns for your retailer — that pairing is the thing that most often goes wrong, and it is set when you book rather than discovered at the counter."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Collecting your parcels and dropping them at the carrier",
+      "A printed label or a return QR code you provide",
+      "Several parcels in one booking"
+     ],
+     "excludes": [
+      "Authorising the return with the retailer — that is yours",
+      "Your refund, which is the retailer's decision alone",
+      "Packing the items, unless you ask within the booked time",
+      "A carrier or drop-off point that will not accept the return"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "package-delivery",
+      "errand-runner"
+     ]
+    },
+    "relatedPrompt": "Returns waiting by the door?",
+    "preparation": {
+     "items": [
+      "Start the return with the retailer first. Authorising it is your side; the helper does the journey.",
+      "Print the label, or have the QR code ready to pass on through the booking.",
+      "Pack and seal each parcel, and count them — the number on the booking should match the pile by the door.",
+      "Pick a carrier and drop-off point that is open and actually accepts returns for that retailer."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "Returns need the carrier and the label sorted up front.",
+    "fields": [
+     {
+      "key": "carrier",
+      "label": "Carrier",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "canada-post",
+        "label": "Canada Post"
+       },
+       {
+        "value": "ups",
+        "label": "UPS"
+       },
+       {
+        "value": "fedex",
+        "label": "FedEx"
+       },
+       {
+        "value": "usps",
+        "label": "USPS"
+       },
+       {
+        "value": "purolator",
+        "label": "Purolator"
+       },
+       {
+        "value": "other",
+        "label": "Other / not sure"
+       }
+      ]
+     },
+     {
+      "key": "label_status",
+      "label": "Return label",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "printed",
+        "label": "Printed and attached"
+       },
+       {
+        "value": "qr",
+        "label": "QR code — helper scans at the counter"
+       },
+       {
+        "value": "none",
+        "label": "No label yet"
+       }
+      ]
+     },
+     {
+      "key": "parcel_count",
+      "label": "How many parcels?",
+      "required": true,
+      "type": "number",
+      "min": 1,
+      "max": 10,
+      "unit": "parcels"
+     },
+     {
+      "key": "dropoff_point",
+      "label": "Preferred drop-off",
+      "required": false,
+      "type": "text",
+      "placeholder": "e.g. the depot on Main St",
+      "maxLength": 200
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1758351507026-71ad3645cb43?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "professional-cuddler",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "professional-cuddler",
+     "category_id": "lifestyle",
+     "title": "Professional Cuddler",
+     "blurb": "Certified cuddlers offer non-sexual hugs, hand-holding and quiet company — clearly consented, fully clothed.",
+     "base_price_cents": 10000,
+     "eta_label": "Today",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1573497019418-b400bb3ab074?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "professional-cuddler",
+     "included_minutes": 60,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 2500,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-28T19:42:17.244349+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "lifestyle",
+     "label": "Lifestyle",
+     "icon": "heart",
+     "sort_order": 5,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": null,
+    "scope": null,
+    "nameAndLinks": null,
+    "relatedPrompt": null,
+    "preparation": null
+   },
+   "intake": {
+    "intro": "A platonic, boundaries-first service. Both sides agree the terms up front.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "meeting_point",
+      "label": "Where should you meet?",
+      "hint": "The venue name or a specific spot — not just the street.",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "setting",
+      "label": "Setting",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "my-place",
+        "label": "My home"
+       },
+       {
+        "value": "public",
+        "label": "A public place"
+       }
+      ]
+     },
+     {
+      "key": "boundaries",
+      "label": "Your boundaries",
+      "required": true,
+      "type": "textarea",
+      "hint": "This is shared with your helper before they accept. Be specific.",
+      "maxLength": 1000
+     },
+     {
+      "key": "context",
+      "label": "What should your helper know?",
+      "hint": "Names, how you know each other, anything to avoid.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 1000
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1573497019418-b400bb3ab074?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "property-inspection",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "property-inspection",
+     "category_id": "business",
+     "title": "Property Inspection",
+     "blurb": "A visit to a property with photographs and a written note of its condition on the day. A record of what was visible — not a technical, pre-purchase or licensed building inspection.",
+     "base_price_cents": 8500,
+     "eta_label": "60 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": null,
+    "completionRequirements": {
+     "service_id": "property-inspection",
+     "requires_report": true,
+     "delivered_by_call": false
+    },
+    "category": {
+     "id": "business",
+     "label": "Business",
+     "icon": "briefcase",
+     "sort_order": 6,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Property Photo & Condition Visit — Visual Report | Helpward",
+     "h1": "Book a property photo and condition visit",
+     "intro": "A visit to a property, photographs, and a written note of what was visible on the day. On Helpward this is the Property Inspection service — most often booked by a landlord, a buyer or somebody managing a place from another city. It is a record of a visit, not a technical inspection, and the helper is not a licensed inspector.",
+     "faqs": [
+      {
+       "q": "Is this a licensed home inspection?",
+       "a": "No, and it should not be used as one. There is no structural, electrical, plumbing or code assessment, no licensed inspector, and nothing here is valid for a mortgage, an insurance requirement or a pre-purchase condition. It is photographs and a written note of what could be seen."
+      },
+      {
+       "q": "What will the report include?",
+       "a": "Photographs of the areas you asked for and a plain written description of their condition on the day of the visit. Observations, not findings, and no opinion on value or compliance."
+      },
+      {
+       "q": "Which areas can be photographed?",
+       "a": "The ones you nominate and the helper can lawfully reach. The form asks the property type and whether it is occupied, because an occupied home sets limits that an empty unit does not."
+      },
+      {
+       "q": "How do I arrange access?",
+       "a": "Through the handover instructions, which only the booked helper can read. If anyone is living there, their consent is yours to obtain before the visit — a helper will not and should not talk their way in."
+      },
+      {
+       "q": "When will the report be available?",
+       "a": "The photographs and notes come through the booking once the visit is complete. The visit is a flat price however long it takes."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "A visit to the property on the day you book",
+      "Photographs of the areas you nominate",
+      "A written note of the condition that was visible"
+     ],
+     "excludes": [
+      "A licensed, pre-purchase, structural or code inspection",
+      "Anything valid for a mortgage, insurer or regulator",
+      "Opinion on value, compliance or cause of a defect",
+      "Entry without the occupier's consent"
+     ]
+    },
+    "nameAndLinks": {
+     "name": "Property Photo & Condition Visit",
+     "related": [
+      "house-check-in",
+      "maid-service"
+     ]
+    },
+    "relatedPrompt": "Want photographs and a note on the condition?",
+    "preparation": {
+     "items": [
+      "Say what the property is and whether anyone is living there. An occupied home sets limits an empty unit does not.",
+      "Get the occupier's consent before the visit if someone lives there. A helper will not talk their way in.",
+      "Nominate the rooms and areas you want photographed.",
+      "Arrange access through your handover instructions — a key, a lockbox, or someone to let them in."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "An inspection produces a report, so the scope has to be agreed first.",
+    "fields": [
+     {
+      "key": "access",
+      "label": "How does your helper get in?",
+      "hint": "Buzzer, lockbox, gate code, where to park, who to ask for.",
+      "required": true,
+      "type": "textarea",
+      "maxLength": 600,
+      "sensitive": true
+     },
+     {
+      "key": "property_type",
+      "label": "Property type",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "apartment",
+        "label": "Apartment or condo"
+       },
+       {
+        "value": "house",
+        "label": "House"
+       },
+       {
+        "value": "commercial",
+        "label": "Commercial unit"
+       }
+      ]
+     },
+     {
+      "key": "occupancy",
+      "label": "Is it occupied?",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "vacant",
+        "label": "Vacant"
+       },
+       {
+        "value": "tenanted",
+        "label": "Tenanted — notice given"
+       },
+       {
+        "value": "owner",
+        "label": "Owner present"
+       }
+      ]
+     },
+     {
+      "key": "scope",
+      "label": "What should the report cover?",
+      "required": true,
+      "type": "checkboxes",
+      "options": [
+       {
+        "value": "condition",
+        "label": "General condition, room by room"
+       },
+       {
+        "value": "damage",
+        "label": "Damage and wear"
+       },
+       {
+        "value": "appliances",
+        "label": "Appliances working"
+       },
+       {
+        "value": "safety",
+        "label": "Smoke alarms and safety"
+       },
+       {
+        "value": "meters",
+        "label": "Meter readings"
+       },
+       {
+        "value": "exterior",
+        "label": "Exterior and grounds"
+       }
+      ]
+     },
+     {
+      "key": "report_format",
+      "label": "Report format",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "photos-notes",
+        "label": "Photos with written notes"
+       },
+       {
+        "value": "checklist",
+        "label": "Checklist only"
+       }
+      ]
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "rent-a-friend",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "rent-a-friend",
+     "category_id": "lifestyle",
+     "title": "Rent-a-Friend",
+     "blurb": "Book a friendly local to hang out — explore the city, share a meal, attend an event or just talk over coffee.",
+     "base_price_cents": 7000,
+     "eta_label": "Today",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "rent-a-friend",
+     "included_minutes": 120,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 1750,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "lifestyle",
+     "label": "Lifestyle",
+     "icon": "heart",
+     "sort_order": 5,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Rent a Friend — Book Platonic Company | Helpward",
+     "h1": "Book platonic company for an activity",
+     "intro": "Somebody to go with, when going alone is the thing stopping you. On Helpward this is the Rent a Friend service: company for a few hours, for a walk, a meal, a gallery, a gig. It is platonic, and it is time rather than a relationship.",
+     "faqs": [
+      {
+       "q": "Is this strictly platonic?",
+       "a": "Yes, entirely, with no exceptions. It is not dating, not romantic and not sexual; there is no version of this booking that becomes any of those things. A helper can end a booking and report it if someone treats it that way, and that account is closed."
+      },
+      {
+       "q": "Which activities can I book?",
+       "a": "Ordinary public things: a coffee, a walk, a meal, an exhibition, a match, a shopping trip. {base} covers the first {inclTime} and each extra {blockTime} is {blockPrice}."
+      },
+      {
+       "q": "Are meals and tickets included?",
+       "a": "No. You are paying for someone's time. Anything bought along the way — food, entry, transport — is settled separately and is worth agreeing before you go rather than at the till."
+      },
+      {
+       "q": "Where do we meet?",
+       "a": "Somewhere public, agreed in the booking before the day. That is the norm for this service and a helper is entitled to insist on it."
+      },
+      {
+       "q": "Can I request the same companion again?",
+       "a": "Yes. Save them as a favourite and later requests can go to them first."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Platonic company for an ordinary public activity",
+      "The hours you book, from an agreed public meeting point"
+     ],
+     "excludes": [
+      "Anything romantic or sexual, without exception",
+      "Meals, tickets, entry or transport",
+      "Meeting anywhere but a public place",
+      "Continuing past the hours booked"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "event-companion",
+      "shopping-companion",
+      "listening-service"
+     ]
+    },
+    "relatedPrompt": "Want company for something ordinary?",
+    "preparation": {
+     "items": [
+      "Pick something ordinary and public: a coffee, a walk, a gallery, a match.",
+      "Agree the public meeting point in the booking, before the day.",
+      "Settle who pays for what beforehand — food, entry and transport are not included.",
+      "Book the hours you actually want. The booking ends when they do."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "So your helper arrives prepared and dressed for it.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "meeting_point",
+      "label": "Where should you meet?",
+      "hint": "The venue name or a specific spot — not just the street.",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "dress_code",
+      "label": "Dress code",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "casual",
+        "label": "Casual"
+       },
+       {
+        "value": "smart-casual",
+        "label": "Smart casual"
+       },
+       {
+        "value": "business",
+        "label": "Business"
+       },
+       {
+        "value": "formal",
+        "label": "Formal / black tie"
+       }
+      ]
+     },
+     {
+      "key": "activity",
+      "label": "What are you doing?",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "context",
+      "label": "What should your helper know?",
+      "hint": "Names, how you know each other, anything to avoid.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 1000
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "shopping-companion",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "shopping-companion",
+     "category_id": "lifestyle",
+     "title": "Shopping Companion",
+     "blurb": "A second opinion at the mall — fashion eye, carries bags, keeps you company. Personal stylists available for a premium.",
+     "base_price_cents": 7000,
+     "eta_label": "Today",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "shopping-companion",
+     "included_minutes": 120,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 1750,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "lifestyle",
+     "label": "Lifestyle",
+     "icon": "heart",
+     "sort_order": 5,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Shopping Companion — Company & Help at the Shops | Helpward",
+     "h1": "Book a companion for your shopping trip",
+     "intro": "Somebody to come shopping with you: company, a second opinion, and a hand with the bags. On Helpward this is the Shopping Companion service. They go with you — if you would rather someone went instead of you, that is Errand Runner.",
+     "faqs": [
+      {
+       "q": "Will the companion shop with me or for me?",
+       "a": "With you. The whole service is company on the trip. Shopping done on your behalf, without you there, is Errand Runner."
+      },
+      {
+       "q": "Is personal styling included?",
+       "a": "No. A friendly second opinion, yes; professional styling or wardrobe consulting, no — helpers are approved by a person at Helpward, not credentialled stylists."
+      },
+      {
+       "q": "Can they help carry bags?",
+       "a": "Yes, within reason — what one person can reasonably carry. Say in the booking if it is likely to be heavy, so a helper knows before accepting."
+      },
+      {
+       "q": "Are purchases included?",
+       "a": "No. You buy what you buy; the booking is the companion's time. {base} covers the first {inclTime}, with {blockPrice} per extra {blockTime}."
+      },
+      {
+       "q": "Can we visit more than one store?",
+       "a": "Yes, as many as fit the time. Say roughly where you are going, especially if mobility or accessibility shapes the route."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Company on the trip, with you there",
+      "A hand with bags one person can reasonably carry",
+      "More than one store, within the time you book"
+     ],
+     "excludes": [
+      "Shopping done without you — that is Errand Runner",
+      "Professional styling or wardrobe consulting",
+      "Your purchases — you pay for what you buy",
+      "Pushing a wheelchair or any personal care"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "errand-runner",
+      "rent-a-friend",
+      "elder-assistance"
+     ]
+    },
+    "relatedPrompt": "Want company at the shops?",
+    "preparation": {
+     "items": [
+      "Agree a meeting point and roughly which shops you are heading to.",
+      "Say if mobility or accessibility shapes the route, so the plan suits the day.",
+      "Flag if the bags are likely to be heavy — it is what one person can reasonably carry.",
+      "Bring your own means of paying. The companion's time is what the booking covers."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "So your helper arrives prepared and dressed for it.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "meeting_point",
+      "label": "Where should you meet?",
+      "hint": "The venue name or a specific spot — not just the street.",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "dress_code",
+      "label": "Dress code",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "casual",
+        "label": "Casual"
+       },
+       {
+        "value": "smart-casual",
+        "label": "Smart casual"
+       },
+       {
+        "value": "business",
+        "label": "Business"
+       },
+       {
+        "value": "formal",
+        "label": "Formal / black tie"
+       }
+      ]
+     },
+     {
+      "key": "shopping_for",
+      "label": "What are you shopping for?",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "context",
+      "label": "What should your helper know?",
+      "hint": "Names, how you know each other, anything to avoid.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 1000
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=70"
+  },
+  {
+   "id": "sleep-call-companion",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "sleep-call-companion",
+     "category_id": "presence",
+     "title": "Sleep Call Companion",
+     "blurb": "Quiet audio company while you fall asleep, ending at a time you set beforehand. Audio only, one person, nothing recorded.",
+     "base_price_cents": 3000,
+     "eta_label": "Tonight",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1668706936367-2bef7e0e38db?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "sleep-call-companion",
+     "included_minutes": 60,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 1500,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": {
+     "service_id": "sleep-call-companion",
+     "requires_report": false,
+     "delivered_by_call": true
+    },
+    "category": {
+     "id": "presence",
+     "label": "Presence",
+     "icon": "user",
+     "sort_order": 4,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Sleep Call Companion — Quiet Audio Company | Helpward",
+     "h1": "Book quiet audio company while you fall asleep",
+     "intro": "A quiet voice on a call while you fall asleep, for an agreed stretch of time. On Helpward this is the Sleep Call Companion service: audio only, as much or as little conversation as you want, and a definite end time set when you book.",
+     "faqs": [
+      {
+       "q": "How long does the call last?",
+       "a": "As long as you booked, and no longer. {base} covers the first {inclTime}, with {blockPrice} per extra {blockTime}. There is no open-ended or all-night call — the end time is fixed before it starts."
+      },
+      {
+       "q": "Is this audio only?",
+       "a": "Yes. No video, and nobody comes to you."
+      },
+      {
+       "q": "What happens when I fall asleep?",
+       "a": "The helper stays on for the time you booked and then ends the call. That is what the agreed end time is for — it means nobody has to decide anything while you are asleep."
+      },
+      {
+       "q": "Can I choose quiet company instead of conversation?",
+       "a": "Yes, and plenty of people do. Say which you want when you book, so the helper knows whether they are talking or just there."
+      },
+      {
+       "q": "Is the call recorded?",
+       "a": "Not by Helpward, and no one on the call should be recording it."
+      },
+      {
+       "q": "Is this a treatment for insomnia?",
+       "a": "No. It is company, not medicine. It makes no claim to treat insomnia, anxiety or any condition, and persistent sleep trouble is worth raising with a doctor."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "An audio call with a fixed end time you set",
+      "Quiet company or conversation, whichever you choose"
+     ],
+     "excludes": [
+      "Any treatment for insomnia or a medical condition",
+      "An open-ended or all-night call",
+      "Video, or anyone travelling to you",
+      "Recording, by either side"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "listening-service",
+      "rent-a-friend"
+     ]
+    },
+    "relatedPrompt": "Quiet company while you fall asleep?",
+    "preparation": {
+     "items": [
+      "Be ready for bed before the call starts. The end time is fixed when you book.",
+      "Allow microphone access, and keep the phone charging within reach.",
+      "Say whether you want quiet company or conversation, so the helper knows which they are doing.",
+      "Use headphones or a speaker you can leave beside you comfortably."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "This one happens by call, so we need to know how to reach you.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "contact_method",
+      "label": "How should your helper reach you?",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "app-voice",
+        "label": "Voice call in the Helpward app"
+       },
+       {
+        "value": "phone",
+        "label": "My phone number"
+       }
+      ]
+     },
+     {
+      "key": "wind_down",
+      "label": "How should the call end?",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "stay-until-asleep",
+        "label": "Stay on until I fall asleep"
+       },
+       {
+        "value": "fixed",
+        "label": "End at the agreed time"
+       }
+      ]
+     },
+     {
+      "key": "context",
+      "label": "What should your helper know?",
+      "hint": "Names, how you know each other, anything to avoid.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 1000
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1668706936367-2bef7e0e38db?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "tech-setup",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "tech-setup",
+     "category_id": "home-help",
+     "title": "Tech Setup",
+     "blurb": "Set up your new TV, Wi-Fi, printer, smart home or migrate your old computer — every device, every brand.",
+     "base_price_cents": 7500,
+     "eta_label": "45 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1648737964965-7eda17871196?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "tech-setup",
+     "included_minutes": 60,
+     "extra_block_minutes": 15,
+     "extra_block_cents": 1875,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "home-help",
+     "label": "Home Help",
+     "icon": "home",
+     "sort_order": 2,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Home Tech Setup — Wi-Fi, Printers & Devices | Helpward",
+     "h1": "Get help setting up your home technology",
+     "intro": "The router, the printer, the new laptop, the thing that will not connect to the other thing. On Helpward this is the Tech Setup service: say which devices and what you want working at the end, and a helper sits down and does it with you.",
+     "faqs": [
+      {
+       "q": "Can you set up Wi-Fi or a printer?",
+       "a": "Yes — both are the bread and butter of it, along with new phones, laptops, televisions and smart-home devices. The form asks what the goal is, which matters more than the device list: \"printing from my phone\" is a finish line, \"printer\" is not."
+      },
+      {
+       "q": "Which device details should I provide?",
+       "a": "What needs setting up, and what you want working. The more specific the goal, the better the chance the hour actually ends with it working."
+      },
+      {
+       "q": "Do I need my own subscriptions and accounts?",
+       "a": "Yes. A helper configures what you already pay for; they do not buy services on your behalf or supply accounts."
+      },
+      {
+       "q": "How are passwords handled?",
+       "a": "The form asks whether you have your passwords and accounts to hand, because a setup visit stalls without them. Type them nowhere in the booking — have them ready for the visit and enter them yourself. Nothing in a Helpward request is a place to store a credential."
+      },
+      {
+       "q": "Is data migration included?",
+       "a": "Moving files and accounts across within the booked time, yes, as far as the time allows. Recovering a failed drive or repairing hardware is a different trade and not part of this."
+      },
+      {
+       "q": "How is it priced?",
+       "a": "{base} covers the first {inclTime}, then {blockPrice} per extra {blockTime}, plus the flat {fee} service fee. Book the time you think it needs; the figure is on screen before you send it."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Setting up Wi-Fi, printers, phones, laptops and smart devices",
+      "Configuring the accounts and subscriptions you already pay for",
+      "Moving files across, as far as the booked time allows"
+     ],
+     "excludes": [
+      "Buying hardware, software or subscriptions for you",
+      "Hardware repair or recovering a failed drive",
+      "Business or network administration",
+      "Storing or keeping any password of yours"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "tv-mounting",
+      "appliance-repair",
+      "furniture-assembly"
+     ]
+    },
+    "relatedPrompt": "Devices that will not talk to each other?",
+    "preparation": {
+     "items": [
+      "Have your passwords and account logins ready — and enter them yourself. Do not put a credential in the booking.",
+      "Say what you want working at the end. \"Printing from my phone\" is a finish line; \"printer\" is not.",
+      "Make sure any subscription you need is already paid for. A helper configures what you have; they do not buy it.",
+      "Unbox the devices and have them near a power socket."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "Which devices, so your helper knows what they're walking into.",
+    "fields": [
+     {
+      "key": "devices",
+      "label": "What needs setting up?",
+      "required": true,
+      "type": "checkboxes",
+      "options": [
+       {
+        "value": "wifi",
+        "label": "Wi-Fi / router"
+       },
+       {
+        "value": "tv",
+        "label": "Smart TV or streaming"
+       },
+       {
+        "value": "computer",
+        "label": "Computer or laptop"
+       },
+       {
+        "value": "printer",
+        "label": "Printer"
+       },
+       {
+        "value": "smart-home",
+        "label": "Smart home devices"
+       },
+       {
+        "value": "phone",
+        "label": "Phone or tablet"
+       }
+      ]
+     },
+     {
+      "key": "detail",
+      "label": "What's the goal?",
+      "required": true,
+      "type": "textarea",
+      "placeholder": "e.g. get the new router working and the printer back on Wi-Fi",
+      "maxLength": 800
+     },
+     {
+      "key": "credentials",
+      "label": "Do you have the passwords and accounts to hand?",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "yes",
+        "label": "Yes"
+       },
+       {
+        "value": "no",
+        "label": "No — I may need help recovering them"
+       }
+      ]
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1648737964965-7eda17871196?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "tv-mounting",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "tv-mounting",
+     "category_id": "home-help",
+     "title": "TV Mounting",
+     "blurb": "Securely wall-mount any TV up to 85\" on drywall, brick or concrete — mount bracket available on request.",
+     "base_price_cents": 9900,
+     "eta_label": "30-45 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1701421048182-2a628d927578?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": null,
+    "completionRequirements": null,
+    "category": {
+     "id": "home-help",
+     "label": "Home Help",
+     "icon": "home",
+     "sort_order": 2,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "TV Mounting — Book Wall-Mount Installation | Helpward",
+     "h1": "Book help mounting your TV",
+     "intro": "A television on the wall instead of on the floor. On Helpward this is the TV Mounting service: give the screen size, the wall type and whether you have a bracket, and the helper mounts it.",
+     "faqs": [
+      {
+       "q": "Do I need to supply a bracket?",
+       "a": "Yes, and the form asks which one you have. A mount has to match both the television and the wall, so it is the one thing worth buying before you book rather than after."
+      },
+      {
+       "q": "Which wall types are supported?",
+       "a": "The form asks whether it is drywall, brick, concrete or something else, because they are genuinely different jobs needing different fixings. Say which you have; if you do not know, say that instead of guessing."
+      },
+      {
+       "q": "Can you mount a large TV?",
+       "a": "Screen size is a question on the form and the helper reads it before accepting. A very large panel is a two-person lift, so book accordingly rather than hoping."
+      },
+      {
+       "q": "Is cable concealment included?",
+       "a": "Routing cables tidily, usually. Cutting into a wall to hide them, or any new electrical work, is not — that is an electrician's job and no part of this booking."
+      },
+      {
+       "q": "What details affect the quote?",
+       "a": "Time, and nothing else. It is a flat price for the visit, so screen size and wall type change who should accept the job rather than what you pay."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "Mounting the television on the bracket you supply",
+      "Tidy routing of the cables you already have",
+      "Drywall, brick or concrete, as described on the form"
+     ],
+     "excludes": [
+      "Supplying the bracket",
+      "Cutting into a wall to hide cables",
+      "Any new electrical work or added sockets",
+      "Aerial, satellite or in-wall wiring"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "tech-setup",
+      "furniture-assembly",
+      "moving-help"
+     ]
+    },
+    "relatedPrompt": "Television still to go on the wall?",
+    "preparation": {
+     "items": [
+      "Buy the bracket before you book, and make sure it matches both the television and the wall.",
+      "Know your wall: drywall, brick, concrete or something else. They need different fixings and it changes the job.",
+      "Have the screen size to hand. A very large panel is a two-person lift.",
+      "Clear the wall and the floor beneath it, and decide where the cables should run."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "Wall type and mount decide whether this is a 20-minute job or not.",
+    "fields": [
+     {
+      "key": "tv_size",
+      "label": "Screen size",
+      "required": true,
+      "type": "number",
+      "min": 19,
+      "max": 120,
+      "unit": "inches"
+     },
+     {
+      "key": "wall_type",
+      "label": "Wall type",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "drywall",
+        "label": "Drywall / plasterboard"
+       },
+       {
+        "value": "brick",
+        "label": "Brick"
+       },
+       {
+        "value": "concrete",
+        "label": "Concrete"
+       },
+       {
+        "value": "plaster",
+        "label": "Lath and plaster"
+       },
+       {
+        "value": "unsure",
+        "label": "Not sure"
+       }
+      ]
+     },
+     {
+      "key": "mount",
+      "label": "Mount bracket",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "have",
+        "label": "I have the bracket"
+       },
+       {
+        "value": "need",
+        "label": "I need one — advise me"
+       }
+      ]
+     },
+     {
+      "key": "cable_management",
+      "label": "Hide the cables?",
+      "required": false,
+      "type": "select",
+      "options": [
+       {
+        "value": "yes",
+        "label": "Yes"
+       },
+       {
+        "value": "no",
+        "label": "No"
+       }
+      ]
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1701421048182-2a628d927578?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "wait-in-line",
+   "active": true,
+   "database": {
+    "row": {
+     "id": "wait-in-line",
+     "category_id": "presence",
+     "title": "Wait in Line",
+     "blurb": "A helper waits in an eligible queue for as long as you book, then hands their place to you where the venue allows it. You are paying for their time — admission, stock and appointments are not guaranteed.",
+     "base_price_cents": 3500,
+     "eta_label": "Starts in 15 min",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1743324754696-c636e1aed0b6?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70",
+     "active": true,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "wait-in-line",
+     "included_minutes": 60,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 900,
+     "duration_field": "expected_wait",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-28T19:42:17.244349+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "presence",
+     "label": "Presence",
+     "icon": "user",
+     "sort_order": 4,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Hire Someone to Wait in Line — Line Sitter Service | Helpward",
+     "h1": "Pay someone to wait in an eligible line for you",
+     "intro": "Spend someone else's hours in the queue instead of your own. On Helpward this is the Wait in Line service: a helper holds a place for as long as you book, then hands it over where the venue allows it. You are paying for their time — not for admission, a ticket, or whatever is at the front.",
+     "faqs": [
+      {
+       "q": "Can someone hold my place at this venue?",
+       "a": "That is the venue's call, and you should check before you book. Plenty of queues allow it; ticketed events, government offices and anything requiring the named person to be present usually do not. Helpward cannot overrule a venue's rules and does not promise it can."
+      },
+      {
+       "q": "How do we hand over the place?",
+       "a": "You meet the helper in the queue and take their spot. Agree a meeting point in the booking and stay in touch as the line moves, because the handover is the part that needs timing."
+      },
+      {
+       "q": "What if the helper reaches the front first?",
+       "a": "Then the booking has run out of usefulness unless you are there. A helper cannot buy, enter, register or sign on your behalf — plan to arrive before the front, and extend the booking if the queue moves slower than you thought."
+      },
+      {
+       "q": "Can I extend the waiting time?",
+       "a": "Yes. {base} covers the first {inclTime} and each extra {blockTime} is {blockPrice}. Arrange it with the helper through the booking — their time is theirs, so an extension is an agreement rather than something you can impose."
+      },
+      {
+       "q": "Are tickets or purchases included?",
+       "a": "No. Nothing is bought on your behalf and nothing at the front of the line is included. You are buying someone's hours standing still."
+      },
+      {
+       "q": "What if the venue refuses the handover?",
+       "a": "Then the place is lost, and no one can promise otherwise. This is the real risk of the service, which is why checking the venue's policy first is worth more than anything we could write here."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "A helper holding a place for the time you book",
+      "Updates as the queue moves",
+      "Handover to you where the venue allows it",
+      "An extension, if the helper agrees to it"
+     ],
+     "excludes": [
+      "Any promise the venue will permit a handover",
+      "Tickets, admission, stock or appointments",
+      "Buying, registering or signing on your behalf",
+      "The place, if you are not there when it reaches the front"
+     ]
+    },
+    "nameAndLinks": {
+     "name": "Hire Someone to Wait in Line",
+     "related": [
+      "errand-runner",
+      "event-companion"
+     ]
+    },
+    "relatedPrompt": "A queue you would rather not stand in?",
+    "preparation": {
+     "items": [
+      "Check the venue allows someone to hold a place. That is their rule, not ours, and a refused handover loses the spot.",
+      "Agree a meeting point, and plan to arrive before the front of the queue.",
+      "Hand over anything the helper needs from you — but nothing that only works with your ID present.",
+      "Book longer than you think. Extending depends on the helper agreeing, and a queue rarely moves to plan."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "Your helper holds your place, so they need to know what for.",
+    "fields": [
+     {
+      "key": "what_for",
+      "label": "What are they queuing for?",
+      "required": true,
+      "type": "text",
+      "placeholder": "e.g. passport office, concert tickets",
+      "maxLength": 200
+     },
+     {
+      "key": "expected_wait",
+      "label": "Expected wait",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "handover",
+      "label": "How does the handover work?",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "swap",
+        "label": "I arrive and take their place"
+       },
+       {
+        "value": "collect",
+        "label": "They collect something for me"
+       }
+      ]
+     },
+     {
+      "key": "documents",
+      "label": "Do they need anything from you?",
+      "hint": "ID, a ticket, a reference number, a form.",
+      "required": false,
+      "type": "text",
+      "maxLength": 200
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1743324754696-c636e1aed0b6?auto=format&fit=crop&crop=entropy&w=800&h=480&q=70"
+  },
+  {
+   "id": "wedding-guest",
+   "active": false,
+   "database": {
+    "row": {
+     "id": "wedding-guest",
+     "category_id": "lifestyle",
+     "title": "Wedding Guest",
+     "blurb": "Trained guests fill seats at your wedding — smile, applaud, take group photos. Rehearsed roles on request.",
+     "base_price_cents": 13500,
+     "eta_label": "Schedule",
+     "countries": [
+      "US",
+      "CA"
+     ],
+     "popular": false,
+     "image_url": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=70",
+     "active": false,
+     "created_at": "2026-05-27T04:38:38.131621+00:00"
+    },
+    "pricingRule": {
+     "service_id": "wedding-guest",
+     "included_minutes": 180,
+     "extra_block_minutes": 30,
+     "extra_block_cents": 2250,
+     "duration_field": "duration_min",
+     "unit_field": null,
+     "included_units": 1,
+     "per_extra_unit_cents": null,
+     "crew_field": null,
+     "included_crew": 1,
+     "per_extra_crew_cents": null,
+     "updated_at": "2026-10-29T00:54:38.016704+00:00"
+    },
+    "completionRequirements": null,
+    "category": {
+     "id": "lifestyle",
+     "label": "Lifestyle",
+     "icon": "heart",
+     "sort_order": 5,
+     "active": true
+    }
+   },
+   "publicCopy": {
+    "page": {
+     "title": "Wedding Guest Service — Book Extra Guests | Helpward",
+     "h1": "Arrange additional guests for your wedding",
+     "intro": "Seats filled at your wedding by people who have been briefed and will behave well. On Helpward this is the Wedding Guest service: attendance for the hours you book, by approved helpers who know what you have told them and nothing you have not.",
+     "faqs": [
+      {
+       "q": "Can I book more than one guest?",
+       "a": "Yes, as separate bookings — one per person. {base} covers the first {inclTime} of each, with {blockPrice} per extra {blockTime}."
+      },
+      {
+       "q": "What should I include in the briefing?",
+       "a": "Who they are meant to be to you, names they will hear, the running order, the dress code, and anything they should not be drawn into. The more concrete the briefing, the less anyone has to improvise."
+      },
+      {
+       "q": "Are meals and venue access included?",
+       "a": "No, and both are yours to arrange. If the venue counts heads or seats by name, tell them — a guest who is not on the list is a problem on the day, not a surprise worth risking."
+      },
+      {
+       "q": "Does the venue need to know?",
+       "a": "You should assume yes. It is your event and your relationship with the venue; Helpward is supplying attendance, not permission."
+      },
+      {
+       "q": "How is time and guest count priced?",
+       "a": "Per person, by time booked. Each guest is their own booking with its own hours, so the total is simply the sum of them, each shown in full before you send it."
+      },
+      {
+       "q": "How does this differ from an event companion?",
+       "a": "An Event Companion goes with you to someone else's event. This fills seats at yours. Different job, different briefing."
+      }
+     ]
+    },
+    "scope": {
+     "includes": [
+      "One briefed guest per booking, attending for the hours you book",
+      "A dress code, running order and briefing you provide"
+     ],
+     "excludes": [
+      "Meals, drinks or venue access, which you arrange",
+      "Venue permission — that is between you and the venue",
+      "Speeches, officiating, hosting or event staffing",
+      "Any legal or official role"
+     ]
+    },
+    "nameAndLinks": {
+     "related": [
+      "event-companion",
+      "family-standin",
+      "date-companion"
+     ]
+    },
+    "relatedPrompt": "Seats to fill at your own wedding?",
+    "preparation": {
+     "items": [
+      "Check with your venue. It is your event and your relationship with them; we supply attendance, not permission.",
+      "Write the briefing properly: who they are to you, names they will hear, the running order, and what not to be drawn into.",
+      "Arrange seating and catering for them if the venue counts heads.",
+      "Book one person per booking, for the hours you need each of them."
+     ]
+    }
+   },
+   "intake": {
+    "intro": "So your helper arrives prepared and dressed for it.",
+    "fields": [
+     {
+      "key": "duration_min",
+      "label": "How long do you need?",
+      "required": true,
+      "type": "duration",
+      "options": [
+       {
+        "value": "30",
+        "label": "30 minutes"
+       },
+       {
+        "value": "45",
+        "label": "45 minutes"
+       },
+       {
+        "value": "60",
+        "label": "1 hour"
+       },
+       {
+        "value": "90",
+        "label": "1.5 hours"
+       },
+       {
+        "value": "120",
+        "label": "2 hours"
+       },
+       {
+        "value": "180",
+        "label": "3 hours"
+       },
+       {
+        "value": "240",
+        "label": "4 hours"
+       },
+       {
+        "value": "480",
+        "label": "A full day (8 hours)"
+       }
+      ]
+     },
+     {
+      "key": "meeting_point",
+      "label": "Where should you meet?",
+      "hint": "The venue name or a specific spot — not just the street.",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "dress_code",
+      "label": "Dress code",
+      "required": true,
+      "type": "select",
+      "options": [
+       {
+        "value": "casual",
+        "label": "Casual"
+       },
+       {
+        "value": "smart-casual",
+        "label": "Smart casual"
+       },
+       {
+        "value": "business",
+        "label": "Business"
+       },
+       {
+        "value": "formal",
+        "label": "Formal / black tie"
+       }
+      ]
+     },
+     {
+      "key": "relationship",
+      "label": "How do we know each other?",
+      "hint": "Your helper needs a consistent answer if someone asks.",
+      "required": true,
+      "type": "text",
+      "maxLength": 200
+     },
+     {
+      "key": "context",
+      "label": "What should your helper know?",
+      "hint": "Names, how you know each other, anything to avoid.",
+      "required": false,
+      "type": "textarea",
+      "maxLength": 1000
+     }
+    ]
+   },
+   "photograph": "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=70"
+  }
+ ]
+}

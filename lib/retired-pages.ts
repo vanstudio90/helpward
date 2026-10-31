@@ -4,8 +4,12 @@
 // Why 410 and not a redirect: sending someone searching for "Austin" to
 // San Diego is an irrelevant redirect. Google treats those as soft 404s,
 // and it misleads a visitor who asked a specific question. 410 states
-// plainly that the page is gone and is not coming back, while the body
-// still helps the visitor by listing where we do operate.
+// plainly that the page is deliberately gone, which is what we mean,
+// while the body still helps the visitor by listing where we do operate.
+//
+// 410 is not a one-way door — any of these URLs could serve 200 again if
+// the decision changed. It is chosen because it describes the decision
+// accurately, not because it cannot be undone.
 //
 // Served from the proxy rather than a page component because the App
 // Router cannot set a 410 status from a server component (notFound() is

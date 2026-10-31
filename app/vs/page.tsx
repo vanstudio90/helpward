@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Scale, ShoppingCart, Truck, Wrench, Soup, PawPrint } from "lucide-react";
 import { MarketingShell } from "@/components/MarketingShell";
-import { COMPETITORS } from "@/lib/competitors";
+import { activeCompetitors } from "@/lib/competitors";
 
 export const metadata: Metadata = {
   title: "Helpward comparisons — vs TaskRabbit, Instacart, DoorDash, Dolly, Bellhop, Rover, Wag, Care.com",
@@ -32,8 +32,8 @@ const VERTICAL: Record<string, { label: string; icon: typeof Wrench }> = {
 export default function VersusIndexPage() {
   // Group competitors by vertical label, preserving insertion order. Avoids
   // pulling in a sort dep — handful of items, plain Map does fine.
-  const buckets = new Map<string, { icon: typeof Wrench; items: typeof COMPETITORS }>();
-  for (const c of COMPETITORS) {
+  const buckets = new Map<string, { icon: typeof Wrench; items: ReturnType<typeof activeCompetitors> }>();
+  for (const c of activeCompetitors()) {
     const v = VERTICAL[c.slug] ?? { label: "Other", icon: Scale };
     if (!buckets.has(v.label)) buckets.set(v.label, { icon: v.icon, items: [] });
     buckets.get(v.label)!.items.push(c);
@@ -46,7 +46,7 @@ export default function VersusIndexPage() {
     name: "Helpward comparisons",
     description: "Side-by-side comparisons of Helpward versus other gig-economy and delivery apps.",
     url: "https://helpward.com/vs",
-    hasPart: COMPETITORS.map((c) => ({
+    hasPart: activeCompetitors().map((c) => ({
       "@type": "Article",
       "@id": `https://helpward.com/vs/${c.slug}#article`,
       name: `Helpward vs ${c.brandName}`,

@@ -107,8 +107,8 @@ export default function PricingPage() {
           you book the same service in the same city next week, the line items will be the same.
         </li>
         <li>
-          <strong>No booking minimums or bundles you have to buy into.</strong> One $9 dog walk
-          is a complete booking. There is no basket to fill and no tier to reach.
+          <strong>No booking minimums or bundles you have to buy into.</strong> One parcel
+          return is a complete booking. There is no basket to fill and no tier to reach.
         </li>
         <li>
           <strong>No platform-fee hikes during demand spikes.</strong> If supply tightens, helpers
@@ -117,7 +117,7 @@ export default function PricingPage() {
         </li>
         <li>
           <strong>No minimums.</strong> No &ldquo;you must book $20 of services to start.&rdquo; A
-          $9 dog walk is a fine first booking.
+          single errand is a fine first booking.
         </li>
         <li>
           <strong>No premium tier.</strong> There is no &ldquo;Helpward Plus&rdquo; that gives you a

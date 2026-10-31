@@ -36,6 +36,28 @@ export type Competitor = {
 //
 // The competitor columns are left as they were. They describe other
 // companies, and correcting those is a separate exercise.
+/*
+  COMPARISONS WE ARE NOT CURRENTLY MAKING.
+
+  A /vs page argues that Helpward is a reasonable alternative in some
+  category. Rover and Wag are pet care, and we stopped selling dog
+  walking when the catalogue was cut to the iOS launch set — so those two
+  pages invite a visitor to compare us on something we do not offer and
+  then land them on a 404.
+
+  Withdrawn the same way the services were: the entry stays, written and
+  complete, and comes back when dog walking does. Nothing is deleted.
+
+  Keep this in step with the active catalogue. If a comparison's whole
+  premise is a service we are not selling, it belongs here.
+*/
+export const WITHDRAWN_COMPARISONS = new Set(["rover", "wag"]);
+
+/** The comparisons currently published. */
+export function activeCompetitors(): Competitor[] {
+  return COMPETITORS.filter((c) => !WITHDRAWN_COMPARISONS.has(c.slug));
+}
+
 export const COMPETITORS: Competitor[] = [
   {
     slug: "taskrabbit",
@@ -706,5 +728,6 @@ export const COMPETITORS: Competitor[] = [
 ];
 
 export function getCompetitor(slug: string): Competitor | null {
+  if (WITHDRAWN_COMPARISONS.has(slug)) return null;
   return COMPETITORS.find((c) => c.slug === slug) ?? null;
 }
