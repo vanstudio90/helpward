@@ -7,6 +7,7 @@ import {
   listCategoriesPublic,
   getServicePublic,
   listCallDeliveredServiceIds,
+  listPricingRulesPublic,
 } from "@/lib/data/services";
 import {
   PUBLIC_SERVICE_COPY,
@@ -14,6 +15,7 @@ import {
   publicServiceDescription,
   includedPoints,
   coverageNote,
+  pricingExplanation,
 } from "@/lib/public-service-copy";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../_landing-header";
@@ -54,11 +56,12 @@ export default async function ServiceDetailPage({
   params,
 }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [service, allServices, categories, callDelivered] = await Promise.all([
+  const [service, allServices, categories, callDelivered, pricingRules] = await Promise.all([
     getServicePublic(slug),
     listServicesPublic(),
     listCategoriesPublic(),
     listCallDeliveredServiceIds(),
+    listPricingRulesPublic(),
   ]);
   if (!service) notFound();
 
@@ -70,12 +73,28 @@ export default async function ServiceDetailPage({
   const description = publicServiceDescription(service.id, service.blurb);
   const deliveredByCall = callDelivered.has(service.id);
 
-  const related = allServices
-    .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
-    .slice(0, 6);
+  /*
+    Chosen by what someone books next, with the category as a fallback
+    for a service nobody has mapped yet. Dog Walking used to offer Date
+    Companion and Wedding Guest because all three sit under Companionship.
+  */
+  const curated = (PUBLIC_SERVICE_COPY[service.id]?.related ?? [])
+    .map((id) => allServices.find((s) => s.id === id))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s));
+  const related = curated.length > 0
+    ? curated
+    : allServices
+        .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
+        .slice(0, 6);
   const baseDollars = service.base_price_cents / 100;
   const serviceFee = 4.5;
   const total = baseDollars + serviceFee;
+
+  const pricing = pricingExplanation({
+    baseCents: service.base_price_cents,
+    serviceFeeCents: Math.round(serviceFee * 100),
+    rule: pricingRules[service.id] ?? null,
+  });
 
   const SERVICE_LD = {
     "@context": "https://schema.org",
@@ -102,7 +121,7 @@ export default async function ServiceDetailPage({
     },
     {
       q: `How much does ${name.toLowerCase()} cost?`,
-      a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)}. A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. Final pricing depends on distance, time, and any tip you add. You're only charged after the helper marks the task complete.`,
+      a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)}. A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. ${pricing.points.slice(0, -1).join(" ")}`,
     },
     deliveredByCall
       ? {
@@ -223,7 +242,7 @@ export default async function ServiceDetailPage({
                 <div className="flex justify-between pt-2 border-t border-slate-100"><dt className="font-bold text-slate-900">Total estimate</dt><dd className="font-bold text-brand-700">${total.toFixed(2)}</dd></div>
               </dl>
               <p className="text-[11px] text-slate-400 mt-2 leading-snug">
-                Final price depends on distance, time, and any tip. You&apos;re only charged after the task is marked complete.
+                {pricing.lead} Distance does not change it. You&apos;re only charged after the task is marked complete.
                 Shown in USD; Canadian bookings are charged the same figure in CAD.
               </p>
               <Link
@@ -259,6 +278,28 @@ export default async function ServiceDetailPage({
               </div>
             </div>
           </div>
+        </section>
+
+        {/*
+          HOW THE PRICE IS WORKED OUT.
+
+          The pricing card shows three numbers; this says what moves
+          them. Built from the service's own pricing rule, so it cannot
+          promise an arithmetic the server does not perform.
+        */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <h2 className="text-2xl font-bold text-slate-900">
+            How {name.toLowerCase()} is priced
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">{pricing.lead}</p>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2 max-w-4xl text-sm text-slate-700">
+            {pricing.points.map((point) => (
+              <li key={point} className="flex items-start gap-2 rounded-xl bg-slate-50 border border-slate-100 p-3.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* Where it's available */}

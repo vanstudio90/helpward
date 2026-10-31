@@ -79,12 +79,12 @@ export default function About() {
           </Card>
           <Card icon={<MapPin className="w-5 h-5 text-brand-600" />} title="Real cities, real density">
             We launch one city at a time and don&apos;t move to the next until helper supply hits the density that
-            keeps response times under 20 minutes. Currently live in 10 metros — see them on the{" "}
+            keeps response times short. Currently live in two areas, Vancouver and San Diego — see them on the{" "}
             <Link href="/" className="font-semibold">homepage</Link>.
           </Card>
           <Card icon={<Sparkles className="w-5 h-5 text-amber-600" />} title="Transparent economics">
-            Helpers keep 80% of base + distance fees and 100% of tips. Helpward&apos;s 20% funds insurance,
-            background checks, support, and platform engineering. No subscriptions, no setup fees.
+            Helpers keep 80% of the base price and 100% of tips. Helpward&apos;s 20% funds support, payment
+            processing and platform engineering. No subscriptions, no setup fees.
           </Card>
           <Card icon={<Heart className="w-5 h-5 text-rose-600" />} title="Designed for the helper too">
             Helpers set their own hours via the schedule, see every task before accepting, and can decline anything
@@ -110,9 +110,9 @@ export default function About() {
 
         <h2>How we make money</h2>
         <p>
-          A flat $4.50 service fee plus 20% of the helper&apos;s base + distance earnings on each completed
+          A flat $4.50 service fee plus 20% of the helper&apos;s base earnings on each completed
           booking. We chose a flat fee over a percentage so a $20 errand isn&apos;t disproportionately penalised
-          versus a $200 booking — the fixed costs of running the marketplace (insurance, verification, support,
+          versus a $200 booking — the fixed costs of running the marketplace (review, support,
           engineering) don&apos;t scale with task size, and our pricing shouldn&apos;t either. The full economics
           live in the{" "}
           <Link href="/help/how-pricing-works" className="font-semibold">pricing guide</Link>.

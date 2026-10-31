@@ -261,7 +261,7 @@ export default async function CityServicePage({
                   <div className="flex justify-between pt-2 border-t border-slate-100"><dt className="font-bold text-slate-900">Total estimate</dt><dd className="font-bold text-brand-700">${total.toFixed(2)}</dd></div>
                 </dl>
                 <p className="text-[11px] text-slate-400 mt-2 leading-snug">
-                  Final price depends on distance, time, and any tip. You&apos;re only charged after the task is marked complete.
+                  Distance does not change the price. You&apos;re only charged after the task is marked complete, and the figure above is in {currency}.
                 </p>
                 <Link
                   href={`/new-request?service=${service.id}`}

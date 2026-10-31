@@ -31,18 +31,27 @@ import { CITIES } from "@/lib/marketing";
 
 export type PublicServiceCopy = {
   /** Directory label, link text and the name in headings. */
-  name: string;
+  name?: string;
   /** <title>. */
-  title: string;
+  title?: string;
   /** On-page H1. */
-  h1: string;
+  h1?: string;
   /**
     Opening paragraph. Leads with the need, then names the product once
     so the bridge from search phrase to catalogue title is explicit.
   */
-  intro: string;
+  intro?: string;
   /** Meta description and the `description` in Service structured data. */
   description?: string;
+  /**
+    Services a customer with THIS need also wants.
+
+    The old block listed whatever shared a category, so Dog Walking
+    offered Date Companion, Rent-a-Friend and Wedding Guest — same
+    taxonomy branch, nothing to do with a dog. These are chosen by what
+    the next task actually is.
+  */
+  related?: string[];
 };
 
 export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
@@ -54,6 +63,7 @@ export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
       "A flat battery, someone there with cables and a portable jump pack, and no tow truck. "
       + "On Helpward this is booked as the Car Battery Jump service: tell us where the car is "
       + "and a nearby helper comes out to start it.",
+    related: ["designated-driver", "errand-runner"],
   },
 
   "maid-service": {
@@ -69,6 +79,7 @@ export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
     description:
       "A cleaner for dusting, vacuuming, kitchens, bathrooms and laundry — and the same cleaner "
       + "can be re-booked weekly.",
+    related: ["house-check-in", "moving-help", "furniture-assembly"],
   },
 
   "elder-assistance": {
@@ -84,6 +95,7 @@ export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
     description:
       "A companion for seniors — grocery trips, doctor visits, conversation and light "
       + "housekeeping, booked by the hour.",
+    related: ["errand-runner", "grocery-pickup", "listening-service"],
   },
 
   "house-check-in": {
@@ -94,6 +106,7 @@ export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
       "Someone calls at your house while you are travelling: checks the locks, waters the plants, "
       + "brings in the mail and sends you a photo report. On Helpward this is the House Check-In "
       + "service — book a single visit, or one for each week you are gone.",
+    related: ["dog-walking", "property-inspection", "maid-service"],
   },
 
   "wait-in-line": {
@@ -104,6 +117,7 @@ export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
       "Spend someone else's hours in the queue instead of your own. On Helpward this is the "
       + "Wait in Line service: a helper holds a place in an eligible queue for as long as you "
       + "book, then hands it over where the venue allows it. You are paying for their time.",
+    related: ["errand-runner", "event-companion"],
   },
 
   "property-inspection": {
@@ -114,7 +128,28 @@ export const PUBLIC_SERVICE_COPY: Record<string, PublicServiceCopy> = {
       "A visit to a property, photographs, and a written note of what was visible on the day. "
       + "On Helpward this is the Property Inspection service. It is a record of a visit — not a "
       + "technical, pre-purchase or code inspection, and the helper is not a licensed inspector.",
+    related: ["house-check-in", "maid-service"],
   },
+  "designated-driver": { related: ["car-battery-jump", "event-companion"] },
+  "dog-walking": { related: ["house-check-in", "errand-runner"] },
+  "moving-help": { related: ["furniture-assembly", "maid-service", "package-delivery"] },
+  "furniture-assembly": { related: ["moving-help", "tv-mounting", "tech-setup"] },
+  "errand-runner": { related: ["grocery-pickup", "package-delivery", "package-return", "wait-in-line"] },
+  "grocery-pickup": { related: ["errand-runner", "package-delivery"] },
+  "package-delivery": { related: ["package-return", "errand-runner", "grocery-pickup"] },
+  "package-return": { related: ["package-delivery", "errand-runner"] },
+  "appliance-repair": { related: ["tech-setup", "house-check-in"] },
+  "tv-mounting": { related: ["tech-setup", "furniture-assembly", "moving-help"] },
+  "tech-setup": { related: ["tv-mounting", "appliance-repair", "furniture-assembly"] },
+  "listening-service": { related: ["sleep-call-companion", "rent-a-friend"] },
+  "sleep-call-companion": { related: ["listening-service", "rent-a-friend"] },
+  "rent-a-friend": { related: ["event-companion", "shopping-companion", "listening-service"] },
+  "date-companion": { related: ["event-companion", "rent-a-friend", "shopping-companion"] },
+  "event-companion": { related: ["date-companion", "wedding-guest", "rent-a-friend"] },
+  "shopping-companion": { related: ["errand-runner", "rent-a-friend", "elder-assistance"] },
+  "wedding-guest": { related: ["event-companion", "family-standin", "date-companion"] },
+  "family-standin": { related: ["wedding-guest", "event-companion"] },
+  "motorcycle-taxi": { related: ["designated-driver", "car-battery-jump"] },
 };
 
 /** The public-facing name. Falls back to the catalogue title. */
@@ -179,4 +214,94 @@ export function coverageNote(): string {
   return CITIES.length === 1
     ? "Coverage is city limits only."
     : `${CITIES.length === 2 ? "Both" : "All"} areas cover city limits only.`;
+}
+
+/*
+  WHAT DECIDES THE PRICE, per service, written from the pricing rule.
+
+  Every page carried the same sentence: "Final pricing depends on
+  distance, time, and any tip you add." Distance does not enter the
+  price. `bookings.distance_cents` exists, defaults to zero, and no code
+  path in the app, the API or any migration ever sets it — so a customer
+  reading that sentence was being told their fare moves with a number
+  that is always nought.
+
+  Time only enters it where the service has a pricing rule, and seven of
+  the twenty-six do not: those are a flat price for the visit. Rather
+  than find a phrasing vague enough to be true of all of them, this
+  builds the explanation from the rule itself, so it cannot drift from
+  what price_service_cents() actually charges.
+*/
+export function pricingExplanation(opts: {
+  baseCents: number;
+  serviceFeeCents: number;
+  rule: {
+    includedMinutes: number | null;
+    extraBlockMinutes: number | null;
+    extraBlockCents: number | null;
+    unitField: string | null;
+    includedUnits: number;
+    perExtraUnitCents: number | null;
+    crewField: string | null;
+    includedCrew: number;
+    perExtraCrewCents: number | null;
+  } | null;
+}): { lead: string; points: string[] } {
+  const { baseCents, serviceFeeCents, rule } = opts;
+  const money = (c: number) =>
+    c % 100 === 0 ? `$${(c / 100).toFixed(0)}` : `$${(c / 100).toFixed(2)}`;
+  const mins = (m: number) => {
+    if (m < 60) return `${m} minutes`;
+    const h = m / 60;
+    return `${Number.isInteger(h) ? h : h.toFixed(1)} hour${h === 1 ? "" : "s"}`;
+  };
+
+  const points: string[] = [];
+
+  if (rule?.includedMinutes != null && rule.extraBlockMinutes && rule.extraBlockCents != null) {
+    points.push(
+      `${money(baseCents)} covers the first ${mins(rule.includedMinutes)}.`,
+    );
+    points.push(
+      `Longer than that is ${money(rule.extraBlockCents)} per extra `
+      + `${mins(rule.extraBlockMinutes)}. Blocks are started, not metered: `
+      + `a job that runs ${rule.extraBlockMinutes + 1} minutes over is charged two blocks, `
+      + `because a helper's time is booked rather than clocked.`,
+    );
+  } else {
+    points.push(`${money(baseCents)} is the price for the visit, however long it takes.`);
+  }
+
+  if (rule?.unitField && rule.perExtraUnitCents != null) {
+    const unit = rule.unitField.replace(/_count$/, "").replace(/_/g, " ");
+    points.push(
+      `${rule.includedUnits} ${unit}${rule.includedUnits === 1 ? "" : "s"} included; `
+      + `${money(rule.perExtraUnitCents)} for each one after that.`,
+    );
+  }
+
+  if (rule?.crewField && rule.perExtraCrewCents != null) {
+    points.push(
+      `${rule.includedCrew} helper${rule.includedCrew === 1 ? "" : "s"} included; `
+      + `${money(rule.perExtraCrewCents)} for each extra helper you ask for.`,
+    );
+  }
+
+  points.push(`A flat ${money(serviceFeeCents)} service fee is added once, whatever the job.`);
+  points.push(
+    "Distance does not change the price, and there is no surge pricing or "
+    + "peak-hour markup. A tip is optional and entirely yours to set.",
+  );
+  points.push(
+    "You see the whole figure on the review screen before the request reaches "
+    + "a helper. Your card is authorised when one accepts and charged once the "
+    + "job is marked complete.",
+  );
+
+  return {
+    lead: rule?.includedMinutes != null
+      ? "This service is priced by time booked."
+      : "This service is a flat price.",
+    points,
+  };
 }

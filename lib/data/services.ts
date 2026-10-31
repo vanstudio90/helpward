@@ -131,6 +131,29 @@ export async function listPricingRules(): Promise<Record<string, PricingRule>> {
 }
 
 /*
+  The same rules, but build-safe.
+
+  listPricingRules() uses the cookie-bound client, which cannot run
+  inside a static pre-render. The public service pages need the rule to
+  explain how a price is worked out, and the rules are the same for
+  everyone, so service-role is equivalent here.
+*/
+export async function listPricingRulesPublic(): Promise<Record<string, PricingRule>> {
+  const supabase = createSupabaseServiceClient();
+  const { data, error } = await supabase.from("service_pricing").select("*");
+  if (error) {
+    console.error("listPricingRulesPublic error:", error.message);
+    return {};
+  }
+  const out: Record<string, PricingRule> = {};
+  for (const row of (data ?? []) as Array<Record<string, unknown>>) {
+    const rule = ruleFromRow(row);
+    if (rule) out[rule.serviceId] = rule;
+  }
+  return out;
+}
+
+/*
   Which services are delivered entirely by phone call.
 
   Public pages used to promise "Real-time GPS tracking" and answer "How
