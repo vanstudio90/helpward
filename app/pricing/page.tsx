@@ -136,11 +136,27 @@ export default async function PricingPage() {
             Generated from the same pricing rules that quote your booking, so these cannot drift
             from what you are actually charged.
           </p>
+          {/*
+            Every figure below is one number in two currencies: a base of
+            25 is CA$25 on a Vancouver booking and US$25 on a San Diego
+            one. Saying so once, here, is the honest way to label a
+            national page — the alternative is a bare "$" that means
+            something different depending on where the job is.
+          */}
+          <p className="mt-1 text-sm font-semibold text-slate-900">
+            Figures shown as <span className="whitespace-nowrap">US$ / CA$</span>: the amount is the
+            same number in both, and you are charged in the currency of the city you book in.
+          </p>
           <div className="mt-4 space-y-4">
             {examples.map(({ service, name, pricing }) => (
               <div key={service.id} className="rounded-2xl border border-slate-100 bg-white p-5">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="text-base font-bold text-slate-900">{name}</h3>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {name}{" "}
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      US$ / CA$
+                    </span>
+                  </h3>
                   <Link
                     href={`/services/${service.id}`}
                     className="text-[13px] font-semibold text-brand-700 hover:underline"
