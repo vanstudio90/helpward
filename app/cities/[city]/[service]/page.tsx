@@ -15,6 +15,7 @@ import {
   publicServiceDescription,
   includedPoints,
 } from "@/lib/public-service-copy";
+import { cityCopy } from "@/lib/public-city-copy";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { LandingHeader } from "../../../_landing-header";
 import { CITIES, getCity } from "@/lib/marketing";
@@ -43,7 +44,9 @@ export async function generateMetadata({
 
   const name = publicServiceName(service.id, service.title);
   const title = `${name} in ${city.name}, ${city.region} | Helpward`;
-  const description = `Book ${name.toLowerCase()} in ${city.name} via Helpward. Approved local helpers, $${(service.base_price_cents / 100).toFixed(0)} base price (${city.country === "CA" ? "CAD" : "USD"}), payment only after the task is complete.`;
+  const local = cityCopy(city.slug);
+  const area = local ? local.coverage.replace(/\.$/, "") : `${city.metro ?? city.name}`;
+  const description = `Book ${name.toLowerCase()} in ${city.name} via Helpward. Covers ${area.charAt(0).toLowerCase() + area.slice(1)}. $${(service.base_price_cents / 100).toFixed(0)} base price in ${local?.currency ?? (city.country === "CA" ? "CAD" : "USD")}, payment only after the task is complete.`;
   const url = `https://helpward.com/cities/${city.slug}/${service.id}`;
   return {
     title,
@@ -72,7 +75,8 @@ export default async function CityServicePage({
   const name = publicServiceName(service.id, service.title);
   const blurb = publicServiceDescription(service.id, service.blurb);
   const deliveredByCall = callDelivered.has(service.id);
-  const currency = city.country === "CA" ? "CAD" : "USD";
+  const local = cityCopy(city.slug);
+  const currency = local?.currency ?? (city.country === "CA" ? "CAD" : "USD");
 
   const related = allServices
     .filter((s) => s.category?.id === service.category?.id && s.id !== service.id)
@@ -143,6 +147,20 @@ export default async function CityServicePage({
       q: `How much does ${name.toLowerCase()} cost in ${city.name}?`,
       a: `Base price for ${service.title} on Helpward is $${baseDollars.toFixed(0)} (${currency}). A flat $${serviceFee.toFixed(2)} service fee brings the total to about $${total.toFixed(2)}. Pricing is the same across ${city.name} — no surge fees, no per-block markup. You're only charged after the helper marks the task complete.`,
     },
+    ...(local
+      ? [
+          {
+            q: `Which areas of ${city.name} are covered?`,
+            a: local.notCovered.length > 0
+              ? `${local.coverage} Neighbouring places are separate incorporated cities and are not covered: ${local.notCovered.join(", ")}. A ${city.name} mailing address is not proof an address sits inside the line, so where a job has two ends it is worth checking both before booking.`
+              : `${local.coverage}`,
+          },
+          {
+            q: `Which currency will I be charged in ${city.name}?`,
+            a: `${local.currency}. Every figure shown on this page is in ${local.currency}, and that is what your card is charged. The address form asks for a ${local.regionWord} and a postal code here.`,
+          },
+        ]
+      : []),
     {
       q: `Are Helpward helpers in ${city.name} approved?`,
       a: `Every ${city.name} helper is reviewed and approved by a person at Helpward before they can take a task, and an unapproved helper is never offered work. Automated ID verification and background checks are not running yet, and Helpward does not currently carry platform insurance — we'll say so here when that changes.`,
@@ -298,6 +316,56 @@ export default async function CityServicePage({
             </div>
           </div>
         </section>
+
+        {/*
+          WHAT IS DIFFERENT ABOUT BOOKING HERE.
+
+          These 52 pages were the same page with a city name swapped in.
+          This is the part that genuinely differs: the service area and
+          what sits just outside it, the currency a card is charged in,
+          and one real consequence of the local geography. No invented
+          helper counts, no neighbourhood lists pretending to be
+          coverage.
+        */}
+        {local && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <h2 className="text-2xl font-bold text-slate-900">
+              Booking {name.toLowerCase()} in {city.name}
+            </h2>
+            <div className="mt-4 grid gap-4 md:grid-cols-3 max-w-5xl text-sm">
+              <div className="rounded-2xl border border-slate-100 bg-white p-5">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Service area
+                </div>
+                <p className="mt-2 text-slate-700">{local.coverage}</p>
+                {local.notCovered.length > 0 && (
+                  <p className="mt-2 text-slate-600">
+                    Not covered, because they are separate incorporated cities:{" "}
+                    {local.notCovered.join(", ")}.
+                  </p>
+                )}
+              </div>
+              <div className="rounded-2xl border border-slate-100 bg-white p-5">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Currency and address
+                </div>
+                <p className="mt-2 text-slate-700">
+                  Your card is charged in {local.currency}, and every figure on this page is
+                  in {local.currency}. The address form asks for a {local.regionWord} and a
+                  postal code here.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-100 bg-white p-5">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {deliveredByCall ? "Nobody travels" : "Getting there"}
+                </div>
+                <p className="mt-2 text-slate-700">
+                  {deliveredByCall ? local.remoteNote : local.travelNote}
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Same service, other cities */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
