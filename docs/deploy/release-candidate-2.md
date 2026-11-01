@@ -8,7 +8,7 @@ authorised step.
 | Website + API | `dbe3a72be5b8d4660a68651f1d086c9cc7dc73ae` on `api-merge-rehearsal` |
 | iOS | `d3056917c50542890a8f2cc7b7c566f6a4eae76c` |
 | RC-1 was | `37079ea` — still in history, so the difference is reviewable |
-| Tests | 534, all passing |
+| Tests | 540, all passing |
 | Typecheck / build | clean |
 
 ```
@@ -75,3 +75,20 @@ Nothing, yet. The pieces are built; three things have to happen first.
 - The controlled helper is **operated by a person**, not automated. The
   review notes say so plainly and give the reviewer two ways not to wait
   on one.
+
+
+---
+
+## Follow-up commits after RC-2 was cut
+
+RC-2 stays identifiable at `22dd25b`. These are additions on top of it,
+not a new candidate — no renumbering for documentation.
+
+| Commit | What |
+|---|---|
+| `2406709` | Dependable acceptance, payment-mode separation through the whole lifecycle, migration `0089` |
+
+**The submission build is cut after the production journey works**, not
+before. These commits change behaviour the reviewer depends on, so the
+binary to archive is the one built from whatever is HEAD at that point —
+recorded in the review notes then, not guessed now.
