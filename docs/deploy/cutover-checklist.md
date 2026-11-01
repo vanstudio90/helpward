@@ -282,7 +282,7 @@ node scripts/reapply-migrations.mjs \
 `0044` is deliberately absent from that list: `0090` supersedes it and
 also closes the `pm_self` policy that `0044` left behind.
 
-### 8.2 Apply 0090
+### 8.2 Apply 0090 — DONE 2026-11-01
 
 ```
 node scripts/migrate.mjs --production --only 0090
@@ -309,7 +309,7 @@ Ships `prepareReviewHelper()`. Until this lands, the controlled helper
 must be refreshed within 30 minutes of any demonstration:
 `node scripts/refresh-review-helper.mjs`.
 
-### 8.5 Prove the journey
+### 8.5 Prove the journey — DONE 2026-11-01, 8/8
 
 ```
 node scripts/review-journey.mjs
@@ -336,3 +336,40 @@ went through chat. Each needs its own rotation: Supabase → project →
 Settings → Database → Reset database password. Afterwards re-run
 `~/.helpward-cutover/set-production-db.sh` so the stored URI matches, and
 delete the scratch project, which is billable.
+
+---
+
+## 9. Journey verified end to end — 2026-11-01
+
+`0090` applied (146ms). The audit dropped from eight discrepancies to
+three; the payment_methods findings are closed.
+
+`scripts/review-journey.mjs`: **8 passed, 0 failed.** Each service went
+request -> accepted with the card held -> started -> completed and
+captured, through the same endpoints the app and helper use.
+
+| Service | Quote | Final |
+|---|---|---|
+| errand-runner | CA$44.50 | completed/captured |
+| maid-service | CA$94.50 | completed/captured |
+| moving-help | CA$224.50 | completed/captured |
+| furniture-assembly | CA$64.50 | completed/captured |
+| grocery-pickup | CA$29.50 | completed/captured |
+| package-delivery | CA$29.50 | completed/captured |
+| package-return | CA$34.50 | completed/captured |
+| wait-in-line | CA$44.50 | completed/captured |
+
+Confirmed in Stripe rather than only in our own tables: nine succeeded
+test-mode PaymentIntents in CAD, each with
+`transfer_data.destination = acct_1UUtVQ9u2smD2qAZ`, so the destination
+split reaches the helper. Cancellation was exercised too — the API
+returned `holdReleased: true` and Stripe moved that intent to
+`canceled`.
+
+Isolation holds from the other side: an ordinary account aimed at a
+genuine review booking gets `403 "Not available on this account."`
+
+**Still outstanding:** 8.1 (re-apply 0049, 0058, 0063), 8.4 (deploy
+`prepareReviewHelper`), 8.6 (submit), 8.7 (rotate both passwords). Until
+8.4 ships, run `scripts/refresh-review-helper.mjs` within 30 minutes of
+a demonstration.

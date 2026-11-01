@@ -115,15 +115,29 @@ for (const serviceId of ids) {
     console.log(`    ${C.bad("FAIL")} create: HTTP ${res.status} ${JSON.stringify(out).slice(0, 220)}`);
     fail++; continue;
   }
-  const bookingId = out.bookingId ?? out.booking?.id ?? null;
-  console.log(`    request ${out.requestId ?? out.id ?? "?"}  offered to ${out.offeredTo ?? "?"}`);
-  if (out.reviewAccept) console.log(`    accept  ${JSON.stringify(out.reviewAccept)}`);
-  if (!bookingId) {
-    console.log(`    ${C.bad("FAIL")} no booking: the controlled helper did not accept.`);
+  console.log(`    request ${out.requestId}  offered to ${out.candidateCount} helper(s)  ${out.currency} ${out.estimatedTotalCents}`);
+
+  /*
+    The route reports the controlled helper's action as reviewDemo and does
+    NOT return a booking id — the app reads its bookings separately. So read
+    it the same way, as the customer, which also proves RLS lets them see it.
+  */
+  if (!out.reviewDemo?.accepted) {
+    console.log(`    ${C.bad("FAIL")} the controlled helper did not accept.`);
     console.log(`           ${C.dim(JSON.stringify(out).slice(0, 300))}`);
     fail++; continue;
   }
-  console.log(`    booking ${bookingId}`);
+  console.log(`    accepted: ${out.reviewDemo.note}`);
+
+  const bk = await (await fetch(
+    `${SUPA}/rest/v1/bookings?request_id=eq.${out.requestId}&select=id,status,payment_status`,
+    { headers: { apikey: ANON, Authorization: `Bearer ${tok.access_token}` } })).json();
+  const bookingId = Array.isArray(bk) ? bk[0]?.id : null;
+  if (!bookingId) {
+    console.log(`    ${C.bad("FAIL")} accepted but no booking is readable by the customer.`);
+    fail++; continue;
+  }
+  console.log(`    booking ${bookingId}  ${bk[0].status}/${bk[0].payment_status}`);
 
   let okAll = true;
   for (const step of ["start", "complete"]) {
@@ -133,6 +147,13 @@ for (const serviceId of ids) {
     const mark = a.ok ? C.ok("ok  ") : C.bad("FAIL");
     console.log(`    ${mark} advance (${step}): HTTP ${a.status} ${JSON.stringify(aj).slice(0, 160)}`);
     if (!a.ok) okAll = false;
+  }
+  const after = await (await fetch(
+    `${SUPA}/rest/v1/bookings?id=eq.${bookingId}&select=status,payment_status`,
+    { headers: { apikey: ANON, Authorization: `Bearer ${tok.access_token}` } })).json();
+  if (Array.isArray(after) && after[0]) {
+    console.log(`    final   ${after[0].status}/${after[0].payment_status}`);
+    if (after[0].payment_status !== "captured") okAll = false;
   }
   okAll ? pass++ : fail++;
 }
