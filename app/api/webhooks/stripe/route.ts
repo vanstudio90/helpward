@@ -26,11 +26,47 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const stripe = getStripe();
 
+  /*
+    TWO SIGNING SECRETS, because there are two Stripe modes.
+
+    App Review bookings transact in test mode, and Stripe signs a
+    test-mode event with the TEST endpoint's secret. Verifying only
+    against the live secret would reject every review event as a bad
+    signature — so a review booking would never see its hold confirmed
+    or its capture reconciled, and the reviewer would be stuck on a
+    payment that silently never settled.
+
+    Live is tried first, so the ordinary path is unchanged and costs
+    nothing. The test secret is only consulted when the live one
+    rejects, and only if it is configured at all.
+
+    This is NOT a loosening: each event still has to carry a valid
+    signature for one of the two endpoints we own. An unsigned or
+    wrongly-signed event is refused exactly as before.
+  */
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(body, sig, secret);
-  } catch (err) {
-    return NextResponse.json({ ok: false, reason: "bad_signature", message: (err as Error).message }, { status: 400 });
+  } catch (liveErr) {
+    const testSecret = process.env.STRIPE_TEST_WEBHOOK_SECRET;
+    if (!testSecret) {
+      return NextResponse.json(
+        { ok: false, reason: "bad_signature", message: (liveErr as Error).message },
+        { status: 400 },
+      );
+    }
+    try {
+      event = stripe.webhooks.constructEvent(body, sig, testSecret);
+    } catch {
+      return NextResponse.json(
+        { ok: false, reason: "bad_signature", message: (liveErr as Error).message },
+        { status: 400 },
+      );
+    }
+    // A live-mode event must never arrive signed by the test endpoint.
+    if (event.livemode) {
+      return NextResponse.json({ ok: false, reason: "mode_mismatch" }, { status: 400 });
+    }
   }
 
   const admin = createSupabaseServiceClient();

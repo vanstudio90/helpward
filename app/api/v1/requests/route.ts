@@ -3,6 +3,7 @@ import { withBearerAuth } from "@/lib/api/bearer";
 import { quoteOneShotCents } from "@/lib/pricing";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
+import { acceptAsReviewHelper } from "@/lib/review-helper";
 import { reviewResolution } from "@/lib/address-confirmation";
 import { validateIntake, describeIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service-intake";
 import { validateHandover, isHandoverEmpty } from "@/lib/handover";
@@ -288,6 +289,21 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
   await broadcastRequestBestEffort(admin, created.id, { label: "ios-one-shot" });
 
   /*
+    A REVIEW REQUEST IS ANSWERED IMMEDIATELY, by the controlled helper,
+    through the ordinary accept path.
+
+    App Review must not depend on somebody being at a desk. Telling a
+    reviewer to email us if nobody accepts makes the journey hinge on
+    staff availability, which is not something they can rely on.
+
+    Nothing is fabricated: this is accept_request() followed by the same
+    authorisation the helper's own app performs, in Stripe test mode
+    because the customer is a review account. It is a no-op for every
+    real request — acceptAsReviewHelper checks the flag and refuses.
+  */
+  const reviewAccept = await acceptAsReviewHelper(created.id);
+
+  /*
     HOW MANY HELPERS ACTUALLY GOT IT.
 
     A broadcast that reaches nobody still "succeeds" — find_nearby_providers
@@ -305,6 +321,13 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
     .eq("request_id", created.id);
 
   return Response.json({
+      /*
+        Present only for a review account, and only to say what the
+        controlled helper did. Absent for every ordinary request.
+      */
+      ...(reviewAccept.ok
+        ? { reviewDemo: { accepted: true, note: reviewAccept.note } }
+        : {}),
     requestId: created.id,
     candidateCount: candidateCount ?? 0,
     // The ATTESTED coordinates, so the app can show the search area over a

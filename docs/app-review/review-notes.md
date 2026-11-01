@@ -71,19 +71,25 @@ configuration is present in the binary.
 9. The test helper marks the job complete. The hold is **captured** at
    that point and the booking moves to completed.
 
-### If nobody accepts within a few minutes
+### You will not have to wait for anyone
 
-Our operations team answers review bookings during working hours, and a
-reviewer should not have to wait on a person. If a request has not been
-accepted:
+The controlled helper accepts **immediately**, automatically, as part of
+sending the request — there is nobody to email and nothing to wait for,
+at any hour.
 
-- Send a message through the booking, or email the contact above, and
-  the helper will be brought online immediately; **or**
-- Cancel the request (below) and try again — nothing is charged for a
-  request that was never accepted.
+Moving the booking through its remaining states is also in your hands:
+the booking screen on this account shows **Advance demo booking**, which
+performs the helper's next action — start, then complete.
 
-A request that nobody accepts **expires on its own** and is never
-charged. That is the real product behaviour, not a review special case.
+That control exists only on this account. An ordinary account has no
+such button and the endpoint behind it refuses them.
+
+**None of it fabricates anything.** Acceptance calls the same
+`accept_request` the helper's app calls, followed by the same card
+authorisation. Advancing calls `start_booking` and `complete_booking`,
+and whether the hold is captured or released is decided by the same
+settlement rule a real booking uses. You are watching the real
+transitions, with test money.
 
 ## Test inputs for each of the eight services
 
@@ -138,12 +144,20 @@ will recreate it.
 Nothing about the payment, the pricing, the validation or the booking
 states is simulated — all of it is the production code path.
 
-**One thing is operated rather than organic:** the helper who accepts
-and completes a review booking is a controlled account run by our
-operations team, not a member of the public. We do this so that a
-reviewer is never the cause of a real person travelling to an address
-that does not need help. The helper's actions — accepting, messaging,
-marking complete — are the same actions any helper performs.
+**One thing is operated rather than organic:** the helper on a review
+booking is a controlled account, and its accept / start / complete
+actions are performed automatically rather than by a person. We do this
+so a reviewer is never the cause of a real person travelling to an
+address that does not need help, and never has to wait for one.
+
+Those actions are the same calls a real helper's app makes. Nothing is
+skipped and no state is written directly — if it were, you would be
+verifying a path no customer takes.
+
+Review activity is also kept out of everything a customer reads: a
+review you leave is not customer-visible, the controlled helper's rating
+and completed-task count stay at zero, and it does not appear in the
+public helper directory.
 
 ## Separation
 

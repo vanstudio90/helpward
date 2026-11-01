@@ -64,3 +64,69 @@ test("the app is told its publishable key rather than compiling one in", () => {
   assert.match(me, /publishableKeyFor/);
   assert.match(me, /isReviewAccount/);
 });
+
+test("every payment call resolves its mode; none assumes live", () => {
+  /*
+    Checking BOTH directions matters. Review activity reaching live
+    Stripe would charge a reviewer real money; an ordinary booking
+    reaching test Stripe would be a free booking. Both are failures.
+
+    Any remaining getStripe() must be somewhere that genuinely has no
+    customer to resolve from, and must say so.
+  */
+  const lines = payments.split("\n");
+  const offenders: string[] = [];
+  lines.forEach((line, i) => {
+    if (!/\bgetStripe\(\)/.test(line)) return;
+    const context = lines.slice(Math.max(0, i - 14), i).join("\n");
+    const explained = /no customer|nobody to resolve|would not be found|does not say which/i.test(context);
+    if (!explained) offenders.push(`line ${i + 1}: ${line.trim()}`);
+  });
+  assert.deepEqual(offenders, [],
+    `unresolved getStripe() with no explanation:\n${offenders.join("\n")}`);
+});
+
+test("a helper's connected account follows the same mode as its bookings", () => {
+  // A test-mode destination charge cannot pay a live connected account.
+  assert.match(payments, /async function stripeForHelper\(/);
+  assert.match(payments, /is_review_helper/);
+});
+
+test("the webhook accepts test-mode events without accepting unsigned ones", () => {
+  const hook = readFileSync("app/api/webhooks/stripe/route.ts", "utf8");
+  assert.match(hook, /STRIPE_TEST_WEBHOOK_SECRET/);
+  // A live event signed by the test endpoint is still refused.
+  assert.match(hook, /event\.livemode/);
+  assert.match(hook, /mode_mismatch/);
+  // And a bad signature is still a 400, not a pass-through.
+  assert.match(hook, /bad_signature/);
+});
+
+test("the controlled helper uses the real actions, never a status write", () => {
+  const rh = readFileSync("lib/review-helper.ts", "utf8");
+  for (const rpc of ["accept_request", "start_booking", "complete_booking"]) {
+    assert.ok(rh.includes(rpc), `review helper does not call ${rpc}`);
+  }
+  assert.match(rh, /authorizeBookingPayment/);
+  assert.match(rh, /captureBookingPayment/);
+  // No direct status writes, which would fabricate a transition.
+  assert.doesNotMatch(rh, /\.update\(\{[^}]*status:/);
+  assert.doesNotMatch(rh, /payment_status/);
+});
+
+test("the controlled helper cannot be aimed at a real booking", () => {
+  const rh = readFileSync("lib/review-helper.ts", "utf8");
+  assert.match(rh, /isReviewRequest/);
+  assert.match(rh, /isReviewBooking/);
+  // The booking must belong to the review helper, not merely to a review
+  // customer who happened to match someone real.
+  assert.match(rh, /row\.provider_id !== helper/);
+});
+
+test("the advance endpoint is gated on the account, not on a parameter", () => {
+  const route = readFileSync("app/api/v1/review/advance/route.ts", "utf8");
+  assert.match(route, /is_review_account/);
+  assert.match(route, /status: 403/);
+  // And the booking must be the caller's own.
+  assert.match(route, /\.eq\("customer_id", user\.id\)/);
+});

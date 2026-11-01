@@ -202,7 +202,7 @@ export async function startHelperOnboarding(
   returnTo: string,
 ): Promise<PaymentResult<{ url: string; accountId: string }>> {
   if (!stripeConfigured()) return fail("not_configured", "Payouts are not available yet.");
-  const stripe = getStripe();
+  const stripe = await stripeForHelper(providerId);
   const admin = createSupabaseServiceClient();
 
   const { data: profile } = await admin
@@ -345,8 +345,27 @@ export async function refreshHelperPayoutState(
   accountId: string,
 ): Promise<PaymentResult<{ payable: boolean }>> {
   if (!stripeConfigured()) return fail("not_configured", "Payouts are not available yet.");
-  const stripe = getStripe();
   const admin = createSupabaseServiceClient();
+  /*
+    Only the account id is given, so the helper is looked up from it. A
+    review helper's connected account lives in test Stripe and would not
+    be found by the live client at all.
+  */
+  const { data: owner } = await admin
+    .from("provider_profiles")
+    .select("user_id")
+    .eq("stripe_connect_account_id", accountId)
+    .maybeSingle();
+  /*
+    No owner row for this account id, so there is no customer to resolve
+    a mode from. Live is the safe default: an unknown account is far
+    more likely to be a live one, and guessing test here would look for
+    a live connected account in the test dashboard and report it
+    unpayable.
+  */
+  const stripe = owner?.user_id
+    ? await stripeForHelper(owner.user_id as string)
+    : getStripe();
 
   try {
     const account = await stripe.accounts.retrieve(accountId);
@@ -392,6 +411,28 @@ export async function refreshHelperPayoutState(
   Resolved from the DATABASE, never from anything the caller passed, so
   a client cannot ask to be billed in test mode.
 */
+/** Is this helper the controlled App Review helper? */
+async function isReviewHelper(userId: string): Promise<boolean> {
+  const admin = createSupabaseServiceClient();
+  const { data } = await admin
+    .from("provider_profiles")
+    .select("is_review_helper")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return Boolean(data?.is_review_helper);
+}
+
+/*
+  The connected account a helper is paid through must live in the same
+  Stripe mode as the bookings they take. A test-mode destination charge
+  cannot pay a live connected account, and a review helper onboarded
+  against live Stripe would be a real payout account created for a
+  demonstration.
+*/
+async function stripeForHelper(userId: string) {
+  return getStripeFor(await isReviewHelper(userId));
+}
+
 async function isReviewCustomer(userId: string): Promise<boolean> {
   const admin = createSupabaseServiceClient();
   const { data } = await admin
@@ -400,6 +441,25 @@ async function isReviewCustomer(userId: string): Promise<boolean> {
     .eq("id", userId)
     .maybeSingle();
   return Boolean(data?.is_review_account);
+}
+
+/** The mode a booking transacts in, from its customer. */
+async function stripeForBooking(bookingId: string) {
+  const admin = createSupabaseServiceClient();
+  const { data } = await admin
+    .from("bookings")
+    .select("customer_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+  /*
+    Booking not found, so nobody to resolve a mode from. Live is the
+    safe default in this direction: the failure it produces is a lookup
+    that finds nothing, whereas defaulting to test could let an unknown
+    booking transact against test money and become a free booking.
+  */
+  return data?.customer_id
+    ? stripeForUser(data.customer_id as string)
+    : getStripe();
 }
 
 async function stripeForUser(userId: string) {
@@ -710,7 +770,7 @@ export async function confirmPendingAuthorization(
   }
 
   try {
-    const intent = await getStripe().paymentIntents.retrieve(booking.stripe_payment_intent_id);
+    const intent = await (await stripeForBooking(bookingId)).paymentIntents.retrieve(booking.stripe_payment_intent_id);
     const held = intent.status === "requires_capture" || intent.status === "succeeded";
 
     await admin
@@ -812,7 +872,7 @@ export async function voidBookingAuthorization(
   }
 
   try {
-    await getStripe().paymentIntents.cancel(booking.stripe_payment_intent_id);
+    await (await stripeForBooking(bookingId)).paymentIntents.cancel(booking.stripe_payment_intent_id);
     await createSupabaseServiceClient()
       .from("bookings")
       .update({ payment_status: "pending", authorized_at: null })
@@ -1064,14 +1124,14 @@ export async function hasUsableCard(userId: string): Promise<boolean> {
  * a label, not an amount — treating "partial_refund" as "nothing left"
  * is what refused a legitimate second partial refund.
  */
-async function remainingRefundable(intentId: string): Promise<number> {
-  /*
-    Default client on purpose: this takes an intent id and no customer,
-    so there is nobody to resolve a mode from. Refunds are not part of
-    the review journey; if they ever are, this needs the booking's
-    customer passed in rather than a guess.
-  */
-  const stripe = getStripe();
+/*
+  Takes the client rather than choosing one. It only has an intent id,
+  and an intent id does not say which Stripe mode it belongs to — so the
+  caller, which knows the booking, passes the right client in. Guessing
+  here would look at a test intent through the live client and report
+  nothing refundable.
+*/
+async function remainingRefundable(stripe: Stripe, intentId: string): Promise<number> {
   const intent = await stripe.paymentIntents.retrieve(intentId, { expand: ["latest_charge"] });
   const charge = intent.latest_charge as Stripe.Charge | string | null;
   if (!charge || typeof charge === "string") return 0;
@@ -1132,7 +1192,7 @@ export async function refundBooking(
   } = {},
 ): Promise<PaymentResult<{ legs: RefundLeg[]; totalRefundedCents: number }>> {
   if (!stripeConfigured()) return fail("not_configured", "Refunds are not available yet.");
-  const stripe = getStripe();
+  const stripe = await stripeForBooking(bookingId);
   const admin = createSupabaseServiceClient();
 
   const { data: bookingRow } = await admin
@@ -1178,9 +1238,9 @@ export async function refundBooking(
 
   try {
     // ---- the job charge -------------------------------------------------
-    const jobRefundable = await remainingRefundable(booking.stripe_payment_intent_id);
+    const jobRefundable = await remainingRefundable(stripe, booking.stripe_payment_intent_id);
     const tipRefundableNow = opts.includeTip && booking.tip_payment_intent_id
-      ? await remainingRefundable(booking.tip_payment_intent_id)
+      ? await remainingRefundable(stripe, booking.tip_payment_intent_id)
       : 0;
 
     // Asking for everything when the job is spent but the tip is not is a
@@ -1256,9 +1316,9 @@ export async function refundBooking(
     // ---- record ---------------------------------------------------------
     // Status from what Stripe says is LEFT, not from what we just asked
     // for: a refund issued elsewhere would otherwise be overwritten.
-    const jobLeft = await remainingRefundable(booking.stripe_payment_intent_id);
+    const jobLeft = await remainingRefundable(stripe, booking.stripe_payment_intent_id);
     const tipLeft = booking.tip_payment_intent_id
-      ? await remainingRefundable(booking.tip_payment_intent_id)
+      ? await remainingRefundable(stripe, booking.tip_payment_intent_id)
       : 0;
     // "Refunded" means nothing is left on either charge.
     const fullyRefunded = jobLeft === 0 && tipLeft === 0;
@@ -1351,7 +1411,7 @@ export async function pendingAuthorizationSecret(
   }
 
   try {
-    const intent = await getStripe().paymentIntents.retrieve(booking.stripe_payment_intent_id);
+    const intent = await (await stripeForBooking(bookingId)).paymentIntents.retrieve(booking.stripe_payment_intent_id);
 
     // The hold EXISTS at Stripe but the booking never heard about it.
     //
@@ -1433,7 +1493,7 @@ export async function pendingAuthorizationSecret(
     // independent of what the browser sends.
     if (intent.status === "requires_payment_method") {
       try {
-        await getStripe().paymentIntents.update(intent.id, { payment_method: paymentMethodId });
+        await (await stripeForBooking(bookingId)).paymentIntents.update(intent.id, { payment_method: paymentMethodId });
       } catch (err) {
         console.error("could not reattach payment method", intent.id, err);
       }
@@ -1475,7 +1535,7 @@ export async function payCrew(
   bookingId: string,
 ): Promise<PaymentResult<{ paid: number; owedCents: number; failures: string[] }>> {
   if (!stripeConfigured()) return fail("not_configured", "Payouts are not available yet.");
-  const stripe = getStripe();
+  const stripe = await stripeForBooking(bookingId);
   const admin = createSupabaseServiceClient();
 
   const booking = await loadBooking(bookingId);

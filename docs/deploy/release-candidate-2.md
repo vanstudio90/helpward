@@ -68,7 +68,7 @@ Nothing, yet. The pieces are built; three things have to happen first.
 
 - The review journey runs on production code paths but **cannot run in
   production yet**: `/api/v1/requests` is 404 until the cutover.
-  Everything has been exercised in the isolated environment instead.
+  Everything has been exercised in the rehearsal project instead.
 - Review bookings will be production rows, flagged — not rows in a
   separate database. They should be excluded from operational reporting
   by that flag.

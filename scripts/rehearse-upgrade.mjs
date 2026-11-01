@@ -166,8 +166,8 @@ const { rows: svc } = await client.query("select count(*)::int as n from service
 console.log(`  services present from the catalogue migration: ${svc[0].n}`);
 
 /* ------------------------------------------------------- 3. the upgrade */
-console.log("\n=== 3. the upgrade under rehearsal: 0081 -> 0087 ===");
-for (const n of ["0081", "0082", "0083", "0084", "0085", "0086", "0087"]) {
+console.log("\n=== 3. the upgrade under rehearsal: 0081 -> 0089 ===");
+for (const n of ["0081", "0082", "0083", "0084", "0085", "0086", "0087", "0088", "0089"]) {
   console.log(`\n--- ${n}`);
   run(`--only ${n}`);
 }
@@ -186,6 +186,32 @@ const { rows: offer } = await client.query(
   "select to_regclass('public.offer_summary') is not null as ok",
 );
 console.log(`  offer_summary exists (the code deployed with 0085 reads it): ${offer[0].ok}`);
+
+/* ------------------------------------------- 5. what 0088 must leave behind */
+console.log("\n=== 5. review-account isolation (0088) ===");
+const { rows: fnp } = await client.query(`
+  select prosrc from pg_proc where proname = 'find_nearby_providers' and pronargs = 5
+`);
+const src = fnp[0]?.prosrc ?? "";
+console.log(`  matching function takes the review parameter: ${fnp.length === 1}`);
+console.log(`  municipality filter from 0072 survived:       ${src.includes("provider_cities")}`);
+console.log(`  isolation is symmetric:                       ${src.includes("is_review_helper, false) = coalesce(p_review")}`);
+const { rows: trg } = await client.query(`
+  select count(*)::int as n from pg_trigger
+   where tgname in ('profiles_review_flag_guard','helper_review_flag_guard')
+`);
+console.log(`  self-promotion guards present:                ${trg[0].n === 2}`);
+
+/* --------------------------------------- 6. request privacy, end to end */
+console.log("\n=== 6. request privacy (0085) ===");
+const { rows: pol2 } = await client.query(`
+  select pg_get_expr(polqual, polrelid) as qual
+    from pg_policy
+   where polrelid = 'public.requests'::regclass and polname = 'req_read'
+`);
+const qual = pol2[0]?.qual ?? "";
+console.log(`  merely-offered helper clause removed: ${!qual.includes("match_attempts")}`);
+console.log(`  booked helper can still read:         ${qual.includes("is_booked_helper_for_request")}`);
 
 await client.end();
 console.log("\nRehearsal complete. Record the output with the release candidate.");

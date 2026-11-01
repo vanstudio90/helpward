@@ -1,7 +1,7 @@
 # How the submitted binary handles review accounts
 
 **The brief asked how the binary "routes the disclosed review accounts
-into the isolated environment". It does not, and that is the design
+onto review accounts on production infrastructure". It does not, and that is the design
 decision — so it is worth stating plainly rather than quietly.**
 
 ## What was asked for, and what was built instead
