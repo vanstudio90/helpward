@@ -48,7 +48,7 @@ configuration is present in the binary.
 | Contact for review questions | `________________` (name) |
 | Contact email | `________________` |
 | Contact phone | `________________` |
-| Build number | `________________` |
+| Build number | `1` (version 1.0.0, archived 2026-11-01) |
 | Backend | production (`helpward.com`) |
 
 ## Completing a booking — exact steps
