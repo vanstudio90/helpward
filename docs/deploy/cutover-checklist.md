@@ -373,3 +373,57 @@ genuine review booking gets `403 "Not available on this account."`
 `prepareReviewHelper`), 8.6 (submit), 8.7 (rotate both passwords). Until
 8.4 ships, run `scripts/refresh-review-helper.mjs` within 30 minutes of
 a demonstration.
+
+---
+
+## 10. 8.1 and 8.4 closed — 2026-11-01
+
+**8.1 — the four backfill victims are repaired.** `0049`, `0058` and `0063`
+re-applied via `scripts/reapply-migrations.mjs`; `0090` applied earlier.
+`scripts/audit-migration-effects.mjs` now reports **no discrepancies**,
+down from eight. Confirmed directly: `accept_request` calls
+`requested_crew_size` and writes `crew_size`, `requested_crew_size()`
+exists, `call_sessions.negotiated_at` exists, `refunds_booking_idx` exists.
+
+**8.4 — `prepareReviewHelper` is deployed.** Proven by forcing the exact
+failure first: the controlled helper was set `is_online=false` with a
+location three hours old, and the journey still reported
+`candidateCount: 1` and held the card. Before the deploy that same state
+gave `candidateCount: 0` and no booking. `scripts/refresh-review-helper.mjs`
+is no longer needed before a demonstration.
+
+### What restoring 0058 exposed
+
+The crew gate came back with it, and immediately broke the documented
+journey: Moving Help with 2 helpers — the value the review notes tell a
+reviewer to enter — accepted, held the card, then refused to start with
+"This job needs 1 more helper(s) before it can start."
+
+The gate is right. `accept_request` invites the OTHER helpers who were
+offered the request, so a single controlled account leaves an empty
+invite list and `crew_shortfall` never reaches zero.
+
+Fixed with a second controlled helper (`demo-helper-2@helpward.com`) and
+`seatReviewCrew()`, which takes the remaining places through
+`accept_crew_invite` — the same call a helper's own app makes — and only
+for accounts flagged `is_review_helper`.
+
+`provider_profiles.stripe_connect_account_id` is UNIQUE, so helper two
+needed its own sandbox connected account. Worth recording for next time:
+an account created with `controller.requirement_collection = stripe`
+**cannot be activated by API** — Stripe refuses application-side TOS
+acceptance on those. The working account was created with
+application-collected requirements and came up `transfers: active`
+immediately. It is `STRIPE_TEST_CONNECT_ACCOUNT_2` in `.env.rehearsal`.
+
+### Verified end state
+
+All eight services: request → accepted with the card held → started →
+completed and captured. The crew booking holds two accepted controlled
+members whose shares (8800 + 8800) sum exactly to the 17600 payout.
+
+**Litter to clear:** `acct_1UX8Xs4VP9D7YLJL` is an abandoned sandbox
+connected account from the first, unactivatable attempt. Deleting it was
+refused in-session; remove it from the Stripe sandbox dashboard.
+
+**Still outstanding:** 8.6 submit, 8.7 rotate both database passwords.
