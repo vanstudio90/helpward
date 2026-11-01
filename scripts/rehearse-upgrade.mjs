@@ -182,10 +182,26 @@ const { rows: pol } = await client.query(`
    where polrelid = 'public.requests'::regclass and polname = 'req_read'
 `);
 console.log(`  req_read policy present: ${pol.length === 1}`);
-const { rows: offer } = await client.query(
-  "select to_regclass('public.offer_summary') is not null as ok",
+/*
+  offer_summary is a COLUMN on requests, added by 0084 — not a table.
+  The first version of this check asked to_regclass for a relation of
+  that name and reported "false" on a rehearsal that had in fact
+  succeeded. A check that fails when the thing works is worse than no
+  check: it trains you to ignore it.
+*/
+const { rows: offerCol } = await client.query(`
+  select count(*)::int as n from information_schema.columns
+   where table_name = 'requests' and column_name = 'offer_summary'
+`);
+console.log(`  requests.offer_summary column (0084): ${offerCol[0].n === 1}`);
+const { rows: myOffers } = await client.query(
+  "select count(*)::int as n from pg_proc where proname = 'my_offers'",
 );
-console.log(`  offer_summary exists (the code deployed with 0085 reads it): ${offer[0].ok}`);
+console.log(`  my_offers() — what an offered helper calls instead: ${myOffers[0].n > 0}`);
+const { rows: priv } = await client.query(
+  "select to_regclass('public.request_private_details') is not null as ok",
+);
+console.log(`  request_private_details (0083): ${priv[0].ok}`);
 
 /* ------------------------------------------- 5. what 0088 must leave behind */
 console.log("\n=== 5. review-account isolation (0088) ===");
