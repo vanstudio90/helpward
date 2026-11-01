@@ -98,27 +98,100 @@ export REHEARSAL_DATABASE_URL='<its connection string>'
 
 ## 4. Deployment operator — backup and approval
 
-- [ ] Take a Supabase backup (Database → Backups).
-- [ ] Fill the blanks in `release-candidate.md`: backup identity, UTC
-      timestamp, restore procedure, and the deployment live immediately
-      before cutover.
-- [ ] Obtain the owner's explicit approval to proceed.
+- [x] **Owner approved the cutover, 2026-11-01.**
+- [ ] On-demand Supabase backup — **not taken.** The owner approved
+      without one. `release-candidate.md` records this, what it costs
+      (0 bookings / 0 reviews / 0 payouts exist; at most a day of the 95
+      profiles and 67 requests is at risk) and how to restore anyway.
+- [x] Deployment live before cutover recorded:
+      `https://helpward-pl2dqwo0h-vanstudio.vercel.app`
 
 Recovery is **roll-forward**. Re-promoting the old deployment after
 `0085` leaves every helper with an empty inbox — see that document.
 
 ## 5. Developer — cutover
 
-- [ ] `DATABASE_URL=… node scripts/migrate.mjs --dry-run`
-- [ ] `DATABASE_URL=… node scripts/migrate.mjs`
-- [ ] `vercel --prod --force`
-- [ ] `0085` is deploy-coupled: the migration and this deploy go
-      together.
-- [ ] Verify the existing site still works: the eight service pages, the
-      directory, `/pricing`, a city page, and that country pricing still
-      shows both figures.
-- [ ] Verify the app's API is reachable: all four `/api/v1` routes should
-      answer **401** to a bad token, not 404.
+Run the whole sequence with one command. It stops at the first failure
+and states what condition production is in, so a partial run is never
+ambiguous:
+
+```
+~/.helpward-cutover/run-cutover.sh
+```
+
+It reads the connection string from `~/.helpward-cutover/production-db-url`
+(mode 600, written by `set-production-db.sh`), logs to
+`~/.helpward-cutover/cutover-<timestamp>.log`, and performs:
+
+1. `migrate.mjs --production --pre-deploy` — 7 migrations
+2. `vercel deploy --prod --force`
+3. `migrate.mjs --production --deploy-coupled` — `0081`, `0085`
+4. `notify pgrst, 'reload schema'`
+5. Ledger check, expecting 86/86
+6. The webhook signature proof
+7. Public surface and API route codes
+8. `preflight --production`, if live Stripe keys are in the shell
+
+**The variable is `PRODUCTION_DATABASE_URL`, not `DATABASE_URL`.** This
+checklist previously said the latter, which `--production` ignores
+entirely — it reads `PRODUCTION_DATABASE_URL` only, loads no dotenv file,
+and refuses a target whose ref is not `HELPWARD_PRODUCTION_REF`.
+
+### Verified before running: 77/86 applied, 9 pending
+
+A `--dry-run` against production confirmed `0080` and everything below it
+is applied, with `0081`–`0089` pending.
+
+### The ordering question, checked rather than assumed
+
+`selectFiles()` filters by **class, not sequence**, so `--pre-deploy`
+applies `0082`–`0089` *before* the numerically earlier `0081`. The
+rehearsal only ever ran them in numeric order, so this ordering was
+untested.
+
+It is safe, and here is why rather than a reassurance: `0081` renames the
+`user_role` enum value, rewrites `handle_new_user` and `cancel_booking`
+from their live definitions, and migrates `favorites.kind`. No pending
+pre-deploy migration references `user_role` or either function —
+`0088`/`0089` touch `broadcast_request`, `find_nearby_providers`,
+`hide_review_account_reviews`, `reject_self_review_flag` and
+`skip_review_helper_task_count` only. `0081` is also self-checking: it
+raises rather than guessing if a definition does not match the shape it
+expects, so a wrong order fails loudly instead of corrupting silently.
+
+### Acceptance criteria, with the pre-cutover baseline measured
+
+Captured from live `helpward.com` immediately before cutover:
+
+| Route | Before | Required after |
+|---|---|---|
+| `/` | 200 | 200 |
+| `/pricing` | 200 | 200 |
+| `/how-it-works` | 200 | 200 |
+| `/api/v1/me` | 401 | 401 |
+| `/api/v1/payment-methods` | 401 | 401 |
+| `/api/v1/requests` | **404** | **401** |
+| `/api/v1/account/deletion` | **404** | **401** |
+| `/api/v1/review/advance` | **404** | **401** |
+
+The three 404s are the routes this release adds; they are the signal that
+the deploy actually shipped this branch. A 401 proves the route exists and
+is authenticating. Note `/api/v1/bookings/[id]/cancellation` is dynamic and
+is not probed here.
+
+Also required: the webhook probe must flip from `400 bad_signature` to
+**200**. Before cutover it returned 400 even when signed with the correct
+sandbox secret, because Vercel variables only take effect on a new
+deployment — which also explains the 780 failed deliveries Stripe recorded
+over 10/26–11/01.
+
+### Why a developer could not run this
+
+In the session that prepared this release, the agent's permission mode
+refused production migrations and deploys outright (`Production Deploy`),
+and separately refused Stripe account writes. Everything up to the point
+of writing to production was completed and verified; execution itself
+needs either an operator or a granted permission rule.
 
 ## 6. Developer — the production reviewer journey
 

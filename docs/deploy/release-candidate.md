@@ -90,17 +90,37 @@ together or not at all.
 Take a Supabase backup — Database → Backups — and record it here:
 
 ```
-Backup identity:   ____________________   (Supabase backup id)
-Taken at:          ____________________   (UTC)
+Backup identity:   NONE TAKEN ON DEMAND — see the note below
+Taken at:          n/a
+Restore point:     Supabase automatic daily backup (Pro plan retention),
+                   whichever is newest at the time of restore
 Restore procedure: Supabase dashboard → Database → Backups → Restore,
                    then re-promote the Vercel deployment that was live
                    immediately before cutover (recorded below).
-Deployment live before cutover: ____________________
+Deployment live before cutover: https://helpward-pl2dqwo0h-vanstudio.vercel.app
 ```
 
-Left blank deliberately. Taking the backup and recording its identity is
-the owner's action, and a procedure written from a backup nobody has
-taken is not a procedure.
+**No on-demand backup was taken, and this records that honestly rather
+than implying one exists.** The owner approved the cutover on 2026-11-01
+without supplying a backup identity, so the restore point is whatever
+Supabase's automatic daily backup holds.
+
+What that costs, measured rather than assumed. Production was read
+immediately before cutover:
+
+    bookings   0      reviews   0      payouts   0
+    requests  67      profiles 95      services 27
+
+So no financial record exists to lose, and a restore to the previous
+automatic backup risks at most a day of signups and service requests. On
+a database with live bookings this would not be an acceptable trade and
+an on-demand backup should be taken first.
+
+The weaker part is not the data but the precision: without a recorded
+backup id and timestamp, a restore means picking the newest backup in
+the dashboard rather than restoring a known point. Anyone restoring
+should check that backup's timestamp predates the migration times in
+`~/.helpward-cutover/cutover-*.log`.
 
 ### Confirm it in the rehearsal
 
