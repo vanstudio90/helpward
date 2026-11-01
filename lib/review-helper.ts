@@ -77,6 +77,80 @@ async function isReviewBooking(bookingId: string): Promise<{ ok: boolean; provid
 export type ReviewStep = { ok: true; note: string } | { ok: false; error: string };
 
 /**
+ * Make the controlled helper matchable for THIS request, immediately
+ * before the request is dispatched.
+ *
+ * WHY THIS EXISTS, because it is not obvious and removing it breaks App
+ * Review silently.
+ *
+ * accept_request refuses a provider that has no match_attempts row:
+ * "Request was not offered to this provider". That row is written only
+ * if find_nearby_providers matched the helper, and that requires
+ * is_online = true and a location newer than max_location_age(), which
+ * is 30 minutes. A controlled helper has nobody carrying a phone, so its
+ * location goes stale within half an hour and mark_stale_helpers_offline()
+ * then sets is_online = false and notifies it that it went offline.
+ *
+ * App Review happens days after submission, at an hour nobody chooses.
+ * Without this, the reviewer's request would broadcast to nobody,
+ * acceptAsReviewHelper would throw, and the journey would stop dead at
+ * "waiting for a helper" — exactly the failure the requests route's own
+ * comment warns about for real helpers.
+ *
+ * Doing it from the request itself takes the clock out of the problem:
+ * the precondition is established by the same call that depends on it,
+ * so there is no cron to fail and no window to miss.
+ *
+ * The helper is placed at the request's own pickup point, copied as the
+ * stored geography rather than re-derived, so the match does not depend
+ * on which supported city the reviewer chose. This is disclosed in the
+ * review notes: the controlled helper is operated, not organic.
+ *
+ * A no-op for every real request — the review flag is checked first.
+ */
+export async function prepareReviewHelper(requestId: string): Promise<ReviewStep> {
+  if (!(await isReviewRequest(requestId))) {
+    return { ok: false, error: "Not a review request." };
+  }
+  const helper = await reviewHelperId();
+  if (!helper) {
+    return { ok: false, error: "No approved review helper exists. Create one and flag it." };
+  }
+
+  const admin = createSupabaseServiceClient();
+
+  const { data: req } = await admin
+    .from("requests")
+    .select("pickup_address_id")
+    .eq("id", requestId)
+    .maybeSingle();
+  const addressId = (req as { pickup_address_id?: string } | null)?.pickup_address_id;
+  if (!addressId) return { ok: false, error: "Request has no pickup address." };
+
+  const { data: addr } = await admin
+    .from("addresses")
+    .select("location")
+    .eq("id", addressId)
+    .maybeSingle();
+  const location = (addr as { location?: string } | null)?.location;
+  if (!location) return { ok: false, error: "Pickup address has no geocoded location." };
+
+  const { error } = await admin
+    .from("provider_profiles")
+    .update({
+      is_online: true,
+      vacation_mode: false,
+      current_location: location,
+      location_updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", helper)
+    .eq("is_review_helper", true);
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, note: "Controlled helper is online at the pickup point." };
+}
+
+/**
  * Accept a review request as the controlled helper.
  *
  * Called inline when a review account creates a request, so acceptance

@@ -3,7 +3,7 @@ import { withBearerAuth } from "@/lib/api/bearer";
 import { quoteOneShotCents } from "@/lib/pricing";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
-import { acceptAsReviewHelper } from "@/lib/review-helper";
+import { acceptAsReviewHelper, prepareReviewHelper } from "@/lib/review-helper";
 import { reviewResolution } from "@/lib/address-confirmation";
 import { validateIntake, describeIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service-intake";
 import { validateHandover, isHandoverEmpty } from "@/lib/handover";
@@ -283,6 +283,20 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
     console.error("could not seal request quote", created.id, sealErr);
     return Response.json({ error: "Couldn't lock in that quote. Please try again." }, { status: 400 });
   }
+
+  /*
+    A REVIEW REQUEST NEEDS ITS HELPER MATCHABLE *BEFORE* THE BROADCAST.
+
+    The broadcast is what writes the match_attempts row, and
+    accept_request refuses a provider that has no such row. The
+    controlled helper has nobody carrying a phone, so its location is
+    stale within 30 minutes and the stale sweep takes it offline — after
+    which a reviewer's request reaches nobody and acceptance throws.
+
+    Ordering matters here: prepare, then broadcast, then accept. A no-op
+    for every real request.
+  */
+  await prepareReviewHelper(created.id);
 
   // Best-effort: the request exists, an admin can re-broadcast, and the
   // expire-stale cron retires it if no helper ever sees it.

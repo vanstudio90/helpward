@@ -30,9 +30,11 @@ except one: who can be matched to its bookings.
   real authorisation and a real capture against test keys. Nothing is
   simulated and no transition is skipped — a reviewer sees the same
   payment states a customer sees, with no real money involved.
-- The test helper's acceptance and completion are performed by our
-  operations team, not automatically. **A reviewer does not have to wait
-  for anyone**: see "If nobody accepts" below.
+- The test helper's acceptance is **automatic and immediate**, performed
+  by the system as part of sending the request, and its start and
+  complete actions are in the reviewer's own hands. **Nobody has to be
+  waiting, at any hour** — see "You will not have to wait for anyone"
+  below.
 
 Ordinary users cannot reach any of this. Neither flag can be set by its
 owner — the database rejects it — and nothing about the review
@@ -99,13 +101,18 @@ Addresses: use `1055 W Georgia St, Vancouver, BC` for pickup, and
 | Service | What to enter |
 |---|---|
 | **Errand Runner** | What needs doing: `Collect dry cleaning` · Where: `Robson St dry cleaners` · Spending limit: `20` |
-| **House Cleaning** | Bedrooms: `2` · Bathrooms: `1` · Supplies: *Helper brings them* · Pets: leave blank |
-| **Moving Help** | How many helpers: `2` · What's being moved: `Sofa, bed frame, 10 boxes` · Access at both ends: `Ground floor, lift available` |
-| **Furniture Assembly** | What needs assembling: `One flat-pack wardrobe` · Number of items: `1` · Tools: *Helper brings them* · Packaging disposal: *Yes* |
-| **Grocery Pickup** | Which store: `Save-On-Foods, Robson St` · Shopping list / order reference: `Order 12345` · Spending limit: `50` · If out of stock: *Pick something similar* |
+| **House Cleaning** | Bedrooms: `2` · Bathrooms: `1` · Focus on: tick *Kitchen* and *Bathrooms* · Supplies: *Helper brings supplies* · Pets: leave blank |
+| **Moving Help** | Destination: `800 Robson St, Vancouver, BC` · How many helpers: `2` · What's being moved: `Sofa, bed frame, 10 boxes` · Access at pickup: *Ground floor* · Access at destination: *Lift / elevator* · Vehicle: *I need advice on what to book* |
+| **Furniture Assembly** | What needs assembling: `One flat-pack wardrobe` · Number of items: `1` · Tools: *Helper brings tools* · Packaging disposal: *Yes* |
+| **Grocery Pickup** | Which store: `Save-On-Foods, Robson St` · Shopping list: `Order 12345` · Spending limit: `50` · If out of stock: *Substitute something similar* |
 | **Package Delivery** | Deliver to: `800 Robson St, Vancouver, BC` · Size: *Small — fits in a backpack* · Rough weight: `2` · Who receives it: `Reception` |
-| **Package Return** | Carrier: *any* · Return label: *Printed* · How many parcels: `2` · Preferred drop-off: `Robson St` |
-| **Wait in Line** | What are they queuing for: `Box office tickets` · Which venue: `Orpheum Theatre` · Expected wait: `1 hour` |
+| **Package Return** | Carrier: *Canada Post* · Return label: *Printed and attached* · How many parcels: `2` · Preferred drop-off: `Robson St` |
+| **Wait in Line** | What are they queuing for: `Box office tickets` · Expected wait: *1 hour* · Handover: *I arrive and take their place* · Venue: `Orpheum Theatre` · Which queue: `Box office` · Checked with the venue: *Yes* · Notice needed: *15 minutes* · Party size: `1` · If your turn comes early: *Ask the venue to hold it and call me* |
+
+Every required field is listed above. **Wait in Line asks the most** — nine
+fields, because a queueing job goes wrong without them. An earlier version
+of this table listed only three of them, which would have left a reviewer
+stuck on a validation error.
 
 **Crew requirement:** Moving Help and House Cleaning price per helper.
 Entering `2` helpers on Moving Help is what demonstrates the crew
