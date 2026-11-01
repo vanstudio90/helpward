@@ -32,16 +32,53 @@ export REHEARSAL_DATABASE_URL='<its connection string>'
 
 ## 3. Deployment operator — production configuration
 
-- [ ] `DATABASE_URL` in the authorised environment.
-- [ ] `STRIPE_TEST_SECRET_KEY` — must begin `sk_test_`. The code refuses
-      anything else rather than falling back to live.
-- [ ] `STRIPE_TEST_PUBLISHABLE_KEY` — `pk_test_`.
-- [ ] `STRIPE_TEST_WEBHOOK_SECRET` — from the **test-mode** webhook
-      endpoint in Stripe.
-- [ ] Confirm that endpoint points at `https://helpward.com/api/webhooks/stripe`
-      and that the secret you copied belongs to **that** endpoint. A
-      mismatch here is silent: review events would fail signature
-      verification and a reviewer's hold would never reconcile.
+- [ ] `DATABASE_URL` in the authorised environment. **Still outstanding.**
+      Needs the production database password, which Supabase does not
+      return through any API — it can only be read from the dashboard or
+      reset there. This is the one item that blocks the migration step.
+- [x] `STRIPE_TEST_SECRET_KEY` — added to Vercel Production 2026-11-01.
+      Authenticated against Stripe as `acct_1UUsXV8ZAIHcYg7R` in test
+      mode before upload, so the key is known valid and known test-mode.
+      The code refuses anything but `sk_test_` rather than falling back
+      to live.
+- [x] `STRIPE_TEST_PUBLISHABLE_KEY` — added to Vercel Production
+      2026-11-01, `pk_test_` confirmed at source.
+- [x] `STRIPE_TEST_WEBHOOK_SECRET` — added to Vercel Production
+      2026-11-01, taken from the sandbox secret recorded in
+      `.env.rehearsal`, which that file documents as created on
+      2026-10-26 against the endpoint registered at
+      `https://helpward.com/api/webhooks/stripe`.
+- [x] Endpoint identity confirmed by API: test-mode endpoint
+      `we_1UUtvH8ZAIHcYg7RPhZ9KsN1` is `enabled` and points at
+      `https://helpward.com/api/webhooks/stripe`. The live endpoints are
+      separate objects in live mode and were not touched.
+
+  Verification limit, stated plainly: `vercel env pull` masks every
+  encrypted value, so the three uploads cannot be read back and compared.
+  Presence and encryption are confirmed by `vercel env ls production`.
+  The key values prove out at the first deploy through
+  `scripts/preflight.mjs`; the signing secret proves out only on a
+  Stripe-**delivered** test event, not on anything checkable from here.
+
+- [ ] **Add four events to the test-mode payments endpoint.** It is
+      subscribed to `payment_intent.succeeded` alone, but the handler
+      processes five:
+
+          payment_intent.amount_capturable_updated
+          payment_intent.canceled
+          payment_intent.payment_failed
+          payment_intent.succeeded
+          charge.refunded
+
+      The missing `amount_capturable_updated` is the durable half of the
+      authorise-at-acceptance recovery. Without it, a reviewer whose
+      browser dies between bank approval and the app recording it keeps a
+      booking that never shows its hold confirmed, and no retry fixes it.
+
+      Stripe → **Test mode** → Developers → Webhooks →
+      `we_1UUtvH8ZAIHcYg7RPhZ9KsN1` → Update details → add the four.
+      Editing enabled events does **not** rotate the signing secret, so
+      the value already uploaded stays correct.
 
 ## 4. Deployment operator — backup and approval
 
