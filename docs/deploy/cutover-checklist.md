@@ -257,3 +257,82 @@ needs either an operator or a granted permission rule.
       `docs/app-review/review-notes.md`; check the wording still matches
       what shipped.
 - [ ] Submit.
+
+---
+
+## 8. What is left, in order — 2026-11-01
+
+Everything below needs an operator: the preparing agent's permission mode
+refused production migrations and deploys. Each step is one command.
+
+### 8.1 Repair the four migrations that never ran
+
+```
+cd /tmp/hw-merge
+export PRODUCTION_DATABASE_URL="$(cat ~/.helpward-cutover/production-db-url)"
+export HELPWARD_PRODUCTION_REF=xhmgmegraieouudyjjlv
+export HELPWARD_PRODUCTION_ORIGIN=https://helpward.com
+
+node scripts/reapply-migrations.mjs \
+  0049_refund_ledger_identity.sql \
+  0058_crew_on_acceptance.sql \
+  0063_call_truth_and_gating.sql
+```
+
+`0044` is deliberately absent from that list: `0090` supersedes it and
+also closes the `pm_self` policy that `0044` left behind.
+
+### 8.2 Apply 0090
+
+```
+node scripts/migrate.mjs --production --only 0090
+```
+
+It asserts its own effects in a do-block, so it fails loudly rather than
+recording another ledger row for work that did not happen.
+
+### 8.3 Confirm the repair
+
+```
+node scripts/audit-migration-effects.mjs
+```
+
+Expect no discrepancies. Before the repair it reported eight.
+
+### 8.4 Deploy the review-journey fix
+
+```
+vercel deploy --prod --force
+```
+
+Ships `prepareReviewHelper()`. Until this lands, the controlled helper
+must be refreshed within 30 minutes of any demonstration:
+`node scripts/refresh-review-helper.mjs`.
+
+### 8.5 Prove the journey
+
+```
+node scripts/review-journey.mjs
+```
+
+Expect eight passes. Before the repair all eight created a booking but
+none could hold a card.
+
+Then confirm the isolation holds from the other side: sign in with an
+ordinary account and `POST /api/v1/review/advance` — it must return
+**403**, and the Advance control must be absent in the app.
+
+### 8.6 Submit
+
+The build is archived and exported: **1.0.0 (1)**, Apple Distribution,
+team `5X7WKD8U78`, at `~/Documents/helpward-build-1`. Upload and submit
+only once 8.5 passes — a reviewer who cannot save a card cannot complete
+a booking, and that is a rejection rather than a delay.
+
+### 8.7 Rotate two database passwords
+
+Production and `helpward-rehearsal-scratch` share one password and both
+went through chat. Each needs its own rotation: Supabase → project →
+Settings → Database → Reset database password. Afterwards re-run
+`~/.helpward-cutover/set-production-db.sh` so the stored URI matches, and
+delete the scratch project, which is billable.
