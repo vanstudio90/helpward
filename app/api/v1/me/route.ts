@@ -1,4 +1,5 @@
 import { withBearerAuth } from "@/lib/api/bearer";
+import { publishableKeyFor } from "@/lib/stripe";
 
 /*
   Who the caller is, and which database answered.
@@ -19,7 +20,7 @@ export const GET = withBearerAuth(async ({ user, supabase }) => {
   // This is the same trap the web sign-in hit.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, is_review_account")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -39,5 +40,18 @@ export const GET = withBearerAuth(async ({ user, supabase }) => {
     // role is changed without re-issuing the token.
     role: profile?.role ?? "customer",
     environment: projectRef,
+    /*
+      WHICH STRIPE THE APP SHOULD TALK TO, decided here rather than
+      compiled in. An App Review account transacts in Stripe TEST mode —
+      live mode rejects a test card — and the only way to do that without
+      shipping two key sets in the binary is for the server to say which
+      publishable key applies to the signed-in account.
+
+      A publishable key is public by design; the secret never leaves the
+      server. An ordinary account is told the live key and nothing about
+      the review configuration.
+    */
+    isReviewAccount: Boolean(profile?.is_review_account),
+    stripePublishableKey: publishableKeyFor(Boolean(profile?.is_review_account)),
   });
 });

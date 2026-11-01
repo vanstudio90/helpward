@@ -25,6 +25,56 @@ export function getStripe(): Stripe {
   return _client;
 }
 
+/*
+  THE TEST-MODE CLIENT, for App Review only.
+
+  A reviewer cannot pay with a test card against live Stripe — live mode
+  rejects it — so a review account has to transact in test mode. The
+  alternative people reach for is to skip capture or set the payment
+  status by hand for review accounts, and that is exactly what must not
+  happen: the reviewer would be shown a payment transition that never
+  occurred, and the path they verified would not be the path a customer
+  takes.
+
+  So review accounts use REAL Stripe, in test mode: a real SetupIntent,
+  a real authorisation, a real capture, against test keys. Same code,
+  same transitions, different keys.
+
+  Separate keys mean separate everything — customers, payment methods,
+  webhooks, payouts — so review traffic cannot land in the live
+  dashboard or a live payout.
+*/
+let _testClient: Stripe | null = null;
+
+export function stripeTestConfigured(): boolean {
+  const key = process.env.STRIPE_TEST_SECRET_KEY ?? "";
+  // A live key in this slot would send review traffic to real money.
+  return key.startsWith("sk_test_");
+}
+
+export function getStripeFor(isReviewAccount: boolean): Stripe {
+  if (!isReviewAccount) return getStripe();
+  const key = process.env.STRIPE_TEST_SECRET_KEY;
+  if (!key || !key.startsWith("sk_test_")) {
+    throw new Error(
+      "STRIPE_TEST_SECRET_KEY is not set to a test key — a review account "
+      + "must not transact against live Stripe.",
+    );
+  }
+  if (!_testClient) {
+    _testClient = new Stripe(key, { apiVersion: "2025-02-24.acacia" });
+  }
+  return _testClient;
+}
+
+/** The publishable key the APP should use for this account. */
+export function publishableKeyFor(isReviewAccount: boolean): string | null {
+  const key = isReviewAccount
+    ? process.env.STRIPE_TEST_PUBLISHABLE_KEY
+    : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  return key ?? null;
+}
+
 export function stripeConfigured(): boolean {
   return !!process.env.STRIPE_SECRET_KEY;
 }

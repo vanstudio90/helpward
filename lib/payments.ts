@@ -2,6 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import {
   getStripe,
+  getStripeFor,
   stripeConfigured,
   CONNECTED_ACCOUNT_CONTROLLER,
   CONNECTED_ACCOUNT_CAPABILITIES,
@@ -377,9 +378,37 @@ export async function refreshHelperPayoutState(
    ========================================================================= */
 
 /** Find or create the Stripe Customer for a Helpward account. */
+/*
+  WHICH STRIPE A GIVEN CUSTOMER TRANSACTS AGAINST.
+
+  An App Review account uses Stripe TEST mode, because live mode rejects
+  a test card and a reviewer must not be charged real money. Everything
+  else about their booking is real: a real SetupIntent, a real
+  authorisation, a real capture. The alternative — skipping capture or
+  writing the payment status by hand for review accounts — would show a
+  reviewer a transition that never happened, and that is the one thing
+  worth refusing to do.
+
+  Resolved from the DATABASE, never from anything the caller passed, so
+  a client cannot ask to be billed in test mode.
+*/
+async function isReviewCustomer(userId: string): Promise<boolean> {
+  const admin = createSupabaseServiceClient();
+  const { data } = await admin
+    .from("profiles")
+    .select("is_review_account")
+    .eq("id", userId)
+    .maybeSingle();
+  return Boolean(data?.is_review_account);
+}
+
+async function stripeForUser(userId: string) {
+  return getStripeFor(await isReviewCustomer(userId));
+}
+
 export async function ensureStripeCustomer(userId: string): Promise<PaymentResult<{ customerId: string }>> {
   if (!stripeConfigured()) return fail("not_configured", "Payments are not available yet.");
-  const stripe = getStripe();
+  const stripe = await stripeForUser(userId);
   const admin = createSupabaseServiceClient();
 
   const existing = await readStripeCustomerId(userId);
@@ -425,7 +454,7 @@ export async function createCardSetupIntent(
   if (!customer.ok) return customer;
 
   try {
-    const intent = await getStripe().setupIntents.create({
+    const intent = await (await stripeForUser(userId)).setupIntents.create({
       customer: customer.customerId,
       payment_method_types: ["card"],
       // The customer will not be present when we authorize at acceptance.
@@ -487,11 +516,12 @@ export async function authorizeBookingPayment(
   clientSecret?: string | null;
 }>> {
   if (!stripeConfigured()) return fail("not_configured", "Payments are not available yet.");
-  const stripe = getStripe();
   const admin = createSupabaseServiceClient();
 
   const booking = await loadBooking(bookingId);
   if (!booking) return fail("no_booking", "Booking not found.");
+  // Test mode for a review booking, live for everyone else.
+  const stripe = await stripeForUser(booking.customer_id);
 
   // Idempotent: a retried acceptance must not place a second hold.
   //
@@ -711,11 +741,12 @@ export async function captureBookingPayment(
   captureCents?: number,
 ): Promise<PaymentResult<{ capturedCents: number }>> {
   if (!stripeConfigured()) return fail("not_configured", "Payments are not available yet.");
-  const stripe = getStripe();
   const admin = createSupabaseServiceClient();
 
   const booking = await loadBooking(bookingId);
   if (!booking) return fail("no_booking", "Booking not found.");
+  // Test mode for a review booking, live for everyone else.
+  const stripe = await stripeForUser(booking.customer_id);
   if (!booking.stripe_payment_intent_id) {
     return fail("not_authorized", "This booking has no payment hold to capture.");
   }
@@ -806,11 +837,12 @@ export async function chargeTip(
 ): Promise<PaymentResult<{ paymentIntentId: string }>> {
   if (!stripeConfigured()) return fail("not_configured", "Payments are not available yet.");
   if (tipCents <= 0) return fail("bad_amount", "Tip must be greater than zero.");
-  const stripe = getStripe();
   const admin = createSupabaseServiceClient();
 
   const booking = await loadBooking(bookingId);
   if (!booking) return fail("no_booking", "Booking not found.");
+  // Test mode for a review booking, live for everyone else.
+  const stripe = await stripeForUser(booking.customer_id);
   if (booking.payment_status !== "captured") {
     return fail("not_captured", "You can only tip a booking that has been paid for.");
   }
@@ -885,7 +917,7 @@ export async function saveCardFromSetupIntent(
   if (!/^seti_[A-Za-z0-9_]+$/.test(setupIntentId ?? "")) {
     return fail("bad_intent", "That card could not be saved. Please try again.");
   }
-  const stripe = getStripe();
+  const stripe = await stripeForUser(userId);
   const admin = createSupabaseServiceClient();
 
   const savedForCustomer = await readStripeCustomerId(userId);
@@ -969,7 +1001,7 @@ export async function removeCard(userId: string, cardId: string): Promise<Paymen
   if (!card) return fail("not_found", "Card not found.");
 
   try {
-    await getStripe().paymentMethods.detach(card.stripe_payment_method_id);
+    await (await stripeForUser(userId)).paymentMethods.detach(card.stripe_payment_method_id);
   } catch (err) {
     // A card already detached at Stripe should still disappear from here.
     console.warn("detach failed, removing locally anyway", cardId, err);
@@ -1033,6 +1065,12 @@ export async function hasUsableCard(userId: string): Promise<boolean> {
  * is what refused a legitimate second partial refund.
  */
 async function remainingRefundable(intentId: string): Promise<number> {
+  /*
+    Default client on purpose: this takes an intent id and no customer,
+    so there is nobody to resolve a mode from. Refunds are not part of
+    the review journey; if they ever are, this needs the booking's
+    customer passed in rather than a guess.
+  */
   const stripe = getStripe();
   const intent = await stripe.paymentIntents.retrieve(intentId, { expand: ["latest_charge"] });
   const charge = intent.latest_charge as Stripe.Charge | string | null;
