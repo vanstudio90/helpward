@@ -136,9 +136,27 @@ test("the controlled helper cannot be aimed at a real booking", () => {
   const rh = readFileSync("lib/review-helper.ts", "utf8");
   assert.match(rh, /isReviewRequest/);
   assert.match(rh, /isReviewBooking/);
-  // The booking must belong to the review helper, not merely to a review
-  // customer who happened to match someone real.
-  assert.match(rh, /row\.provider_id !== helper/);
+  // The lead must be verified as a CONTROLLED helper, not merely a review
+  // customer who happened to match someone real. Checked against the SET
+  // of controlled accounts rather than one id: a crew job needs more than
+  // one, and comparing against a single id would refuse every booking the
+  // second helper happened to lead.
+  assert.match(rh, /isReviewHelper\(row\.provider_id\)/);
+  assert.match(rh, /\.eq\("is_review_helper", true\)/);
+});
+
+test("the review crew is staffed only from controlled accounts", () => {
+  const rh = readFileSync("lib/review-helper.ts", "utf8");
+  const seat = rh.slice(rh.indexOf("async function seatReviewCrew"));
+  assert.ok(seat.length > 0, "seatReviewCrew is missing");
+  assert.match(seat, /accept_crew_invite/);
+  // Ordering is the guarantee, not mere presence: the invited list has to
+  // be narrowed to controlled accounts BEFORE any invitation is accepted,
+  // or a real helper could be conscripted into a demonstration booking.
+  assert.ok(
+    seat.indexOf("is_review_helper") < seat.indexOf("accept_crew_invite"),
+    "seatReviewCrew accepts an invite before filtering to controlled helpers",
+  );
 });
 
 test("the advance endpoint is gated on the account, not on a parameter", () => {
