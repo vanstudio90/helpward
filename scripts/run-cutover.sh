@@ -10,7 +10,7 @@ WT=/tmp/hw-merge
 CRED="$HOME/.helpward-cutover/production-db-url"
 REF=xhmgmegraieouudyjjlv
 ORIGIN=https://helpward.com
-EXPECT_HEAD=7643a50
+EXPECT_BRANCH=api-merge-rehearsal
 LOG="$HOME/.helpward-cutover/cutover-$(date -u +%Y%m%dT%H%M%SZ).log"
 
 exec > >(tee -a "$LOG") 2>&1
@@ -30,12 +30,13 @@ echo "  credential      present (mode $(stat -f '%Lp' "$CRED"))"
 
 cd "$WT" 2>/dev/null || die "release worktree $WT is missing" "nothing changed."
 HEAD_NOW="$(git rev-parse --short HEAD)"
+BRANCH_NOW="$(git rev-parse --abbrev-ref HEAD)"
 DIRTY="$(git status --porcelain | wc -l | tr -d ' ')"
 echo "  worktree        $WT"
-echo "  HEAD            $HEAD_NOW (expected $EXPECT_HEAD)"
+echo "  HEAD            $HEAD_NOW on branch $BRANCH_NOW"
 echo "  uncommitted     $DIRTY file(s)"
 [ "$DIRTY" = "0" ] || die "the release worktree has uncommitted changes" "nothing changed. Commit or stash first — a deploy must be identifiable."
-[ "$HEAD_NOW" = "$EXPECT_HEAD" ] || echo "  NOTE: HEAD differs from the reviewed candidate. Continuing."
+[ "$BRANCH_NOW" = "$EXPECT_BRANCH" ] || die "branch is $BRANCH_NOW, expected $EXPECT_BRANCH" "nothing changed. Deploying the wrong branch is how main@6e5befc would go live again."
 
 # Vercel needs the project link; the worktree does not carry .vercel.
 if [ ! -f .vercel/project.json ]; then
