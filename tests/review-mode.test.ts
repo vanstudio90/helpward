@@ -65,25 +65,43 @@ test("the app is told its publishable key rather than compiling one in", () => {
   assert.match(me, /isReviewAccount/);
 });
 
-test("every payment call resolves its mode; none assumes live", () => {
+test("an unknown record can never select a Stripe mode", () => {
   /*
-    Checking BOTH directions matters. Review activity reaching live
-    Stripe would charge a reviewer real money; an ordinary booking
-    reaching test Stripe would be a free booking. Both are failures.
+    The safeguard: when payment mode is unknown, nothing may quietly
+    pick one. Defaulting to live is a live operation chosen on a guess;
+    defaulting to test could let an unknown booking settle against test
+    money and become a free job. Neither is defensible, so there is no
+    default — the lookups refuse.
 
-    Any remaining getStripe() must be somewhere that genuinely has no
-    customer to resolve from, and must say so.
+    This asserts the structural property, not "every caller currently
+    remembers to check first".
   */
-  const lines = payments.split("\n");
-  const offenders: string[] = [];
-  lines.forEach((line, i) => {
-    if (!/\bgetStripe\(\)/.test(line)) return;
-    const context = lines.slice(Math.max(0, i - 14), i).join("\n");
-    const explained = /no customer|nobody to resolve|would not be found|does not say which/i.test(context);
-    if (!explained) offenders.push(`line ${i + 1}: ${line.trim()}`);
-  });
-  assert.deepEqual(offenders, [],
-    `unresolved getStripe() with no explanation:\n${offenders.join("\n")}`);
+  assert.doesNotMatch(payments, /\bgetStripe\(\)/,
+    "payments.ts still has an unresolved getStripe(); every path must resolve a mode or refuse");
+
+  // The booking lookup throws rather than returning a client.
+  assert.match(payments, /Cannot determine the payment mode for booking/);
+
+  // The payout-account lookup fails rather than asking live Stripe about
+  // an account it cannot attribute.
+  assert.match(payments, /unknown_account/);
+  assert.match(payments, /its payment mode is unknown/);
+});
+
+test("mode is resolved only after the record is known to exist", () => {
+  // refundBooking and payCrew used to build a client before checking the
+  // booking existed. Harmless then, because the Stripe call came later —
+  // but it meant a mode was chosen from a missing row.
+  for (const fn of ["refundBooking", "payCrew"]) {
+    const start = payments.indexOf(`export async function ${fn}`);
+    assert.ok(start > -1, `${fn} not found`);
+    const body = payments.slice(start, start + 4000);
+    const check = body.indexOf('return fail("no_booking"');
+    const resolve = body.indexOf("stripeForBooking(bookingId)");
+    assert.ok(check > -1 && resolve > -1, `${fn} missing one of the two`);
+    assert.ok(check < resolve,
+      `${fn} resolves a payment mode before confirming the booking exists`);
+  }
 });
 
 test("a helper's connected account follows the same mode as its bookings", () => {

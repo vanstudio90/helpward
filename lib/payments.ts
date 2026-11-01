@@ -357,15 +357,22 @@ export async function refreshHelperPayoutState(
     .eq("stripe_connect_account_id", accountId)
     .maybeSingle();
   /*
-    No owner row for this account id, so there is no customer to resolve
-    a mode from. Live is the safe default: an unknown account is far
-    more likely to be a live one, and guessing test here would look for
-    a live connected account in the test dashboard and report it
-    unpayable.
+    NO OWNER ROW MEANS WE DO NOT KNOW WHICH STRIPE THIS IS, so we ask
+    neither. Defaulting to live would send a lookup for an unattributed
+    account id to the live account — a read rather than a payment, but
+    still a live operation performed on a guess, and the wrong answer
+    whenever the account is in fact a test one.
+
+    An unknown account id is a data problem. Saying so is more useful
+    than a confident "not payable" derived from asking the wrong Stripe.
   */
-  const stripe = owner?.user_id
-    ? await stripeForHelper(owner.user_id as string)
-    : getStripe();
+  if (!owner?.user_id) {
+    return fail(
+      "unknown_account",
+      "No helper is linked to that payout account, so its payment mode is unknown.",
+    );
+  }
+  const stripe = await stripeForHelper(owner.user_id as string);
 
   try {
     const account = await stripe.accounts.retrieve(accountId);
@@ -452,14 +459,23 @@ async function stripeForBooking(bookingId: string) {
     .eq("id", bookingId)
     .maybeSingle();
   /*
-    Booking not found, so nobody to resolve a mode from. Live is the
-    safe default in this direction: the failure it produces is a lookup
-    that finds nothing, whereas defaulting to test could let an unknown
-    booking transact against test money and become a free booking.
+    NO BOOKING MEANS NO KNOWN MODE, SO THIS REFUSES rather than picking
+    one. Defaulting to live would be a live operation chosen on a guess;
+    defaulting to test could let an unknown booking settle against test
+    money and become a free job. Neither default is defensible, so there
+    is none.
+
+    Every caller already returns "Booking not found" before reaching
+    here, which makes this unreachable today. It throws anyway, because
+    "unreachable because every caller remembers" is a weaker property
+    than "cannot happen", and the next caller is the one that forgets.
   */
-  return data?.customer_id
-    ? stripeForUser(data.customer_id as string)
-    : getStripe();
+  if (!data?.customer_id) {
+    throw new Error(
+      `Cannot determine the payment mode for booking ${bookingId}: no such booking.`,
+    );
+  }
+  return stripeForUser(data.customer_id as string);
 }
 
 async function stripeForUser(userId: string) {
@@ -1192,7 +1208,6 @@ export async function refundBooking(
   } = {},
 ): Promise<PaymentResult<{ legs: RefundLeg[]; totalRefundedCents: number }>> {
   if (!stripeConfigured()) return fail("not_configured", "Refunds are not available yet.");
-  const stripe = await stripeForBooking(bookingId);
   const admin = createSupabaseServiceClient();
 
   const { data: bookingRow } = await admin
@@ -1215,6 +1230,10 @@ export async function refundBooking(
   } | null;
 
   if (!booking) return fail("no_booking", "Booking not found.");
+  // The mode comes from the booking, so it is resolved only once the
+  // booking is known to exist. Nothing here can pick a Stripe from a
+  // missing row.
+  const stripe = await stripeForBooking(bookingId);
   if (!booking.stripe_payment_intent_id) {
     return fail("nothing_to_refund", "This booking was never charged.");
   }
@@ -1535,11 +1554,14 @@ export async function payCrew(
   bookingId: string,
 ): Promise<PaymentResult<{ paid: number; owedCents: number; failures: string[] }>> {
   if (!stripeConfigured()) return fail("not_configured", "Payouts are not available yet.");
-  const stripe = await stripeForBooking(bookingId);
   const admin = createSupabaseServiceClient();
 
   const booking = await loadBooking(bookingId);
   if (!booking) return fail("no_booking", "Booking not found.");
+  // The mode comes from the booking, so it is resolved only once the
+  // booking is known to exist. Nothing here can pick a Stripe from a
+  // missing row.
+  const stripe = await stripeForBooking(bookingId);
   if (booking.payment_status !== "captured") {
     return fail("not_captured", "The job has not been paid for yet.");
   }

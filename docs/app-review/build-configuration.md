@@ -90,3 +90,41 @@ paths are not all in production yet:
 
 Until then the journey is demonstrable only in the isolated environment,
 which is where it has been exercised.
+
+## The row-not-found safeguard — closed
+
+**The question:** when payment mode cannot be determined, can a code path
+quietly reach live Stripe?
+
+**It could, in one place.** `refreshHelperPayoutState` takes only a
+connected-account id. If no helper row linked to it, it fell back to the
+live client and then called `stripe.accounts.retrieve(accountId)` — a
+read rather than a payment, but still a live operation performed on a
+guess, and the wrong answer whenever the account is a test one. It now
+returns `unknown_account` and contacts nobody.
+
+**The other four were already safe, and are now safe structurally.**
+`confirmPendingAuthorization`, `voidBookingAuthorization`,
+`pendingAuthorizationSecret`, `refundBooking` and `payCrew` all return
+"Booking not found" before any Stripe call. Two of them —
+`refundBooking` and `payCrew` — nonetheless *built* the client before
+the booking check, so a mode was being chosen from a missing row even
+though nothing was sent. Both now resolve after the check.
+
+**And the lookup itself refuses.** `stripeForBooking` throws when the
+booking does not exist rather than returning a client:
+
+- defaulting to **live** is a live operation chosen on a guess;
+- defaulting to **test** could let an unknown booking settle against
+  test money and become a free job.
+
+Neither default is defensible, so there is none. It is unreachable today
+because every caller checks first — it throws anyway, because
+"unreachable because every caller remembers" is weaker than "cannot
+happen", and the next caller is the one that forgets.
+
+`lib/payments.ts` now contains **no unresolved `getStripe()` at all**.
+Two tests hold it there: one fails if any reappears or if either refusal
+is removed, the other fails if a mode is resolved before the record is
+confirmed to exist. Both were checked by reintroducing the fallback on
+purpose.
