@@ -48,10 +48,21 @@ export REHEARSAL_DATABASE_URL='<its connection string>'
       `.env.rehearsal`, which that file documents as created on
       2026-10-26 against the endpoint registered at
       `https://helpward.com/api/webhooks/stripe`.
-- [x] Endpoint identity confirmed by API: test-mode endpoint
+- [x] Endpoint identity confirmed by API: endpoint
       `we_1UUtvH8ZAIHcYg7RPhZ9KsN1` is `enabled` and points at
-      `https://helpward.com/api/webhooks/stripe`. The live endpoints are
-      separate objects in live mode and were not touched.
+      `https://helpward.com/api/webhooks/stripe`.
+
+  **Read this before opening Stripe.** The sandbox is a SEPARATE ACCOUNT,
+  not a test mode of the live platform:
+
+      live platform   acct_1UUsXQ6i5ULJPPDA   STRIPE_SECRET_KEY (sk_live_)
+      sandbox         acct_1UUsXV8ZAIHcYg7R   STRIPE_TEST_SECRET_KEY
+
+  So every review booking transacts wholly inside the sandbox account,
+  and the endpoint above lives there. The live platform's endpoints are
+  in a different account and were not touched. An account-scoped
+  dashboard URL carrying the other id silently lands you in the wrong
+  account — that has already cost one round trip here.
 
   Verification limit, stated plainly: `vercel env pull` masks every
   encrypted value, so the three uploads cannot be read back and compared.
@@ -75,10 +86,15 @@ export REHEARSAL_DATABASE_URL='<its connection string>'
       browser dies between bank approval and the app recording it keeps a
       booking that never shows its hold confirmed, and no retry fixes it.
 
-      Stripe → **Test mode** → Developers → Webhooks →
-      `we_1UUtvH8ZAIHcYg7RPhZ9KsN1` → Update details → add the four.
+      In the **sandbox account `acct_1UUsXV8ZAIHcYg7R`** (switch
+      accounts first; confirm the id before clicking anything):
+      Developers → Webhooks → `we_1UUtvH8ZAIHcYg7RPhZ9KsN1` →
+      Update details → add the four events.
+
       Editing enabled events does **not** rotate the signing secret, so
-      the value already uploaded stays correct.
+      the value already uploaded stays correct. Do not delete and
+      recreate the endpoint: that *would* issue a new secret and the
+      uploaded one would then be wrong.
 
 ## 4. Deployment operator — backup and approval
 
