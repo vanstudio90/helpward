@@ -69,17 +69,10 @@ node scripts/migrate.mjs --production --deploy-coupled \
   || die "deploy-coupled migrations failed" "the new code IS live but 0081/0085 are not fully applied. This is the one genuinely inconsistent state. Re-run step 3; if it keeps failing, re-promote $PREV AND restore the database together — code alone is not a rollback."
 
 banner "4. Reload the PostgREST schema cache"
-node -e '
-const pg = require("pg");
-(async () => {
-  const c = new pg.Client({ connectionString: process.env.PRODUCTION_DATABASE_URL,
-                            ssl: { rejectUnauthorized: false } });
-  await c.connect();
-  await c.query("notify pgrst, 'reload schema'");
-  await c.end();
-  console.log("  schema cache reload sent");
-})().catch(e => { console.error("  reload failed:", e.message); process.exit(1); });
-' || die "schema cache reload failed" "all migrations applied and code deployed. Only the cache notify failed — re-run step 4, or the cache refreshes on its own shortly."
+# Was an inline node -e with escaped quotes, which zsh mangled into invalid
+# JS and failed the step on the real run. A file needs no escaping.
+node scripts/reload-schema-cache.mjs \
+  || die "schema cache reload failed" "all migrations applied and code deployed. Only the cache notify failed, which is recoverable: re-run 'node scripts/reload-schema-cache.mjs', or wait — PostgREST also refreshes on its own."
 
 banner "5. Ledger check — expect 86/86"
 node scripts/migrate.mjs --production --status 2>&1 | tail -3

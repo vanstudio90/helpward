@@ -159,31 +159,70 @@ pre-deploy migration references `user_role` or either function —
 raises rather than guessing if a definition does not match the shape it
 expects, so a wrong order fails loudly instead of corrupting silently.
 
-### Acceptance criteria, with the pre-cutover baseline measured
+### CUTOVER EXECUTED 2026-11-01 — complete and verified
 
-Captured from live `helpward.com` immediately before cutover:
+Run by the owner from their own terminal, since the preparing agent's
+permission mode refused production writes. Log:
+`~/.helpward-cutover/cutover-20261101T230011Z.log`.
 
-| Route | Before | Required after |
-|---|---|---|
-| `/` | 200 | 200 |
-| `/pricing` | 200 | 200 |
-| `/how-it-works` | 200 | 200 |
-| `/api/v1/me` | 401 | 401 |
-| `/api/v1/payment-methods` | 401 | 401 |
-| `/api/v1/requests` | **404** | **401** |
-| `/api/v1/account/deletion` | **404** | **401** |
-| `/api/v1/review/advance` | **404** | **401** |
+| Step | Result |
+|---|---|
+| 1. Pre-deploy migrations | 7 applied, 131–215ms each |
+| 2. Deploy | `helpward-gcd8go8wl`, build 52s, aliased to helpward.com |
+| 3. Deploy-coupled `0081`, `0085` | applied, 225ms / 139ms |
+| 4. Schema cache reload | **failed first run** — see below — then applied |
+| 5. Ledger | **86/86 applied** · 74 pre-deploy · 12 deploy-coupled |
+| 6. Webhook signature | **200** signed; 400 unsigned; 400 bogus |
+| 7. Routes | all pass, see the corrected table below |
 
-The three 404s are the routes this release adds; they are the signal that
-the deploy actually shipped this branch. A 401 proves the route exists and
-is authenticating. Note `/api/v1/bookings/[id]/cancellation` is dynamic and
-is not probed here.
+Previous deployment, for the record:
+`https://helpward-pl2dqwo0h-vanstudio.vercel.app`
 
-Also required: the webhook probe must flip from `400 bad_signature` to
-**200**. Before cutover it returned 400 even when signed with the correct
-sandbox secret, because Vercel variables only take effect on a new
-deployment — which also explains the 780 failed deliveries Stripe recorded
-over 10/26–11/01.
+**Step 4 failed on a defect in this repo's own script**, not on anything
+in production. `run-cutover.sh` ran the notify as an inline `node -e`
+with escaped quotes, which zsh mangled into invalid JavaScript. It is now
+`scripts/reload-schema-cache.mjs`, a file, which needs no escaping. The
+failure was safely placed: migrations and deploy had already succeeded,
+and the step is recoverable by re-running it.
+
+Cache reload confirmed effective through the REST API, which is the thing
+that actually breaks when the cache is stale:
+
+    rpc whoami_role          200  "service_role"
+    rpc my_offers            200  []
+    profiles.is_review_account      200   (0088)
+    requests.offer_summary          200   (0084)
+    provider_profiles.is_review_helper  200   (0088)
+
+### Acceptance criteria — the baseline, and a correction
+
+Measured on live `helpward.com` before and after:
+
+| Route | Before | After | Meaning |
+|---|---|---|---|
+| `/`, `/pricing`, `/how-it-works` | 200 | 200 | unbroken |
+| `GET /api/v1/me` | 401 | 401 | already shipped |
+| `GET /api/v1/payment-methods` | 401 | 401 | already shipped |
+| `GET /api/v1/requests` | **404** | **405** | route now exists |
+| `GET /api/v1/account/deletion` | **404** | **405** | route now exists |
+| `GET /api/v1/review/advance` | **404** | **405** | route now exists |
+| `POST /api/v1/requests` | — | **401** | authenticates |
+| `POST /api/v1/account/deletion` | — | **401** | authenticates |
+| `POST /api/v1/review/advance` | — | **401** | authenticates |
+
+**Correction to what this document previously claimed.** It said those
+three routes must return 401. They return **405** to a GET, because all
+three export `POST` only — 405 is the correct answer to the wrong method
+and proves the route exists, but it does not prove authentication. The
+auth check needs the right verb: `POST` with no Authorization header
+returns `401 {"error":"Missing Authorization header."}` on all three.
+Probing only with GET would have reported a pass that tested nothing.
+
+The webhook probe flipped from `400 bad_signature` to `200`, confirming
+`STRIPE_TEST_WEBHOOK_SECRET` reached the runtime — Vercel variables apply
+only to new deployments, which is why it failed before. Unsigned and
+wrongly-signed events are still refused, so the dual-secret path did not
+loosen verification.
 
 ### Why a developer could not run this
 
