@@ -66,15 +66,78 @@ async function isReviewBooking(bookingId: string): Promise<{ ok: boolean; provid
     profiles?: { is_review_account?: boolean };
   } | null;
   if (!row?.profiles?.is_review_account) return { ok: false };
-  const helper = await reviewHelperId();
-  // The booking must belong to the controlled helper too. A review
-  // customer who somehow matched a real helper must not be advanced from
-  // here — that helper is a person with their own schedule.
-  if (!helper || row.provider_id !== helper) return { ok: false };
+  /*
+    The booking must be led by a CONTROLLED helper too. A review customer
+    who somehow matched a real helper must not be advanced from here —
+    that helper is a person with their own schedule.
+
+    Checked against the whole set rather than one id. There is more than
+    one controlled helper now, because a crew job cannot be staffed by a
+    single account, and asking "is it THE review helper?" would refuse
+    every booking the other one happened to lead.
+  */
+  if (!row.provider_id || !(await isReviewHelper(row.provider_id))) return { ok: false };
   return { ok: true, providerId: row.provider_id };
 }
 
+/** Is this provider one of the controlled accounts? */
+async function isReviewHelper(providerId: string): Promise<boolean> {
+  const admin = createSupabaseServiceClient();
+  const { data } = await admin
+    .from("provider_profiles")
+    .select("user_id")
+    .eq("user_id", providerId)
+    .eq("is_review_helper", true)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 export type ReviewStep = { ok: true; note: string } | { ok: false; error: string };
+
+/**
+ * Staff the rest of a crew booking with the other controlled helpers.
+ *
+ * WHY. A crew job refuses to start until crew_shortfall() reaches zero,
+ * and accept_request only invites the helpers who were ALSO offered the
+ * request. One controlled helper means an empty invite list, so Moving
+ * Help with two helpers — the value the review notes tell a reviewer to
+ * enter — would accept, hold the card, and then never start:
+ * "This job needs 1 more helper(s) before it can start."
+ *
+ * Nothing is fabricated. Each place is taken through accept_crew_invite,
+ * the same call a helper's own app makes, and only by an account flagged
+ * as a controlled helper. A real helper's invitation is never touched, so
+ * this cannot quietly conscript somebody into a job.
+ */
+async function seatReviewCrew(bookingId: string): Promise<void> {
+  const admin = createSupabaseServiceClient();
+
+  const { data: shortfall } = await admin.rpc("crew_shortfall", { p_booking_id: bookingId });
+  if (!Number(shortfall ?? 0)) return;
+
+  const { data: invited } = await admin
+    .from("booking_crew")
+    .select("provider_id")
+    .eq("booking_id", bookingId)
+    .eq("status", "invited");
+  const ids = (invited ?? []).map((r) => (r as { provider_id: string }).provider_id);
+  if (!ids.length) return;
+
+  const { data: controlled } = await admin
+    .from("provider_profiles")
+    .select("user_id")
+    .eq("is_review_helper", true)
+    .in("user_id", ids);
+
+  for (const row of controlled ?? []) {
+    const left = await admin.rpc("crew_shortfall", { p_booking_id: bookingId });
+    if (!Number(left.data ?? 0)) break;
+    await admin.rpc("accept_crew_invite", {
+      p_booking_id: bookingId,
+      p_provider_id: (row as { user_id: string }).user_id,
+    });
+  }
+}
 
 /**
  * Make the controlled helper matchable for THIS request, immediately
@@ -207,6 +270,8 @@ export async function advanceReviewBooking(bookingId: string): Promise<ReviewSte
   const status = (booking as { status?: string } | null)?.status;
 
   if (status === "scheduled") {
+    // A crew job will not start until every place is filled.
+    await seatReviewCrew(bookingId);
     const { error } = await admin.rpc("start_booking", { p_booking_id: bookingId });
     if (error) return { ok: false, error: error.message };
     return { ok: true, note: "The helper has started the job." };
