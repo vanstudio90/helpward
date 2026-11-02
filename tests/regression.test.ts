@@ -341,3 +341,36 @@ test("the controlled helper is resolved once per request, not twice", () => {
   );
 });
 
+test("signing back in actually cancels a scheduled deletion", () => {
+  /*
+    The app's delete screen and the website's data page both promise
+    that returning within the grace window calls the deletion off.
+    Nothing did it: the only caller of the cancel path was a button on
+    /settings/data, so a customer who followed the instruction they were
+    given kept their deletion date and had no way to know.
+
+    Both sign-in paths must reach the one implementation. Asserted
+    because the promise is in user-facing copy on two platforms and the
+    cost of it being false is somebody's account.
+  */
+  const login = readFileSync("app/(auth)/auth/actions.ts", "utf8");
+  assert.match(
+    login, /cancelPendingDeletion\(/,
+    "web sign-in must cancel a pending deletion, as /settings/data promises",
+  );
+
+  const lib = readFileSync("lib/account-deletion.ts", "utf8");
+  /*
+    Only inside the window, and only from `pending`. Both conditions
+    belong in the UPDATE: a check beforehand would let two concurrent
+    sign-ins each believe they cancelled it, and would let one revive a
+    request the cron had already begun executing.
+  */
+  assert.match(lib, /\.eq\("status", "pending"\)/, "must only cancel a pending request");
+  assert.match(lib, /\.gt\("grace_until"/, "must only cancel while the grace window is open");
+
+  assert.ok(
+    existsSync("app/api/v1/account/deletion/cancel/route.ts"),
+    "the app needs an endpoint to cancel through",
+  );
+});

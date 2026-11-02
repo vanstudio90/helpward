@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { recordReferralAttribution } from "@/lib/data/referrals";
 import { SERVICE_AREAS, normalizeMunicipality } from "@/lib/service-areas";
 import { isHelperRole } from "@/lib/roles";
+import { cancelPendingDeletion } from "@/lib/account-deletion";
 
 type ActionState = {
   error?: string;
@@ -29,7 +30,7 @@ export async function loginAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data: signIn, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     // Supabase refuses an unconfirmed account with the bare string "Email
@@ -45,6 +46,26 @@ export async function loginAction(
       };
     }
     return { error: error.message };
+  }
+
+  /*
+    COMING BACK CANCELS A SCHEDULED DELETION.
+
+    This site says so on /settings/data — "Sign back in within that
+    window to cancel" — and the app says it on its own delete screen.
+    Neither was true: the only thing that cancelled a request was the
+    button next to that sentence, so anyone who followed the instruction
+    they were given kept their deletion date.
+
+    BEFORE THE MFA BRANCH, on purpose. A correct password is the person
+    coming back whether or not they then step up, and doing it after the
+    redirect would make the promise hold only for accounts without TOTP.
+
+    Takes the user from the sign-in response rather than calling
+    getUser() again — it is the same identity, one round trip cheaper.
+  */
+  if (signIn.user) {
+    await cancelPendingDeletion(signIn.user.id, "signed_in");
   }
 
   // If the account has a verified TOTP factor, the password sign-in lands us
