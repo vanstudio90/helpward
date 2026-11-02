@@ -33,6 +33,49 @@ const local = env(".env.local");
 const sandbox = env(".env.rehearsal");
 const SUPA = local.NEXT_PUBLIC_SUPABASE_URL, ANON = local.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SK = sandbox.STRIPE_SECRET_KEY;
+const SERVICE = local.SUPABASE_SERVICE_ROLE_KEY;
+
+/*
+  START COLD, because warm is the case that always worked.
+
+  The controlled helpers stay online and nearby for 30 minutes after any
+  request, so a second run found them already matchable and every service
+  passed. App Review arrives days later at an hour nobody picks, which is
+  the state this walk has to prove — and it is exactly the state that was
+  broken: the first request of a session was offered to one helper, the
+  acceptance was aimed at the other, and nothing was created.
+
+  Taking them offline with a stale location before the first request
+  makes this script reproduce that instead of stepping around it. Pass
+  --warm to skip, which is only useful when debugging something else.
+*/
+async function goCold() {
+  if (process.argv.includes("--warm")) return;
+  if (!SERVICE) {
+    console.log("  (no service-role key in .env.local — starting warm)");
+    return;
+  }
+  const stale = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  const res = await fetch(
+    `${SUPA}/rest/v1/provider_profiles?is_review_helper=eq.true`,
+    {
+      method: "PATCH",
+      headers: {
+        apikey: SERVICE,
+        Authorization: `Bearer ${SERVICE}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify({ is_online: false, location_updated_at: stale }),
+    },
+  );
+  const rows = await res.json();
+  console.log(
+    res.ok
+      ? `  cold start: ${Array.isArray(rows) ? rows.length : "?"} controlled helper(s) offline, location 2h old`
+      : `  could not go cold (HTTP ${res.status}) — starting warm`,
+  );
+}
 
 let customerEmail, customerPassword;
 for (const line of readFileSync(CREDS, "utf8").split("\n")) {
@@ -99,9 +142,12 @@ if ((cards.cards ?? []).length === 0) {
 }
 
 // ---- walk ------------------------------------------------------------
-const only = process.argv[2];
+// Skips flags, so `--warm` is not mistaken for a service id.
+const only = process.argv.slice(2).find((a) => !a.startsWith("--"));
 const ids = only ? [only] : Object.keys(INTAKE);
 let pass = 0, fail = 0;
+
+await goCold();
 
 for (const serviceId of ids) {
   process.stdout.write(`\n  ${serviceId}\n`);
@@ -124,6 +170,12 @@ for (const serviceId of ids) {
   */
   if (!out.reviewDemo?.accepted) {
     console.log(`    ${C.bad("FAIL")} the controlled helper did not accept.`);
+    /*
+      The route now says WHY. It used to omit reviewDemo entirely on
+      failure, which left this script dumping a response that looked
+      exactly like an ordinary customer's.
+    */
+    if (out.reviewDemo?.error) console.log(`           ${out.reviewDemo.error}`);
     console.log(`           ${C.dim(JSON.stringify(out).slice(0, 300))}`);
     fail++; continue;
   }
