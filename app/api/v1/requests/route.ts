@@ -296,7 +296,7 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
     Ordering matters here: prepare, then broadcast, then accept. A no-op
     for every real request.
   */
-  await prepareReviewHelper(created.id);
+  const prepared = await prepareReviewHelper(created.id);
 
   // Best-effort: the request exists, an admin can re-broadcast, and the
   // expire-stale cron retires it if no helper ever sees it.
@@ -315,7 +315,18 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
     because the customer is a review account. It is a no-op for every
     real request — acceptAsReviewHelper checks the flag and refuses.
   */
-  const reviewAccept = await acceptAsReviewHelper(created.id);
+  const reviewAccept = await acceptAsReviewHelper(
+    created.id,
+    /*
+      THE SAME ACCOUNT prepare put online, by id.
+
+      Resolving "the review helper" independently here returned the other
+      controlled account once prepare's own UPDATE had moved the first
+      one's row, and accept_request refuses a provider the request was
+      never offered to. See lib/review-helper.ts.
+    */
+    prepared.ok ? prepared.helperId : undefined,
+  );
 
   /*
     HOW MANY HELPERS ACTUALLY GOT IT.
@@ -334,14 +345,41 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
     .select("id", { count: "exact", head: true })
     .eq("request_id", created.id);
 
+  /*
+    A REVIEW REQUEST THAT WAS NOT ACCEPTED HAS TO SAY SO.
+
+    This was `reviewAccept.ok ? {...} : {}`, which made a failed
+    automatic acceptance byte-for-byte indistinguishable from an ordinary
+    customer's request: the one state a reviewer cannot recover from was
+    also the one state nothing reported. An independent retest hit
+    exactly that — 200, one candidate, no booking, stuck in `matching`,
+    no explanation anywhere.
+
+    `applies` separates "this is not a review request" from "this is a
+    review request that broke", which is the distinction the old shape
+    could not express.
+  */
+  const reviewApplies = prepared.ok || prepared.applies;
+  const reviewDemo = !reviewApplies
+    ? null
+    : reviewAccept.ok
+      ? { accepted: true as const, note: reviewAccept.note }
+      : {
+          accepted: false as const,
+          // Whichever step actually failed, not a generic apology.
+          error: prepared.ok ? reviewAccept.error : prepared.error,
+        };
+  if (reviewDemo && !reviewDemo.accepted) {
+    console.error("review acceptance failed", created.id, reviewDemo.error);
+  }
+
   return Response.json({
       /*
-        Present only for a review account, and only to say what the
-        controlled helper did. Absent for every ordinary request.
+        Present only for a review account, saying what the controlled
+        helper did OR why it could not. Absent for every ordinary
+        request.
       */
-      ...(reviewAccept.ok
-        ? { reviewDemo: { accepted: true, note: reviewAccept.note } }
-        : {}),
+      ...(reviewDemo ? { reviewDemo } : {}),
     requestId: created.id,
     candidateCount: candidateCount ?? 0,
     // The ATTESTED coordinates, so the app can show the search area over a

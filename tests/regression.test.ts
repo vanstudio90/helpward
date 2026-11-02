@@ -9,7 +9,7 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { getBatchAvailabilityStatus } from "../lib/data/availability.ts";
@@ -295,3 +295,49 @@ test("cancelling a booking never strands the customer's money", () => {
     `these cancel a booking without releasing the hold: ${offenders.join(", ")}`,
   );
 });
+
+test("the controlled helper is resolved once per request, not twice", () => {
+  /*
+    prepareReviewHelper brings a controlled account online and the
+    broadcast offers the request to THAT account. accept_request refuses
+    any provider it was not offered to, so acceptance has to name the
+    same account.
+
+    It used to resolve "the review helper" independently, with an
+    unordered limit(1) over a set that has more than one row — and
+    prepare's own UPDATE moves the row it touched to a new heap
+    position, so the second lookup reliably returned the OTHER account.
+    The reviewer's first request found a candidate, created no booking,
+    and sat in `matching`.
+
+    Asserted on the source because the failure needs two accounts, a
+    stale location window and a real plan to reproduce, and a test that
+    needs all three is a test that stops being run.
+  */
+  const lib = readFileSync("lib/review-helper.ts", "utf8");
+
+  assert.ok(
+    !/is_review_helper", true\)[\s\S]{0,200}?\.limit\(1\)/.test(lib),
+    "resolving a controlled helper with an unordered limit(1) is the bug: order it",
+  );
+  assert.match(
+    lib, /\.eq\("status", "approved"\)\s*\n\s*\.order\("user_id"\)/,
+    "reviewHelperIds must impose a deterministic order",
+  );
+
+  const route = readFileSync("app/api/v1/requests/route.ts", "utf8");
+  assert.match(
+    route, /acceptAsReviewHelper\(\s*created\.id,[\s\S]*?prepared\./,
+    "the requests route must accept as the helper prepare actually prepared",
+  );
+  /*
+    And the failure has to reach the caller. An omitted reviewDemo was
+    indistinguishable from an ordinary customer's request, which is why
+    this went unnoticed for so long.
+  */
+  assert.match(
+    route, /accepted: false/,
+    "a review request that failed to accept must report it, not go quiet",
+  );
+});
+

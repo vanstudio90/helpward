@@ -30,17 +30,42 @@ import { stripeConfigured } from "@/lib/stripe";
   be impossible to aim at a real booking by changing one argument.
 */
 
-/** The controlled helper, resolved from the flag rather than configured. */
-async function reviewHelperId(): Promise<string | null> {
+/*
+  THE CONTROLLED HELPERS, IN A FIXED ORDER.
+
+  WHY THIS IS A LIST AND WHY IT IS ORDERED.
+
+  This was `limit(1)` with no ORDER BY, called once by
+  prepareReviewHelper and then AGAIN by acceptAsReviewHelper. There is
+  more than one controlled account — a crew job cannot be staffed by one
+  — so "the review helper" was never a single row, and an unordered
+  limit returns whatever the plan happens to reach first.
+
+  Worse than arbitrary: prepare UPDATES the row it picked, and an updated
+  tuple takes a new position in the heap. A sequential scan then reports
+  the OTHER account first. So the two calls did not merely risk
+  disagreeing, they reliably DID: prepare brought helper A online and the
+  broadcast offered the request to A, and accept_request was then aimed
+  at B, which refuses with "Request was not offered to this provider".
+
+  Reproduced against production by running prepare's own UPDATE inside a
+  transaction and asking twice: demo-helper-2 at ctid (0,48) before,
+  demo-helper at (0,49) after.
+
+  It looked intermittent because a second request inside the 30-minute
+  location window found BOTH accounts already online and nearby, so
+  either pick worked — until the window lapsed or the city changed. The
+  first request of a session was the one that failed.
+*/
+async function reviewHelperIds(): Promise<string[]> {
   const admin = createSupabaseServiceClient();
   const { data } = await admin
     .from("provider_profiles")
     .select("user_id")
     .eq("is_review_helper", true)
     .eq("status", "approved")
-    .limit(1)
-    .maybeSingle();
-  return data?.user_id ?? null;
+    .order("user_id");
+  return (data ?? []).map((row) => (row as { user_id: string }).user_id);
 }
 
 async function isReviewRequest(requestId: string): Promise<boolean> {
@@ -93,6 +118,16 @@ async function isReviewHelper(providerId: string): Promise<boolean> {
 }
 
 export type ReviewStep = { ok: true; note: string } | { ok: false; error: string };
+
+export type ReviewPrepared =
+  | { ok: true; note: string; helperId: string }
+  /**
+   * `applies` is false ONLY when this is an ordinary customer's request,
+   * which is not a failure. Anything else is a review request that could
+   * not be set up, and the caller has to be able to tell the two apart —
+   * conflating them is what hid the acceptance bug.
+   */
+  | { ok: false; error: string; applies: boolean };
 
 /**
  * Staff the rest of a crew booking with the other controlled helpers.
@@ -171,13 +206,17 @@ async function seatReviewCrew(bookingId: string): Promise<void> {
  *
  * A no-op for every real request — the review flag is checked first.
  */
-export async function prepareReviewHelper(requestId: string): Promise<ReviewStep> {
+export async function prepareReviewHelper(requestId: string): Promise<ReviewPrepared> {
   if (!(await isReviewRequest(requestId))) {
-    return { ok: false, error: "Not a review request." };
+    return { ok: false, error: "Not a review request.", applies: false };
   }
-  const helper = await reviewHelperId();
-  if (!helper) {
-    return { ok: false, error: "No approved review helper exists. Create one and flag it." };
+  const helpers = await reviewHelperIds();
+  if (!helpers.length) {
+    return {
+      ok: false,
+      applies: true,
+      error: "No approved review helper exists. Create one and flag it.",
+    };
   }
 
   const admin = createSupabaseServiceClient();
@@ -188,7 +227,9 @@ export async function prepareReviewHelper(requestId: string): Promise<ReviewStep
     .eq("id", requestId)
     .maybeSingle();
   const addressId = (req as { pickup_address_id?: string } | null)?.pickup_address_id;
-  if (!addressId) return { ok: false, error: "Request has no pickup address." };
+  if (!addressId) {
+    return { ok: false, applies: true, error: "Request has no pickup address." };
+  }
 
   const { data: addr } = await admin
     .from("addresses")
@@ -196,8 +237,22 @@ export async function prepareReviewHelper(requestId: string): Promise<ReviewStep
     .eq("id", addressId)
     .maybeSingle();
   const location = (addr as { location?: string } | null)?.location;
-  if (!location) return { ok: false, error: "Pickup address has no geocoded location." };
+  if (!location) {
+    return { ok: false, applies: true, error: "Pickup address has no geocoded location." };
+  }
 
+  /*
+    EVERY controlled account, not only the lead.
+
+    accept_request invites just the helpers the request was ALSO offered
+    to, and crew_shortfall() refuses to let a crew job start until those
+    places are filled. Preparing one account left the invite list empty,
+    so Moving Help with two helpers — the figure the review notes tell a
+    reviewer to enter — would accept, hold the card, and then refuse to
+    start. It passed in testing only because an earlier request had
+    happened to leave the second account online nearby, which is not
+    something App Review will reproduce for us.
+  */
   const { error } = await admin
     .from("provider_profiles")
     .update({
@@ -206,11 +261,20 @@ export async function prepareReviewHelper(requestId: string): Promise<ReviewStep
       current_location: location,
       location_updated_at: new Date().toISOString(),
     })
-    .eq("user_id", helper)
+    .in("user_id", helpers)
     .eq("is_review_helper", true);
 
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, note: "Controlled helper is online at the pickup point." };
+  if (error) return { ok: false, applies: true, error: error.message };
+  return {
+    ok: true,
+    /*
+      The lead is NAMED, and accepted by that id, so the account the
+      request was offered to is the account that answers it. Resolving it
+      a second time is the bug.
+    */
+    helperId: helpers[0],
+    note: `${helpers.length} controlled helper(s) online at the pickup point.`,
+  };
 }
 
 /**
@@ -219,11 +283,27 @@ export async function prepareReviewHelper(requestId: string): Promise<ReviewStep
  * Called inline when a review account creates a request, so acceptance
  * is immediate rather than a thing somebody has to do.
  */
-export async function acceptAsReviewHelper(requestId: string): Promise<ReviewStep> {
+export async function acceptAsReviewHelper(
+  requestId: string,
+  /*
+    The account prepareReviewHelper actually brought online and had the
+    request offered to. PASSED IN rather than looked up again — looking
+    it up a second time is precisely the defect this parameter removes.
+  */
+  preparedHelperId?: string,
+): Promise<ReviewStep> {
   if (!(await isReviewRequest(requestId))) {
     return { ok: false, error: "Not a review request." };
   }
-  const helper = await reviewHelperId();
+  /*
+    Still checked here. This module's rule is that every entry point
+    verifies for itself, so passing a real helper's id cannot aim the
+    automatic acceptance at a person with their own schedule.
+  */
+  const helper =
+    preparedHelperId && (await isReviewHelper(preparedHelperId))
+      ? preparedHelperId
+      : (await reviewHelperIds())[0];
   if (!helper) {
     return { ok: false, error: "No approved review helper exists. Create one and flag it." };
   }
