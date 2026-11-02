@@ -68,8 +68,10 @@ configuration is present in the binary.
    rejected and a test card is correct.
 7. The request goes to our test helper, who accepts. Your card is then
    **authorised, not charged** — the booking shows "Card held".
-8. Use **Message** to send a message, and **Call** if you wish (the call
-   is placed inside the app; no phone number is exchanged).
+8. Use **Message** to send a message. **Call** opens your phone's own
+   dialler on the helper's number, which both sides can see only while a
+   booking is active. On the Simulator the dialler is unavailable, so
+   that button does nothing there — it works on a device.
 9. The test helper marks the job complete. The hold is **captured** at
    that point and the booking moves to completed.
 
