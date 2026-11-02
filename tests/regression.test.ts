@@ -9,6 +9,8 @@
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 
 import { getBatchAvailabilityStatus } from "../lib/data/availability.ts";
 import { broadcastRequestBestEffort } from "../lib/broadcast.ts";
@@ -242,4 +244,54 @@ describe("retired city paths", () => {
     assert.equal(isRetiredCityPath("/services/dog-walking"), false);
     assert.equal(isRetiredCityPath("/"), false);
   });
+});
+
+test("cancelling a booking never strands the customer's money", () => {
+  /*
+    Every path that cancels a booking must also release the authorisation.
+    The pairing is documented in the cancellation route: cancel the
+    booking, then void the hold, because cancel_booking() does not touch
+    Stripe. A caller that does only the first half leaves the money
+    authorised against the card with nothing left to release it — the
+    booking reads "cancelled" while the bank still shows a pending charge.
+
+    auto-cancel-no-shows did exactly that: a direct status write and no
+    void, so payment_status stayed "authorized" indefinitely. Found on a
+    real production booking that was cancelled while Stripe still had it
+    at requires_capture.
+
+    Asserted across every route that writes a cancelled status, so the
+    next one added has to answer the same question.
+  */
+  const roots = ["app/api/cron", "app/api/v1"];
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith(".ts")) files.push(full);
+    }
+  };
+  for (const r of roots) walk(r);
+
+  const offenders = [];
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    /*
+      A cancelled REQUEST is not a cancelled booking and holds no money —
+      the authorisation is taken at acceptance, after the request is gone.
+      So the status write only counts when this file also touches the
+      bookings table.
+    */
+    const cancelsBooking =
+      /"cancel_booking"/.test(src) ||
+      (/status:\s*"cancelled"/.test(src) && /from\("bookings"\)/.test(src));
+    const cancels = cancelsBooking;
+    if (!cancels) continue;
+    if (!/voidBookingAuthorization/.test(src)) offenders.push(f);
+  }
+  assert.deepEqual(
+    offenders, [],
+    `these cancel a booking without releasing the hold: ${offenders.join(", ")}`,
+  );
 });
