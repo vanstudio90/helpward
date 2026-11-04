@@ -65,7 +65,27 @@ export async function loginAction(
     getUser() again — it is the same identity, one round trip cheaper.
   */
   if (signIn.user) {
-    await cancelPendingDeletion(signIn.user.id, "signed_in");
+    /*
+      NEVER let this stop a sign-in.
+
+      cancelPendingDeletion already swallows its own query errors, but a
+      throw from anywhere inside it — a missing service-role key, a
+      network fault reaching Postgres — would propagate out of
+      loginAction and the person would simply fail to log in, with no
+      idea why. Refusing somebody entry to their own account because a
+      courtesy we perform for them went wrong is the wrong trade in
+      every case.
+
+      The consequence of swallowing it is that a scheduled deletion
+      survives a sign-in that should have cancelled it. That is the
+      state we were already in before this shipped, it is logged inside
+      the helper, and /settings/data still offers the button.
+    */
+    try {
+      await cancelPendingDeletion(signIn.user.id, "signed_in");
+    } catch (cancelError) {
+      console.error("sign-in could not cancel a pending deletion", cancelError);
+    }
   }
 
   // If the account has a verified TOTP factor, the password sign-in lands us
