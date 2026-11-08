@@ -45,6 +45,18 @@ type Body = {
    * decides which half of this is shareable; the client only sends it.
    */
   handover?: Record<string, Record<string, string>>;
+  /**
+   * Leave a REVIEW request standing instead of having the controlled
+   * helper take it immediately.
+   *
+   * Only ever honoured for a review account — acceptAsReviewHelper is a
+   * no-op for anybody else, so this cannot stop a real customer's
+   * request being offered. It exists so an App Store reviewer signed in
+   * on the HELPER side has something in their inbox to accept; without
+   * it every review request is answered inside this same call and the
+   * offer is gone before they can see it.
+   */
+  leaveUnaccepted?: boolean;
 };
 
 export const POST = withBearerAuth(async ({ user, supabase }, request) => {
@@ -315,18 +327,28 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
     because the customer is a review account. It is a no-op for every
     real request — acceptAsReviewHelper checks the flag and refuses.
   */
-  const reviewAccept = await acceptAsReviewHelper(
-    created.id,
-    /*
-      THE SAME ACCOUNT prepare put online, by id.
+  /*
+    UNLESS THE CALLER ASKED FOR IT TO BE LEFT STANDING.
 
-      Resolving "the review helper" independently here returned the other
-      controlled account once prepare's own UPDATE had moved the first
-      one's row, and accept_request refuses a provider the request was
-      never offered to. See lib/review-helper.ts.
-    */
-    prepared.ok ? prepared.helperId : undefined,
-  );
+    A reviewer testing the HELPER side needs something in their inbox,
+    and this same call is what would otherwise have answered it before
+    they ever saw it. Only reachable for a review account, since
+    acceptAsReviewHelper refuses everyone else anyway.
+  */
+  const reviewAccept = body.leaveUnaccepted === true
+    ? { ok: true as const, note: "Left standing for the helper's inbox." }
+    : await acceptAsReviewHelper(
+        created.id,
+        /*
+          THE SAME ACCOUNT prepare put online, by id.
+
+          Resolving "the review helper" independently here returned the
+          other controlled account once prepare's own UPDATE had moved
+          the first one's row, and accept_request refuses a provider the
+          request was never offered to. See lib/review-helper.ts.
+        */
+        prepared.ok ? prepared.helperId : undefined,
+      );
 
   /*
     HOW MANY HELPERS ACTUALLY GOT IT.
