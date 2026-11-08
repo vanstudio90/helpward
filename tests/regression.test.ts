@@ -466,6 +466,38 @@ test("the app and the website accept and complete jobs the same way", () => {
   }
 
   /*
+    Completion photos go to a PRIVATE bucket with the service-role key,
+    so the app cannot upload directly either. Same split, same reason,
+    and the ownership checks must run as the CALLER — the service key
+    satisfies every policy, so deciding with it would be checking a lock
+    with the master key in hand.
+  */
+  for (const file of [
+    "app/(helper)/helper/active/photo-actions.ts",
+    "app/api/v1/helper/bookings/[id]/photos/route.ts",
+  ]) {
+    const src = readFileSync(file, "utf8");
+    assert.match(
+      src, /addCompletionPhoto\(|removeCompletionPhoto\(/,
+      `${file} must go through the shared photo implementation`,
+    );
+    assert.doesNotMatch(
+      src, /createSupabaseServiceClient\(/,
+      `${file} must not hold the service key itself`,
+    );
+  }
+
+  const photos = readFileSync("lib/completion-photos.ts", "utf8");
+  assert.match(
+    photos, /provider_id !== userId/,
+    "only the assigned helper may add proof to a booking",
+  );
+  assert.match(
+    photos, /status !== "in_progress"/,
+    "photos belong to a job in progress, not one already settled",
+  );
+
+  /*
     And the shared implementation must still undo an acceptance it
     cannot charge for. Dispatching a helper to a job that cannot be paid
     for is worse than telling someone their card was declined.
