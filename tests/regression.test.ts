@@ -481,10 +481,22 @@ test("the app and the website accept and complete jobs the same way", () => {
       src, /addCompletionPhoto\(|removeCompletionPhoto\(/,
       `${file} must go through the shared photo implementation`,
     );
-    assert.doesNotMatch(
-      src, /createSupabaseServiceClient\(/,
-      `${file} must not hold the service key itself`,
-    );
+    /*
+      The service key may appear in these files for ONE thing: turning a
+      private storage path into a link an image view can load. It must
+      never be what decides whose photo this is, because it satisfies
+      every policy and would make the check meaningless.
+    */
+    if (/createSupabaseServiceClient\(/.test(src)) {
+      assert.match(
+        src, /createSignedUrls?\(/,
+        `${file} uses the service key for something other than signing`,
+      );
+      assert.doesNotMatch(
+        src, /provider_id|uploaded_by_user_id/,
+        `${file} decides ownership itself instead of leaving it to the shared rules`,
+      );
+    }
   }
 
   const photos = readFileSync("lib/completion-photos.ts", "utf8");

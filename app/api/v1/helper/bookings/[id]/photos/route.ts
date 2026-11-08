@@ -1,5 +1,6 @@
 import { withBearerAuth } from "@/lib/api/bearer";
 import { addCompletionPhoto, removeCompletionPhoto } from "@/lib/completion-photos";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { COMPLETION_PHOTO_MAX_BYTES } from "@/lib/completion-photo-pure";
 
 /*
@@ -64,6 +65,47 @@ export async function POST(request: Request, context: Context) {
     });
     if (!result.ok) return Response.json({ error: result.error }, { status: 409 });
     return Response.json({ photoId: result.photoId });
+  })(request);
+}
+
+/*
+  The photos already on this booking, each with a URL that can actually
+  be loaded.
+
+  The bucket is private, so a storage path is not something an image
+  view can fetch. Signing happens here, with the service client, for one
+  hour — the same thing the website's pages do. The rows themselves are
+  read as the CALLER, so RLS decides whose photos these are and the
+  service key only turns paths into links.
+*/
+export async function GET(request: Request, context: Context) {
+  const { id } = await context.params;
+  return withBearerAuth(async ({ supabase }) => {
+    const { data: rows, error } = await supabase
+      .from("booking_completion_photos")
+      .select("id, storage_path, caption, created_at")
+      .eq("booking_id", id)
+      .order("created_at");
+    if (error) return Response.json({ error: error.message }, { status: 409 });
+
+    const list = rows ?? [];
+    if (list.length === 0) return Response.json({ photos: [] });
+
+    const svc = createSupabaseServiceClient();
+    const { data: signed } = await svc.storage
+      .from("booking-photos")
+      .createSignedUrls(list.map((r) => r.storage_path as string), 3600);
+
+    return Response.json({
+      photos: list.map((row, i) => ({
+        id: row.id,
+        caption: row.caption,
+        createdAt: row.created_at,
+        // Null rather than a broken link when signing fails, so the app
+        // can show a placeholder instead of an image that never loads.
+        url: signed?.[i]?.signedUrl ?? null,
+      })),
+    });
   })(request);
 }
 
