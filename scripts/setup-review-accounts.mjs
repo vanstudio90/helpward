@@ -125,7 +125,6 @@ for (const [i, email] of HELPER_EMAILS.entries()) {
     country: "CA",
   }));
 }
-const helper = helpers[0];
 
 console.log(`  customer ${CUSTOMER_EMAIL}  ${customer.created ? "created" : "already existed"}`);
 for (const [i, h] of helpers.entries()) {
@@ -205,7 +204,24 @@ for (const [i, v] of vAll.entries()) {
 
 const creds = [];
 if (customer.password) creds.push(`customer\t${CUSTOMER_EMAIL}\t${customer.password}`);
-if (helper.password) creds.push(`helper\t${HELPER_EMAIL}\t${helper.password}`);
+/*
+  EVERY helper, not helpers[0].
+
+  This line read `${HELPER_EMAIL}` — a name that does not exist in this
+  file; the constant is HELPER_EMAILS, an array. So the moment a helper
+  was newly created the script threw a ReferenceError HERE, after the
+  transaction had already committed: the accounts were correct in the
+  database and the generated password was gone, unrecoverable, because
+  Supabase will not read one back.
+
+  That is exactly what happened to demo-helper-2 on 1 November. The
+  credentials file holds one helper line, written by the single-helper
+  version of this script, and the run that added the second crashed
+  before it could record it.
+*/
+for (const [i, h] of helpers.entries()) {
+  if (h.password) creds.push(`helper\t${HELPER_EMAILS[i]}\t${h.password}`);
+}
 if (creds.length) {
   /*
     MERGE, never overwrite.
