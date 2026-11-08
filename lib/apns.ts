@@ -40,7 +40,7 @@ export type ApnsEnvironment = keyof typeof HOSTS;
 
 export function apnsConfigured(): boolean {
   return Boolean(
-    process.env.APNS_KEY &&
+    process.env.APNS_KEY_P8 &&
       process.env.APNS_KEY_ID &&
       process.env.APNS_TEAM_ID &&
       process.env.APNS_BUNDLE_ID,
@@ -54,7 +54,7 @@ let cached: { token: string; madeAt: number } | null = null;
 function providerToken(): string {
   if (cached && Date.now() - cached.madeAt < TOKEN_TTL_MS) return cached.token;
 
-  const key = (process.env.APNS_KEY ?? "").replace(/\\n/g, "\n");
+  const key = (process.env.APNS_KEY_P8 ?? "").replace(/\\n/g, "\n");
   const header = { alg: "ES256", kid: process.env.APNS_KEY_ID };
   const claims = { iss: process.env.APNS_TEAM_ID, iat: Math.floor(Date.now() / 1000) };
   const encode = (o: unknown) =>
