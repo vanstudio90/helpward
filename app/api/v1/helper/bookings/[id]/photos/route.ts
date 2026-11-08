@@ -20,36 +20,42 @@ type Context = { params: Promise<{ id: string }> };
 export async function POST(request: Request, context: Context) {
   const { id } = await context.params;
 
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return Response.json(
-      { error: "Expected a multipart form with a `file` part." },
-      { status: 400 },
-    );
-  }
-
-  const file = form.get("file");
-  if (!(file instanceof File)) {
-    return Response.json({ error: "No photo attached." }, { status: 400 });
-  }
   /*
-    Refused before the bytes are copied into a Uint8Array, and with 413
-    rather than the shared implementation's 409, so an app that is
-    retrying can tell "too big" apart from "wrong state".
-
-    This is NOT a guard against a huge upload: formData() has already
-    read the body by the time we get here. Bounding what actually
-    reaches the function is the platform's job, not this handler's.
+    Authenticate BEFORE touching the body. Parsing first meant an
+    anonymous caller could make the function decode a multipart upload
+    and only then be told to sign in — free work for anyone who asked,
+    and a 400 where a 401 belongs.
   */
-  if (file.size > COMPLETION_PHOTO_MAX_BYTES) {
-    return Response.json({ error: "Photo too large — max 8 MB." }, { status: 413 });
-  }
-
-  const caption = form.get("caption");
-
   return withBearerAuth(async ({ user, supabase }) => {
+    let form: FormData;
+    try {
+      form = await request.formData();
+    } catch {
+      return Response.json(
+        { error: "Expected a multipart form with a `file` part." },
+        { status: 400 },
+      );
+    }
+
+    const file = form.get("file");
+    if (!(file instanceof File)) {
+      return Response.json({ error: "No photo attached." }, { status: 400 });
+    }
+    /*
+      Refused before the bytes are copied into a Uint8Array, and with
+      413 rather than the shared implementation's 409, so an app that is
+      retrying can tell "too big" apart from "wrong state".
+
+      This is NOT a guard against a huge upload: formData() has already
+      read the body by the time we get here. Bounding what actually
+      reaches the function is the platform's job, not this handler's.
+    */
+    if (file.size > COMPLETION_PHOTO_MAX_BYTES) {
+      return Response.json({ error: "Photo too large — max 8 MB." }, { status: 413 });
+    }
+
+    const caption = form.get("caption");
+
     const result = await addCompletionPhoto(supabase, user.id, id, {
       bytes: new Uint8Array(await file.arrayBuffer()),
       contentType: file.type,
