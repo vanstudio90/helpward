@@ -421,3 +421,62 @@ test("what we write as a helper is what the schema still accepts", () => {
     `NEW_HELPER_ROLE is "${newRole}", which is not the value 0081 renames the enum to`,
   );
 });
+
+test("the app and the website accept and complete jobs the same way", () => {
+  /*
+    Both are an RPC plus money: accept_request then authorise the card
+    (releasing the acceptance if that fails), complete_booking then
+    capture or void and pay the crew. The RPCs are granted to
+    `authenticated`, so a phone can reach them directly — and a caller
+    that ran the RPC alone would hold a booking nobody authorised a card
+    for, or mark a job complete and never take the money.
+
+    One implementation, two callers. Asserted because the failure is
+    silent on both sides: the booking looks right in the table, and the
+    money is simply missing.
+  */
+  for (const file of [
+    "app/(helper)/helper/inbox/actions.ts",
+    "app/api/v1/helper/requests/[id]/accept/route.ts",
+  ]) {
+    const src = readFileSync(file, "utf8");
+    assert.match(
+      src, /acceptRequestForHelper\(/,
+      `${file} must accept through the shared implementation`,
+    );
+    assert.doesNotMatch(
+      src, /authorizeBookingPayment\(/,
+      `${file} must not place the hold itself — that is how the two drift`,
+    );
+  }
+
+  for (const file of [
+    "app/(helper)/helper/active/actions.ts",
+    "app/api/v1/helper/bookings/[id]/complete/route.ts",
+  ]) {
+    const src = readFileSync(file, "utf8");
+    assert.match(
+      src, /completeBookingForHelper\(/,
+      `${file} must complete through the shared implementation`,
+    );
+    assert.doesNotMatch(
+      src, /captureBookingPayment\(|voidBookingAuthorization\(/,
+      `${file} must not settle the hold itself`,
+    );
+  }
+
+  /*
+    And the shared implementation must still undo an acceptance it
+    cannot charge for. Dispatching a helper to a job that cannot be paid
+    for is worse than telling someone their card was declined.
+  */
+  const shared = readFileSync("lib/helper-jobs.ts", "utf8");
+  assert.match(
+    shared, /release_unpaid_booking/,
+    "a failed authorisation must take the acceptance back out",
+  );
+  assert.match(
+    shared, /payCrew\(/,
+    "a destination charge has one destination; the rest of the crew is paid separately",
+  );
+});

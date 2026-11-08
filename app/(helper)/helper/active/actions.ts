@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { voidBookingAuthorization, captureBookingPayment, payCrew } from "@/lib/payments";
-import { stripeConfigured } from "@/lib/stripe";
+import { completeBookingForHelper } from "@/lib/helper-jobs";
 
 export async function setOnlineAction(isOnline: boolean) {
   const supabase = await createSupabaseServerClient();
@@ -50,69 +49,16 @@ export async function startBookingAction(bookingId: string) {
 export async function completeBookingAction(bookingId: string, outcome?: string) {
   const supabase = await createSupabaseServerClient();
 
-  // complete_booking returns the settlement its outcome requires —
-  // "capture" or "release" — rather than this action deciding. The rule
-  // lives with the outcome, in one place, so the helper's app and any
-  // admin tool cannot drift apart on what a given ending costs.
-  const { data: settlement, error } = await supabase.rpc("complete_booking", {
-    p_booking_id: bookingId,
-    p_outcome: outcome ?? null,
-  });
-  if (error) return { error: error.message };
-
-  // A venue that refused a stand-in means no valid waiting was possible.
-  // The customer must not pay for that, so the authorization is released
-  // rather than captured. The helper's travel is a real cost and is NOT
-  // settled here: Helpward has no disclosed travel-compensation policy,
-  // and inventing a charge for one would be worse than leaving it visible.
-  if (settlement === "release") {
-    if (stripeConfigured()) {
-      const voided = await voidBookingAuthorization(bookingId);
-      if (!voided.ok) {
-        console.error("could not release hold for refused venue", bookingId, voided);
-        revalidatePath("/helper", "layout");
-        return {
-          success: "Recorded.",
-          warning:
-            "Recorded that the venue refused. The hold on the customer's card is still "
-            + "releasing — support has been notified if it does not clear.",
-        };
-      }
-    }
-    revalidatePath("/helper", "layout");
-    return {
-      success: "Recorded — the venue refused a stand-in, so your customer hasn't been charged.",
-    };
-  }
-
-  // Settle the hold placed at acceptance. The job is done either way, so a
-  // capture failure must not un-complete it — the helper has already
-  // worked. It is recorded on the booking (payment_error) and surfaced to
-  // admin instead, which is a collections problem, not a dispatch one.
-  if (stripeConfigured()) {
-    const captured = await captureBookingPayment(bookingId);
-
-    // Capture sends the whole payout to the LEAD's account, because a
-    // destination charge has one destination. Everyone else on the crew
-    // is paid by a separate transfer.
-    if (captured.ok) {
-      const crew = await payCrew(bookingId);
-      if (crew.ok && crew.failures.length > 0) {
-        console.error("crew members unpaid after capture", bookingId, crew.failures);
-      }
-    }
-
-    if (!captured.ok) {
-      console.error("capture failed for completed booking", bookingId, captured);
-      revalidatePath("/helper", "layout");
-      return {
-        success: "Completed.",
-        warning:
-          "The job is marked complete. Payment is still settling — support has been notified if it does not clear.",
-      };
-    }
-  }
+  /*
+    The RPC, the capture-or-void decision and the crew payout live in
+    lib/helper-jobs.ts, shared with /api/v1/helper so the app and the
+    website cannot disagree about what a given ending costs.
+  */
+  const result = await completeBookingForHelper(supabase, bookingId, outcome);
+  if (!result.ok) return { error: result.error };
 
   revalidatePath("/helper", "layout");
-  return { success: "Completed." };
+  return result.warning
+    ? { success: result.message, warning: result.warning }
+    : { success: result.message };
 }

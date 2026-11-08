@@ -124,9 +124,24 @@ test("only the venue-refused outcome escapes a charge", () => {
 });
 
 test("a refused venue releases the hold rather than capturing it", () => {
+  /*
+    The rule moved out of the server action and into lib/helper-jobs.ts
+    when the helper app started completing jobs too — it has to be one
+    implementation, or the website releases the hold and the app
+    captures it for the same ending.
+
+    Asserted where the rule now lives, and asserted that the action no
+    longer carries its own copy.
+  */
+  const shared = readFileSync("lib/helper-jobs.ts", "utf8");
+  assert.match(shared, /settlement === "release"/);
+  assert.match(shared, /voidBookingAuthorization/);
+
   const actions = readFileSync("app/(helper)/helper/active/actions.ts", "utf8");
-  assert.match(actions, /settlement === "release"/);
-  assert.match(actions, /voidBookingAuthorization/);
+  assert.doesNotMatch(
+    actions, /voidBookingAuthorization/,
+    "the action must settle through the shared implementation, not beside it",
+  );
 });
 
 /* ------------------------------------------------- price display parity */
