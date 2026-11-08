@@ -32,18 +32,27 @@ export function canUseHelperArea(role: string | null | undefined): boolean {
 /**
  * What a NEW account is given, and what a favourited helper is filed as.
  *
- * Both are still the RETIRED spelling, deliberately. The enum rename
- * (migration 0081) has not been applied to production yet, and these are
- * writes: handle_new_user casts meta_role::user_role, and favorites has
- * a CHECK constraint. Writing "helper" before the schema accepts it
- * fails the signup outright, after the auth user row already exists.
+ * 0081 WAS APPLIED TO PRODUCTION on 2026-11-01. These were left on the
+ * retired spelling, and the two writes did not fail the same way:
  *
- * These two constants are the whole switch. Flip them in the same change
- * that applies 0081; everything else already reads through isHelperRole
- * or the tolerant pair below and needs no edit.
+ *   signup   SURVIVED. 0081 rewrote handle_new_user to map 'provider' to
+ *            'helper' before the cast, precisely so a deploy still
+ *            sending the old word could not break account creation. Real
+ *            helpers signed up on 4, 5 and 7 November and are in the
+ *            table to prove it.
+ *   favorites BROKE. There is no coercion for it — 0081 widened the
+ *            CHECK, moved the rows, then NARROWED it to
+ *            ('helper','service','address'). An insert of 'provider'
+ *            returns 23514, verified against production. So saving a
+ *            helper has failed since the migration, and the saved-helpers
+ *            list read the dead spelling and came back empty, which is
+ *            the kind of break nobody reports and everybody notices.
+ *
+ * Both now emit what the schema accepts. Reads stay tolerant below until
+ * the last token minted with the old word has expired.
  */
-export const NEW_HELPER_ROLE = "provider";
-export const FAVORITE_HELPER_KIND = "provider";
+export const NEW_HELPER_ROLE = "helper";
+export const FAVORITE_HELPER_KIND = "helper";
 
 /**
  * Both spellings, for READS that must work either side of the migration.

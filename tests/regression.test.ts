@@ -374,3 +374,50 @@ test("signing back in actually cancels a scheduled deletion", () => {
     "the app needs an endpoint to cancel through",
   );
 });
+
+test("what we write as a helper is what the schema still accepts", () => {
+  /*
+    Migration 0081 renamed the worker role and, in the same transaction,
+    narrowed the favorites CHECK to ('helper','service','address'). The
+    two writes behaved differently when the constant was left behind:
+    handle_new_user got a coercion so signup survived, favorites got
+    none, so saving a helper returned 23514 against production for a
+    week while the saved-helpers list read the dead spelling and showed
+    nothing.
+
+    Read the constraint out of the migration rather than restating it
+    here — a test that hardcodes the answer stops being able to notice
+    the next narrowing.
+  */
+  const roles = readFileSync("lib/roles.ts", "utf8");
+  const migration = readFileSync(
+    "supabase/migrations/0081_helper_role_rename.sql", "utf8",
+  );
+
+  const checks = [...migration.matchAll(
+    /add constraint favorites_kind_check\s*\n?\s*check \(kind in \(([^)]*)\)\)/g,
+  )];
+  assert.ok(checks.length > 0, "0081 must still define the favorites CHECK");
+  const allowed = checks[checks.length - 1][1]
+    .split(",").map((s) => s.trim().replace(/'/g, ""));
+
+  const favKind = roles.match(/FAVORITE_HELPER_KIND = "([^"]+)"/)?.[1];
+  assert.ok(
+    favKind && allowed.includes(favKind),
+    `FAVORITE_HELPER_KIND is "${favKind}", which the final CHECK does not allow `
+      + `(${allowed.join(", ")}) — saving a helper would fail with 23514`,
+  );
+
+  /*
+    The role constant is cast to the user_role enum. 0081 renames the
+    value, so the retired spelling is only safe because the migration
+    also taught handle_new_user to translate it. Assert the spelling the
+    enum actually holds, so this does not quietly depend on a coercion
+    that a later migration could drop.
+  */
+  const newRole = roles.match(/NEW_HELPER_ROLE = "([^"]+)"/)?.[1];
+  assert.ok(
+    migration.includes(`rename value 'provider' to '${newRole}'`),
+    `NEW_HELPER_ROLE is "${newRole}", which is not the value 0081 renames the enum to`,
+  );
+});
