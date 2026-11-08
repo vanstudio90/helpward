@@ -524,3 +524,63 @@ test("the app and the website accept and complete jobs the same way", () => {
     "a destination charge has one destination; the rest of the crew is paid separately",
   );
 });
+
+test("push is sent by us, and signed the way Apple will accept", () => {
+  /*
+    Three mistakes that APNs answers with the same unhelpful 403, so
+    none of them is findable from the response.
+  */
+  const apns = readFileSync("lib/apns.ts", "utf8");
+
+  /*
+    JWS ES256 wants the raw r||s pair. Node's DEFAULT ECDSA output is a
+    DER SEQUENCE — 71 bytes against the required 64 — and Apple calls
+    the result malformed. Measured both: ieee-p1363 gives 64, the
+    default gives 71.
+  */
+  assert.match(
+    apns, /dsaEncoding:\s*"ieee-p1363"/,
+    "an ES256 JWT signed with DER encoding is rejected by APNs",
+  );
+
+  /*
+    Apple rate-limits provider token generation and refuses one older
+    than an hour, so it has to be cached AND re-minted. Either half
+    alone gets the app throttled or 403'd.
+  */
+  assert.match(apns, /TOKEN_TTL_MS/, "the provider token must be cached");
+  assert.ok(
+    /45 \* 60 \* 1000/.test(apns),
+    "the cache must expire inside Apple's one-hour limit",
+  );
+
+  /*
+    Sandbox and production are different hosts that reject each other's
+    tokens, which is why device_tokens records which one a token came
+    from.
+  */
+  assert.match(apns, /api\.sandbox\.push\.apple\.com/, "sandbox host missing");
+  assert.match(apns, /api\.push\.apple\.com/, "production host missing");
+
+  /*
+    A 410 is permanent — the app is gone from that device. Retrying it
+    forever is how a sender ends up rate-limited on dead addresses.
+  */
+  assert.match(apns, /410/, "APNs 410 must retire the token");
+
+  /*
+    And native delivery must not be gated on OneSignal being
+    configured. It was, correctly, when OneSignal was the only route;
+    leaving that check in place would mean the app we actually ship
+    sends nothing.
+  */
+  const push = readFileSync("lib/push.ts", "utf8");
+  assert.match(
+    push, /!isPushEnabled\(\) && !apnsConfigured\(\)/,
+    "native push must not require OneSignal to be configured",
+  );
+  assert.match(
+    push, /device_tokens/,
+    "sendPushToUser must deliver to native device tokens",
+  );
+});

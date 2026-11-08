@@ -3,6 +3,7 @@ import { withBearerAuth } from "@/lib/api/bearer";
 import { quoteOneShotCents } from "@/lib/pricing";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
+import { notifyOfferedHelpers } from "@/lib/notify-offers";
 import { acceptAsReviewHelper, prepareReviewHelper } from "@/lib/review-helper";
 import { reviewResolution } from "@/lib/address-confirmation";
 import { validateIntake, describeIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service-intake";
@@ -313,6 +314,7 @@ export const POST = withBearerAuth(async ({ user, supabase }, request) => {
   // Best-effort: the request exists, an admin can re-broadcast, and the
   // expire-stale cron retires it if no helper ever sees it.
   await broadcastRequestBestEffort(admin, created.id, { label: "ios-one-shot" });
+  await notifyOfferedHelpers(created.id, { label: "ios-one-shot" });
 
   /*
     A REVIEW REQUEST IS ANSWERED IMMEDIATELY, by the controlled helper,

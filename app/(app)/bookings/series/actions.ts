@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { quoteOneShotCents } from "@/lib/pricing";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
+import { notifyOfferedHelpers } from "@/lib/notify-offers";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import {
   type Cadence, nextOccurrenceDate, occurrenceToISOAtTimezone,
@@ -434,6 +435,7 @@ export async function materialiseNextOccurrence(seriesId: string): Promise<strin
   // .catch() on it threw a TypeError and took down every
   // materialize-series-occurrences cron run.
   await broadcastRequestBestEffort(admin, req.id, { label: "series" });
+  await notifyOfferedHelpers(req.id, { label: "series" });
 
   return req.id;
 }

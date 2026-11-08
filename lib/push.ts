@@ -10,6 +10,7 @@
 // re-deploy.
 
 import "server-only";
+import { sendApns, apnsConfigured, type ApnsEnvironment } from "@/lib/apns";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 
 const ENDPOINT = "https://onesignal.com/api/v1/notifications";
@@ -56,9 +57,24 @@ export async function sendPushToUser(
      * a value nobody reads is not a setting, it is a decoration.
      */
     pref?: "push_booking";
+    /**
+     * Allowed through Focus and a locked screen, the way a ride request
+     * is. For a job offer that expires — not for anything that can wait.
+     */
+    timeSensitive?: boolean;
+    /** Replaces an earlier notification with the same id. */
+    collapseId?: string;
   } = {},
 ): Promise<PushResult> {
-  if (!isPushEnabled()) return { ok: true, skipped: true };
+  /*
+    OneSignal being unconfigured no longer means "no push".
+
+    This used to return here, which was right when OneSignal was the
+    only route. Native APNs is now the route we actually use, so the
+    check moved down to the OneSignal leg and this function decides per
+    transport instead of refusing outright.
+  */
+  if (!isPushEnabled() && !apnsConfigured()) return { ok: true, skipped: true };
 
   const admin = createSupabaseServiceClient();
 
@@ -75,13 +91,67 @@ export async function sendPushToUser(
     }
   }
 
+  /*
+    NATIVE FIRST, and for this app the only one.
+
+    Tokens are grouped by environment because sandbox and production
+    APNs are different hosts and reject each other's tokens — a
+    TestFlight build and an App Store build of the same app land in
+    different buckets.
+
+    A token APNs calls dead is retired rather than deleted, so a device
+    that comes back can be told apart from one never seen.
+  */
+  let nativeSent = 0;
+  if (apnsConfigured()) {
+    const { data: devices } = await admin
+      .from("device_tokens")
+      .select("token, environment")
+      .eq("user_id", userId)
+      .is("disabled_at", null);
+
+    const groups = new Map<ApnsEnvironment, string[]>();
+    for (const row of devices ?? []) {
+      const env = (row.environment as ApnsEnvironment) ?? "production";
+      groups.set(env, [...(groups.get(env) ?? []), row.token as string]);
+    }
+
+    for (const [env, tokens] of groups) {
+      const result = await sendApns(tokens, env, {
+        title: payload.title,
+        body: payload.body,
+        data: payload.url ? { url: payload.url } : undefined,
+        timeSensitive: opts.timeSensitive,
+        collapseId: opts.collapseId,
+      });
+      nativeSent += result.sent;
+      if (result.dead.length > 0) {
+        await admin
+          .from("device_tokens")
+          .update({ disabled_at: new Date().toISOString(), disabled_reason: "apns_unregistered" })
+          .in("token", result.dead);
+      }
+      for (const failure of result.errors) {
+        console.error("apns send failed", failure.reason);
+      }
+    }
+  }
+
+  if (!isPushEnabled()) {
+    return nativeSent > 0
+      ? { ok: true, sentTo: nativeSent }
+      : { ok: true, skipped: true };
+  }
+
   const { data: rows, error } = await admin
     .from("push_subscriptions")
     .select("player_id")
     .eq("user_id", userId);
   if (error) return { ok: false, error: error.message };
   const ids = (rows ?? []).map((r) => r.player_id as string).filter(Boolean);
-  if (ids.length === 0) return { ok: true, skipped: true };
+  if (ids.length === 0) {
+    return nativeSent > 0 ? { ok: true, sentTo: nativeSent } : { ok: true, skipped: true };
+  }
 
   const body: Record<string, unknown> = {
     app_id: process.env.ONESIGNAL_APP_ID,
@@ -110,5 +180,5 @@ export async function sendPushToUser(
     try { detail = (await res.text()).slice(0, 300); } catch {}
     return { ok: false, error: `OneSignal ${res.status}: ${detail}` };
   }
-  return { ok: true, sentTo: ids.length };
+  return { ok: true, sentTo: ids.length + nativeSent };
 }

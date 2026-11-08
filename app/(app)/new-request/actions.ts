@@ -10,6 +10,7 @@ import { quoteOneShotCents, quoteBundleCents } from "@/lib/pricing";
 import { collectSubmitted, type SubmittedValues } from "@/lib/request-form";
 import { resolveDispatchableAddress, insertAttestedAddress } from "@/lib/dispatch-guard";
 import { broadcastRequestBestEffort } from "@/lib/broadcast";
+import { notifyOfferedHelpers } from "@/lib/notify-offers";
 import { reviewResolution } from "@/lib/address-confirmation";
 import { validateIntake, describeIntake, SERVICE_INTAKE, type IntakeValues } from "@/lib/service-intake";
 import { resolveIntakeAddresses, applyResolvedAddresses } from "@/lib/intake-addresses";
@@ -340,6 +341,7 @@ async function createRequestActionInner(
 
     // Broadcast just like a one-shot request.
     await broadcastRequestBestEffort(createSupabaseServiceClient(), parentRequest.id, { label: "bundle" });
+    await notifyOfferedHelpers(parentRequest.id, { label: "bundle" });
 
     revalidatePath("/dashboard", "page");
     revalidatePath("/bookings", "page");
@@ -496,6 +498,7 @@ async function createRequestActionInner(
   // request exists, an admin can re-broadcast, and the expire-stale cron
   // retires it if no helper ever sees it.
   await broadcastRequestBestEffort(createSupabaseServiceClient(), request.id, { label: "one-shot" });
+  await notifyOfferedHelpers(request.id, { label: "one-shot" });
 
   revalidatePath("/dashboard", "page");
   revalidatePath("/bookings", "page");
