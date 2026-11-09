@@ -132,6 +132,51 @@ export type CompleteOutcome =
   | { ok: true; settlement: "capture" | "release"; message: string; warning?: string }
   | { ok: false; error: string };
 
+/*
+  LEAVE A TRACE WHEN SETTLEMENT FAILS.
+
+  captureBookingPayment already records a Stripe error itself, inside
+  its catch. But it returns BEFORE that try block whenever there is
+  nothing to capture in the first place — no hold was ever placed, the
+  amount is outside the authorisation, the booking has gone. Those
+  paths wrote nothing at all, so a job could finish with the money
+  uncollected and no row anywhere saying so. The only evidence was a
+  console line in a server log nobody keeps.
+
+  No such booking has been observed. This is a gap, not an incident:
+  the one rehearsal booking that looked like it — 33325fe1, completed
+  with payment_status `pending` and captured_at null — turned out to be
+  a venue refusal, which takes the release branch below and is MEANT to
+  end uncharged. Its empty payment_error was correct.
+
+  What would not be correct is the same empty column after a capture
+  that was genuinely refused, and nothing above distinguished the two.
+
+  voidBookingAuthorization is worse — it records nothing on any path,
+  and a failed release leaves a real hold sitting on a customer's card.
+
+  Written with the service client, not the caller's: the caller holds
+  the HELPER's session, and a helper has no business updating the
+  payment columns of a booking.
+
+  Never throws. This runs after the work is done and the booking is
+  already complete; failing to write a note must not turn a settlement
+  problem into a failed request.
+*/
+async function recordSettlementFailure(bookingId: string, note: string): Promise<void> {
+  try {
+    const { error } = await createSupabaseServiceClient()
+      .from("bookings")
+      .update({ payment_error: note })
+      .eq("id", bookingId);
+    if (error) {
+      console.error("could not record settlement failure", bookingId, error.message);
+    }
+  } catch (err) {
+    console.error("could not record settlement failure", bookingId, err);
+  }
+}
+
 /**
  * Finish a job, and settle the hold the way the outcome requires.
  *
@@ -164,6 +209,10 @@ export async function completeBookingForHelper(
       const voided = await voidBookingAuthorization(bookingId);
       if (!voided.ok) {
         console.error("could not release hold for refused venue", bookingId, voided);
+        await recordSettlementFailure(
+          bookingId,
+          `Hold not released after a refused venue: ${voided.message}`,
+        );
         return {
           ok: true,
           settlement: "release",
@@ -202,6 +251,10 @@ export async function completeBookingForHelper(
 
     if (!captured.ok) {
       console.error("capture failed for completed booking", bookingId, captured);
+      await recordSettlementFailure(
+        bookingId,
+        `Payment not captured for a completed job: ${captured.message}`,
+      );
       return {
         ok: true,
         settlement: "capture",

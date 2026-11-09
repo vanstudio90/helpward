@@ -523,6 +523,38 @@ test("the app and the website accept and complete jobs the same way", () => {
     shared, /payCrew\(/,
     "a destination charge has one destination; the rest of the crew is paid separately",
   );
+
+  /*
+    A settlement that fails must leave a mark ON THE BOOKING.
+
+    captureBookingPayment writes payment_error itself, but only from its
+    catch — the guards above its try (no hold was placed, amount out of
+    range, booking gone) returned without writing anything, so a capture
+    refused before Stripe was ever called left no record at all beyond a
+    console line.
+
+    No booking has been seen in that state; this closes the path rather
+    than cleaning up after it. The rehearsal booking that resembled one
+    was a venue refusal, which is supposed to end uncharged.
+
+    voidBookingAuthorization writes nothing on any path, and a failed
+    release leaves a real hold on a customer's card.
+
+    Both branches are asserted, because fixing one and not the other
+    leaves the same silent loss one branch over.
+  */
+  assert.match(
+    shared, /recordSettlementFailure\(\s*\n?\s*bookingId,\s*\n?\s*`Payment not captured/,
+    "a completed job whose capture failed must record why on the booking",
+  );
+  assert.match(
+    shared, /recordSettlementFailure\(\s*\n?\s*bookingId,\s*\n?\s*`Hold not released/,
+    "a hold that could not be released must record why on the booking",
+  );
+  assert.match(
+    shared, /\.update\(\{\s*payment_error:\s*note\s*\}\)/,
+    "the recorder must actually write payment_error, not just log it",
+  );
 });
 
 test("push is sent by us, and signed the way Apple will accept", () => {
