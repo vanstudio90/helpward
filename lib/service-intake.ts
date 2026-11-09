@@ -253,20 +253,60 @@ export const SERVICE_INTAKE: Record<string, ServiceIntake> = {
         type: "number", min: 0, max: 2000, unit: "$" },
     ],
   },
+  /*
+    A COLLECTION, NOT A SHOP.
+
+    This form asked for a shopping list, a required spending limit and
+    an out-of-stock policy — a shop — while every customer-facing word
+    about the service described the opposite. The public page is titled
+    "Collect Your Prepaid Order" and says "It is a collection, not a
+    shop"; SERVICE_SCOPE lists "Choosing items, substituting them, or
+    shopping from a list" under EXCLUDES and sends that customer to
+    Errand Runner; its FAQ explains the form "asks for the store, the
+    order and the collection details rather than for a shopping list".
+
+    The spending limit was the worse half. SERVICE_PREP's own answer to
+    "How are purchases paid for?" is "Not through Helpward … the cost of
+    the goods never passes through us and there is no reimbursement step
+    in the app" — so a customer who set a $200 limit here was promised a
+    mechanism that does not exist anywhere in the product.
+
+    Shopping from a list is Errand Runner, which takes `stops` and an
+    optional `spend_cap` and already carries that warning. The fields
+    below are the four things SERVICE_SCOPE's brief names — store,
+    branch, reference, the name it is under — plus the two SERVICE_PREP
+    tells customers to have ready and gave them nowhere to put: the
+    collection slot, and whether any of it is chilled.
+  */
   "grocery-pickup": {
-    intro: "Your shopping list and where to buy it.",
+    intro: "The order you've already placed, and where to collect it.",
+    addressLabel: "Deliver to",
+    addressHint: "Where the shopping goes. Your helper is dispatched from here, so it has to be in a city we serve.",
     fields: [
       { key: "store", label: "Which store?", required: true, type: "text",
-        placeholder: "e.g. Save-On-Foods, Cambie St", maxLength: 200 },
-      { key: "list", label: "Shopping list", required: true, type: "textarea",
-        placeholder: "One item per line, with quantities", maxLength: 2000 },
-      { key: "spend_cap", label: "Spending limit", required: true,
-        type: "number", min: 5, max: 1000, unit: "$" },
-      { key: "substitutions", label: "If something is out of stock", required: true,
+        placeholder: "e.g. Save-On-Foods", maxLength: 200 },
+      { key: "branch", label: "Which branch?", required: true, type: "text",
+        hint: "The exact location holding your order. A wrong branch is the most common way this goes wrong.",
+        placeholder: "e.g. Cambie St, Vancouver", maxLength: 200 },
+      /*
+        Held back from the offer. A reference and the name it is under
+        are between them enough to walk up to a counter and collect
+        somebody else's shopping, and an offer reaches every candidate
+        including the ones who decline.
+      */
+      { key: "order_ref", sensitive: true, label: "Order or collection reference", required: true,
+        type: "text", hint: "On your confirmation from the store.",
+        placeholder: "e.g. SOF-4471832", maxLength: 120 },
+      { key: "order_name", sensitive: true, label: "Name on the order", required: true,
+        type: "text", placeholder: "The name the store is holding it under", maxLength: 160 },
+      { key: "collection_slot", label: "Collection slot", required: false, type: "text",
+        hint: "If the store gave you a window. Tell them someone else is collecting if they ask you to.",
+        placeholder: "e.g. today, 4–6pm", maxLength: 120 },
+      { key: "chilled", label: "Anything chilled or frozen?", required: true,
         type: "select", options: [
-          { value: "similar", label: "Substitute something similar" },
-          { value: "ask", label: "Message me first" },
-          { value: "skip", label: "Skip it" },
+          { value: "none", label: "No — ambient only" },
+          { value: "some", label: "Some chilled or frozen items" },
+          { value: "mostly", label: "Mostly chilled or frozen" },
         ] },
     ],
   },

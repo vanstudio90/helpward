@@ -170,3 +170,80 @@ describe("what the helper reads", () => {
     assert.deepEqual(describeIntake("dog-walking", null), []);
   });
 });
+
+/*
+  THE FORM AGAINST THE CATALOGUE.
+
+  grocery-pickup shipped with a form that contradicted every public word
+  about the service. Its page is titled "Collect Your Prepaid Order" and
+  says "It is a collection, not a shop"; SERVICE_SCOPE lists "Choosing
+  items, substituting them, or shopping from a list" under EXCLUDES and
+  sends that customer to Errand Runner. The form asked for a shopping
+  list, a required spending limit and an out-of-stock policy.
+
+  Nothing here caught it, because every test checked one surface against
+  itself. These check the form against the promise.
+*/
+describe("the form asks for what the catalogue promises", () => {
+  test("a service that excludes shopping does not ask for a shopping list", async () => {
+    const { SERVICE_COPY } = await import("../lib/service-copy.ts");
+    const shoppingAsk = new Set(["list", "spend_cap", "substitutions"]);
+
+    for (const [id, copy] of Object.entries(SERVICE_COPY)) {
+      const excludes = copy.excludes.join(" ").toLowerCase();
+      if (!/shopping from a list|choosing items/.test(excludes)) continue;
+
+      const spec = intakeFor(id);
+      if (!spec) continue;
+      const offending = spec.fields.map((f) => f.key).filter((k) => shoppingAsk.has(k));
+      assert.deepEqual(offending, [],
+        `${id} rules out shopping in its excludes, but its form asks for: ${offending.join(", ")}`);
+    }
+  });
+
+  test("grocery-pickup collects the collection details its own page names", () => {
+    const spec = intakeFor("grocery-pickup");
+    assert.ok(spec, "grocery-pickup has no intake spec");
+    const byKey = new Map(spec!.fields.map((f) => [f.key, f]));
+
+    // SERVICE_SCOPE's brief: "Give the store, the branch, the order or
+    // collection reference and the name it is under."
+    for (const key of ["store", "branch", "order_ref", "order_name"]) {
+      assert.ok(byKey.has(key), `grocery-pickup does not ask for ${key}`);
+      assert.equal(byKey.get(key)!.required, true, `grocery-pickup's ${key} is optional`);
+    }
+
+    // SERVICE_PREP tells customers to flag chilled or frozen items when
+    // they book "so the route is planned around them", and to check the
+    // collection slot. Both need somewhere to go.
+    assert.ok(byKey.has("chilled"), "no way to flag chilled or frozen items");
+    assert.ok(byKey.has("collection_slot"), "no way to give the collection slot");
+
+    /*
+      A reference and the name it is held under are between them enough
+      to walk up to a counter and collect somebody else's shopping. An
+      offer reaches every candidate helper, including the ones who
+      decline, so neither may be in it.
+    */
+    for (const key of ["order_ref", "order_name"]) {
+      assert.equal(byKey.get(key)!.sensitive, true,
+        `grocery-pickup's ${key} is sent to every candidate helper`);
+    }
+  });
+
+  test("no form makes a spending limit mandatory", () => {
+    /*
+      SERVICE_PREP answers "How are purchases paid for?" with "Not
+      through Helpward … the cost of the goods never passes through us
+      and there is no reimbursement step in the app." A REQUIRED ceiling
+      tells the customer Helpward enforces one. Errand Runner's is
+      optional, and its page says purchases are settled with the helper.
+    */
+    for (const [id, spec] of Object.entries(SERVICE_INTAKE)) {
+      const cap = spec.fields.find((f) => f.key === "spend_cap");
+      if (!cap) continue;
+      assert.equal(cap.required, false,
+        `${id} requires a spending limit, but nothing in the product settles one`);
+    }
+  });
+});
