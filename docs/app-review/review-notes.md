@@ -10,7 +10,13 @@ field is named and left blank for whoever fills in App Store Connect.
 
 Helpward books real-world help from approved local helpers — cleaning,
 moving labour, errands, local parcel delivery and returns, queueing,
-furniture assembly, grocery collection. Services are performed in the
+furniture assembly, grocery collection.
+
+**Grocery Pickup collects an order that has already been placed and paid
+for at the store.** It is not a shopping service — the form asks for the
+store, the branch and the collection reference rather than a shopping
+list, and choosing items is Errand Runner instead. The cost of the goods
+never passes through Helpward. Services are performed in the
 physical world by a person who travels to an address, so payment is by
 card rather than in-app purchase (guideline 3.1.3(e)).
 
@@ -48,7 +54,7 @@ configuration is present in the binary.
 | Contact for review questions | `________________` (name) |
 | Contact email | `________________` |
 | Contact phone | `________________` |
-| Build number | `1` (version 1.0.0, archived 2026-11-01) |
+| Build number | `3` (version 1.0.0) — **must match the archive actually uploaded.** Build 1 and build 2 predate the current payment flow; do not submit either. |
 | Backend | production (`helpward.com`) |
 
 ## Completing a booking — exact steps
@@ -106,7 +112,7 @@ Addresses: use `1055 W Georgia St, Vancouver, BC` for pickup, and
 | **House Cleaning** | Bedrooms: `2` · Bathrooms: `1` · Focus on: tick *Kitchen* and *Bathrooms* · Supplies: *Helper brings supplies* · Pets: leave blank |
 | **Moving Help** | Destination: `800 Robson St, Vancouver, BC` · How many helpers: `2` · What's being moved: `Sofa, bed frame, 10 boxes` · Access at pickup: *Ground floor* · Access at destination: *Lift / elevator* · Vehicle: *I need advice on what to book* |
 | **Furniture Assembly** | What needs assembling: `One flat-pack wardrobe` · Number of items: `1` · Tools: *Helper brings tools* · Packaging disposal: *Yes* |
-| **Grocery Pickup** | Which store: `Save-On-Foods, Robson St` · Shopping list: `Order 12345` · Spending limit: `50` · If out of stock: *Substitute something similar* |
+| **Grocery Pickup** | Which store: `Save-On-Foods` · Which branch: `Robson St, Vancouver` · Order or collection reference: `SOF-4471832` · Name on the order: the account holder's name · Collection slot: `today, 4–6pm` · Anything chilled or frozen: *Some chilled or frozen items* |
 | **Package Delivery** | Deliver to: `800 Robson St, Vancouver, BC` · Size: *Small — fits in a backpack* · Rough weight: `2` · Who receives it: `Reception` |
 | **Package Return** | Carrier: *Canada Post* · Return label: *Printed and attached* · How many parcels: `2` · Preferred drop-off: `Robson St` |
 | **Wait in Line** | What are they queuing for: `Box office tickets` · Expected wait: *1 hour* · Handover: *I arrive and take their place* · Venue: `Orpheum Theatre` · Which queue: `Box office` · Checked with the venue: *Yes* · Notice needed: *15 minutes* · Party size: `1` · If your turn comes early: *Ask the venue to hold it and call me* |
@@ -117,13 +123,31 @@ of this table listed only three of them, which would have left a reviewer
 stuck on a validation error.
 
 **Crew requirement:** Moving Help and House Cleaning price per helper.
-Entering `2` helpers on Moving Help is what demonstrates the crew
-subtotal; the quote on the review screen changes as you change it.
+The crew subtotal is visible on the **review screen as you change the
+number** — you do not need to submit a multi-helper booking to see it.
 
-**Handover instructions:** every service offers these on the booking.
-They are stored with the booking and readable only by the helper who was
-booked — not by everyone the request was offered to. Worth entering to
-see that behaviour.
+**Please book Moving Help with `1` helper.** A job for two needs two
+helpers to accept before it can start, and this account is matched to a
+single controlled helper. A two-helper booking would sit correctly but
+permanently at "still finding 1 more", which is not a state anybody
+needs to review.
+
+**Handover instructions are REQUIRED, and the form stops without them.**
+Every service asks how the handover happens, and at least one of those
+choices must be made before the review screen will open. The card is on
+the booking form, headed by the service's own label, and shows what is
+still outstanding in amber.
+
+| Service | What you must choose |
+|---|---|
+| Errand Runner, Grocery Pickup, Package Delivery, Package Return | *How does your helper collect it?* and *How should they hand it over?* |
+| House Cleaning, Furniture Assembly | *Who meets your helper?* |
+| Moving Help | *Access* at the pickup and *Access* at the destination |
+| Wait in Line | *Where will you meet them?* and *Who takes over?* |
+
+Any option is fine. Once saved, they are stored with the booking and
+readable only by the helper who was booked — not by everyone the request
+was offered to, which is worth seeing.
 
 **Completion evidence:** some services ask the helper for a photo at
 completion. The test helper supplies one, visible on the booking.
