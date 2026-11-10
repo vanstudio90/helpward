@@ -131,6 +131,38 @@ for (const [i, h] of helpers.entries()) {
   console.log(`  helper   ${HELPER_EMAILS[i]}  ${h.created ? "created" : "already existed"}`);
 }
 
+/*
+  THE AVATAR FILE ITSELF, uploaded before the transaction.
+
+  Storage is a REST API rather than a table, so it cannot take part in
+  the transaction below. Uploading first means a failure here stops the
+  run before anything is written; an orphaned object in a bucket is the
+  cheap end of that trade.
+
+  upsert: true because this script is meant to be re-runnable, and a
+  second run must not fail on a file it wrote itself.
+*/
+const avatarBytes = readFileSync("public/logo-512.png");
+const avatarUrls = [];
+for (const h of helpers) {
+  const path = `${h.id.toLowerCase()}/review-helper.png`;
+  const res = await fetch(`${SUPA}/storage/v1/object/avatars/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: KEY,
+      authorization: `Bearer ${KEY}`,
+      "content-type": "image/png",
+      "x-upsert": "true",
+    },
+    body: avatarBytes,
+  });
+  if (!res.ok && res.status !== 409) {
+    console.error(`  FAILED to upload the review helper's photo: ${res.status} ${await res.text()}`);
+    process.exit(1);
+  }
+  avatarUrls.push(`${SUPA}/storage/v1/object/public/avatars/${path}`);
+}
+
 const db = new pg.Client({ connectionString: DB, ssl: { rejectUnauthorized: false } });
 await db.connect();
 try {
@@ -139,6 +171,29 @@ try {
   await db.query(`set local request.jwt.claims = '{"role":"admin"}'`);
 
   await db.query(`update public.profiles set is_review_account = true where id = $1`, [customer.id]);
+
+  /*
+    A PHOTO BEFORE AN APPROVAL, because 0095 now requires one.
+
+    require_helper_photo_for_approval refuses the transition into
+    'approved' for a helper with no profiles.avatar_url — including for
+    the service role, which is the point of it being a trigger. Without
+    this the UPDATE below raises HW020 and the whole run rolls back.
+
+    THE IMAGE IS THE HELPWARD MARK, not a face and not a stock
+    photograph of a person. These are controlled accounts that exist to
+    demonstrate the app; dressing one in a stranger's portrait would be
+    inventing a person, and the bio directly underneath says what the
+    account actually is. The file is uploaded above, into each account's
+    own folder of the avatars bucket, by the same path a real helper's
+    photo takes.
+  */
+  for (const [i, h] of helpers.entries()) {
+    await db.query(
+      `update public.profiles set avatar_url = $2 where id = $1 and coalesce(avatar_url, '') = ''`,
+      [h.id, avatarUrls[i]],
+    );
+  }
 
   // One statement per helper: each gets its own connected account, and
   // stripe_connect_account_id is UNIQUE so they cannot be set in bulk.
@@ -187,6 +242,11 @@ const { rows: vAll } = await db.query(`
   select
     (select is_review_account from public.profiles where id = $1)            as customer_flag,
     pp.is_review_helper, pp.status, pp.is_online, pp.vacation_mode,
+    -- 0095 makes this a condition of being approved at all, so it is
+    -- read back rather than assumed: an approved helper with no photo
+    -- would mean the trigger is not there.
+    coalesce((select nullif(btrim(coalesce(p2.avatar_url, '')), '')
+                from public.profiles p2 where p2.id = pp.user_id), '(none)') as photo,
     pp.stripe_transfers_active, pp.service_radius_km,
     pp.location_updated_at > now() - public.max_location_age()               as location_fresh,
     (select count(*) from public.provider_services ps where ps.provider_id = pp.user_id) as services,
