@@ -9,6 +9,11 @@ import {
   canReceiveTransfers,
   readConnectReadiness,
 } from "@/lib/stripe";
+import {
+  isTerminal,
+  isRecoverableIntentStatus,
+  needsFreshPaymentMethod,
+} from "@/lib/payment-states-pure";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 
 /* How money moves through Helpward.
@@ -784,12 +789,27 @@ export async function confirmPendingAuthorization(
   if (booking.payment_status === "authorized" || booking.payment_status === "captured") {
     return { ok: true, authorized: true };
   }
+  /*
+    Settled or closed bookings are not confirmable, and must not be
+    written to. A refunded booking's intent still reads `succeeded`, so
+    without this the line below promotes it straight back to
+    `authorized` — reported as a real regression against a completed,
+    fully refunded booking.
+  */
+  if (isTerminal(booking)) {
+    return fail("nothing_pending", "There is no payment waiting on this booking.");
+  }
 
   try {
     const intent = await (await stripeForBooking(bookingId)).paymentIntents.retrieve(booking.stripe_payment_intent_id);
     const held = intent.status === "requires_capture" || intent.status === "succeeded";
 
-    await admin
+    /*
+      Conditional on the state this function read. A cancellation or
+      refund completing while the customer was at their bank would
+      otherwise be overwritten by whatever Stripe said a moment ago.
+    */
+    const { data: written } = await admin
       .from("bookings")
       .update({
         payment_status: held ? "authorized" : "pending",
@@ -799,7 +819,18 @@ export async function confirmPendingAuthorization(
           : intent.last_payment_error?.message
             ?? "This payment still needs to be confirmed with your bank.",
       })
-      .eq("id", booking.id);
+      .eq("id", booking.id)
+      .eq("payment_status", booking.payment_status)
+      .in("status", ["scheduled", "in_progress"])
+      .select("id");
+
+    /*
+      Nothing updated means the booking moved underneath us. Reporting
+      `authorized` then would describe a row that does not say so.
+    */
+    if (!written || written.length === 0) {
+      return fail("changed_underneath", "This booking changed while you were confirming. Open it again.");
+    }
 
     return { ok: true, authorized: held };
   } catch (err) {
@@ -1428,6 +1459,15 @@ export async function pendingAuthorizationSecret(
   if (!booking.stripe_payment_intent_id) {
     return fail("nothing_pending", "There is no payment waiting on this booking.");
   }
+  /*
+    Nothing to confirm on a booking that is already settled or closed, and
+    nothing here may write to one. Checked BEFORE Stripe is asked, so a
+    refunded booking cannot be repaired into `authorized` on the strength
+    of an intent that still says `succeeded`.
+  */
+  if (isTerminal(booking)) {
+    return fail("nothing_pending", "There is no payment waiting on this booking.");
+  }
 
   try {
     const intent = await (await stripeForBooking(bookingId)).paymentIntents.retrieve(booking.stripe_payment_intent_id);
@@ -1446,12 +1486,20 @@ export async function pendingAuthorizationSecret(
       if (booking.payment_status !== "authorized" && booking.payment_status !== "captured") {
         const { error: repairError } = await createSupabaseServiceClient()
           .from("bookings")
+          /*
+            Conditional on the state we READ. A refund or cancellation
+            landing between that read and this write would otherwise be
+            overwritten by it — the race the terminal guard above cannot
+            see, because it happened after the guard ran.
+          */
           .update({
             payment_status: "authorized",
             authorized_at: new Date().toISOString(),
             payment_error: null,
           })
-          .eq("id", bookingId);
+          .eq("id", bookingId)
+          .eq("payment_status", booking.payment_status)
+          .in("status", ["scheduled", "in_progress"]);
         if (repairError) {
           console.error("RECONCILE FAILED: Stripe holds the money, booking still blocked", {
             bookingId, intent: intent.id, repairError,
@@ -1469,28 +1517,56 @@ export async function pendingAuthorizationSecret(
       }
       return fail("already_authorized", "This payment is confirmed — your helper can start.");
     }
-    // requires_payment_method is normally a dead intent, EXCEPT when the
-    // reason is authentication_required: that one is recoverable by
-    // confirming again with the customer present, using the card already
-    // attached to it.
-    const recoverable =
-      intent.status === "requires_action" ||
-      intent.status === "requires_confirmation" ||
-      (intent.status === "requires_payment_method" &&
-        intent.last_payment_error?.code === "authentication_required");
+    /*
+      WHAT "requires_payment_method" ACTUALLY MEANS HERE.
+
+      It is not a dead intent. It is where Stripe parks an authorisation
+      the customer has to have another go at, and the reason is in
+      last_payment_error.code:
+
+        authentication_required            — never attempted
+        payment_intent_authentication_failure — the customer FAILED or
+                                             dismissed the 3-D Secure
+                                             challenge
+        card_declined / incorrect_cvc / expired_card / …
+                                           — the bank refused this card
+
+      Only the first was treated as recoverable, so a customer who failed
+      a challenge — which is the ordinary way to get here — was told "this
+      payment can't be confirmed, please contact support" on every retry,
+      and switching cards changed nothing. Measured: three taps, no
+      recovery, booking abandoned.
+
+      All of these are recoverable by confirming again, and the last group
+      is recoverable with a DIFFERENT card, which is why the card is
+      re-resolved below rather than reused.
+    */
+    const recoverable = isRecoverableIntentStatus(intent.status, intent.last_payment_error?.code);
 
     if (!recoverable) {
       return fail("not_confirmable", "This payment can't be confirmed — please contact support.");
     }
     if (!intent.client_secret) return fail("no_secret", "Could not start confirmation.");
 
-    // Prefer whatever is still on the intent; otherwise fall back to the
-    // customer's default saved card. The second case is the normal one
-    // after an authentication_required failure.
+    /*
+      ON A RETRY, USE THE CARD THE CUSTOMER HAS CHOSEN NOW.
+
+      `requires_payment_method` means the card on this intent did not
+      work. Preferring whatever is still attached meant retrying with the
+      card that had just failed, and a customer who switched their
+      default to a working one saw no difference — reported exactly that
+      way. For a challenge not yet attempted (requires_action /
+      requires_confirmation) the attached card is correct and is kept.
+
+      Resolved from the customer's own records either way. A client that
+      could name the card would be choosing what gets charged.
+    */
     let paymentMethodId =
-      typeof intent.payment_method === "string"
-        ? intent.payment_method
-        : intent.payment_method?.id ?? null;
+      needsFreshPaymentMethod(intent.status)
+        ? null
+        : typeof intent.payment_method === "string"
+          ? intent.payment_method
+          : intent.payment_method?.id ?? null;
 
     if (!paymentMethodId) {
       const { data: card } = await createSupabaseServiceClient()
