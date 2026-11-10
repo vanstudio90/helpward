@@ -110,7 +110,7 @@ Addresses: use `1055 W Georgia St, Vancouver, BC` for pickup, and
 |---|---|
 | **Errand Runner** | What needs doing: `Collect dry cleaning` · Where: `Robson St dry cleaners` · Spending limit: `20` |
 | **House Cleaning** | Bedrooms: `2` · Bathrooms: `1` · Focus on: tick *Kitchen* and *Bathrooms* · Supplies: *Helper brings supplies* · Pets: leave blank |
-| **Moving Help** | Destination: `800 Robson St, Vancouver, BC` · How many helpers: `2` · What's being moved: `Sofa, bed frame, 10 boxes` · Access at pickup: *Ground floor* · Access at destination: *Lift / elevator* · Vehicle: *I need advice on what to book* |
+| **Moving Help** | Destination: `800 Robson St, Vancouver, BC` · How many helpers: `1` · What's being moved: `Sofa, bed frame, 10 boxes` · Access at pickup: *Ground floor* · Access at destination: *Lift / elevator* · Vehicle: *I need advice on what to book* |
 | **Furniture Assembly** | What needs assembling: `One flat-pack wardrobe` · Number of items: `1` · Tools: *Helper brings tools* · Packaging disposal: *Yes* |
 | **Grocery Pickup** | Which store: `Save-On-Foods` · Which branch: `Robson St, Vancouver` · Order or collection reference: `SOF-4471832` · Name on the order: the account holder's name · Collection slot: `today, 4–6pm` · Anything chilled or frozen: *Some chilled or frozen items* |
 | **Package Delivery** | Deliver to: `800 Robson St, Vancouver, BC` · Size: *Small — fits in a backpack* · Rough weight: `2` · Who receives it: `Reception` |
