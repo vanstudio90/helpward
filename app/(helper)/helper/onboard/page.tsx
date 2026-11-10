@@ -8,6 +8,7 @@ import { listServices } from "@/lib/data/services";
 import { Check } from "lucide-react";
 import { HelperServicesForm } from "./services-form";
 import { PayoutStep, type PayoutState } from "./payout-step";
+import { PhotoStep } from "./photo-step";
 import { refreshHelperPayoutState } from "@/lib/payments";
 
 export default async function HelperOnboardPage({
@@ -28,13 +29,15 @@ export default async function HelperOnboardPage({
   // trips to us-west-1 before it could render anything. The page is
   // reached by tapping a link that gives no feedback, so that latency was
   // the whole of the "did my tap register?" problem.
-  const [{ data: pp }, services, { data: myServiceRows }] = await Promise.all([
+  const [{ data: pp }, services, { data: myServiceRows }, { data: me }] = await Promise.all([
     supabase.from("provider_profiles").select("*").eq("user_id", user?.id ?? "").maybeSingle(),
     listServices(),
     user
       ? supabase.from("provider_services").select("service_id").eq("provider_id", user.id)
       : Promise.resolve({ data: [] as { service_id: string }[] }),
+    supabase.from("profiles").select("avatar_url").eq("id", user?.id ?? "").maybeSingle(),
   ]);
+  const hasPhoto = !!(me?.avatar_url && String(me.avatar_url).trim().length > 0);
   const selectedServiceIds = (myServiceRows ?? []).map((r) => r.service_id as string);
   const providerServiceCount = selectedServiceIds.length;
 
@@ -76,6 +79,19 @@ export default async function HelperOnboardPage({
   // The bio is not a requirement — nothing gates on it — but a customer
   // reads it, so it stays on the list as a step rather than a blocker.
   const steps = [
+    /*
+      FIRST, AND THE ONLY ONE THAT IS ACTUALLY REQUIRED.
+
+      Migration 0095 refuses the pending -> approved transition for a
+      helper with no profiles.avatar_url, so this is not a nudge: an
+      application without a photo cannot be approved, and the admin
+      queue renders the photo for the person who decides.
+
+      It is also the only step on this list the helper gets ONE go at.
+      Once it is set, set_my_avatar refuses to replace it — so the
+      wording below says that before they choose, not after.
+    */
+    { key: "photo", title: "Add your profile photo", done: hasPhoto },
     { key: "profile", title: "Complete your profile", done: readiness.hasBio },
     { key: "services", title: "Select your services", done: readiness.serviceCount > 0 },
     // Started is not done: an account can exist with Stripe still waiting on
@@ -161,6 +177,7 @@ export default async function HelperOnboardPage({
                 />
               )}
 
+              {s.key === "photo" && <PhotoStep hasPhoto={hasPhoto} avatarUrl={me?.avatar_url ?? null} />}
               {s.key === "payouts" && <PayoutStep state={payoutState} />}
             </div>
           </li>

@@ -1,8 +1,9 @@
 import { PageHeader } from "@/components/ui/kit";
 import { ArrowLeft, GalleryHorizontal } from "lucide-react";
 import Link from "next/link";
-import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
-import { PortfolioGrid, type PortfolioPhoto } from "./portfolio-grid";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { listPortfolioPhotos } from "@/lib/portfolio";
+import { PortfolioGrid } from "./portfolio-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -14,51 +15,13 @@ export default async function HelperPortfolioPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Pull every completion photo on a completed booking owned by this
-  // helper. Service title + completion timestamp come along for the
-  // grid's tile copy.
-  const { data: rows } = await supabase
-    .from("booking_completion_photos")
-    .select(`
-      id, storage_path, caption, portfolio_caption, is_portfolio, booking_id,
-      booking:bookings!booking_completion_photos_booking_id_fkey(
-        completed_at, status,
-        service:services(title)
-      )
-    `)
-    .eq("uploaded_by_user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(200);
-
-  type Row = {
-    id: string; storage_path: string; caption: string | null; portfolio_caption: string | null;
-    is_portfolio: boolean; booking_id: string;
-    booking: { completed_at: string | null; status: string; service: { title: string } | null } | null;
-  };
-  const list = ((rows as Row[] | null) ?? []).filter((r) => r.booking?.status === "completed");
-
-  let signed: { path: string; signedUrl: string }[] = [];
-  if (list.length > 0) {
-    const svc = createSupabaseServiceClient();
-    const { data } = await svc.storage
-      .from("booking-photos")
-      .createSignedUrls(list.map((r) => r.storage_path), 60 * 60);
-    signed = (data ?? []).map((s) => ({ path: s.path ?? "", signedUrl: s.signedUrl ?? "" }));
-  }
-  const urlByPath = new Map(signed.map((s) => [s.path, s.signedUrl] as const));
-
-  const photos: PortfolioPhoto[] = list
-    .map((r) => ({
-      id: r.id,
-      signedUrl: urlByPath.get(r.storage_path) ?? "",
-      caption: r.caption,
-      portfolioCaption: r.portfolio_caption,
-      isPortfolio: r.is_portfolio,
-      bookingId: r.booking_id,
-      serviceTitle: r.booking?.service?.title ?? "Task",
-      completedAt: r.booking?.completed_at ?? new Date().toISOString(),
-    }))
-    .filter((p) => p.signedUrl);
+  /*
+    One reader, two surfaces. This page used to build the query, filter
+    out unfinished bookings and sign the URLs itself; the native app
+    needs exactly the same list, so that work moved to lib/portfolio.ts
+    rather than being written a second time against the same policies.
+  */
+  const photos = await listPortfolioPhotos(supabase, user.id);
 
   return (
     <div className="space-y-5">

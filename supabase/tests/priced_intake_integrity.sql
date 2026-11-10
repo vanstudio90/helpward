@@ -43,6 +43,22 @@ begin
 
   update provider_profiles set status = 'approved', stripe_transfers_active = true
    where user_id = v_helper;
+
+  /*
+    THE FIXTURE SERVICE, SWITCHED ON FOR THE LENGTH OF THIS TRANSACTION.
+
+    0087 cut the catalogue to the eight services the app ships with, and
+    price_service_cents refuses an inactive one — so this suite aborted
+    on its first call with "Service dog-walking is not available" and
+    reported "0 passed", which reads like a suite that ran rather than
+    one that never started.
+
+    Which services are SOLD is a product decision; whether the pricing
+    engine still agrees with itself is what this file tests, and
+    dog-walking is its fixture because it prices on duration AND a
+    count. Rolled back with everything else here.
+  */
+  update services set active = true where id = 'dog-walking';
   insert into provider_services (provider_id, service_id)
   values (v_helper, 'dog-walking') on conflict do nothing;
 

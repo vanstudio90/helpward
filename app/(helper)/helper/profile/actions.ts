@@ -220,10 +220,17 @@ export async function uploadProviderAvatarAction(
   if (upErr) return { error: upErr.message };
 
   const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
-  const { error: profErr } = await supabase
-    .from("profiles")
-    .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
-    .eq("id", user.id);
+  /*
+    THROUGH THE RPC, because the column is no longer writable.
+
+    0095 revoked UPDATE on profiles and granted it back column by
+    column with avatar_url left out — a helper could otherwise PATCH
+    their own avatar_url straight through PostgREST, which made "the
+    photo cannot be changed" a UI convention rather than a rule.
+    set_my_avatar sets a first photo for anyone and refuses to replace
+    a helper's.
+  */
+  const { error: profErr } = await supabase.rpc("set_my_avatar", { p_url: publicUrl });
   if (profErr) return { error: profErr.message };
 
   revalidatePath("/", "layout");

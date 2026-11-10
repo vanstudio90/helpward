@@ -279,6 +279,21 @@ export function ServicesForm({
     return acc;
   }, {});
 
+  // The count has to agree with the boxes underneath it.
+  //
+  // `selected` holds every provider_services row, but this list only
+  // renders the services that are currently active — migration 0087
+  // paused nineteen of them while the app is in review. A helper who had
+  // picked some of those saw "7 selected" above three ticked boxes, with
+  // nothing on the page explaining the other four.
+  //
+  // So: count what is on screen, and account for the rest out loud. The
+  // paused selections are NOT dropped — `save()` still sends the whole
+  // set, so they come back untouched when the services do.
+  const visibleIds = new Set(allServices.map((s) => s.id));
+  const visibleSelected = Array.from(selected).filter((id) => visibleIds.has(id));
+  const pausedCount = selected.size - visibleSelected.length;
+
   const save = () => {
     setMsg(null);
     // No custom_price_cents. Nothing reads it, so sending one would only
@@ -295,10 +310,22 @@ export function ServicesForm({
     <div className="bg-white rounded-card border border-slate-100 shadow-soft p-4 sm:p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-[18px] font-extrabold text-slate-900">Services you offer</h2>
-        <span className="text-[13px] text-slate-500">{selected.size} selected</span>
+        <span className="text-[13px] text-slate-500">
+          {visibleSelected.length} selected
+          {pausedCount > 0 && ` · ${pausedCount} paused`}
+        </span>
       </div>
       <p className="text-[13px] text-slate-500 mb-3">
         You&apos;ll only get task offers for services you check here.
+        {pausedCount > 0 && (
+          <>
+            {" "}
+            {pausedCount === 1 ? "One service you" : `${pausedCount} services you`}
+            {pausedCount === 1 ? " picked is" : " picked are"} paused for everyone at the
+            moment and {pausedCount === 1 ? "is" : "are"} not shown. Your choice is kept
+            and comes back with {pausedCount === 1 ? "it" : "them"}.
+          </>
+        )}
       </p>
 
       {/* Said once, rather than repeated beside 27 figures. The honesty
@@ -367,7 +394,9 @@ export function ServicesForm({
         disabled={pending}
         className="mt-5 inline-flex items-center gap-2 text-[15px] font-semibold text-white bg-brand-600 px-4 py-2.5 rounded-field disabled:opacity-50"
       >
-        {pending ? "Saving…" : `Save ${selected.size} service${selected.size === 1 ? "" : "s"}`}
+        {pending
+          ? "Saving…"
+          : `Save ${visibleSelected.length} service${visibleSelected.length === 1 ? "" : "s"}`}
       </button>
 
       {/* Below the button like every other card here. This one is the
