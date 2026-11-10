@@ -96,6 +96,33 @@ for (const id of CONNECTS) {
   console.log(`  stripe connected account ${id}  transfers=active  (${acct.country})`);
 }
 
+/*
+  THE DATABASE FIRST, BEFORE A SINGLE ACCOUNT IS CREATED.
+
+  A run with the wrong password got as far as creating all three
+  accounts over the auth API — which uses the service key, not this
+  connection — and then died on db.connect(). That left three accounts
+  in production that nothing had configured and whose generated
+  passwords had gone with the process, because they are written at the
+  END of a successful run. They had to be deleted by hand.
+
+  Connecting up front costs one round trip and makes the failure happen
+  before anything exists to clean up.
+*/
+const db = new pg.Client({ connectionString: DB, ssl: { rejectUnauthorized: false } });
+try {
+  await db.connect();
+  const { rows } = await db.query("select current_database() as db");
+  console.log(`  database reachable (${rows[0].db})`);
+} catch (e) {
+  console.error("\n  REFUSING: could not connect to PRODUCTION_DATABASE_URL.");
+  console.error(`  ${e.message}`);
+  console.error("\n  Supabase dashboard -> Project Settings -> Database -> Connection string");
+  console.error("  -> Session pooler (port 5432). Paste the URI with the REAL password in it:");
+  console.error("  the placeholder <password> is not a password, and nothing was created.\n");
+  process.exit(1);
+}
+
 const pw = () => randomBytes(18).toString("base64url");
 
 async function findOrCreate(email, metadata) {
@@ -132,6 +159,18 @@ for (const [i, h] of helpers.entries()) {
 }
 
 /*
+  WRITTEN DOWN THE MOMENT THEY EXIST.
+
+  A generated password lives in this process and nowhere else until the
+  file is written, and the write used to be the last thing a successful
+  run did — so any failure after creation destroyed the only copy and
+  left an account nobody could sign into. Saving here means the worst
+  case is credentials for an account that still needs configuring,
+  which is recoverable; the other way round is not.
+*/
+saveCredentials(customer, helpers);
+
+/*
   THE AVATAR FILE ITSELF, uploaded before the transaction.
 
   Storage is a REST API rather than a table, so it cannot take part in
@@ -163,8 +202,6 @@ for (const h of helpers) {
   avatarUrls.push(`${SUPA}/storage/v1/object/public/avatars/${path}`);
 }
 
-const db = new pg.Client({ connectionString: DB, ssl: { rejectUnauthorized: false } });
-await db.connect();
 try {
   await db.query("begin");
   // The admin claim the 0088 guard requires. Scoped to this transaction.
@@ -262,51 +299,63 @@ for (const [i, v] of vAll.entries()) {
   for (const [k, val] of Object.entries(v)) console.log(`    ${k.padEnd(24)} ${val}`);
 }
 
-const creds = [];
-if (customer.password) creds.push(`customer\t${CUSTOMER_EMAIL}\t${customer.password}`);
+console.log("\n  Credentials were written when the accounts were created; see above.");
+
 /*
-  EVERY helper, not helpers[0].
+  THE PASSWORDS, WRITTEN DOWN AS SOON AS THEY EXIST.
 
-  This line read `${HELPER_EMAIL}` — a name that does not exist in this
-  file; the constant is HELPER_EMAILS, an array. So the moment a helper
-  was newly created the script threw a ReferenceError HERE, after the
-  transaction had already committed: the accounts were correct in the
-  database and the generated password was gone, unrecoverable, because
-  Supabase will not read one back.
-
-  That is exactly what happened to demo-helper-2 on 1 November. The
-  credentials file holds one helper line, written by the single-helper
-  version of this script, and the run that added the second crashed
-  before it could record it.
+  Called immediately after the accounts are created rather than at the
+  end of a successful run — see the note at the call site. Supabase will
+  not read a password back, so a copy that lives only in this process is
+  a copy that one exception destroys.
 */
-for (const [i, h] of helpers.entries()) {
-  if (h.password) creds.push(`helper\t${HELPER_EMAILS[i]}\t${h.password}`);
-}
-if (creds.length) {
+function saveCredentials(customer, helpers) {
+  const creds = [];
+  if (customer.password) creds.push(`customer\t${CUSTOMER_EMAIL}\t${customer.password}`);
   /*
-    MERGE, never overwrite.
+    EVERY helper, not helpers[0].
 
-    An account that already exists yields no password — there is nothing
-    to read back out of Supabase — so a plain write on a re-run would
-    drop the line for every account that was not just created. That
-    includes the customer's, which is the one going into App Store
-    Connect and which cannot be recovered, only reset.
+    This line read `${HELPER_EMAIL}` — a name that does not exist in this
+    file; the constant is HELPER_EMAILS, an array. So the moment a helper
+    was newly created the script threw a ReferenceError HERE, after the
+    transaction had already committed: the accounts were correct in the
+    database and the generated password was gone, unrecoverable, because
+    Supabase will not read one back.
+
+    That is exactly what happened to demo-helper-2 on 1 November. The
+    credentials file holds one helper line, written by the single-helper
+    version of this script, and the run that added the second crashed
+    before it could record it.
   */
-  const existing = new Map();
-  try {
-    for (const line of readFileSync(OUT, "utf8").split("\n")) {
-      const [role, email, password] = line.split("\t");
-      if (email && password) existing.set(`${role}\t${email}`, password);
-    }
-  } catch { /* no file yet */ }
-  for (const line of creds) {
-    const [role, email, password] = line.split("\t");
-    existing.set(`${role}\t${email}`, password);
+  for (const [i, h] of helpers.entries()) {
+    if (h.password) creds.push(`helper\t${HELPER_EMAILS[i]}\t${h.password}`);
   }
-  const merged = [...existing].map(([k, v]) => `${k}\t${v}`);
-  writeFileSync(OUT, merged.join("\n") + "\n", { mode: 0o600 });
-  console.log(`\n  New passwords written to ${OUT} (mode 600).`);
-  console.log("  Put the customer's into App Store Connect. Do not commit them.");
-} else {
-  console.log("\n  Both accounts already existed, so no new passwords were generated.");
+  if (creds.length) {
+    /*
+      MERGE, never overwrite.
+
+      An account that already exists yields no password — there is nothing
+      to read back out of Supabase — so a plain write on a re-run would
+      drop the line for every account that was not just created. That
+      includes the customer's, which is the one going into App Store
+      Connect and which cannot be recovered, only reset.
+    */
+    const existing = new Map();
+    try {
+      for (const line of readFileSync(OUT, "utf8").split("\n")) {
+        const [role, email, password] = line.split("\t");
+        if (email && password) existing.set(`${role}\t${email}`, password);
+      }
+    } catch { /* no file yet */ }
+    for (const line of creds) {
+      const [role, email, password] = line.split("\t");
+      existing.set(`${role}\t${email}`, password);
+    }
+    const merged = [...existing].map(([k, v]) => `${k}\t${v}`);
+    writeFileSync(OUT, merged.join("\n") + "\n", { mode: 0o600 });
+    console.log(`\n  New passwords written to ${OUT} (mode 600).`);
+    console.log("  Put the customer's into App Store Connect. Do not commit them.");
+  } else {
+    console.log("\n  Both accounts already existed, so no new passwords were generated.");
+  }
 }
