@@ -90,8 +90,23 @@ const INTAKE = {
   "moving-help": { destination: DEST, crew_size: "2", inventory: "Sofa, bed frame, 10 boxes",
                    access_from: "ground", access_to: "elevator", vehicle: "need-advice" },
   "furniture-assembly": { items: "One flat-pack wardrobe", item_count: "1", tools: "helper", disposal: "yes" },
-  "grocery-pickup": { store: "Save-On-Foods, Robson St", list: "Order 12345", spend_cap: "50",
-                      substitutions: "similar" },
+  /*
+    THE COLLECTION-ORDER SHAPE, which is what this service asks for now.
+
+    These four keys were store/list/spend_cap/substitutions — a
+    shop-for-me design that no longer exists. The service became "go and
+    collect the order I already placed", so the server refused every
+    request this walk made with "Which branch? is required" and the one
+    service a reviewer is most likely to try went untested.
+
+    order_ref and order_name are the sensitive pair: a reference and the
+    name it is held under are between them enough to collect somebody
+    else's shopping, so they are withheld from the offer and reach only
+    the helper who accepts.
+  */
+  "grocery-pickup": { store: "Save-On-Foods", branch: "Robson St, Vancouver",
+                      order_ref: "SOF-4471832", order_name: "App Review",
+                      collection_slot: "today, 4-6pm", chilled: "some" },
   "package-delivery": { deliver_to: DEST, size: "small", weight_kg: "2", recipient: "Reception" },
   "package-return": { carrier: "canada-post", label_status: "printed", parcel_count: "2",
                       dropoff_point: "Robson St" },
