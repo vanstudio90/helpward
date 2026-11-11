@@ -1,381 +1,138 @@
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import {
-  Users, Calendar, AlertOctagon, DollarSign, ShieldCheck, TrendingUp, TrendingDown,
-  ArrowRight, Activity, Sparkles, MessageSquare, UserPlus,
-} from "lucide-react";
+  getLiveOperations, getOverviewSnapshot, WINDOWS, type WindowKey,
+} from "@/lib/data/admin-overview";
 import {
-  getBookingsSeries, getDisputesSeries, getSignupsSeries,
-  rollupKPI, getSnapshot, getTopServices, getDisputeBreakdown,
-  getHelperFunnel, getRecentEvents,
-} from "@/lib/data/admin-analytics";
-import { Sparkline } from "@/components/charts/Sparkline";
-import { LineChart } from "@/components/charts/LineChart";
-import { StackedBars } from "@/components/charts/StackedBars";
-import { ClientDateTime } from "@/components/ClientDateTime";
+  Kpis, NeedsAttention, MoneyAtAGlance, CoverageByService,
+  PlatformSignals, RecentActivity,
+} from "@/components/admin/OverviewPanels";
+import { BookingsInMotion } from "@/components/admin/BookingsInMotion";
+import { LiveOperations } from "@/components/admin/LiveOperations";
+import { OverviewControls } from "@/components/admin/OverviewControls";
 
-// Dynamic so admins always see fresh numbers — no ISR on this surface.
+/*
+  THE OPERATIONS OVERVIEW.
+
+  What this page replaced: thirty days of charts — bookings, signups and
+  disputes as lines. A fine quarterly read and no use at all on a Tuesday
+  morning, when the question is never "how was the month" but "what is
+  broken, who owns it, and where is everybody".
+
+  So the order of the page is the order of the morning. What needs a
+  person, first and at the top. Then the jobs moving through the system,
+  then where every helper physically is, then the money, then the things
+  that quietly rot — coverage, dispatch faults, stale locations.
+
+  Every figure comes from two database functions that each return one
+  document, so the cards cannot disagree with each other or with the
+  map. Nothing here is computed from a second query taken a moment
+  later.
+*/
+
 export const dynamic = "force-dynamic";
 
-const DAYS = 30;
+export default async function AdminOverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ window?: string; region?: string; review?: string }>;
+}) {
+  const params = await searchParams;
+  const windowKey: WindowKey = (params.window === "7d" || params.window === "30d")
+    ? params.window
+    : "today";
+  const includeReview = params.review === "1";
+  const region = params.region || null;
 
-// Dispute-category palette — keeps tones consistent across the breakdown
-// chart, the top-list, and any future per-category drill-down.
-const CATEGORY_COLOR: Record<string, string> = {
-  no_show: "#f59e0b",
-  quality: "#f97316",
-  damage: "#e11d48",
-  billing: "#0ea5e9",
-  safety: "#dc2626",
-  other: "#64748b",
-};
-
-const CATEGORY_LABEL: Record<string, string> = {
-  no_show: "No-show", quality: "Quality", damage: "Damage",
-  billing: "Billing", safety: "Safety", other: "Other",
-};
-
-export default async function AdminOverviewPage() {
-  const [
-    bookings, disputes, signups, snapshot,
-    topServices, disputeBreakdown, funnel, events,
-  ] = await Promise.all([
-    getBookingsSeries(DAYS),
-    getDisputesSeries(DAYS),
-    getSignupsSeries(DAYS),
-    getSnapshot(),
-    getTopServices(7),
-    getDisputeBreakdown(DAYS),
-    getHelperFunnel(),
-    getRecentEvents(10),
+  const [snapshot, live] = await Promise.all([
+    getOverviewSnapshot({ window: windowKey, includeReview, region }),
+    getLiveOperations({ includeReview }),
   ]);
 
-  const bookingsKPI = rollupKPI(bookings);
-  const gmvKPI = rollupKPI(bookings, /* useSumCents */ true);
-  const disputesKPI = rollupKPI(disputes);
-  const customerSignupsKPI = rollupKPI(signups.customers);
-  const helperSignupsKPI = rollupKPI(signups.providers);
+  /*
+    A FAILED READ IS NOT AN EMPTY MARKETPLACE.
+
+    If the snapshot cannot be taken there is nothing honest to render in
+    its place, so the page says what went wrong and offers the one
+    action that helps. It does not draw zeroes: a zero on this page is
+    something somebody acts on.
+  */
+  if (!snapshot.ok) {
+    return (
+      <div className="px-6 py-10 max-w-3xl mx-auto">
+        <div className="bg-white rounded-2xl border border-amber-200 p-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+            <div>
+              <h1 className="text-lg font-bold text-slate-900">The overview could not be loaded</h1>
+              <p className="text-[14px] text-slate-600 mt-1">{snapshot.error}</p>
+              <p className="text-[13px] text-slate-500 mt-3">
+                Nothing is shown rather than zeroes, because a zero here reads as a quiet
+                marketplace instead of a broken query.
+              </p>
+              <Link
+                href="/admin"
+                className="inline-block mt-4 bg-brand-600 hover:bg-brand-700 text-white text-[13px] font-semibold px-4 py-2 rounded-xl"
+              >
+                Try again
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const data = snapshot.data;
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-7xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex items-end justify-between gap-3 mb-6 flex-wrap">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 pb-12 max-w-[1600px] mx-auto">
+      <header className="flex flex-wrap items-start justify-between gap-4 mb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Overview</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Marketplace pulse across the last {DAYS} days.
+          <h1 className="text-[28px] leading-tight font-bold text-slate-900">
+            Marketplace overview
+          </h1>
+          <p className="text-[14px] text-slate-500 mt-0.5">
+            Know what needs attention. Keep every job moving.
           </p>
         </div>
-        <div className="text-[11px] text-slate-400">
-          Live snapshot · refreshes on reload
+        <div className="flex flex-col items-end gap-1.5">
+          <OverviewControls
+            regions={data.regions}
+            asOf={data.as_of}
+            stale={!live.ok}
+          />
+          <p className="text-[11px] text-slate-400">
+            {WINDOWS[windowKey].label}
+            {region ? ` · ${region}` : " · all regions"}
+            {includeReview ? " · review activity included" : " · review & test activity excluded"}
+          </p>
+        </div>
+      </header>
+
+      <div className="space-y-4">
+        <Kpis snapshot={data} />
+
+        <div className="grid lg:grid-cols-[1.35fr_1fr] gap-4 items-start">
+          <NeedsAttention items={data.needs_attention} />
+          <LiveOperations
+            initial={live.ok ? live.data : null}
+            includeReview={includeReview}
+            error={live.ok ? undefined : live.error}
+          />
+        </div>
+
+        <div className="grid lg:grid-cols-[1.35fr_1fr] gap-4 items-start">
+          <BookingsInMotion queues={data.bookings_in_motion} />
+          <MoneyAtAGlance rows={data.money} />
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-4 items-start">
+          <CoverageByService rows={data.coverage} />
+          <PlatformSignals health={data.health} />
+          <RecentActivity events={data.activity} />
         </div>
       </div>
-
-      {/* Tier-1 KPI row — the six numbers an operator looks at daily */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
-        <KPI
-          tone="bg-brand-50 text-brand-600"
-          icon={<Calendar className="w-4 h-4" />}
-          label={`Bookings · ${DAYS}d`}
-          value={bookingsKPI.total.toLocaleString()}
-          delta={bookingsKPI.deltaVsPrev}
-          sparkValues={bookingsKPI.values}
-          sparkColor="#4f46e5"
-          href="/admin/bookings"
-        />
-        <KPI
-          tone="bg-emerald-50 text-emerald-600"
-          icon={<DollarSign className="w-4 h-4" />}
-          label={`GMV · ${DAYS}d`}
-          value={formatCurrencyShort(gmvKPI.total)}
-          delta={gmvKPI.deltaVsPrev}
-          sparkValues={gmvKPI.values}
-          sparkColor="#059669"
-          href="/admin/bookings"
-        />
-        <KPI
-          tone="bg-rose-50 text-rose-600"
-          icon={<AlertOctagon className="w-4 h-4" />}
-          label={`Disputes · ${DAYS}d`}
-          value={disputesKPI.total.toLocaleString()}
-          delta={disputesKPI.deltaVsPrev}
-          deltaPolarity="lower-is-better"
-          sparkValues={disputesKPI.values}
-          sparkColor="#e11d48"
-          href="/admin/disputes"
-        />
-        <KPI
-          tone="bg-amber-50 text-amber-600"
-          icon={<UserPlus className="w-4 h-4" />}
-          label={`Customer signups · ${DAYS}d`}
-          value={customerSignupsKPI.total.toLocaleString()}
-          delta={customerSignupsKPI.deltaVsPrev}
-          sparkValues={customerSignupsKPI.values}
-          sparkColor="#d97706"
-          href="/admin/users"
-        />
-        <KPI
-          tone="bg-violet-50 text-violet-600"
-          icon={<ShieldCheck className="w-4 h-4" />}
-          label={`Helper signups · ${DAYS}d`}
-          value={helperSignupsKPI.total.toLocaleString()}
-          delta={helperSignupsKPI.deltaVsPrev}
-          sparkValues={helperSignupsKPI.values}
-          sparkColor="#7c3aed"
-          href="/admin/helpers"
-        />
-        <KPI
-          tone="bg-slate-100 text-slate-600"
-          icon={<Activity className="w-4 h-4" />}
-          label="Active right now"
-          value={(snapshot.activeBookings + snapshot.scheduledBookings).toLocaleString()}
-          sub={`${snapshot.activeBookings} in progress · ${snapshot.scheduledBookings} scheduled`}
-          href="/admin/bookings"
-        />
-      </div>
-
-      {/* Tier-2 attention strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        <Attention
-          icon={<AlertOctagon className="w-4 h-4 text-rose-600" />}
-          label="Open disputes"
-          value={snapshot.openDisputes}
-          warn={snapshot.unresolved24h > 0 ? `${snapshot.unresolved24h} unresolved >24h — check disputes queue` : undefined}
-          href="/admin/disputes"
-        />
-        <Attention
-          icon={<ShieldCheck className="w-4 h-4 text-amber-600" />}
-          label="Helpers awaiting approval"
-          value={snapshot.pendingProviders}
-          warn={snapshot.pendingProviders > 5 ? "Queue building — review onboarding pipeline" : undefined}
-          href="/admin/helpers"
-        />
-        <Attention
-          icon={<Users className="w-4 h-4 text-brand-600" />}
-          label="Total users"
-          value={snapshot.totalUsers}
-          href="/admin/users"
-        />
-        <Attention
-          icon={<ShieldCheck className="w-4 h-4 text-emerald-600" />}
-          label="Approved helpers"
-          value={snapshot.approvedProviders}
-          href="/admin/helpers"
-        />
-      </div>
-
-      {/* Time-series block */}
-      <div className="grid lg:grid-cols-2 gap-6 mb-8">
-        <ChartCard title="Bookings + signups" subtitle={`Last ${DAYS} days`}>
-          <LineChart
-            labels={bookings.map((b) => b.label)}
-            series={[
-              { name: "Bookings", values: bookings.map((b) => b.count), color: "#4f46e5" },
-              { name: "Customer signups", values: signups.customers.map((b) => b.count), color: "#d97706" },
-              { name: "Helper signups", values: signups.providers.map((b) => b.count), color: "#7c3aed" },
-            ]}
-          />
-        </ChartCard>
-
-        <ChartCard title="GMV" subtitle={`Last ${DAYS} days · gross transaction value`}>
-          <LineChart
-            labels={bookings.map((b) => b.label)}
-            series={[
-              { name: "GMV", values: bookings.map((b) => (b.sumCents ?? 0) / 100), color: "#059669" },
-            ]}
-            formatY={(n) => `$${formatNumberShort(n)}`}
-          />
-        </ChartCard>
-      </div>
-
-      {/* Breakdown row */}
-      <div className="grid lg:grid-cols-3 gap-6 mb-8">
-        <ChartCard title="Top services" subtitle="Last 7 days · by booking volume">
-          {topServices.length === 0 ? (
-            <EmptyMini text="No bookings in the last 7 days." />
-          ) : (
-            <StackedBars
-              items={topServices.map((s, i) => ({
-                label: s.title,
-                value: s.count,
-                color: ["#4f46e5", "#7c3aed", "#0ea5e9", "#059669", "#d97706"][i % 5],
-                sub: `${formatCurrencyShort(s.gmvCents)} GMV`,
-                href: `/services/${s.id}`,
-              }))}
-            />
-          )}
-        </ChartCard>
-
-        <ChartCard title="Dispute categories" subtitle={`Last ${DAYS} days`}>
-          {disputeBreakdown.length === 0 ? (
-            <EmptyMini text="No disputes in the last 30 days." />
-          ) : (
-            <StackedBars
-              items={disputeBreakdown.map((d) => ({
-                label: CATEGORY_LABEL[d.category] ?? d.category,
-                value: d.count,
-                color: CATEGORY_COLOR[d.category] ?? "#64748b",
-                href: `/admin/disputes?category=${encodeURIComponent(d.category)}`,
-              }))}
-            />
-          )}
-        </ChartCard>
-
-        <ChartCard title="Helper onboarding funnel" subtitle="All-time">
-          <StackedBars
-            scaleMax={funnel.applied || 1}
-            items={[
-              { label: "Applied", value: funnel.applied, color: "#94a3b8" },
-              { label: "ID-verified", value: funnel.idVerified, color: "#0ea5e9",
-                sub: funnel.applied > 0 ? `${pct(funnel.idVerified, funnel.applied)}% pass-through` : undefined },
-              { label: "Background-cleared", value: funnel.bgCleared, color: "#7c3aed",
-                sub: funnel.applied > 0 ? `${pct(funnel.bgCleared, funnel.applied)}% pass-through` : undefined },
-              { label: "Approved", value: funnel.approved, color: "#059669",
-                sub: funnel.applied > 0 ? `${pct(funnel.approved, funnel.applied)}% pass-through` : undefined,
-                href: "/admin/helpers" },
-            ]}
-          />
-        </ChartCard>
-      </div>
-
-      {/* Recent activity */}
-      <ChartCard title="Recent activity" subtitle="Last 10 marketplace events">
-        {events.length === 0 ? (
-          <EmptyMini text="No recent activity yet." />
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {events.map((e) => (
-              <li key={e.id}>
-                <Link href={e.href} className="flex items-center gap-3 py-2.5 px-1 hover:bg-slate-50 rounded-lg transition">
-                  <EventIcon kind={e.kind} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm text-slate-900 truncate">{e.label}</div>
-                    <div className="text-[11px] text-slate-500"><ClientDateTime iso={e.at} /></div>
-                  </div>
-                  <ArrowRight className="w-3 h-3 text-slate-300 shrink-0" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </ChartCard>
     </div>
   );
-}
-
-// =========================================================================
-// Components
-// =========================================================================
-
-function KPI({
-  tone, icon, label, value, sub, delta, deltaPolarity = "higher-is-better",
-  sparkValues, sparkColor, href,
-}: {
-  tone: string;
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sub?: string;
-  delta?: number | null;
-  deltaPolarity?: "higher-is-better" | "lower-is-better";
-  sparkValues?: number[];
-  sparkColor?: string;
-  href: string;
-}) {
-  const isPositive = delta != null && (deltaPolarity === "higher-is-better" ? delta >= 0 : delta <= 0);
-  return (
-    <Link href={href} className="block rounded-2xl bg-white border border-slate-100 p-4 hover:border-slate-200 hover:shadow-sm transition">
-      <div className="flex items-start justify-between mb-1.5 gap-2">
-        <span className={`inline-flex w-7 h-7 rounded-lg ${tone} items-center justify-center shrink-0`}>{icon}</span>
-        {delta != null && (
-          <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${isPositive ? "text-emerald-700" : "text-rose-700"}`}>
-            {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-            {Math.abs(delta).toFixed(0)}%
-          </span>
-        )}
-      </div>
-      <div className="text-[10px] uppercase tracking-wide text-slate-500 leading-tight">{label}</div>
-      <div className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 leading-tight">{value}</div>
-      {sub && <div className="text-[11px] text-slate-500 mt-0.5">{sub}</div>}
-      {sparkValues && sparkValues.length > 0 && (
-        <div className="mt-2 -mb-1" style={{ color: sparkColor ?? "#4f46e5" }}>
-          <Sparkline values={sparkValues} width={140} height={24} color={sparkColor} fill={sparkColor} />
-        </div>
-      )}
-    </Link>
-  );
-}
-
-function Attention({
-  icon, label, value, warn, href,
-}: { icon: React.ReactNode; label: string; value: number; warn?: string; href: string }) {
-  return (
-    <Link href={href} className="block rounded-2xl bg-white border border-slate-100 p-4 hover:border-slate-200 hover:shadow-sm transition">
-      <div className="flex items-center gap-2 mb-2">
-        {icon}
-        <span className="text-[11px] font-semibold text-slate-700">{label}</span>
-      </div>
-      <div className="text-xl font-bold text-slate-900">{value.toLocaleString()}</div>
-      {warn && (
-        <div className="text-[10px] text-amber-700 mt-1.5 leading-snug bg-amber-50 rounded-md px-2 py-1">
-          {warn}
-        </div>
-      )}
-    </Link>
-  );
-}
-
-function ChartCard({
-  title, subtitle, children,
-}: { title: string; subtitle?: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5">
-      <div className="mb-4">
-        <h2 className="text-sm font-bold text-slate-900">{title}</h2>
-        {subtitle && <p className="text-[11px] text-slate-500 mt-0.5">{subtitle}</p>}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function EmptyMini({ text }: { text: string }) {
-  return (
-    <div className="py-8 text-center text-xs text-slate-500">
-      <Sparkles className="w-4 h-4 mx-auto mb-1.5 text-slate-300" />
-      {text}
-    </div>
-  );
-}
-
-function EventIcon({ kind }: { kind: "signup" | "booking" | "dispute" | "review" }) {
-  const map = {
-    signup: { Icon: UserPlus, tone: "bg-emerald-50 text-emerald-600" },
-    booking: { Icon: Calendar, tone: "bg-brand-50 text-brand-600" },
-    dispute: { Icon: AlertOctagon, tone: "bg-rose-50 text-rose-600" },
-    review: { Icon: MessageSquare, tone: "bg-amber-50 text-amber-600" },
-  } as const;
-  const { Icon, tone } = map[kind];
-  return (
-    <span className={`inline-flex w-7 h-7 rounded-lg ${tone} items-center justify-center shrink-0`}>
-      <Icon className="w-3.5 h-3.5" />
-    </span>
-  );
-}
-
-function pct(part: number, total: number): number {
-  if (total === 0) return 0;
-  return Math.round((part / total) * 100);
-}
-
-function formatCurrencyShort(cents: number): string {
-  const dollars = cents / 100;
-  if (Math.abs(dollars) >= 1_000_000) return `$${(dollars / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(dollars) >= 1_000) return `$${(dollars / 1_000).toFixed(1)}k`;
-  return `$${dollars.toFixed(0)}`;
-}
-
-function formatNumberShort(n: number): string {
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toFixed(0);
 }
