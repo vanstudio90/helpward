@@ -197,39 +197,121 @@ export async function getLiveOperations(
   return { ok: true, data: data as LiveOperations };
 }
 
-// ---------------------------------------------------------------- helpers
+/*
+  The formatters live in lib/admin-format.ts so the client components can
+  use them without importing this server-only module; re-exported here so
+  server code has one import.
+*/
+export { money, age, delta } from "@/lib/admin-format";
 
-/** "CA$1,240.00" — currency always named, never a bare dollar sign. */
-export function money(cents: number | null | undefined, currency: string): string {
-  const amount = (cents ?? 0) / 100;
-  return new Intl.NumberFormat("en-CA", {
-    style: "currency",
-    currency,
-    currencyDisplay: "narrowSymbol",
-    maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
-  }).format(amount).replace(/^\$/, currency === "CAD" ? "CA$" : "US$");
+// ============================================================ activity
+
+export type ActivityRow = {
+  kind: "request" | "booking";
+  id: string;
+  ref: string;
+  service_id: string;
+  service_title: string;
+  customer_name: string | null;
+  helper_name: string | null;
+  status: string;
+  payment_status: string | null;
+  total_cents: number | null;
+  currency: string;
+  updated_at: string;
+  created_at: string;
+  needs_attention: boolean;
+};
+
+export type ActivityList = {
+  as_of: string;
+  total: number;
+  limit: number;
+  offset: number;
+  counts: {
+    needs_attention: number; matching: number; scheduled: number;
+    in_progress: number; completed: number; cancelled: number;
+  };
+  rows: ActivityRow[];
+};
+
+export type ActivityDetail = {
+  kind: "request" | "booking";
+  id: string;
+  ref: string;
+  request_id: string | null;
+  booking_id: string | null;
+  service_id: string;
+  service_title: string | null;
+  status: string;
+  created_at: string;
+  scheduled_for: string | null;
+  crew_size: number | null;
+  customer: { id: string; name: string | null; country: string | null; is_review_account: boolean } | null;
+  helper: { id: string; name: string | null; status: string | null; is_review_helper: boolean } | null;
+  pickup: { formatted: string; city: string | null; lat: number | null; lng: number | null; verified: boolean } | null;
+  dropoff: { formatted: string; city: string | null; lat: number | null; lng: number | null } | null;
+  intake: Record<string, unknown> | null;
+  handover_shared: Record<string, unknown> | null;
+  has_private_details: boolean;
+  money: {
+    currency: string | null; quote_cents: number | null; base_cents: number | null;
+    service_fee_cents: number | null; tip_cents: number | null; platform_fee_cents: number | null;
+    payout_cents: number | null; payment_status: string | null;
+    authorized_at: string | null; captured_at: string | null; payment_error: string | null;
+    refunds: { amount_cents: number; status: string; reason: string | null; created_at: string }[];
+  };
+  timeline: { at: string; label: string; detail: string }[] | null;
+  offers: { helper_name: string | null; response: string; distance_km: number | null; notified_at: string; responded_at: string | null }[];
+  notes: { body: string; at: string; author: string }[];
+  disputes: { category: string; status: string; created_at: string }[] | null;
+  conversation_id: string | null;
+  actions: {
+    cancel_request: boolean;
+    cancel_booking: boolean;
+    cancel_booking_reason: string | null;
+    refund: boolean;
+    reveal_private: boolean;
+  };
+};
+
+export async function getActivity(opts: {
+  window?: WindowKey; includeReview?: boolean; region?: string | null;
+  service?: string | null; kind?: "all" | "requests" | "bookings";
+  flag?: string | null; search?: string | null; currency?: string | null;
+  limit?: number; offset?: number;
+} = {}): Promise<Read<ActivityList>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_activity", {
+    p_window: WINDOWS[opts.window ?? "7d"].interval,
+    p_include_review: opts.includeReview ?? false,
+    p_region: opts.region ?? null,
+    p_service: opts.service ?? null,
+    p_kind: opts.kind ?? "all",
+    p_flag: opts.flag ?? null,
+    p_search: opts.search ?? null,
+    p_currency: opts.currency ?? null,
+    p_limit: opts.limit ?? 25,
+    p_offset: opts.offset ?? 0,
+  });
+  if (error) return { ok: false, error: describe(error) };
+  return { ok: true, data: data as ActivityList };
 }
 
-/** "4m", "2h", "3d" — the age of something that is waiting. */
-export function age(seconds: number | null | undefined): string {
-  if (seconds == null) return "—";
-  const s = Math.max(0, Math.round(seconds));
-  if (s < 60) return `${s}s`;
-  if (s < 3600) return `${Math.floor(s / 60)}m`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h`;
-  return `${Math.floor(s / 86400)}d`;
+export async function getActivityDetail(
+  kind: "request" | "booking", id: string,
+): Promise<Read<ActivityDetail | null>> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_activity_detail", {
+    p_kind: kind, p_id: id,
+  });
+  if (error) return { ok: false, error: describe(error) };
+  return { ok: true, data: data as ActivityDetail | null };
 }
 
-/**
- * The change between this window and the one before it.
- *
- * Returns null when the prior window has nothing in it: "+100%" against
- * zero is arithmetic, not information, and it is the shape most likely
- * to be screenshotted into a board deck.
- */
-export function delta(value: number, prior: number): { pct: number; up: boolean } | null {
-  if (!prior) return null;
-  const pct = Math.round(((value - prior) / prior) * 100);
-  if (pct === 0) return null;
-  return { pct: Math.abs(pct), up: pct > 0 };
+/** The services the catalogue actually offers, for the filter. */
+export async function getActiveServices(): Promise<{ id: string; title: string }[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase.from("services").select("id, title").eq("active", true).order("title");
+  return data ?? [];
 }

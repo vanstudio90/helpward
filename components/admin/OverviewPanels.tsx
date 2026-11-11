@@ -5,10 +5,8 @@ import {
   Users, UserCheck, Activity, Radio,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import {
-  age, delta, money,
-  type AttentionItem, type CoverageRow, type Money, type Snapshot,
-} from "@/lib/data/admin-overview";
+import { age, delta, money } from "@/lib/admin-format";
+import type { AttentionItem, CoverageRow, Money, Snapshot } from "@/lib/data/admin-overview";
 
 /*
   THE CARDS THE OVERVIEW IS MADE OF.
