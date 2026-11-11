@@ -19,7 +19,16 @@ export async function GET(request: Request) {
   const includeReview = new URL(request.url).searchParams.get("review") === "1";
   const result = await getLiveOperations({ includeReview });
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+    /*
+      The status says which kind of problem it is, because the map
+      component treats them differently: a refusal stops polling, a
+      missing migration is worth saying out loud, and anything else is
+      worth retrying on the next tick.
+    */
+    const status = /not an admin|not permitted/i.test(result.error) ? 403
+      : /migration/i.test(result.error) ? 501
+      : 502;
+    return NextResponse.json({ error: result.error }, { status });
   }
   return NextResponse.json(result.data, {
     headers: { "cache-control": "no-store" },
