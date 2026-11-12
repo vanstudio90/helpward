@@ -1,188 +1,183 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { cancellationFeeFor, CANCELLATION_FEE_RATE } from "../lib/cancellation.ts";
+import { describeCancellationFee } from "../lib/cancellation.ts";
 
 /*
   WHAT CANCELLING COSTS.
 
-  This is money a customer agrees to on a screen, so the arithmetic is
-  run rather than described. The rule: Helpward holds money at booking
-  and only takes it when the work is done, so cancelling normally
-  costs nothing — except once a helper has taken the job, which is
-  what this fee is for.
+  THE POLICY MOVED. It used to be decided here, in TypeScript, from
+  the booking alone — which is how a helper abandoning a job came to
+  charge the customer 10%: this layer could see the booking and not
+  who was asking. It now lives in cancellation_fee_for() and
+  cancel_booking_with_fee(), inside the row lock that also decides the
+  race with completion, and 0126's self-test proves the rules.
+
+  What is tested here is the half that is still TypeScript: turning
+  the database's decision into a sentence a customer can agree to.
 */
 
-const BOOKING = {
-  status: "scheduled",
-  total_cents: 22450,
-  captured_at: null as string | null,
-};
+const policy = readFileSync("supabase/migrations/0126_cancellation_policy.sql", "utf8");
+const shared = readFileSync("lib/cancel-booking.ts", "utf8");
+const route = readFileSync("app/api/v1/bookings/[id]/cancellation/route.ts", "utf8");
 
-test("a job a helper has taken costs 10% to cancel", () => {
-  const fee = cancellationFeeFor(BOOKING);
-  assert.equal(fee.cents, 2245);
-  assert.equal(fee.rate, CANCELLATION_FEE_RATE);
-  // The customer is told the amount in money, not the rule.
+test("the customer is told the amount, the total and what happens to the rest", () => {
+  const fee = describeCancellationFee(
+    { cents: 2245, rate: 0.10, reason: "helper_accepted", total_cents: 22450 },
+  );
   assert.match(fee.explanation, /CA\$22\.45/);
   assert.match(fee.explanation, /CA\$224\.50/);
-  assert.match(fee.because, /accepted this job/);
+  assert.match(fee.explanation, /rest of the hold is released/);
+  assert.match(fee.because, /set the time aside/);
 });
 
-test("a job already under way costs the same", () => {
-  // "Picked up" covers a helper on their way and a helper working.
-  const fee = cancellationFeeFor({ ...BOOKING, status: "in_progress" });
-  assert.equal(fee.cents, 2245);
-});
-
-test("the fee rounds in the customer's favour", () => {
-  /*
-    A half-cent in our favour on every cancellation is not worth the
-    sentence it would take to explain.
-  */
-  assert.equal(cancellationFeeFor({ ...BOOKING, total_cents: 2999 }).cents, 299);
-  assert.equal(cancellationFeeFor({ ...BOOKING, total_cents: 105 }).cents, 10);
-  assert.equal(cancellationFeeFor({ ...BOOKING, total_cents: 9 }).cents, 0);
-});
-
-test("there is nothing to charge when there is nothing to cancel", () => {
-  for (const status of ["completed", "cancelled", "disputed"]) {
-    const fee = cancellationFeeFor({ ...BOOKING, status });
-    assert.equal(fee.cents, 0, `${status} must not be charged a fee`);
-    assert.match(fee.because, new RegExp(status));
+test("every free case says WHY it is free", () => {
+  /* "No fee applies" is not something anybody can check. */
+  const cases: Record<string, RegExp> = {
+    within_grace: /still within the few minutes/,
+    predates_policy: /before cancellation fees existed/,
+    not_the_customer: /apply to the customer who booked, not to you/,
+    nothing_charged: /no charge against it/,
+  };
+  for (const [reason, expected] of Object.entries(cases)) {
+    const fee = describeCancellationFee({ cents: 0, rate: 0, reason, total_cents: 22450 });
+    assert.equal(fee.cents, 0, `${reason} must cost nothing`);
+    assert.match(fee.because, expected, `${reason} must explain itself`);
   }
 });
 
-test("a booking with no charge behind it is free to cancel", () => {
-  const fee = cancellationFeeFor({ ...BOOKING, total_cents: 0 });
-  assert.equal(fee.cents, 0);
-  assert.match(fee.explanation, /costs nothing/);
-});
-
-test("an already-charged booking is a refund, and says the amounts", () => {
-  /*
-    The money is taken, so there is no hold to release. The fee is
-    kept and the rest goes back — and the customer is told both
-    figures rather than one.
-  */
-  const fee = cancellationFeeFor({ ...BOOKING, captured_at: "2026-11-12T10:00:00Z" });
-  assert.equal(fee.alreadyCharged, true);
-  assert.equal(fee.cents, 2245);
-  assert.match(fee.explanation, /already been charged CA\$224\.50/);
-  assert.match(fee.explanation, /returns CA\$202\.05/);
-  assert.match(fee.explanation, /keeps a CA\$22\.45/);
-  // 202.05 + 22.45 = 224.50, which is what they paid.
-  assert.equal(22450 - fee.cents, 20205);
-});
-
 test("the currency shown is the booking's", () => {
-  assert.match(cancellationFeeFor(BOOKING, "USD").explanation, /\$22\.45/);
-  assert.doesNotMatch(cancellationFeeFor(BOOKING, "USD").explanation, /CA\$/);
-});
-
-/* ------------------------------------------------------------------ */
-/* THE PARTS THAT MOVE MONEY                                           */
-/* ------------------------------------------------------------------ */
-
-const shared = readFileSync("lib/cancel-booking.ts", "utf8");
-const action = readFileSync("app/(app)/bookings/actions.ts", "utf8");
-const route = readFileSync("app/api/v1/bookings/[id]/cancellation/route.ts", "utf8");
-const button = readFileSync("app/(app)/bookings/[id]/cancel-button.tsx", "utf8");
-
-test("nothing is charged that the customer has not accepted", () => {
-  // The figure is checked again on the server at the moment of cancelling.
-  assert.match(shared, /THE CUSTOMER HAS TO HAVE SEEN THE NUMBER/);
-  assert.match(shared, /input\.acceptedFeeCents !== fee\.cents/);
-  assert.match(shared, /needsAcceptance: true/);
-  // And the button names the amount rather than saying "cancel".
-  assert.match(button, /Cancel and pay \$\{money\(fee!\.cents\)\}/);
-  assert.match(button, /THE AMOUNT, BEFORE THE BUTTON/);
-});
-
-test("the booking is cancelled before any money moves", () => {
-  /*
-    The other order risks charging for a job that is still going
-    ahead. This order's worst case costs Helpward, not the customer.
-  */
-  assert.match(shared, /THE ORDER MATTERS AND IT IS DELIBERATE/);
-  assert.ok(
-    shared.indexOf('rpc("cancel_booking"') < shared.indexOf("captureBookingPayment("),
-    "the cancellation must be committed before the fee is taken",
+  const usd = describeCancellationFee(
+    { cents: 2245, rate: 0.1, reason: "helper_accepted", total_cents: 22450 }, "USD",
   );
+  assert.match(usd.explanation, /\$22\.45/);
+  assert.doesNotMatch(usd.explanation, /CA\$/);
 });
 
-test("the fee is a partial capture, not a charge and a refund", () => {
-  // Capturing the fee releases the remainder in the same call, so the
-  // customer is never charged in full and then credited.
-  assert.match(shared, /ONE CALL\./);
-  assert.match(shared, /captureBookingPayment\(bookingId, fee\.cents\)/);
-});
+/* ------------------------------------------------------------------ */
+/* THE RULES, WHERE THEY NOW LIVE                                      */
+/* ------------------------------------------------------------------ */
 
-test("the race that used to charge for a cancelled booking is handled", () => {
+test("a helper abandoning a job does not charge the customer", () => {
   /*
-    The job completing between the customer pressing cancel and the
-    hold being released left them charged in full with nothing
-    recording it — Stripe even said "refund it instead".
+    cancel_booking has always permitted customer, provider or admin and
+    returned void, so the caller never learned which. The fee was
+    computed from the booking alone and a helper cancelling triggered
+    the customer's 10%, recorded with the helper as actor.
   */
-  assert.match(shared, /THE JOB COMPLETED BETWEEN THE CUSTOMER PRESSING CANCEL/);
-  assert.match(shared, /result\.code === "already_captured"/);
-  assert.match(shared, /refundCapturedRemainder/);
-  // Neither surface swallows it any more.
-  assert.doesNotMatch(action, /already_captured/);
-  assert.doesNotMatch(route, /already_captured/);
+  assert.match(policy, /A HELPER ABANDONING A JOB CHARGED THE CUSTOMER/);
+  assert.match(policy, /if p_actor is distinct from 'customer' then/);
+  assert.match(policy, /a helper cancelling was charged the customer fee/);
+  assert.match(policy, /an admin cancelling was charged a fee/);
 });
 
-test("both surfaces share one implementation", () => {
-  // Two copies of money-moving logic is two places for it to drift.
-  assert.match(shared, /ONCE, FOR BOTH THE WEBSITE AND THE APP/);
-  assert.match(action, /performCancellation\(\{/);
-  assert.match(route, /performCancellation\(\{/);
-  assert.doesNotMatch(route, /cancellationFeeCents: 0/);
+test("status, actor, policy and consent are settled in one locked call", () => {
+  assert.match(policy, /create or replace function public\.cancel_booking_with_fee/);
+  assert.match(policy, /for update/);
+  assert.match(policy, /CONSENT IS CHECKED HERE, under the same lock/);
+  assert.match(policy, /a fee-bearing cancellation went through with no acceptance/);
+  assert.match(policy, /a cancellation went through on the wrong accepted amount/);
+  // And TypeScript no longer decides any of it.
+  assert.match(shared, /THE POLICY IS NOT HERE/);
+  assert.doesNotMatch(shared, /floor\(.*0\.10|\* 0\.1\b/);
 });
 
-test("the app is told the fee instead of being left to assume zero", () => {
-  assert.match(route, /cancellationFeeCents: fee\.cents/);
-  assert.match(route, /THERE IS A CANCELLATION FEE NOW/);
-  // And it must send back what it showed.
+test("a completed job cannot be cancelled into a refund", () => {
+  /*
+    complete_booking and cancel_booking_with_fee take the same row
+    lock, so whichever commits first makes the other impossible.
+  */
+  assert.match(policy, /COMPLETION WINS, ALWAYS/);
+  assert.match(policy, /a completed job was cancelled/);
+  assert.match(policy, /a captured booking was cancelled into a refund/);
+});
+
+test("the grace window and the disclosure instant are real values", () => {
+  assert.match(policy, /interval '5 minutes'/);
+  // Midnight was never when anything was published.
+  assert.match(policy, /2026-11-12 22:21:13\+00/);
+  assert.match(policy, /which is not when\s*\n\s*anything was published/);
+  assert.match(policy, /a booking made before the policy was charged/);
+});
+
+/* ------------------------------------------------------------------ */
+/* REPORTING WHAT ACTUALLY HAPPENED                                    */
+/* ------------------------------------------------------------------ */
+
+test("the charge reported is what the processor took", () => {
+  /*
+    captureBookingPayment returns the FULL booking amount when it finds
+    the booking already captured. Reporting the requested fee
+    regardless announced a CA$22.45 fee with CA$202.05 released to a
+    customer who had paid for everything.
+  */
+  assert.match(shared, /WHAT THE PROCESSOR ACTUALLY TOOK, not what we asked for/);
+  assert.match(shared, /charged = captured\.capturedCents/);
+  assert.match(shared, /released = Math\.max\(0, decision\.total_cents - charged\)/);
+  // And an over-capture is recovered rather than left.
+  assert.match(shared, /charged > decision\.fee_cents/);
+  assert.match(shared, /system_cancellation_refund/);
+});
+
+test("a failed capture is not reported as proof that nothing happened", () => {
+  /*
+    A dropped connection cannot establish that the card was untouched,
+    and every failure used to say "nothing has been charged".
+  */
+  assert.match(shared, /A FAILED CALL IS NOT PROOF THAT NOTHING HAPPENED/);
+  assert.match(shared, /could not confirm whether the cancellation fee was taken/);
+  // Only a definite refusal claims nothing moved.
+  assert.match(shared, /captured\.code === "card_declined"/);
+});
+
+test("the automatic refund has its own narrow door", () => {
+  /*
+    It used to call admin_refund_request with the service key, which
+    cannot work: is_admin() reads the app_metadata role and a
+    service-role token has none. Every call failed 42501 and the whole
+    automatic path was dead.
+  */
+  assert.match(policy, /Bypassing RLS is not the same as being an admin/);
+  assert.match(policy, /The answer is NOT to make service_role an admin/);
+  assert.match(policy, /grant execute on function public\.system_cancellation_refund\(uuid, integer, text\) to service_role/);
+  assert.doesNotMatch(policy, /system_cancellation_refund\(uuid, integer, text\) to authenticated/);
+  // And the file that skipped the shared protections is gone.
+  assert.throws(() => readFileSync("lib/cancellation-refund.ts", "utf8"));
+});
+
+/* ------------------------------------------------------------------ */
+/* THE CLIENTS                                                         */
+/* ------------------------------------------------------------------ */
+
+test("the app sends the amount it showed", () => {
+  /*
+    The shipped client sent only `reason`, so every fee-bearing
+    cancellation from the app was refused — and a build that forgets
+    the field must be refused rather than charging without consent.
+  */
+  const api = readFileSync(
+    "../helpward-ios/Helpward/Shared/Services/APIClient.swift", "utf8");
+  const sheet = readFileSync(
+    "../helpward-ios/Helpward/Customer/Views/Booking/CancelBookingSheet.swift", "utf8");
+
+  assert.match(api, /acceptedFeeCents: Int/);
+  assert.match(api, /let acceptedFeeCents: Int/);
+  assert.match(sheet, /acceptedFeeCents: shown\.cancellationFeeCents/);
+  assert.match(sheet, /NOTHING IS SENT WITHOUT THE AMOUNT ON SCREEN/);
+  // It decodes what the new response actually carries.
+  assert.match(api, /cancellationFeeChargedCents/);
+  assert.doesNotMatch(api, /let releaseProblem/);
+  // A 409 re-asks rather than showing an error nobody can act on.
+  assert.match(sheet, /isFeeChanged/);
+  assert.match(sheet, /The cancellation fee changed/);
+  // And the button names the charge.
+  assert.match(sheet, /Cancel and pay/);
+});
+
+test("the server refuses a client that did not confirm", () => {
   assert.match(route, /acceptedFeeCents/);
   assert.match(route, /status: 409/);
-});
-
-test("a fee that was charged is recorded with what was agreed", () => {
-  const sql = readFileSync("supabase/migrations/0125_cancellation_fee.sql", "utf8");
-  assert.match(sql, /A FEE NOBODY CAN POINT AT IS A CHARGEBACK WAITING TO HAPPEN/);
-  assert.match(sql, /cancellation_fee_accepted_cents/);
-  assert.match(sql, /matched_what_was_shown/);
-  assert.match(sql, /a fee that differed from what was shown was recorded as matching/);
-});
-
-/* ------------------------------------------------------------------ */
-/* THE PROMISE IN THE TERMS                                            */
-/* ------------------------------------------------------------------ */
-
-test("a booking made before the fee existed is never charged it", () => {
-  /*
-    /terms said: "we will not introduce one retrospectively for a
-    booking made without that fee being clearly disclosed." A booking
-    taken under those words was taken on the understanding that
-    cancelling was free.
-  */
-  const old = cancellationFeeFor({
-    ...BOOKING, created_at: "2026-11-01T12:00:00Z",
-  });
-  assert.equal(old.cents, 0);
-  assert.match(old.because, /before cancellation fees existed/);
-
-  const now = cancellationFeeFor({
-    ...BOOKING, created_at: "2026-11-20T12:00:00Z",
-  });
-  assert.equal(now.cents, 2245);
-});
-
-test("a booking with no creation date is charged, not grandfathered", () => {
-  // Absence of a date is not evidence of an old booking, and treating
-  // it as one would be a loophole rather than a kindness.
-  assert.equal(cancellationFeeFor({ ...BOOKING, created_at: null }).cents, 2245);
+  assert.match(policy, /errcode = 'HW152'/);
 });
 
 test("every page that describes cancelling agrees with the code", () => {
@@ -190,16 +185,50 @@ test("every page that describes cancelling agrees with the code", () => {
   const terms = readFileSync("app/terms/page.tsx", "utf8");
   const help = readFileSync("lib/help-articles.ts", "utf8");
 
-  // The claims that are now false must be gone, not merely softened.
   assert.doesNotMatch(pricing, /There is no cancellation fee/);
-  assert.doesNotMatch(terms, /Helpward does not currently apply a cancellation fee/);
   assert.doesNotMatch(terms, /We don't charge one today/);
-  assert.doesNotMatch(help, /A small cancellation fee may apply close to the scheduled time/);
-
-  // And each says the same thing: free until accepted, then 10%.
   for (const [name, page] of [["pricing", pricing], ["terms", terms], ["help", help]] as const) {
     assert.match(page, /10%/, `${name} must state the rate`);
   }
-  // The promise is restated where it is kept.
   assert.match(terms, /Bookings made before this fee existed are never charged it/);
+});
+
+/* ------------------------------------------------------------------ */
+/* THE FUNCTIONS ANYONE COULD CALL                                     */
+/* ------------------------------------------------------------------ */
+
+const lock = readFileSync("supabase/migrations/0127_lock_internal_functions.sql", "utf8");
+
+test("revoking from PUBLIC does not lock a function", () => {
+  /*
+    Supabase's DEFAULT PRIVILEGES grant EXECUTE on new functions in
+    `public` to anon, authenticated and service_role INDIVIDUALLY. So
+    `revoke all … from public` removes a grant that was never the one
+    letting them in, and every internal function written that way was
+    callable by anyone — including ingest_refund_event, which is
+    SECURITY DEFINER, has no is_admin() check by design, and writes
+    refund rows and booking payment states.
+  */
+  assert.match(lock, /EVERY INTERNAL FUNCTION I ADDED WAS CALLABLE BY ANYONE/);
+  assert.match(lock, /from anon, authenticated/);
+  assert.match(lock, /ingest_refund_event is the serious one/);
+  // Both doors, where PUBLIC still held one.
+  assert.match(lock, /from public, anon, authenticated/);
+  // The test fails loudly rather than reporting a tidy list.
+  assert.match(lock, /still reachable from a browser session/);
+  // And the service role keeps what it needs to work.
+  assert.match(lock, /the webhook can no longer record refunds/);
+});
+
+test("the fee preview resolves the caller instead of believing them", () => {
+  /*
+    cancellation_fee_for(booking, actor) let the caller name which
+    party they were, so anyone could ask what a stranger's booking
+    would cost "as the customer" and be told the fee and the total.
+  */
+  assert.match(lock, /TOOK THE CALLER'S WORD FOR WHO THEY WERE/);
+  assert.match(lock, /'not_your_booking'/);
+  assert.match(lock, /revoke all on function public\.cancellation_fee_for\(uuid, text\) from anon, authenticated/);
+  assert.match(shared, /THE DATABASE WORKS OUT WHO IS ASKING/);
+  assert.doesNotMatch(shared, /p_actor: actor/);
 });

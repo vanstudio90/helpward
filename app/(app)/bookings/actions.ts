@@ -3,8 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { voidBookingAuthorization, captureBookingPayment, chargeTip } from "@/lib/payments";
-import { cancellationFeeFor } from "@/lib/cancellation";
-import { performCancellation } from "@/lib/cancel-booking";
+import { performCancellation, previewCancellation } from "@/lib/cancel-booking";
 import { stripeConfigured } from "@/lib/stripe";
 import { validateHandover, isHandoverEmpty } from "@/lib/handover";
 
@@ -106,23 +105,10 @@ export async function previewCancellationAction(bookingId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Sign in to cancel a booking." };
 
-  const { data, error } = await supabase
-    .from("bookings")
-    .select("id, status, total_cents, captured_at, created_at, currency, customer_id")
-    .eq("id", bookingId)
-    .maybeSingle();
-  if (error) return { error: error.message };
-  if (!data) return { error: "Booking not found." };
-
-  const booking = data as unknown as {
-    status: string; total_cents: number | null; captured_at: string | null;
-    created_at: string | null; currency: string | null; customer_id: string | null;
-  };
-  /* The row is readable under RLS by both parties; only the customer
-     is being offered a cancellation here. */
-  if (booking.customer_id !== user.id) return { error: "Not your booking." };
-
-  const fee = cancellationFeeFor(booking, booking.currency ?? "CAD");
+  /* The database resolves who is asking from their own token and
+     answers for THAT person — a helper previewing their own
+     cancellation is told it is free, not quoted the customer's fee. */
+  const fee = await previewCancellation(supabase, bookingId);
   return { fee };
 }
 
@@ -165,9 +151,7 @@ export async function cancelBookingAction(
 
   return {
     success: charged > 0
-      ? `Cancelled. A cancellation fee of ${(charged / 100).toFixed(2)} was charged${
-          fee.alreadyCharged ? " and the rest is being returned" : " and the rest of the hold was released"
-        }.`
+      ? `Cancelled. A cancellation fee of ${(charged / 100).toFixed(2)} was charged and the rest of the hold was released.`
       : "Cancelled.",
     warning: note,
   };

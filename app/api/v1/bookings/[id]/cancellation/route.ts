@@ -1,6 +1,5 @@
 import { withBearerAuth } from "@/lib/api/bearer";
-import { cancellationFeeFor } from "@/lib/cancellation";
-import { performCancellation } from "@/lib/cancel-booking";
+import { performCancellation, previewCancellation } from "@/lib/cancel-booking";
 
 /*
   Cancelling a booking from the native app.
@@ -58,7 +57,10 @@ export async function GET(request: Request, context: Context) {
       must show it before cancelling and send it back on the POST,
       which refuses anything that does not match.
     */
-    const fee = cancellationFeeFor(booking, booking.currency ?? "CAD");
+    /* Resolved by the database for whoever is asking, so a helper is
+       told their own cancellation is free rather than the customer's
+       fee being quoted at them. */
+    const fee = await previewCancellation(supabase, id);
     const holdReleaseCents =
       booking.payment_status === "authorized"
         ? Math.max(0, (booking.total_cents ?? 0) - fee.cents)
@@ -71,17 +73,16 @@ export async function GET(request: Request, context: Context) {
       /** Show this to the customer verbatim; it is already in money. */
       explanation: fee.explanation,
       because: fee.because,
-      /** True when the money is already taken and this is a refund. */
-      alreadyCharged: fee.alreadyCharged,
+      /** Why the fee is what it is — the app can branch on this
+          rather than parsing the sentence. */
+      reason: fee.reason,
       holdReleaseCents,
       currency: booking.currency,
       holdExists: booking.payment_status === "authorized",
       // Honest about the part Helpward does not control.
       note: holdReleaseCents > 0
         ? "We release the rest of the hold immediately. How quickly it disappears from your statement is up to your bank."
-        : fee.alreadyCharged
-          ? "This booking has already been charged. The balance is returned to your card."
-          : "No money is being held for this booking, so there is nothing to release.",
+        : "No money is being held for this booking, so there is nothing to release.",
     });
   })(request);
 }

@@ -7,9 +7,9 @@ import { cancelBookingAction, previewCancellationAction } from "../actions";
 type Fee = {
   cents: number;
   rate: number;
+  reason: string;
   explanation: string;
   because: string;
-  alreadyCharged: boolean;
 };
 
 /*
