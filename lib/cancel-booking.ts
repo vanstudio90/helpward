@@ -49,6 +49,59 @@ type CancelDecision = {
   hold_exists: boolean;
 };
 
+/*
+  RAISING THE MONEY BACK — AND SAYING WHICH OF THE TWO HAPPENED.
+
+  Both recovery paths used to announce "a refund has been raised"
+  whether or not the request was created. One of them logged the
+  failure and told the customer the opposite anyway; the other never
+  looked at the response at all. A customer who had been overcharged
+  was told a recovery existed when none did, which is worse than
+  telling them nothing: it stops them chasing it.
+
+  There are two outcomes and they get two different sentences. The
+  failure also leaves an audit entry, because a console log is not a
+  record anybody is going to find — it is a line in a log that has to
+  be looked for by somebody who already knows to look.
+*/
+async function raiseRecovery(
+  bookingId: string,
+  amountCents: number,
+  internalNote: string,
+  prefix: string,
+): Promise<string> {
+  const admin = createSupabaseServiceClient();
+  const { error } = await admin.rpc("system_cancellation_refund", {
+    p_booking: bookingId,
+    p_amount_cents: amountCents,
+    p_note: internalNote,
+  });
+
+  if (!error) {
+    return `${prefix} A refund of ${(amountCents / 100).toFixed(2)} has been raised and our team is completing it.`;
+  }
+
+  console.error("CANCELLATION OWES A REFUND AND IT COULD NOT BE RAISED", {
+    bookingId, amountCents, error,
+  });
+  /* Durable, because the log is not. */
+  await admin.from("audit_log").insert({
+    actor_id: null,
+    action: "refund.recovery_failed",
+    target_table: "bookings",
+    target_id: bookingId,
+    payload: {
+      amount_cents: amountCents,
+      reason: internalNote,
+      error: error.message,
+      needs: "A refund is owed on this booking and no request exists for it.",
+    },
+    outcome: "failed",
+  });
+
+  return `${prefix} We could NOT start the refund automatically — please contact support with this booking so we can return ${(amountCents / 100).toFixed(2)} to you.`;
+}
+
 export async function performCancellation(input: {
   supabase: SupabaseClient;
   bookingId: string;
@@ -121,18 +174,11 @@ export async function performCancellation(input: {
           /* More was taken than the fee. Recover the difference
              through a refund request rather than leaving it. */
           const over = charged - decision.fee_cents;
-          const admin = createSupabaseServiceClient();
-          const { error: refundError } = await admin.rpc("system_cancellation_refund", {
-            p_booking: bookingId,
-            p_amount_cents: over,
-            p_note: `Cancellation captured ${charged} cents when the fee was ${decision.fee_cents}. Raised automatically to return the difference.`,
-          });
-          if (refundError) {
-            console.error("OVER-CAPTURED ON CANCELLATION AND COULD NOT RAISE THE REFUND", {
-              bookingId, charged, fee: decision.fee_cents, refundError,
-            });
-          }
-          note = "More than the cancellation fee was taken. A refund of the difference has been raised and our team is completing it.";
+          note = await raiseRecovery(
+            bookingId, over,
+            `Cancellation captured ${charged} cents when the fee was ${decision.fee_cents}. Raised automatically to return the difference.`,
+            "More than the cancellation fee was taken.",
+          );
         }
       } else {
         /*
@@ -157,13 +203,11 @@ export async function performCancellation(input: {
           captured outside that lock. Loud, and recovered.
         */
         console.error("CANCELLED BOOKING WAS ALREADY CAPTURED", { bookingId });
-        const admin = createSupabaseServiceClient();
-        await admin.rpc("system_cancellation_refund", {
-          p_booking: bookingId,
-          p_amount_cents: decision.total_cents,
-          p_note: "The booking was captured despite being cancelled. Raised automatically to return it.",
-        });
-        note = "This booking had already been charged. A full refund has been raised and our team is completing it.";
+        note = await raiseRecovery(
+          bookingId, decision.total_cents,
+          "The booking was captured despite being cancelled. Raised automatically to return it.",
+          "This booking had already been charged.",
+        );
       } else {
         console.error("could not void authorization on cancel", bookingId, result);
         note = "The hold could not be released automatically. Our team has been alerted.";

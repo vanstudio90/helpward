@@ -232,3 +232,67 @@ test("the fee preview resolves the caller instead of believing them", () => {
   assert.match(shared, /THE DATABASE WORKS OUT WHO IS ASKING/);
   assert.doesNotMatch(shared, /p_actor: actor/);
 });
+
+/* ------------------------------------------------------------------ */
+/* THE SIBLINGS, AND THE DOOR THAT WAS LEFT OPEN                       */
+/* ------------------------------------------------------------------ */
+
+const siblings = readFileSync("supabase/migrations/0128_close_the_siblings.sql", "utf8");
+
+test("a function that takes an id and trusts it is the shape to look for", () => {
+  /*
+    customer_open_cases takes a customer id, returns their dispute
+    descriptions, support subjects and who is handling them, and never
+    asks who is calling. The grant to `authenticated` was never needed:
+    its only caller reaches it in definer context.
+  */
+  assert.match(siblings, /CUSTOMER_OPEN_CASES READ ANYBODY'S SUPPORT CASES/);
+  assert.match(siblings, /THE SHAPE OF THE MISTAKE/);
+  assert.match(siblings, /revoke all on function public\.customer_open_cases\(uuid\) from public, anon, authenticated/);
+  // Plus a check inside, so a future grant cannot reopen it.
+  assert.match(siblings, /auth\.uid\(\) <> p_user_id/);
+  assert.match(siblings, /another customer''s support cases are still readable/);
+});
+
+test("the rule outlives the list of names", () => {
+  /*
+    Nine names, then one more. A longer list is not an answer; this
+    fails for functions nobody has written yet.
+  */
+  assert.match(siblings, /create or replace function public\.functions_trusting_their_arguments/);
+  assert.match(siblings, /these can be called by a browser and never ask who is calling/);
+  // Exceptions are decisions with reasons attached, not omissions.
+  assert.match(siblings, /create table if not exists public\.open_function_allowlist/);
+  assert.match(siblings, /why       text not null/);
+  assert.match(siblings, /Asked by the website before anybody has an account/);
+});
+
+test("the old cancellation door goes through the policy", () => {
+  /*
+    0126 put the policy in cancel_booking_with_fee and left
+    cancel_booking callable and unguarded, so a customer could preview
+    a CA$22.45 fee and cancel through the old door for nothing.
+  */
+  assert.match(siblings, /Adding a rule in one place and leaving the old entrance open/);
+  assert.match(siblings, /perform public\.cancel_booking_with_fee\(p_booking_id, p_reason, null\)/);
+  assert.match(siblings, /the legacy cancellation still bypasses the policy/);
+});
+
+test("a recovery that was not raised is not announced as raised", () => {
+  /*
+    Both paths said "a refund has been raised" whether or not the
+    request was created — one logged the failure and told the customer
+    the opposite, the other never checked. Telling somebody a recovery
+    exists when it does not is worse than silence: it stops them
+    chasing it.
+  */
+  assert.match(shared, /RAISING THE MONEY BACK — AND SAYING WHICH OF THE TWO HAPPENED/);
+  assert.match(shared, /We could NOT start the refund automatically/);
+  // Both call sites go through the one function that checks.
+  const raises = shared.match(/raiseRecovery\(/g) ?? [];
+  assert.equal(raises.length, 3, "one definition and two call sites, all checked");
+  assert.doesNotMatch(shared, /await admin\.rpc\("system_cancellation_refund"[\s\S]{0,200}\n\s*\}\);\n\s*note =/);
+  // And the failure is durable, because a log is not a record.
+  assert.match(shared, /action: "refund\.recovery_failed"/);
+  assert.match(shared, /Durable, because the log is not/);
+});
