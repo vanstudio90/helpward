@@ -153,3 +153,60 @@ export async function decideRefundAction(
   revalidatePath("/admin/payments");
   return outcome;
 }
+
+/*
+  SENDING A REFUND THAT WAS ALREADY APPROVED.
+
+  Turning the switch on does not reach back and send the rows that
+  were approved while it was off — they sit in `processing` with no
+  processor id, which is exactly what they are. Re-approving them is
+  not possible (and should not be: the decision was already taken by
+  somebody, and that record stands), so there has to be a deliberate
+  way to send one.
+
+  This is that way. It sends an already-approved request and records
+  what comes back, through the same path as approval — one named leg,
+  the exact approved amount, the request's own id as the idempotency
+  key — so a row sent this way cannot become a second refund of one
+  sent any other way.
+*/
+export async function sendApprovedRefundAction(refundId: string): Promise<RefundResult> {
+  if (!refundSendingEnabled()) {
+    return {
+      ok: false,
+      error: "Sending is switched off. This request stays approved and unsent until it is enabled.",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_refund_ready_to_send", { p_refund: refundId });
+  if (error) return fail(error);
+
+  const ready = data as {
+    booking_id: string; leg: string; amount_cents: number; absorb_helper_share: boolean;
+  };
+
+  const sent = await refundCharge({
+    bookingId: ready.booking_id,
+    leg: ready.leg === "tip" ? "tip" : "service",
+    amountCents: ready.amount_cents,
+    absorbHelperShare: ready.absorb_helper_share,
+    operationId: refundId,
+  });
+
+  const outcome = await recordRefundOutcome(
+    sent,
+    async ({ status, processorId, detail }) => {
+      const { error: settleError } = await supabase.rpc("admin_refund_settle", {
+        p_refund: refundId, p_status: status,
+        p_processor_id: processorId, p_detail: detail,
+      });
+      return { error: settleError ? { message: settleError.message } : null };
+    },
+    { refundId, absorbHelperShare: ready.absorb_helper_share },
+  );
+
+  revalidatePath("/admin/refunds");
+  revalidatePath("/admin/payments");
+  return outcome;
+}

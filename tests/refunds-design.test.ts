@@ -92,15 +92,15 @@ test("the two outcomes are tracked apart", () => {
   /*
     The money going back and the helper's transfer being adjusted are
     separate operations at Stripe, and either can fail on its own.
+    The arithmetic is checked by running it, in
+    tests/refund-effects.test.ts — a source assertion is what let the
+    tip reversal use the service ratio for a release.
   */
   assert.match(data, /A refund has TWO outcomes and either can fail on its own/);
   assert.match(data, /key: "helper_transfer"/);
-  // Unknown is null and is never drawn as zero — except where zero is
-  // the decided answer.
-  assert.match(data, /amount_cents: absorb \? 0 : share/);
-  assert.match(data, /the amount cannot be worked out here/);
-  // Stripe performs the reversal; this figure says it is not the authority.
-  assert.match(data, /Stripe performs the reversal and its figure is the authority/);
+  assert.match(data, /THE TWO CHARGES SPLIT DIFFERENTLY/);
+  assert.ok(readFileSync("tests/refund-effects.test.ts", "utf8").includes("refundEffects("),
+    "the arithmetic must be exercised, not described");
 });
 
 test("available to refund subtracts what is already in flight", () => {
@@ -171,4 +171,85 @@ test("retrying is guarded and outside refunds are expected", () => {
   assert.match(page, /check whether the first attempt went through/i);
   assert.match(page, /appear after a\s*\n?\s*synchronisation/);
   assert.match(page, /via Stripe/);
+});
+
+/* ------------------------------------------------------------------ */
+/* EVENTS FROM THE PROCESSOR                                            */
+/* ------------------------------------------------------------------ */
+
+const webhook = readFileSync("app/api/webhooks/stripe/route.ts", "utf8");
+const ingest = readFileSync("supabase/migrations/0120_refund_event_ingest.sql", "utf8");
+const reconcile = readFileSync("scripts/reconcile-refunds.mjs", "utf8");
+
+test("a partial refund is never written down as a full one", () => {
+  /*
+    `charge.refunded` fires for a partial refund as readily as a full
+    one. The handler set payment_status = 'refunded' unconditionally,
+    so CA$5.00 back on a CA$224.50 charge marked the booking refunded
+    — and could overwrite the correct partial_refund 0119 had written.
+  */
+  assert.doesNotMatch(webhook, /update\(\{ payment_status: "refunded" \}\)/);
+  assert.match(webhook, /A CHARGE EVENT CARRIES EVERY REFUND ON THAT CHARGE/);
+  assert.match(ingest, /THE BOOKING IS NEVER DECIDED BY ONE EVENT/);
+  // Both charges decide it, from the ledger.
+  assert.match(ingest, /v_captured := coalesce\(v_b\.total_cents, 0\) \+ coalesce\(v_b\.tip_cents, 0\)/);
+  assert.match(ingest, /and status = 'succeeded'/);
+  // Proven in the migration, including the reversal when one later fails.
+  assert.match(ingest, /CA\$5\.00 of CA\$234\.50 was recorded as/);
+  assert.match(ingest, /a reversed failure left the booking fully refunded/);
+});
+
+test("a pending refund has somewhere to finish", () => {
+  assert.match(webhook, /case "refund\.updated":/);
+  assert.match(webhook, /case "refund\.failed":/);
+  assert.match(webhook, /THE LIFECYCLE THAT WAS MISSING ENTIRELY/);
+  // And it finds the request it belongs to rather than inserting a stranger.
+  assert.match(ingest, /the operation id we put in the refund's metadata/);
+  assert.match(ingest, /the event did not find its request by operation id/);
+  assert.match(ingest, /the flag was not cleared once the refund was identified/);
+});
+
+test("reconciliation advances what it already knows", () => {
+  /*
+    It skipped every id it had seen — which is exactly the id of the
+    pending row waiting to be advanced.
+  */
+  assert.match(reconcile, /KNOWING THE ID IS NOT THE SAME AS BEING UP TO DATE/);
+  assert.doesNotMatch(reconcile, /if \(known\.has\(r\.id\)\) continue;/);
+  assert.match(reconcile, /ingest_refund_event/);
+  // And it no longer decides a booking from one charge or from unsettled rows.
+  assert.match(reconcile, /recompute_booking_payment_status/);
+  assert.doesNotMatch(reconcile, /refundedHere >= booking\.total_cents/);
+});
+
+test("a failed write is not acknowledged", () => {
+  assert.match(webhook, /THE EVENT IS RECORDED BEFORE IT IS ACTED ON/);
+  assert.match(webhook, /A FAILURE IS NOT AN ACKNOWLEDGEMENT/);
+  assert.match(webhook, /status: 500/);
+  assert.doesNotMatch(webhook, /warning: "handler_error_logged"/);
+  // Retry is safe because the event is keyed by Stripe's own id.
+  assert.match(webhook, /onConflict: "id"/);
+  assert.match(ingest, /create table if not exists public\.stripe_webhook_events/);
+  assert.match(ingest, /processed_at is null for anything that failed/);
+});
+
+test("the panel says what the switch does", () => {
+  const p = readFileSync("components/admin/RefundReviewPanel.tsx", "utf8");
+  assert.match(p, /can\.send \? "Approve and send" : "Approve \(will not send\)"/);
+  assert.match(p, /THE COPY FOLLOWS THE SWITCH/);
+  assert.match(p, /Sending is switched off\./);
+  // An approved-but-unsent row can be sent deliberately, not by flag alone.
+  assert.match(p, /sendApprovedRefundAction/);
+  assert.match(ingest, /admin_refund_ready_to_send/);
+  assert.match(ingest, /Sending it again would refund the money twice/);
+});
+
+test("the concurrency script says what it actually does", () => {
+  const c = readFileSync("scripts/verify-refund-concurrency.mjs", "utf8");
+  // It claimed everything was rolled back; the fixture is committed.
+  assert.doesNotMatch(c, /Everything is rolled back/);
+  assert.match(c, /WHAT IT ACTUALLY WRITES/);
+  assert.match(c, /REHEARSAL ONLY, AND IT REFUSES ANYTHING ELSE/);
+  // And it does not try to delete from the append-only log.
+  assert.doesNotMatch(c, /delete from audit_log/);
 });

@@ -8,10 +8,20 @@
  * BOOKING first, which is the thing the money belongs to.
  *
  * This opens two real connections, holds both inside transactions, and
- * makes them race. Everything is rolled back.
+ * makes them race.
  *
- *   node scripts/verify-refund-concurrency.mjs            (rehearsal)
- *   PRODUCTION_DATABASE_URL=... node ... --production
+ * WHAT IT ACTUALLY WRITES, because an earlier version of this comment
+ * claimed "everything is rolled back" and that was not true: the race
+ * needs committed state to contend over, so the fixture booking IS
+ * committed, and the booking and its refund rows are deleted at the
+ * end. The audit events those requests wrote are NOT deleted — 0109
+ * made audit_log append-only and nothing here may remove from it. They
+ * are left, correctly attributed to nobody, and that is the point of
+ * an append-only log.
+ *
+ * So: rehearsal only. Do not point this at production.
+ *
+ *   node scripts/verify-refund-concurrency.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -25,10 +35,20 @@ for (const f of [".env.rehearsal", ".env.local"]) {
     if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
   }
 }
-const prod = process.argv.includes("--production");
-const url = prod ? process.env.PRODUCTION_DATABASE_URL
-  : (process.env.REHEARSAL_DATABASE_URL || process.env.DATABASE_URL);
+/*
+  REHEARSAL ONLY, AND IT REFUSES ANYTHING ELSE. This commits a fixture
+  booking and leaves audit rows behind; neither belongs in production.
+*/
+if (process.argv.includes("--production")) {
+  console.error("This writes a fixture booking and leaves audit rows. It is for rehearsal only.");
+  process.exit(1);
+}
+const url = process.env.REHEARSAL_DATABASE_URL || process.env.DATABASE_URL;
 if (!url) { console.error("no database url"); process.exit(1); }
+if (/xhmgmegraieouudyjjlv/.test(url)) {
+  console.error("That connection string is production. Refusing.");
+  process.exit(1);
+}
 
 const ADMIN_CLAIM = `{"app_metadata":{"role":"admin"}}`;
 const connect = async () => {
@@ -120,7 +140,9 @@ if (failures === 0) console.log("    PASS: the second saw the first's reservatio
 
 // Clean up and report.
 const cleanup = await connect();
-await cleanup.query("delete from audit_log where target_id in (select id::text from refunds where booking_id=$1)", [booking]).catch(() => {});
+/* The refunds and the fixture booking go. The audit events stay: the
+   log is append-only and deleting from it is the one thing this
+   project will not do, even for its own test rows. */
 await cleanup.query("delete from refunds where booking_id = $1", [booking]);
 await cleanup.query("delete from bookings where id = $1", [booking]);
 await cleanup.end();

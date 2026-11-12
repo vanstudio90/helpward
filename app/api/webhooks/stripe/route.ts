@@ -71,6 +71,78 @@ export async function POST(req: NextRequest) {
 
   const admin = createSupabaseServiceClient();
 
+  /*
+    THE EVENT IS RECORDED BEFORE IT IS ACTED ON.
+
+    Everything below used to ignore its own errors and the catch
+    returned 200, so an event that could not be written was told to
+    Stripe as handled and never came back. Now the verified event is
+    stored first, keyed by Stripe's own id, and `processed_at` is only
+    stamped once the work succeeded. A failure returns 500, which is
+    Stripe's signal to retry — and the retry is safe precisely because
+    this row makes repeated delivery idempotent.
+  */
+  const { error: recordError } = await admin
+    .from("stripe_webhook_events")
+    .upsert({
+      id: event.id,
+      type: event.type,
+      livemode: event.livemode,
+      payload: event.data.object as unknown as Record<string, unknown>,
+    }, { onConflict: "id" });
+  if (recordError) {
+    console.error("STRIPE EVENT NOT RECORDED", { id: event.id, type: event.type, recordError });
+    return NextResponse.json(
+      { ok: false, reason: "not_recorded", retry: true },
+      { status: 500 },
+    );
+  }
+  await admin.rpc("bump_webhook_attempt", { p_event: event.id });
+
+  /*
+    REFUND EVENTS GO THROUGH ONE PATH.
+
+    `charge.refunded` fires for a PARTIAL refund as readily as a full
+    one, which is how CA$5.00 back on a CA$224.50 charge came to mark
+    the whole booking refunded. Nothing here decides a booking's state
+    from one event any more: the refund is recorded as the processor
+    describes it and the booking is recomputed from the ledger, across
+    both the service charge and the tip.
+  */
+  const ingestRefund = async (refund: Stripe.Refund) => {
+    const intentId = typeof refund.payment_intent === "string"
+      ? refund.payment_intent
+      : refund.payment_intent?.id ?? null;
+    if (!intentId) return { skipped: "no_intent" as const };
+
+    const { data: booking, error: lookupError } = await admin
+      .from("bookings")
+      .select("id, stripe_payment_intent_id, tip_payment_intent_id")
+      .or(`stripe_payment_intent_id.eq.${intentId},tip_payment_intent_id.eq.${intentId}`)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!booking) return { skipped: "no_booking" as const };
+
+    const row = booking as unknown as {
+      id: string; stripe_payment_intent_id: string | null; tip_payment_intent_id: string | null;
+    };
+    /* WHICH CHARGE IT WAS, from the intent it names — not from a
+       metadata field a dashboard refund would not carry. */
+    const leg = row.tip_payment_intent_id === intentId ? "tip" : "service";
+
+    const { error: ingestError } = await admin.rpc("ingest_refund_event", {
+      p_processor_id: refund.id,
+      p_booking: row.id,
+      p_leg: leg,
+      p_amount_cents: refund.amount,
+      p_status: refund.status ?? "pending",
+      p_operation: (refund.metadata?.helpward_operation as string | undefined) ?? null,
+      p_reason: null,
+    });
+    if (ingestError) throw ingestError;
+    return { ingested: true as const };
+  };
+
   try {
     switch (event.type) {
       // Stripe telling us a hold is in place. This is the durable half of
@@ -118,14 +190,57 @@ export async function POST(req: NextRequest) {
           .eq("stripe_payment_intent_id", pi.id);
         break;
       }
+      /*
+        A CHARGE EVENT CARRIES EVERY REFUND ON THAT CHARGE, so each one
+        is ingested and the booking is recomputed from the ledger. The
+        charge's own `refunded` flag is deliberately not used to set a
+        booking's status: it describes ONE charge, and a booking has
+        two.
+      */
       case "charge.refunded": {
         const charge = event.data.object as Stripe.Charge;
-        if (charge.payment_intent) {
-          await admin
-            .from("bookings")
-            .update({ payment_status: "refunded" })
-            .eq("stripe_payment_intent_id", String(charge.payment_intent));
+        for (const refund of charge.refunds?.data ?? []) {
+          await ingestRefund(refund);
         }
+        /* An older charge payload can arrive without the expanded
+           refunds list. Recomputing from the ledger is still correct;
+           inventing "refunded" from the flag is not. */
+        if (!charge.refunds?.data?.length && charge.payment_intent) {
+          const intentId = String(charge.payment_intent);
+          const { data: booking, error } = await admin
+            .from("bookings")
+            .select("id")
+            .or(`stripe_payment_intent_id.eq.${intentId},tip_payment_intent_id.eq.${intentId}`)
+            .maybeSingle();
+          if (error) throw error;
+          if (booking) {
+            const { error: recomputeError } = await admin.rpc(
+              "recompute_booking_payment_status",
+              { p_booking: (booking as { id: string }).id },
+            );
+            if (recomputeError) throw recomputeError;
+          }
+        }
+        break;
+      }
+
+      /*
+        THE LIFECYCLE THAT WAS MISSING ENTIRELY. A refund Stripe is
+        still working on finishes here — or fails here — and before
+        this there was no branch at all: the event was acknowledged
+        with 200 and nothing was written, so a pending refund stayed
+        pending for ever.
+      */
+      case "refund.created":
+      case "refund.updated":
+      case "refund.failed": {
+        await ingestRefund(event.data.object as Stripe.Refund);
+        break;
+      }
+
+      /* Stripe's older name for the same thing. */
+      case "charge.refund.updated": {
+        await ingestRefund(event.data.object as Stripe.Refund);
         break;
       }
       /*
@@ -183,10 +298,37 @@ export async function POST(req: NextRequest) {
       // Other event types ignored for now
     }
   } catch (err) {
-    // Ack with 200 to prevent Stripe retry storms — signature is verified above,
-    // so the event is authentic; any failure here is on our side.
-    console.error("stripe webhook handler error:", err);
-    return NextResponse.json({ ok: true, warning: "handler_error_logged" });
+    /*
+      A FAILURE IS NOT AN ACKNOWLEDGEMENT.
+
+      This used to return 200 on any error, to avoid retry storms. The
+      cost of that was silence: an event that could not be recorded was
+      gone, and the money screen simply never learned what the
+      processor had done. The event row above is stored and
+      unprocessed, so Stripe's retry re-runs it safely, and anything
+      that never succeeds is visible rather than lost.
+    */
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("stripe webhook handler error:", { id: event.id, type: event.type, err });
+    await admin
+      .from("stripe_webhook_events")
+      .update({ last_error: message.slice(0, 500) })
+      .eq("id", event.id);
+    return NextResponse.json(
+      { ok: false, reason: "handler_failed", retry: true },
+      { status: 500 },
+    );
+  }
+
+  /* Only now is it handled. */
+  const { error: doneError } = await admin
+    .from("stripe_webhook_events")
+    .update({ processed_at: new Date().toISOString(), last_error: null })
+    .eq("id", event.id);
+  if (doneError) {
+    console.error("STRIPE EVENT PROCESSED BUT NOT MARKED", { id: event.id, doneError });
+    /* The work succeeded; saying otherwise would make Stripe repeat
+       it. It is idempotent, but a loud log beats a silent lie. */
   }
 
   return NextResponse.json({ ok: true });

@@ -1,6 +1,7 @@
 import "server-only";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { windowSince, windowLabel, modeOfAccount } from "@/lib/admin-filters";
+import { refundSendingEnabled } from "@/lib/refund-approval";
 import type { RefundState, EffectState } from "@/lib/admin-refund-states";
 import type { PaymentLeg, PaymentMode } from "@/lib/admin-payment-states";
 
@@ -76,6 +77,9 @@ export type RefundReview = {
   /* The row's real id, and the token a decision is made against. */
   id_uuid: string;
   updated_at: string;
+  /* Null until the request has actually been handed to the processor.
+     An approved row with no id is one that was never sent. */
+  processor_refund_id: string | null;
   state: RefundState;
   mode: PaymentMode;
   currency: string;
@@ -129,6 +133,13 @@ export type RefundsView = {
   can: {
     request: boolean;
     decide: boolean;
+    /*
+      WHETHER APPROVING ALSO SENDS. The server has refused to send
+      since HELPWARD_REFUND_SEND was introduced; the panel went on
+      saying "Approve and send" and promising the money would go
+      immediately. The button has to know.
+    */
+    send: boolean;
   };
   /** Why the list is empty, when it is. Never a blank table. */
   empty_reason: string | null;
@@ -212,49 +223,77 @@ type BookingForRefund = {
   helper is still holding the share of a job the customer no longer
   paid for.
 
-  The helper figure is PROPORTIONAL, because that is what a reversal
-  does: refunding a tenth of a job pulls back a tenth of the transfer.
-  It is calculated from the split saved with the booking, and it says
-  so — Stripe performs the reversal and its figure is the authority.
+  THE TWO CHARGES SPLIT DIFFERENTLY, and this got it wrong. The
+  service charge is split between the helper's payout and Helpward's
+  commission, so reversing part of it pulls back that proportion — on
+  a CA$224.50 job paying out CA$176.00, CA$5.00 reversed takes CA$3.92
+  from the helper. A TIP carries no commission: all of it went to the
+  helper, so CA$5.00 of a tip reversed takes CA$5.00, not CA$3.92. The
+  old code applied the service ratio to both, and quietly understated
+  what a helper would lose on every tip refund.
+
+  AND THESE ARE ESTIMATES UNTIL THE PROCESSOR SAYS OTHERWISE. Stripe
+  performs the reversal and we do not store what it actually reversed,
+  so nothing here is marked "applied" on the strength of a refund
+  status alone. The customer's leg is confirmed by the refund
+  succeeding; the transfer is not, and says so.
 */
-function effectsOf(
-  r: RefundDb, b: BookingForRefund | undefined,
+export function refundEffects(
+  r: Pick<RefundDb, "leg" | "amount_cents" | "status" | "absorb_helper_share">,
+  b: Pick<BookingForRefund, "total_cents" | "payout_cents"> | undefined,
 ): RefundEffect[] {
   const settled = r.status === "succeeded";
   const sent = r.status === "processing" || settled;
   const absorb = r.absorb_helper_share ?? false;
+  const isTip = r.leg === "tip";
 
-  const share = b && b.total_cents && b.payout_cents !== null
-    ? Math.round(r.amount_cents * (b.payout_cents / b.total_cents))
-    : null;
+  /*
+    The helper's share of THIS charge. A tip is wholly theirs; the
+    service charge is theirs in the proportion the booking recorded.
+  */
+  const helperShare: number | null = isTip
+    ? r.amount_cents
+    : b && b.total_cents && b.payout_cents !== null
+      ? Math.round(r.amount_cents * (b.payout_cents / b.total_cents))
+      : null;
+
+  const reversed = absorb ? 0 : helperShare;
 
   return [
     {
       key: "customer",
       label: "Back to the customer",
       amount_cents: r.amount_cents,
+      /* This one IS confirmed by the refund succeeding. */
       state: settled ? "applied" : sent ? "pending" : "requires_review",
       note: settled ? null : "Not sent yet.",
     },
     {
       key: "helper_transfer",
       label: absorb ? "Helper keeps their share" : "Taken back from the helper",
-      /* Null is unknown and is never rendered as zero — except when
-         absorbing, where zero is the actual, decided answer. */
-      amount_cents: absorb ? 0 : share,
-      state: absorb ? "not_applicable" : settled ? "applied" : sent ? "pending" : "requires_review",
+      amount_cents: reversed,
+      /*
+        NEVER "applied" ON THE STRENGTH OF A REFUND STATUS. The
+        reversal is a separate operation at the processor and nothing
+        here reads what it actually did.
+      */
+      state: absorb ? "not_applicable" : "requires_review",
       note: absorb
         ? "This reason leaves the helper paid. Helpward carries the refund."
-        : share === null
+        : helperShare === null
           ? "The split saved with this booking is incomplete, so the amount cannot be worked out here."
-          : "Proportional to the refund, calculated from the split saved with this booking. Stripe performs the reversal and its figure is the authority.",
+          : isTip
+            ? "The whole tip was the helper's, so the whole refund comes back out of their balance. An estimate until the processor's own reversal is checked."
+            : "The helper's share of this charge, in the proportion saved with the booking. An estimate until the processor's own reversal is checked.",
     },
     {
       key: "platform",
       label: absorb ? "Helpward absorbs" : "Helpward's share returned",
-      amount_cents: share === null ? null : absorb ? r.amount_cents : r.amount_cents - share,
+      amount_cents: reversed === null ? null : absorb ? r.amount_cents : r.amount_cents - reversed,
       state: settled ? "applied" : sent ? "pending" : "requires_review",
-      note: null,
+      note: isTip && !absorb
+        ? "A tip carries no commission, so none of it comes back to Helpward."
+        : null,
     },
   ];
 }
@@ -283,7 +322,7 @@ export async function getRefundsView(opts: {
 
   const shell = (loadError: string | null, emptyReason: string | null): RefundsView => ({
     sample: false,
-    can: { request: true, decide: true },
+    can: { request: true, decide: true, send: refundSendingEnabled() },
     empty_reason: emptyReason,
     load_error: loadError,
     as_of: "just now",
@@ -487,6 +526,7 @@ export async function getRefundsView(opts: {
       id: `RF-${ref(r.id)}`,
       id_uuid: r.id,
       updated_at: r.updated_at,
+      processor_refund_id: r.stripe_refund_id,
       state: (r.status as RefundState),
       mode: modeOfRefund(r),
       currency,
@@ -522,7 +562,7 @@ export async function getRefundsView(opts: {
         internal_note: r.internal_note ?? "",
         notify_customer: false,
       },
-      effects: effectsOf(r, b),
+      effects: refundEffects(r, b),
       blocked_reason:
         r.status !== "awaiting_review"
           ? `This refund is ${r.status}. There is nothing to decide.`
@@ -537,7 +577,7 @@ export async function getRefundsView(opts: {
 
   return {
     sample: false,
-    can: { request: true, decide: true },
+    can: { request: true, decide: true, send: refundSendingEnabled() },
     load_error: null,
     empty_reason: rows.length > 0 ? null
       : refunds.length === 0

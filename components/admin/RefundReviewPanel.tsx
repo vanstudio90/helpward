@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   X, ExternalLink, Info, AlertTriangle, Send, Save, CheckCircle2, History, Lock,
 } from "lucide-react";
-import { decideRefundAction, type RefundResult } from "@/app/(admin)/admin/refunds/actions";
+import {
+  decideRefundAction, sendApprovedRefundAction, type RefundResult,
+} from "@/app/(admin)/admin/refunds/actions";
 import type { RefundReview } from "@/lib/data/admin-refunds";
 import {
   REFUND_LABEL, REFUND_TONE, REFUND_MEANING, REFUND_REASONS,
@@ -39,7 +41,7 @@ export function RefundReviewPanel({
 }: {
   review: RefundReview;
   sample: boolean;
-  can: { request: boolean; decide: boolean };
+  can: { request: boolean; decide: boolean; send: boolean };
 }) {
   /*
     APPROVING IS THE MOMENT MONEY MOVES, and nothing else on this
@@ -50,10 +52,26 @@ export function RefundReviewPanel({
   const [busy, setBusy] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<RefundResult | null>(null);
 
+  const run = async (key: string, fn: () => Promise<RefundResult>) => {
+    setBusy(key);
+    setOutcome(null);
+    try {
+      const result = await fn();
+      setOutcome(result);
+      if (result.ok) router.refresh();
+    } catch (e) {
+      setOutcome({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const decide = (approve: boolean) => async () => {
     const why = window.prompt(
       approve
-        ? "Why is this refund being approved? It is recorded with your name, and the money is sent immediately after."
+        ? can.send
+          ? "Why is this refund being approved? It is recorded with your name, and the money is sent immediately after."
+          : "Why is this refund being approved? It is recorded with your name. Sending is switched off, so NO money will move — the request will wait."
         : "Why is this refund being declined? The request stays on the record with your reason.",
     );
     if (why === null) return;
@@ -335,18 +353,57 @@ export function RefundReviewPanel({
             title={review.blocked_reason ?? (overAvailable ? "More than is available" : undefined)}
             className="inline-flex items-center gap-1.5 bg-brand-600 text-white text-[13px] font-semibold px-3.5 py-2 rounded-xl disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
             <CheckCircle2 className="w-4 h-4" />
-            {busy === "approve" ? "Sending…" : "Approve and send"}
+            {busy === "approve"
+              ? (can.send ? "Sending…" : "Recording…")
+              : (can.send ? "Approve and send" : "Approve (will not send)")}
           </button>
+          {/*
+            AN APPROVED ROW THAT WAS NEVER SENT. Turning the switch on
+            does not reach back and send these, and re-approving is not
+            possible — the decision already happened. So sending one is
+            its own deliberate act.
+          */}
+          {review.state === "processing" && !review.processor_refund_id && (
+            <button type="button"
+              disabled={sample || !can.send || busy !== null}
+              title={can.send
+                ? "Send this already-approved refund to the processor now."
+                : "Sending is switched off. This request stays approved and unsent."}
+              onClick={() => {
+                if (!window.confirm(
+                  "Send this approved refund to the processor now? The money moves immediately.",
+                )) return;
+                void run("send", () => sendApprovedRefundAction(review.id_uuid));
+              }}
+              className="inline-flex items-center gap-1.5 bg-white border border-brand-200 text-[13px] font-semibold text-brand-700 px-3 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+              {busy === "send" ? "Sending…" : "Send now"}
+            </button>
+          )}
           {blocked && review.blocked_reason && (
             <span className="inline-flex items-center gap-1.5 text-[12px] text-amber-800">
               <Lock className="w-3.5 h-3.5" /> {review.blocked_reason}
             </span>
           )}
         </div>
-        <p className="text-[11px] text-slate-500">
-          Approving sends the refund to the processor immediately. What comes back — an id or an
-          error — is written to this request, so a refund that failed is never shown as sent.
-        </p>
+        {/*
+          THE COPY FOLLOWS THE SWITCH. The server has refused to send
+          since the safeguard went in; this paragraph went on promising
+          the money would move immediately, which is the one thing an
+          operator must not be told wrongly about a refund.
+        */}
+        {can.send ? (
+          <p className="text-[11px] text-slate-500">
+            Approving sends the refund to the processor immediately. What comes back — an id or an
+            error — is written to this request, so a refund that failed is never shown as sent.
+          </p>
+        ) : (
+          <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+            <span className="font-semibold">Sending is switched off.</span>{" "}
+            Approving records the decision with your name and moves nothing. The request waits as
+            approved-but-unsent until sending is enabled and somebody sends it deliberately — the
+            end-to-end run against the processor has not been done yet.
+          </p>
+        )}
 
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
           <span>

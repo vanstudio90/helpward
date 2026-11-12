@@ -41,10 +41,32 @@ const { data: bookings, error } = await admin
   .or("stripe_payment_intent_id.not.is.null,tip_payment_intent_id.not.is.null");
 if (error) { console.error(error.message); process.exit(1); }
 
-const { data: existing } = await admin.from("refunds").select("stripe_refund_id");
-const known = new Set((existing ?? []).map((r) => r.stripe_refund_id).filter(Boolean));
+/*
+  KNOWING THE ID IS NOT THE SAME AS BEING UP TO DATE.
 
-let found = 0, missing = 0, written = 0;
+  This used to skip every refund whose processor id it had already
+  seen — which is exactly the id of a PENDING row waiting to be
+  advanced, and of an UNKNOWN one waiting to be identified. So the one
+  script that could have rescued them walked straight past them, and a
+  refund that completed hours after it was sent stayed "processing"
+  for ever.
+
+  Now a known id is still compared: if the processor's status differs
+  from ours, or the row is flagged for reconciliation, it is ingested
+  through the same function the webhook uses — which matches by id or
+  by the operation id in the refund's metadata, updates the original
+  request rather than inserting a stranger, preserves its leg and
+  reason, clears the flag only when it actually identified the refund,
+  and recomputes the booking from the ledger.
+*/
+const { data: existing } = await admin
+  .from("refunds")
+  .select("id, stripe_refund_id, status, processor_status, needs_reconciliation");
+const known = new Map(
+  (existing ?? []).filter((r) => r.stripe_refund_id).map((r) => [r.stripe_refund_id, r]),
+);
+
+let found = 0, missing = 0, written = 0, advanced = 0, agreed = 0;
 
 for (const b of bookings ?? []) {
   for (const [kind, pi] of [["job", b.stripe_payment_intent_id], ["tip", b.tip_payment_intent_id]]) {
@@ -54,45 +76,84 @@ for (const b of bookings ?? []) {
 
     for (const r of list.data ?? []) {
       found++;
-      if (known.has(r.id)) continue;
+      const leg = kind === "tip" ? "tip" : "service";
+      const mine = known.get(r.id);
+
+      if (mine) {
+        /* Already recorded. Does it still say the same thing? */
+        const stale = (mine.processor_status ?? null) !== (r.status ?? null)
+          || mine.needs_reconciliation === true;
+        if (!stale) { agreed++; continue; }
+        console.log(`  STALE    booking ${b.id.slice(0, 8)}  ${leg}  ${r.id}  ours=${mine.processor_status ?? mine.status}  theirs=${r.status}${mine.needs_reconciliation ? "  (flagged)" : ""}`);
+        if (!APPLY) continue;
+        const { error: advErr } = await admin.rpc("ingest_refund_event", {
+          p_processor_id: r.id,
+          p_booking: b.id,
+          p_leg: leg,
+          p_amount_cents: r.amount,
+          p_status: r.status ?? "pending",
+          p_operation: r.metadata?.helpward_operation ?? null,
+          p_reason: null,
+        });
+        if (advErr) console.error(`    could not advance: ${advErr.message}`);
+        else advanced++;
+        continue;
+      }
+
       missing++;
       console.log(`  MISSING  booking ${b.id.slice(0, 8)}  ${kind}  ${r.id}  $${(r.amount / 100).toFixed(2)}  ${r.status}`);
       if (!APPLY) continue;
 
-      const { error: insErr } = await admin.from("refunds").upsert({
-        booking_id: b.id,
-        stripe_refund_id: r.id,
-        amount_cents: r.amount,
-        reason: r.reason ?? "requested_by_customer",
-        status: r.status ?? "succeeded",
-      }, { onConflict: "stripe_refund_id" });
+      /*
+        THROUGH THE SAME DOOR AS THE WEBHOOK. Upserting directly here
+        would bypass the matching that lets a refund find the request
+        it belongs to — and would set a booking's status from one
+        charge, which is the bug 0120 exists to stop.
+      */
+      const { error: insErr } = await admin.rpc("ingest_refund_event", {
+        p_processor_id: r.id,
+        p_booking: b.id,
+        p_leg: leg,
+        p_amount_cents: r.amount,
+        p_status: r.status ?? "succeeded",
+        p_operation: r.metadata?.helpward_operation ?? null,
+        p_reason: r.reason ?? null,
+      });
       if (insErr) console.error(`    could not write: ${insErr.message}`);
       else written++;
     }
   }
 }
 
-// A booking's payment_status must agree with what Stripe says is left.
+/*
+  THE BOOKING FOLLOWS THE LEDGER, through the same function everything
+  else uses.
+
+  What was here carried two of the bugs this pass is removing: it
+  compared the refunded total against `total_cents` ALONE, so a
+  booking whose service charge was fully refunded was marked
+  "refunded" while its tip was untouched; and it summed EVERY refund
+  row regardless of status, so a request still awaiting review — or
+  one that failed — counted as money returned.
+*/
 if (APPLY) {
   for (const b of bookings ?? []) {
-    if (!b.stripe_payment_intent_id) continue;
     const { data: rows } = await admin.from("refunds")
-      .select("amount_cents").eq("booking_id", b.id);
-    const refundedHere = (rows ?? []).reduce((n, r) => n + r.amount_cents, 0);
-    if (refundedHere === 0) continue;
-
-    const { data: booking } = await admin.from("bookings")
-      .select("total_cents, payment_status").eq("id", b.id).single();
-    if (!booking || !["captured", "partial_refund", "refunded"].includes(booking.payment_status)) continue;
-
-    const want = refundedHere >= booking.total_cents ? "refunded" : "partial_refund";
-    if (booking.payment_status !== want) {
-      await admin.from("bookings").update({ payment_status: want }).eq("id", b.id);
-      console.log(`  STATUS   booking ${b.id.slice(0, 8)}  ${booking.payment_status} -> ${want}`);
-    }
+      .select("id").eq("booking_id", b.id).limit(1);
+    if (!rows?.length) continue;
+    const { error: recErr } = await admin.rpc("recompute_booking_payment_status", {
+      p_booking: b.id,
+    });
+    if (recErr) console.error(`  could not recompute booking ${b.id.slice(0, 8)}: ${recErr.message}`);
   }
 }
 
-console.log(`\n  ${found} refunds at Stripe · ${missing} missing from the ledger · ${written} written`);
-if (missing > 0 && !APPLY) console.log(`  Re-run with --apply to record them.\n`);
-else console.log("");
+console.log(
+  `\n  ${found} refunds at Stripe · ${agreed} already agree · ` +
+  `${missing} missing from the ledger · ${written} written · ${advanced} advanced`,
+);
+if ((missing > 0 || advanced === 0) && !APPLY && (missing > 0 || found > agreed)) {
+  console.log("  Re-run with --apply to record and advance them.\n");
+} else {
+  console.log("");
+}
