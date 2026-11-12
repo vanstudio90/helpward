@@ -87,6 +87,15 @@ export type RefundReview = {
     refused.
   */
   quarantine: string | null;
+  /*
+    AN UNKNOWN PROCESSOR OUTCOME IS A SEPARATE BLOCK from a
+    quarantined identity, and it needs its own control: clearing the
+    identity used to be the only thing on offer, which left an
+    operator correctly told the booking was still blocked and given no
+    way to resolve it.
+  */
+  outcome_unknown: boolean;
+  outcome_note: string | null;
   state: RefundState;
   mode: PaymentMode;
   currency: string;
@@ -207,6 +216,7 @@ function at(iso: string | null): string | null {
 type RefundDb = {
   id: string; booking_id: string; leg: string; amount_cents: number;
   needs_reconciliation?: boolean | null;
+  reconcile_note?: string | null;
   quarantine_note?: string | null;
   quarantine_cleared_at?: string | null;
   reason: string | null; status: string; stripe_refund_id: string | null;
@@ -322,7 +332,7 @@ export async function getRefundsView(opts: {
       .select("id, booking_id, leg, amount_cents, reason, status, stripe_refund_id," +
         " requested_by, requested_at, decided_by, decided_at, decision_reason," +
         " internal_note, absorb_helper_share, failure_reason, needs_reconciliation," +
-        " quarantine_note, quarantine_cleared_at, created_at, updated_at")
+        " reconcile_note, quarantine_note, quarantine_cleared_at, created_at, updated_at")
       .order("updated_at", { ascending: false }).limit(500),
     db.from("bookings")
       .select("id, customer_id, provider_id, service_id, total_cents, tip_cents," +
@@ -542,6 +552,8 @@ export async function getRefundsView(opts: {
       updated_at: r.updated_at,
       processor_refund_id: r.stripe_refund_id,
       quarantine: r.quarantine_cleared_at ? null : r.quarantine_note ?? null,
+      outcome_unknown: Boolean(r.needs_reconciliation),
+      outcome_note: r.reconcile_note ?? null,
       state: (r.status as RefundState),
       mode: modeOfRefund(r),
       currency,

@@ -506,3 +506,80 @@ test("approval blocks on the same predicate as request and send", () => {
   assert.match(claims, /DECLINING IS ALWAYS ALLOWED/);
   assert.match(claims, /a decline was refused on a blocked booking/);
 });
+
+/* ------------------------------------------------------------------ */
+/* NULL IS NOT AN ANSWER, AND RECOVERY IS REACHABLE                    */
+/* ------------------------------------------------------------------ */
+
+const nulls = readFileSync("supabase/migrations/0124_null_is_not_an_answer.sql", "utf8");
+const refundPanel = readFileSync("components/admin/RefundReviewPanel.tsx", "utf8");
+
+test("no guard lets a NULL past", () => {
+  /*
+    `null not in ('a','b')` is NULL, not TRUE, so the `if` never fires.
+    p_found = NULL passed validation and cleared an unknown payment
+    outcome — row untouched at the processor, block simply erased.
+  */
+  assert.match(nulls, /A NULL SLIPS PAST `not in`, AND EVERY GUARD I WROTE USED IT/);
+  // Every surviving NOT IN guard rejects NULL first.
+  const guards = nulls.match(/p_\w+ not in \(/g) ?? [];
+  const nullChecked = nulls.match(/p_\w+ is null or p_\w+ not in \(/g) ?? [];
+  assert.equal(nullChecked.length, guards.length,
+    `${guards.length} NOT IN guards but only ${nullChecked.length} reject NULL`);
+  // Proven, both reported cases.
+  assert.match(nulls, /a NULL finding resolved an unknown outcome/);
+  assert.match(nulls, /a NULL processor status resolved an unknown outcome/);
+  // And a refusal must leave everything exactly as it was.
+  assert.match(nulls, /a refused input changed the row anyway/);
+  assert.match(nulls, /a refused input unblocked the booking/);
+  assert.match(nulls, /a refused input wrote an audit entry/);
+});
+
+test("a missing decision is not a decline", () => {
+  // `if p_approve then` treats NULL as false — a refusal nobody chose.
+  assert.match(nulls, /A NULL BOOLEAN WAS READING AS "NO"/);
+  assert.match(nulls, /if p_approve is null then/);
+  assert.match(nulls, /a NULL answer was accepted as a decision/);
+});
+
+test("the bodies were read back, not retyped", () => {
+  /* Six live functions rewritten by hand is a worse risk than the bug. */
+  assert.match(nulls, /read back from the database\s*\n\s*with pg_get_functiondef/);
+  assert.match(nulls, /CREATE OR REPLACE FUNCTION public\.ingest_refund_event/);
+  assert.match(nulls, /CREATE OR REPLACE FUNCTION public\.admin_venue_set_permissions/);
+});
+
+test("an unknown outcome can be resolved from the console", () => {
+  /*
+    The function existed and no screen called it, so an operator could
+    clear the identity problem and then be told — correctly and
+    uselessly — that the booking was still blocked.
+  */
+  assert.match(actions, /RECORDING WHAT THE PROCESSOR ACTUALLY DID/);
+  assert.match(actions, /admin_refund_resolve_unknown/);
+  assert.match(refundPanel, /THE OTHER HALF OF RECOVERY/);
+  assert.match(refundPanel, /resolveRefundOutcomeAction/);
+  // Both findings are offered, and "refunded" asks for the id and status.
+  assert.match(refundPanel, /The processor DID refund it/);
+  assert.match(refundPanel, /It never left — no refund exists/);
+  assert.match(refundPanel, /The processor's refund id for this operation/);
+});
+
+test("the quarantine prompt no longer overpromises", () => {
+  // It said clearing identity "unblocks every refund on this booking".
+  assert.doesNotMatch(refundPanel, /it unblocks every refund on this booking/);
+  assert.match(refundPanel, /This resolves the IDENTITY problem only/);
+});
+
+test("a block stops money leaving, it does not trap the queue", () => {
+  /*
+    The database allows declining on a blocked booking; the screen
+    disabled the button anyway, so the one safe action was the one an
+    operator could not take.
+  */
+  assert.match(refundPanel, /A BLOCK STOPS MONEY LEAVING\. IT DOES NOT TRAP THE QUEUE/);
+  assert.match(refundPanel, /const canDecline = review\.state === "awaiting_review"/);
+  assert.match(refundPanel, /disabled=\{sample \|\| !can\.decide \|\| !canDecline \|\| busy !== null\}/);
+  // Approve stays protected by the block.
+  assert.match(refundPanel, /disabled=\{sample \|\| !can\.decide \|\| blocked \|\| overAvailable \|\| busy !== null\}/);
+});

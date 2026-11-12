@@ -56,7 +56,11 @@ function fail(error: { message?: string; code?: string } | null): RefundResult {
     case "HW139": return { ok: false, error: message };
     case "HW141": return { ok: false, error: message };
     case "HW143": return { ok: false, error: message };
-    case "HW144": return { ok: false, error: "There is no open quarantine on this refund." };
+    case "HW144": return { ok: false, error: message };
+    case "HW145": return { ok: false, error: message };
+    case "HW146": return { ok: false, error: "Say which you found: that the processor refunded it, or that it did not." };
+    case "HW147": return { ok: false, error: message };
+    case "HW148": return { ok: false, error: "Say whether this is an approval or a decline." };
     default: return { ok: false, error: error?.message ?? "The refund could not be recorded." };
   }
 }
@@ -253,6 +257,45 @@ export async function clearRefundQuarantineAction(
   return {
     ok: true,
     message: "Quarantine resolved.",
+    detail: (data as { note: string }).note,
+  };
+}
+
+/*
+  RECORDING WHAT THE PROCESSOR ACTUALLY DID.
+
+  An unknown outcome blocks every refund action on the booking, and
+  until now nothing in the console could end that: the function
+  existed, and no screen called it. An operator could clear the
+  identity problem and then be told, correctly and uselessly, that the
+  booking was still blocked by something they had no way to resolve.
+
+  It takes a FINDING, not a sentence. "Refunded" needs the processor's
+  own id and status; "not refunded" records that the money never left
+  and marks the request failed. The note says how it was checked, and
+  all of it goes in the trail.
+*/
+export async function resolveRefundOutcomeAction(
+  refundId: string,
+  found: "refunded" | "not_refunded",
+  processorId: string,
+  processorStatus: string,
+  note: string,
+): Promise<RefundResult> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_refund_resolve_unknown", {
+    p_refund: refundId,
+    p_found: found,
+    p_processor_id: processorId || null,
+    p_status: processorStatus || null,
+    p_note: note,
+  });
+  if (error) return fail(error);
+  revalidatePath("/admin/refunds");
+  revalidatePath("/admin/payments");
+  return {
+    ok: true,
+    message: found === "refunded" ? "Recorded as refunded." : "Recorded: the money never left.",
     detail: (data as { note: string }).note,
   };
 }

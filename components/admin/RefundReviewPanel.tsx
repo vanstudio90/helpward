@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import {
   decideRefundAction, sendApprovedRefundAction, clearRefundQuarantineAction,
-  type RefundResult,
+  resolveRefundOutcomeAction, type RefundResult,
 } from "@/app/(admin)/admin/refunds/actions";
 import type { RefundReview } from "@/lib/data/admin-refunds";
 import {
@@ -103,6 +103,16 @@ export function RefundReviewPanel({
   };
 
   const blocked = Boolean(review.blocked_reason) || sample;
+  /*
+    A BLOCK STOPS MONEY LEAVING. IT DOES NOT TRAP THE QUEUE.
+
+    The database allows declining a request on a blocked booking —
+    refusing it would leave the queue stuck behind the very thing
+    somebody is trying to tidy up — and this screen disabled the
+    button anyway, so the one safe action was the one an operator
+    could not take.
+  */
+  const canDecline = review.state === "awaiting_review";
   const proposed = kind === "full" ? review.balances.available_cents : Math.round(Number(amount || 0) * 100);
   const overAvailable = proposed > review.balances.available_cents;
 
@@ -356,7 +366,7 @@ export function RefundReviewPanel({
               disabled={sample || busy !== null}
               onClick={() => {
                 const why = window.prompt(
-                  "What did you check at the processor, and what did you find? This is recorded with your name, and it unblocks every refund on this booking.",
+                  "What did you check at the processor, and what did you find? This is recorded with your name.\n\nThis resolves the IDENTITY problem only. If this refund also has an unknown outcome, that stays blocked until the actual processor result is recorded.",
                 );
                 if (why === null) return;
                 void run("quarantine", () => clearRefundQuarantineAction(review.id_uuid, why));
@@ -367,9 +377,61 @@ export function RefundReviewPanel({
           </div>
         )}
 
+        {/*
+          THE OTHER HALF OF RECOVERY. An unknown outcome blocks the
+          booking and nothing on this screen could end it: the
+          function existed and no control called it.
+        */}
+        {review.outcome_unknown && (
+          <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
+            <p className="text-[12px] font-semibold text-rose-900">
+              It is not known whether this refund was taken
+            </p>
+            {review.outcome_note && (
+              <p className="text-[11px] text-rose-800 mt-0.5">{review.outcome_note}</p>
+            )}
+            <p className="text-[11px] text-rose-800 mt-1">
+              Check the processor for operation <code className="bg-white/70 px-1 rounded">{review.id_uuid}</code>,
+              then record what you found. Nothing else can be requested, approved or sent against
+              this booking until you do.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <button type="button" disabled={sample || busy !== null}
+                onClick={() => {
+                  const id = window.prompt("The processor's refund id for this operation (re_…):");
+                  if (id === null) return;
+                  const status = window.prompt(
+                    "The status the processor shows: succeeded, pending or requires_action.",
+                    "succeeded",
+                  );
+                  if (status === null) return;
+                  const how = window.prompt("How did you check? This is recorded.");
+                  if (how === null) return;
+                  void run("outcome", () =>
+                    resolveRefundOutcomeAction(review.id_uuid, "refunded", id.trim(), status.trim(), how));
+                }}
+                className="text-[11px] font-semibold text-rose-900 bg-white border border-rose-200 px-2.5 py-1.5 rounded-lg disabled:opacity-50">
+                {busy === "outcome" ? "Recording…" : "The processor DID refund it"}
+              </button>
+              <button type="button" disabled={sample || busy !== null}
+                onClick={() => {
+                  const how = window.prompt(
+                    "How did you confirm no refund exists at the processor? This is recorded, and the request will be marked failed.",
+                  );
+                  if (how === null) return;
+                  void run("outcome", () =>
+                    resolveRefundOutcomeAction(review.id_uuid, "not_refunded", "", "", how));
+                }}
+                className="text-[11px] font-semibold text-rose-900 bg-white border border-rose-200 px-2.5 py-1.5 rounded-lg disabled:opacity-50">
+                It never left — no refund exists
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
           <button type="button"
-            disabled={sample || !can.decide || blocked || busy !== null}
+            disabled={sample || !can.decide || !canDecline || busy !== null}
             onClick={decide(false)}
             className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
             {busy === "decline" ? "Declining…" : "Decline"}
