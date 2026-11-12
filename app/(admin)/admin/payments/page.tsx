@@ -12,12 +12,18 @@ import { PaymentDetailPanel } from "@/components/admin/PaymentDetailPanel";
 /*
   PAYMENTS.
 
-  THIS SCREEN IS A DESIGN, AND IT SAYS SO. Every figure on it comes
-  from the sample dataset in lib/data/admin-payments.ts; the badge in
-  the title and the strip under it are not decoration, they are the
-  only thing standing between a reader and the belief that Helpward
-  took CA$1,240 last month. When getPaymentsView() is wired to real
-  reads it sets `sample: false` and the stamps disappear on their own.
+  WIRED. Every figure on it is read from `bookings` and `refunds` —
+  the rows Helpward wrote when it took the money. It was a stamped
+  design for exactly as long as it took to be able to read those rows,
+  because a console showing invented money while looking like the real
+  one is the most expensive mistake this product could make.
+
+  WHAT IT STILL DOES NOT CLAIM. There is no local mirror of Stripe's
+  event log, so the detail panel's timeline is what Helpward recorded
+  and says so; no reconciliation has ever run, so the card says that
+  rather than printing a comforting date; and nothing on this screen
+  moves money — refunds are a separate screen with their own decision
+  trail.
 
   THE ARITHMETIC THE LAYOUT IS BUILT AROUND:
 
@@ -63,13 +69,15 @@ export default async function AdminPaymentsPage({
     mode: params.mode === "test" ? "test" : "live",
     tab,
     open: params.open ?? null,
+    includeReview: params.review === "1",
+    search: params.q ?? null,
+    state: params.state ?? null,
   });
 
   /*
-    The sample carries one worked example (PY-1040). Opening any other
-    row says so rather than showing that example under somebody else's
-    reference — a panel that silently displays the wrong payment is the
-    habit this screen must not start with.
+    A PANEL THAT SILENTLY SHOWS THE WRONG PAYMENT is the one habit
+    this screen must never start. If the requested row is not the one
+    that was built, nothing is shown under its reference.
   */
   const openId = params.open ?? view.detail?.id ?? null;
   const detail = openId && openId === view.detail?.id ? view.detail : null;
@@ -93,23 +101,19 @@ export default async function AdminPaymentsPage({
             <div className="min-w-0 flex-1">
               <h1 className="text-[28px] leading-tight font-bold text-slate-900 flex flex-wrap items-center gap-2.5">
                 Payments
-                {view.sample && (
-                  <span className="text-[11px] font-bold uppercase tracking-wide bg-violet-100 text-violet-800 px-2.5 py-1 rounded-md">
-                    Design concept · sample data
-                  </span>
-                )}
+
               </h1>
               <p className="text-[14px] text-slate-500 mt-0.5">
                 Track authorizations, captures and settlement issues.
               </p>
             </div>
-            <button type="button" disabled={view.sample}
-              title={view.sample ? "Nothing real to export yet" : "Export the filtered payments"}
+            <button type="button" disabled={!view.writable}
+              title="Exporting payments has not been built."
               className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
               <Download className="w-4 h-4" /> Export
             </button>
-            <button type="button" disabled={view.sample}
-              title={view.sample ? "Saved views arrive with the wiring" : "Saved views"}
+            <button type="button" disabled={!view.writable}
+              title="Saved views have not been built."
               className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
               <Bookmark className="w-4 h-4" /> Saved views
             </button>
@@ -120,15 +124,35 @@ export default async function AdminPaymentsPage({
             the most expensive mistake this console could make, so this
             sits above the numbers rather than in a footnote.
           */}
-          {view.sample && (
-            <div className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
-              <FlaskConical className="w-4 h-4 text-violet-600 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-violet-900">
-                <span className="font-semibold">Every number on this page is invented.</span>{" "}
-                This is the agreed design with sample data in it — no Stripe record, booking or
-                refund behind any of it, and the buttons that would move money are switched off.
-                Wiring it is one function: <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">getPaymentsView()</code>{" "}
-                in <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">lib/data/admin-payments.ts</code>.
+          {/*
+            A FAILED READ IS NOT AN EMPTY LEDGER. Drawing zeroes here
+            would read as a quiet month rather than a broken query, and
+            on this screen that is the difference between "nobody
+            bought anything" and "we cannot see what they bought".
+          */}
+          {view.load_error && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-amber-900">
+                <span className="font-semibold">The payments could not be read.</span>{" "}
+                {view.load_error} Nothing is shown rather than zeroes.
+              </p>
+            </div>
+          )}
+
+          {/*
+            CURRENCIES ARE NEVER SUMMED. If money exists in another
+            currency it is named here and left out of every figure,
+            rather than quietly converted or added in.
+          */}
+          {view.other_currencies.length > 0 && (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 flex items-start gap-2.5">
+              <Info className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-slate-700">
+                Showing {view.currency} only.{" "}
+                {view.other_currencies.map((c) => `${c.payments} payment${c.payments === 1 ? "" : "s"} in ${c.currency}`).join(", ")}{" "}
+                {view.other_currencies.length === 1 ? "is" : "are"} not included in any figure here —
+                these totals are one currency at a time and are never added together.
               </p>
             </div>
           )}
@@ -200,7 +224,7 @@ export default async function AdminPaymentsPage({
                   className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-brand-200"
                 />
               </div>
-              <button type="button" disabled={view.sample}
+              <button type="button" disabled={!view.writable}
                 className="ml-auto inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 bg-white border border-slate-200 px-2.5 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
                 <Columns3 className="w-3.5 h-3.5" /> Columns
               </button>
@@ -225,6 +249,26 @@ export default async function AdminPaymentsPage({
                 ))}
               </tbody>
             </table>
+
+            {/*
+              AN EMPTY PAYMENTS LIST IS ALARMING UNLESS IT EXPLAINS
+              ITSELF. "Every booking so far belongs to a test account"
+              is information; a blank table is a fault report.
+            */}
+            {view.rows.length === 0 && (
+              <div className="px-6 py-12 text-center">
+                <p className="text-[15px] font-bold text-slate-900">No payments to show</p>
+                <p className="text-[13px] text-slate-500 mt-1 max-w-md mx-auto">
+                  {view.empty_reason ?? "Nothing matches this window and these filters."}
+                </p>
+                {params.review !== "1" && (
+                  <Link href={query({ review: "1" })}
+                    className="inline-block mt-3 text-[13px] font-semibold text-brand-700">
+                    Include review &amp; test activity
+                  </Link>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-100">
               <span className="text-[12px] text-slate-500">
@@ -292,7 +336,7 @@ export default async function AdminPaymentsPage({
                 {view.reconciliation.items_to_investigate === 1 ? "" : "s"} to investigate
               </p>
               <p className="text-[11px] text-slate-500 mt-auto pb-2">{view.reconciliation.note}</p>
-              <button type="button" disabled={view.sample}
+              <button type="button" disabled={!view.writable}
                 className="w-full text-[13px] font-semibold text-brand-700 border border-brand-200 bg-white hover:bg-brand-50 px-3 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
                 View reconciliation
               </button>
@@ -309,22 +353,21 @@ export default async function AdminPaymentsPage({
           </div>
         </div>
 
-        {detail && <PaymentDetailPanel detail={detail} sample={view.sample} />}
+        {detail && <PaymentDetailPanel detail={detail} sample={!view.writable} />}
 
         {missingDetail && (
           <aside className="bg-white rounded-2xl border border-slate-200 px-5 py-10 text-center">
             <Layers className="w-7 h-7 text-slate-300 mx-auto" />
             <p className="text-[14px] font-semibold text-slate-700 mt-3">
-              No worked example for {openId}
+              {openId} is not in this view
             </p>
             <p className="text-[13px] text-slate-500 mt-1 max-w-xs mx-auto">
-              The sample dataset carries one payment in full — {view.detail?.id}. Every other row
-              is a list entry only, because inventing a second complete record would make this
-              design harder to check, not easier.
+              It may be outside this window, in another currency, or belong to a review account.
+              Nothing is shown under its reference rather than a different payment.
             </p>
-            <Link href={query({ open: view.detail?.id ?? null })}
+            <Link href={query({ open: null, window: "Everything" })}
               className="inline-block mt-3 text-[13px] font-semibold text-brand-700">
-              Open {view.detail?.id}
+              Clear the window and look again
             </Link>
           </aside>
         )}

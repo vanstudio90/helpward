@@ -1,41 +1,53 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { getReviewsView } from "../lib/data/admin-reviews.ts";
 import { REPORT_REASONS } from "../lib/admin-review-states.ts";
 
 /*
-  REVIEWS MODERATION IS A DESIGN — but the rating rule it describes is
-  the live one, so the test that matters most is the one checking the
-  page tells the truth about what hiding does to a helper's average.
+  REVIEWS MODERATION IS WIRED, and the test that matters most is the
+  one checking what hiding does to a helper's average. Until 0117 it
+  removed the customer's stars as a side effect, which lets a helper's
+  rating be improved by their customers' rudeness.
+
+  These are SOURCE assertions: getReviewsView() needs a database now,
+  and a test that needs a service key is one that gets skipped in CI
+  and then quietly rots.
 */
 
 const page = readFileSync("app/(admin)/admin/reviews/page.tsx", "utf8");
 const panel = readFileSync("components/admin/ReviewPanel.tsx", "utf8");
 const data = readFileSync("lib/data/admin-reviews.ts", "utf8");
 const states = readFileSync("lib/admin-review-states.ts", "utf8");
+const moderation = readFileSync("supabase/migrations/0117_review_moderation.sql", "utf8");
+const actions = readFileSync("app/(admin)/admin/reviews/actions.ts", "utf8");
 
-test("the rating effect states the implemented result, not a question", async () => {
-  const view = await getReviewsView();
-  const treatment = view.selected!.rating_treatment;
-  // The mockup said "Not shown · Check policy". This says which.
-  assert.ok(["included", "excluded"].includes(treatment.public_effect));
-  assert.equal(treatment.public_effect, "excluded", "a hidden review is drawn as still counting");
-  assert.match(panel, /RATING_EFFECT_LABEL\[detail\.rating_treatment\.public_effect\]/);
-  assert.doesNotMatch(panel, /Check policy/);
-
+test("hiding the words does not silently move the helper's score", () => {
   /*
-    AND IT MATCHES THE CODE. refresh_provider_rating aggregates only
-    customer_visible rows and fires on update, so hiding removes the
-    rating from the public average. If that migration ever changes,
-    this test fails and the copy gets revisited rather than quietly
-    becoming a lie.
+    THE DECISION AT THE CENTRE OF 0117. refresh_provider_rating()
+    averaged the reviews where customer_visible was true, so hiding a
+    review ALSO removed its stars — one act, two consequences, and the
+    second invisible from this screen. A helper's average could be
+    improved by their customers' rudeness.
   */
-  const trigger = readFileSync("supabase/migrations/0006_reviews_trigger.sql", "utf8");
-  assert.match(trigger, /where provider_id = new\.provider_id and customer_visible/);
-  assert.match(trigger, /after insert or update on reviews/);
-  assert.equal(treatment.internal_average_exists, false);
-  assert.match(page, /there is no\s*\n?\s*separate internal average/);
+  assert.match(moderation, /THE DECISION AT THE CENTRE OF THIS FILE/);
+  assert.match(moderation, /where provider_id = new\.provider_id and rating_visible/);
+  assert.match(moderation, /rating_visible = case when p_exclude_rating then false else rating_visible end/);
+  // Backfilled, so no existing average moves on deploy.
+  assert.match(moderation, /update public\.reviews set rating_visible = customer_visible where rating_visible is null/);
+  // Proven, not asserted.
+  assert.match(moderation, /hiding the words silently removed the score/);
+  assert.match(moderation, /the helper average moved when only the wording was hidden/);
+  // And the moderator is told which it is, in the outcome.
+  assert.match(moderation, /The rating still counts toward this helper''s average/);
+});
+
+test("excluding a score is its own decision", () => {
+  // "These words break a rule" and "this person was never here" are
+  // different findings, so the second gets its own control.
+  assert.match(moderation, /create or replace function public\.admin_review_set_rating_counts/);
+  assert.match(panel, /THE SCORE IS A SEPARATE DECISION, AND THE FORM SAYS SO/);
+  assert.match(panel, /Also stop this score counting toward the helper/);
+  assert.match(page, /Hiding a review does not change the helper/);
 });
 
 test("a low rating is never grounds for a decision", () => {
@@ -49,36 +61,56 @@ test("a low rating is never grounds for a decision", () => {
   assert.match(panel, /A low rating or unhappy wording is\s*\n?\s*not grounds on its own/);
 });
 
-test("the original feedback cannot be edited by anybody", async () => {
-  const view = await getReviewsView();
-  assert.ok(view.selected?.original_text);
-  // Nothing in the panel writes to it: no input, no textarea bound to it.
-  assert.doesNotMatch(panel, /value=\{detail\.original_text\}/);
-  assert.doesNotMatch(panel, /setOriginal|editOriginal/);
-  assert.match(panel, /THE ORIGINAL IS READ-ONLY AND ALWAYS WILL BE/);
-  assert.match(panel, /kept exactly as written/);
+test("the original feedback cannot be edited by anybody", () => {
+  // The words are the customer's. This console decides whether to show
+  // them, not what they say — so there is no update path for the text.
+  assert.doesNotMatch(moderation, /update public\.reviews set comment/);
+  assert.match(moderation, /EDITING WHAT SOMEBODY WROTE/);
+  assert.match(data, /The customer's words\. Nothing in this console edits them/);
+  assert.match(page, /Nothing here edits what somebody wrote/);
 });
 
-test("a verified booking is not a verified claim", async () => {
-  const view = await getReviewsView();
-  assert.equal(view.selected?.booking_verified, true);
-  assert.match(panel, /Whether what they wrote about\s*\n?\s*it is accurate has not been checked/);
+test("a verified booking is not a verified claim", () => {
+  // Attached to a booking means work was bought, not that the account
+  // of it is true.
+  assert.match(data, /A review attached to a booking is a review of work that was\s*\n\s*actually bought/);
+  assert.match(data, /booking_verified: Boolean\(r\.booking_id\)/);
 });
 
-test("sensitive originals are restricted", async () => {
-  const view = await getReviewsView();
-  assert.equal(view.selected?.original_restricted, true);
-  assert.equal(view.selected?.public_text_available, false);
-  assert.match(panel, /Restricted original/);
+test("sensitive originals are restricted, not rewritten", () => {
+  assert.match(data, /PERSONAL INFORMATION IS A REASON TO RESTRICT, NOT TO REWRITE/);
+  assert.match(data, /function restrictedBy/);
+  assert.match(data, /r\.reason === "personal_information"/);
 });
 
-test("decisions are append-only and carry their before and after", async () => {
-  const view = await getReviewsView();
-  const decision = view.selected!.decisions[0];
-  assert.ok(decision.actor && decision.at);
-  assert.ok("from_visibility" in decision && "to_visibility" in decision);
-  assert.match(panel, /Append-only\. A decision that was wrong is reversed with another decision/);
-  assert.match(panel, /records the actor, the\s*\n?\s*reason, the policy and the visibility before and after/);
+test("decisions carry their before and after, and a reason", () => {
+  assert.match(moderation, /from_visibility  text not null/);
+  assert.match(moderation, /to_visibility    text not null/);
+  assert.match(moderation, /reason           text not null/);
+  // Every path demands one.
+  assert.match(moderation, /errcode = 'HW120'/);
+  assert.match(moderation, /a decision was recorded with no reason/);
+  // Nothing updates a decision row: a history that can be edited is not one.
+  assert.doesNotMatch(moderation, /update public\.review_decisions/);
+  assert.match(panel, /Append-only\. A decision that was wrong is reversed/);
+});
+
+test("two moderators deciding one review is a conflict, not a race", () => {
+  assert.match(moderation, /date_trunc\('milliseconds', v_r\.updated_at\)/);
+  assert.match(moderation, /errcode = 'HW080'/);
+  assert.match(moderation, /a stale decision was applied/);
+  assert.match(actions, /conflict: true/);
+  assert.match(panel, /Reload this review and start from what is recorded now/);
+});
+
+test("a test account's review never reaches a public average", () => {
+  /*
+    A separate trigger forces those hidden on insert. The first version
+    of 0117's self-test assumed otherwise and failed on production for
+    a reason that had nothing to do with 0117.
+  */
+  assert.match(moderation, /A TEST ACCOUNT'S REVIEW NEVER REACHES A PUBLIC AVERAGE/);
+  assert.match(moderation, /reviews_hide_review_account/);
 });
 
 test("four kinds of empty stay apart", () => {

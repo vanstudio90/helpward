@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   X, ExternalLink, Info, AlertTriangle, Send, Save, CheckCircle2, History, Lock,
 } from "lucide-react";
+import { decideRefundAction, type RefundResult } from "@/app/(admin)/admin/refunds/actions";
 import type { RefundReview } from "@/lib/data/admin-refunds";
 import {
   REFUND_LABEL, REFUND_TONE, REFUND_MEANING, REFUND_REASONS,
@@ -33,7 +34,41 @@ import { money } from "@/lib/admin-format";
   reviewers each refunding "the remaining CA$94.50" is how a customer
   gets paid twice.
 */
-export function RefundReviewPanel({ review, sample }: { review: RefundReview; sample: boolean }) {
+export function RefundReviewPanel({
+  review, sample, can,
+}: {
+  review: RefundReview;
+  sample: boolean;
+  can: { request: boolean; decide: boolean };
+}) {
+  /*
+    APPROVING IS THE MOMENT MONEY MOVES, and nothing else on this
+    screen does. The button says what it will do before it does it,
+    and the outcome it reports is what the processor actually
+    returned — not the fact that somebody clicked.
+  */
+  const [busy, setBusy] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<RefundResult | null>(null);
+
+  const decide = (approve: boolean) => async () => {
+    const why = window.prompt(
+      approve
+        ? "Why is this refund being approved? It is recorded with your name, and the money is sent immediately after."
+        : "Why is this refund being declined? The request stays on the record with your reason.",
+    );
+    if (why === null) return;
+    setBusy(approve ? "approve" : "decline");
+    setOutcome(null);
+    try {
+      const result = await decideRefundAction(review.id_uuid, review.updated_at, approve, why);
+      setOutcome(result);
+      if (result.ok) router.refresh();
+    } catch (e) {
+      setOutcome({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
   const router = useRouter();
   const params = useSearchParams();
   const [kind, setKind] = useState<"partial" | "full">(review.proposal.kind);
@@ -264,26 +299,54 @@ export function RefundReviewPanel({ review, sample }: { review: RefundReview; sa
       </div>
 
       <footer className="border-t border-slate-100 px-4 py-3 space-y-2 bg-slate-50/60">
+        {outcome && (
+          <div className={`rounded-xl px-3 py-2 border ${
+            outcome.ok ? "bg-emerald-50 border-emerald-200"
+              : outcome.conflict ? "bg-amber-50 border-amber-200"
+              : "bg-rose-50 border-rose-200"
+          }`}>
+            <p className={`text-[12px] font-semibold ${
+              outcome.ok ? "text-emerald-900" : outcome.conflict ? "text-amber-900" : "text-rose-900"
+            }`}>
+              {outcome.ok ? outcome.message : outcome.error}
+            </p>
+            {outcome.ok && outcome.detail && (
+              <p className="text-[11px] text-slate-600 mt-0.5">{outcome.detail}</p>
+            )}
+            {!outcome.ok && outcome.conflict && (
+              <button type="button" onClick={() => { setOutcome(null); router.refresh(); }}
+                className="mt-1 text-[11px] font-semibold text-amber-900 underline underline-offset-2">
+                Reload this refund and start from what is recorded now
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" disabled={sample}
+          <button type="button"
+            disabled={sample || !can.decide || blocked || busy !== null}
+            onClick={decide(false)}
             className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
-            <Save className="w-4 h-4" /> Save draft
+            {busy === "decline" ? "Declining…" : "Decline"}
           </button>
-          <button type="button" disabled={blocked || overAvailable || !reason}
-            title={
-              sample ? "Sample data — nothing to submit"
-              : review.blocked_reason ?? (overAvailable ? "More than is available" : undefined)
-            }
+          <button type="button"
+            disabled={sample || !can.decide || blocked || overAvailable || busy !== null}
+            onClick={decide(true)}
+            title={review.blocked_reason ?? (overAvailable ? "More than is available" : undefined)}
             className="inline-flex items-center gap-1.5 bg-brand-600 text-white text-[13px] font-semibold px-3.5 py-2 rounded-xl disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
-            <CheckCircle2 className="w-4 h-4" /> Review and confirm
+            <CheckCircle2 className="w-4 h-4" />
+            {busy === "approve" ? "Sending…" : "Approve and send"}
           </button>
-          {blocked && (
+          {blocked && review.blocked_reason && (
             <span className="inline-flex items-center gap-1.5 text-[12px] text-amber-800">
-              <Lock className="w-3.5 h-3.5" />
-              {sample ? "Design concept — submission is switched off." : "Resolve transfer effects to continue."}
+              <Lock className="w-3.5 h-3.5" /> {review.blocked_reason}
             </span>
           )}
         </div>
+        <p className="text-[11px] text-slate-500">
+          Approving sends the refund to the processor immediately. What comes back — an id or an
+          error — is written to this request, so a refund that failed is never shown as sent.
+        </p>
 
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
           <span>

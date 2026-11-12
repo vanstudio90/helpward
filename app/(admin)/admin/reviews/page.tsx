@@ -84,33 +84,26 @@ export default async function AdminReviewsPage({
           <header>
             <h1 className="text-[28px] leading-tight font-bold text-slate-900 flex flex-wrap items-center gap-2.5">
               Reviews moderation
-              {view.sample && (
-                <span className="text-[11px] font-bold uppercase tracking-wide bg-violet-100 text-violet-800 px-2.5 py-1 rounded-md">
-                  Design concept · sample reviews
-                </span>
-              )}
             </h1>
             <p className="text-[14px] text-slate-500 mt-0.5">
               Protect authentic feedback. Apply policy consistently.
             </p>
           </header>
 
-          {view.sample && (
-            <div className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
-              <FlaskConical className="w-4 h-4 text-violet-600 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-violet-900">
-                <span className="font-semibold">These reviews are invented.</span>{" "}
-                Nothing here hides, restores or notifies anybody. The page that does moderate
-                reviews today is working at{" "}
-                <Link href="/admin/reviews/classic" className="font-semibold underline underline-offset-2">
-                  /admin/reviews/classic
-                </Link>
-                {" "}— and the catalogue currently holds no reviews at all. Wiring this design is{" "}
-                <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">getReviewsView()</code>{" "}
-                in <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">lib/data/admin-reviews.ts</code>.
-              </p>
-            </div>
-          )}
+          {/*
+            THE WORDS ARE THE CUSTOMER'S. This console decides whether
+            to show them; it has no path that edits them, and this says
+            so where a moderator starts rather than in a code comment.
+          */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+            <p className="text-[12px] text-slate-700">
+              <span className="font-semibold">Hiding a review does not change the helper&apos;s score.</span>{" "}
+              The wording and the rating are separate decisions: a customer whose words we will not
+              publish still had the experience they scored. Excluding a score is its own act, with
+              its own reason, and it is recorded as such. Nothing here edits what somebody wrote.
+            </p>
+          </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
             <Count icon={CheckCircle2} tone="emerald" label="Published" value={view.counts.published}
@@ -192,7 +185,7 @@ export default async function AdminReviewsPage({
               </div>
             ) : noReviewsAtAll ? (
               <Empty icon={MessageSquare} title="No reviews yet"
-                body="Nobody has reviewed a completed booking. Reports will appear here once there is something to report." />
+                body={view.empty_reason ?? "Nobody has reviewed a completed booking. Reports will appear here once there is something to report."} />
             ) : noneInQueue ? (
               <Empty icon={Flag} title="No reports awaiting review"
                 body={`${view.total_reviews} reviews are published and none has been reported. Nothing needs a moderator today.`}
@@ -260,7 +253,7 @@ export default async function AdminReviewsPage({
           </div>
         </div>
 
-        {detail && <ReviewPanel detail={detail} sample={view.sample} />}
+        {detail && <ReviewPanel can={view.can} detail={detail} sample={false} />}
       </div>
     </div>
   );

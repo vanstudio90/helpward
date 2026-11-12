@@ -1,43 +1,66 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { getRefundsView } from "../lib/data/admin-refunds.ts";
 
 /*
-  THE REFUNDS SCREEN IS A DESIGN FOR NOW, and it is the screen where
-  being wrong costs the most: every mistake here is either money that
-  went back twice or a customer told something untrue about their own
-  money. These guard the four distinctions the layout is built on.
+  REFUNDS IS THE SCREEN WHERE BEING WRONG COSTS THE MOST: every mistake
+  here is either money that went back twice or a customer told
+  something untrue about their own money. These guard the distinctions
+  the workflow is built on — source assertions, because the reader
+  needs a database and a test that needs a service key is one that gets
+  skipped in CI and then quietly rots.
 */
 
 const page = readFileSync("app/(admin)/admin/refunds/page.tsx", "utf8");
 const panel = readFileSync("components/admin/RefundReviewPanel.tsx", "utf8");
 const data = readFileSync("lib/data/admin-refunds.ts", "utf8");
 const states = readFileSync("lib/admin-refund-states.ts", "utf8");
+const sql = readFileSync("supabase/migrations/0118_refund_decisions.sql", "utf8");
+const actions = readFileSync("app/(admin)/admin/refunds/actions.ts", "utf8");
 
-test("invented numbers are labelled as invented", async () => {
-  const view = await getRefundsView();
-  assert.equal(view.sample, true);
-  assert.match(page, /Design concept · sample data/);
-  assert.match(page, /Every figure here is invented/);
-  // Nothing that would submit money is reachable on sample data.
-  assert.match(panel, /disabled=\{sample\}/);
-  assert.match(panel, /const blocked = Boolean\(review\.blocked_reason\) \|\| sample;/);
+test("the reason decides who carries the refund, not whoever clicks", () => {
+  /*
+    refundBooking() reverses the helper's transfer by default. That is
+    right when the work was not delivered and wrong when the work was
+    done and this is goodwill — taking it out of the helper's balance
+    makes them pay for our apology.
+  */
+  assert.match(sql, /THE REASON DECIDES WHO PAYS/);
+  assert.match(sql, /create or replace function public\.refund_absorbs_helper_share/);
+  assert.match(sql, /when 'goodwill'            then true/);
+  assert.match(sql, /when 'no_show'             then false/);
+  // An unmapped reason raises rather than falling through to a default.
+  assert.match(sql, /else null/);
+  assert.match(sql, /errcode = 'HW137'/);
+  assert.match(sql, /an unmapped reason was given a settlement rule by default/);
+  // And the reasons are the ones the screen actually offers.
+  for (const r of ["service_issue", "no_show", "duplicate_charge", "overcharge",
+    "cancelled_late", "goodwill", "chargeback_pre_empt"]) {
+    assert.match(states, new RegExp(`value: "${r}"`));
+    assert.match(sql, new RegExp(`when '${r}'`));
+  }
 });
 
-test("a request awaiting review has not been sent anywhere", async () => {
-  const view = await getRefundsView();
-  const request = view.rows.find((r) => r.state === "awaiting_review");
-  assert.ok(request, "the sample has no awaiting-review row");
-  // The type makes it impossible to fake: no processor reference until
-  // something was actually submitted.
-  assert.equal(request!.processor_refund_id, null);
-  for (const row of view.rows.filter((r) => r.state === "processing" || r.state === "succeeded")) {
-    assert.ok(row.processor_refund_id, `${row.id} claims a state it has no processor record for`);
-  }
-  assert.match(panel, /Nothing has been sent to Stripe and the customer has not\s*\n?\s*been told/);
-  assert.match(states, /An internal request\. Nothing has been sent to Stripe/);
-  assert.match(page, /Requests, not refunds/);
+test("asking is not sending", () => {
+  // A row that only exists once the money is gone cannot be declined.
+  assert.match(sql, /ASKING IS NOT SENDING/);
+  assert.match(sql, /'awaiting_review'/);
+  // The log says "submitted", not "succeeded", for a request AND an approval.
+  assert.match(sql, /asking for a refund was recorded as if it had succeeded/);
+  assert.match(sql, /approval was recorded as if the money had moved/);
+  // Approval marks the row processing first, so a second cannot double-send.
+  assert.match(sql, /then 'processing' else 'cancelled'/);
+  assert.match(sql, /an approved refund was approved a second time/);
+  assert.match(actions, /THE ONLY PLACE MONEY ACTUALLY MOVES/);
+});
+
+test("a refund that failed is never shown as sent", () => {
+  assert.match(actions, /the refund was NOT sent/);
+  assert.match(actions, /p_succeeded: false/);
+  assert.match(actions, /The approval is not\s*\n\s*silently undone/);
+  assert.match(panel, /so a refund that failed is never shown as sent/);
+  // A failure must carry what the processor said.
+  assert.match(sql, /a refund failed with no reason recorded/);
 });
 
 test("succeeded does not mean the customer has the money", () => {
@@ -45,33 +68,41 @@ test("succeeded does not mean the customer has the money", () => {
   assert.match(page, /has shown it yet/);
 });
 
-test("an unknown transfer effect stops the refund", async () => {
-  const view = await getRefundsView();
-  const helper = view.review?.effects.find((e) => e.key === "helper_transfer");
-  assert.ok(helper, "the sample review has no helper effect");
-  // Unknown is null and reads as "requires review" — never as zero.
-  assert.equal(helper!.amount_cents, null);
-  assert.equal(helper!.state, "requires_review");
-  assert.ok(view.review?.blocked_reason, "an unknown effect does not block submission");
-  assert.match(panel, /UNKNOWN IS NOT ZERO/);
-  assert.match(panel, /Verify transfer effects before proceeding/);
-  // Two outcomes, tracked apart, because either can fail on its own.
-  assert.match(data, /TWO OUTCOMES, NOT ONE/);
+test("the two outcomes are tracked apart", () => {
+  /*
+    The money going back and the helper's transfer being adjusted are
+    separate operations at Stripe, and either can fail on its own.
+  */
+  assert.match(data, /A refund has TWO outcomes and either can fail on its own/);
+  assert.match(data, /key: "helper_transfer"/);
+  // Unknown is null and is never drawn as zero — except where zero is
+  // the decided answer.
+  assert.match(data, /amount_cents: absorb \? 0 : share/);
+  assert.match(data, /the amount cannot be worked out here/);
+  // Stripe performs the reversal; this figure says it is not the authority.
+  assert.match(data, /Stripe performs the reversal and its figure is the authority/);
 });
 
-test("available to refund subtracts what is already in flight", async () => {
-  const view = await getRefundsView();
-  const b = view.review!.balances;
-  assert.equal(b.available_cents, b.captured_cents - b.refunded_cents - b.processing_cents);
-  assert.match(panel, /Refunds processing/);
-  assert.match(panel, /rechecked when the\s*\n?\s*refund is submitted/);
+test("available to refund subtracts what is already in flight", () => {
+  /*
+    Leaving in-flight requests out of that sum is how two people each
+    approve half and the second one fails at the processor.
+  */
+  assert.match(sql, /YOU CANNOT REFUND MORE THAN IS THERE/);
+  assert.match(sql, /'succeeded', 'processing', 'awaiting_review'/);
+  assert.match(sql, /a request in flight was not counted against what is left/);
+  assert.match(sql, /errcode = 'HW134'/);
+  assert.match(data, /processing_cents: processing/);
+  assert.match(data, /available_cents: Math\.max\(0, captured - refunded - processing\)/);
 });
 
-test("a tip is a different charge and says so", async () => {
-  const view = await getRefundsView();
-  assert.equal(view.review?.separate_leg?.leg, "tip");
-  assert.notEqual(view.review?.separate_leg?.payment_ref, view.review?.payment.ref);
-  assert.match(panel, /not included\. It is payment/);
+test("a tip is a different charge and says so", () => {
+  // Its own intent and its own remaining balance. A request for more
+  // than the service charge holds is not quietly taken from the tip.
+  assert.match(sql, /A TIP IS A DIFFERENT CHARGE/);
+  assert.match(sql, /refunds_leg_check check \(leg in \('service', 'tip'\)\)/);
+  assert.match(sql, /case when p_leg = 'tip' then coalesce\(b\.tip_cents, 0\) else b\.total_cents end/);
+  assert.match(actions, /includeTip: decision\.leg === "tip"/);
 });
 
 test("a failed synchronisation is never drawn as zero refunds", () => {

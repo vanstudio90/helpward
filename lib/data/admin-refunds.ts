@@ -1,3 +1,5 @@
+import "server-only";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import type { RefundState, EffectState } from "@/lib/admin-refund-states";
 import type { PaymentLeg, PaymentMode } from "@/lib/admin-payment-states";
 
@@ -70,6 +72,9 @@ export type RefundEffect = {
 
 export type RefundReview = {
   id: string;
+  /* The row's real id, and the token a decision is made against. */
+  id_uuid: string;
+  updated_at: string;
   state: RefundState;
   mode: PaymentMode;
   currency: string;
@@ -115,6 +120,19 @@ export type RefundReview = {
 
 export type RefundsView = {
   sample: boolean;
+  /*
+    ONE FLAG PER CONTROL. Requesting and deciding have database
+    functions behind them. Sending is the server action calling
+    refundBooking(); exporting and syncing do not exist.
+  */
+  can: {
+    request: boolean;
+    decide: boolean;
+  };
+  /** Why the list is empty, when it is. Never a blank table. */
+  empty_reason: string | null;
+  /** Set when the read failed. NEVER rendered as zero refunds. */
+  load_error: string | null;
   as_of: string;
   currency: string;
   mode: PaymentMode;
@@ -129,99 +147,325 @@ export type RefundsView = {
 };
 
 /* ------------------------------------------------------------------ */
-/* SAMPLE DATA — every figure invented, every reference out of range.  */
+/* THE REAL REFUNDS                                                     */
 /* ------------------------------------------------------------------ */
 
-const SAMPLE_ROWS: RefundRow[] = [
-  { id: "RF-0108", booking_ref: "BK-1040", payment_ref: "PY-1040", customer_name: "Maya C.", leg: "service", amount_cents: 2000, currency: "CAD", state: "awaiting_review", mode: "live", processor_refund_id: null, updated_at: "5m", origin: "console" },
-  { id: "RF-0107", booking_ref: "BK-1038", payment_ref: "PY-1038", customer_name: "Oliver T.", leg: "service", amount_cents: 4000, currency: "CAD", state: "processing", mode: "live", processor_refund_id: "re_sample_0107", updated_at: "12m", origin: "console" },
-  { id: "RF-0106", booking_ref: "BK-1036", payment_ref: "PY-1036", customer_name: "Nora L.", leg: "service", amount_cents: 6450, currency: "CAD", state: "succeeded", mode: "live", processor_refund_id: "re_sample_0106", updated_at: "30m", origin: "console" },
-  { id: "RF-0105", booking_ref: "BK-1035", payment_ref: "PY-1035", customer_name: "Alex R.", leg: "tip", amount_cents: 1000, currency: "CAD", state: "succeeded", mode: "live", processor_refund_id: "re_sample_0105", updated_at: "1h", origin: "stripe_sync" },
-  { id: "RF-0104", booking_ref: "BK-1032", payment_ref: "PY-1032", customer_name: "Ava D.", leg: "service", amount_cents: 2950, currency: "CAD", state: "failed", mode: "live", processor_refund_id: "re_sample_0104", updated_at: "2h", origin: "console" },
-];
+const TZ = "America/Vancouver";
 
-const SAMPLE_REVIEW: RefundReview = {
-  id: "RF-0108",
-  state: "awaiting_review",
-  mode: "live",
-  currency: "CAD",
-  payment: {
-    ref: "PY-1040",
-    booking_ref: "BK-1040",
-    booking_id: null,
-    service: "Maid Service",
-    customer_name: "Maya C.",
-    helper_name: "Jamie R.",
-    card: { brand: "Visa", last4: "4242" },
-  },
-  leg: "service",
-  separate_leg: { leg: "tip", payment_ref: "PY-1041", amount_cents: 1000 },
-  balances: {
-    captured_cents: 9450,
-    refunded_cents: 0,
-    processing_cents: 0,
-    available_cents: 9450,
-  },
-  proposal: {
-    kind: "partial",
-    amount_cents: 2000,
-    reason: "service_issue",
-    internal_note: "Customer reported part of the cleaning was not completed.",
-    notify_customer: true,
-  },
-  /*
-    THE HELPER AND PLATFORM EFFECTS ARE DELIBERATELY UNKNOWN in this
-    sample, because that is the honest state of this product today:
-    there is no settlement rule in the database that says what a
-    partial refund does to a transfer that has already been made. A
-    proportional split would be a guess, and a guess here is somebody's
-    pay.
-  */
-  effects: [
-    { key: "customer", label: "Customer refund", amount_cents: 2000, state: "pending", note: "Goes back to the card ending 4242." },
-    { key: "helper_transfer", label: "Helper transfer adjustment", amount_cents: null, state: "requires_review", note: "No settlement rule is recorded for a partial refund after a transfer." },
-    { key: "platform", label: "Platform adjustment", amount_cents: null, state: "requires_review", note: "Follows whatever the helper adjustment turns out to be." },
-  ],
-  blocked_reason:
-    "The helper and platform effects are unknown. Nothing is submitted until somebody resolves what this refund does to the transfer.",
-  requested_by: "Alex",
-  requested_at: "Today 20:05",
-  history_count: 3,
+function ago(iso: string | null): string {
+  if (!iso) return "—";
+  const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (secs < 3600) return `${Math.max(1, Math.floor(secs / 60))}m`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
+  return `${Math.floor(secs / 86400)}d`;
+}
+
+function at(iso: string | null): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString("en-CA", {
+    timeZone: TZ, day: "numeric", month: "short",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+}
+
+type RefundDb = {
+  id: string; booking_id: string; leg: string; amount_cents: number;
+  reason: string | null; status: string; stripe_refund_id: string | null;
+  requested_by: string | null; requested_at: string | null;
+  decided_by: string | null; decided_at: string | null;
+  decision_reason: string | null; internal_note: string | null;
+  absorb_helper_share: boolean | null; failure_reason: string | null;
+  created_at: string; updated_at: string;
 };
 
-const SAMPLE: RefundsView = {
-  sample: true,
-  as_of: "12 sec ago",
-  currency: "CAD",
-  mode: "live",
-  window_label: "Last 30 days",
-  sync_error: null,
-  totals: {
-    succeeded_cents: 18500,
-    processing_cents: 4000,
-    awaiting_review_count: 2,
-    failed_count: 1,
-    dating_note: "Amounts use refund event dates. CAD only.",
-  },
-  rows: SAMPLE_ROWS,
-  total_rows: 12,
-  failures: [
-    { id: "RF-0104", reason: "The card issuer declined the return.", href: "/admin/refunds?open=RF-0104" },
-  ],
-  review: SAMPLE_REVIEW,
+type BookingForRefund = {
+  id: string; customer_id: string | null; provider_id: string | null;
+  service_id: string | null; total_cents: number | null; tip_cents: number | null;
+  payout_cents: number | null; currency: string | null; captured_at: string | null;
 };
 
 /*
-  THE SEAM. Wiring this means reading refunds, their payments and the
-  processor's view of both, then setting `sample: false`.
+  WHAT A REFUND DOES TO EACH PARTY.
 
-  Two things the wiring must not do, which the types already discourage:
-  substitute zero for an unknown effect, and report a count of zero when
-  the processor could not be reached — that is what `sync_error` is for.
+  A refund has TWO outcomes and either can fail on its own: the money
+  going back to the customer, and the helper's transfer being adjusted.
+  Reporting one as the other is how a console says "refunded" while a
+  helper is still holding the share of a job the customer no longer
+  paid for.
+
+  The helper figure is PROPORTIONAL, because that is what a reversal
+  does: refunding a tenth of a job pulls back a tenth of the transfer.
+  It is calculated from the split saved with the booking, and it says
+  so — Stripe performs the reversal and its figure is the authority.
 */
-export async function getRefundsView(_opts: {
+function effectsOf(
+  r: RefundDb, b: BookingForRefund | undefined,
+): RefundEffect[] {
+  const settled = r.status === "succeeded";
+  const sent = r.status === "processing" || settled;
+  const absorb = r.absorb_helper_share ?? false;
+
+  const share = b && b.total_cents && b.payout_cents !== null
+    ? Math.round(r.amount_cents * (b.payout_cents / b.total_cents))
+    : null;
+
+  return [
+    {
+      key: "customer",
+      label: "Back to the customer",
+      amount_cents: r.amount_cents,
+      state: settled ? "applied" : sent ? "pending" : "requires_review",
+      note: settled ? null : "Not sent yet.",
+    },
+    {
+      key: "helper_transfer",
+      label: absorb ? "Helper keeps their share" : "Taken back from the helper",
+      /* Null is unknown and is never rendered as zero — except when
+         absorbing, where zero is the actual, decided answer. */
+      amount_cents: absorb ? 0 : share,
+      state: absorb ? "not_applicable" : settled ? "applied" : sent ? "pending" : "requires_review",
+      note: absorb
+        ? "This reason leaves the helper paid. Helpward carries the refund."
+        : share === null
+          ? "The split saved with this booking is incomplete, so the amount cannot be worked out here."
+          : "Proportional to the refund, calculated from the split saved with this booking. Stripe performs the reversal and its figure is the authority.",
+    },
+    {
+      key: "platform",
+      label: absorb ? "Helpward absorbs" : "Helpward's share returned",
+      amount_cents: share === null ? null : absorb ? r.amount_cents : r.amount_cents - share,
+      state: settled ? "applied" : sent ? "pending" : "requires_review",
+      note: null,
+    },
+  ];
+}
+
+export async function getRefundsView(opts: {
   window?: string; currency?: string; mode?: PaymentMode;
-  region?: string | null; tab?: string; open?: string | null; start?: string | null;
+  state?: string | null; search?: string | null; open?: string | null;
+  includeReview?: boolean;
+  /* Offered by the page, not yet implemented here — declared rather
+     than swallowed by a loose signature. */
+  region?: string | null; tab?: string; start?: string | null;
 } = {}): Promise<RefundsView> {
-  return SAMPLE;
+  const db = createSupabaseServiceClient();
+
+  const [refundsRes, bookingsRes] = await Promise.all([
+    db.from("refunds")
+      .select("id, booking_id, leg, amount_cents, reason, status, stripe_refund_id," +
+        " requested_by, requested_at, decided_by, decided_at, decision_reason," +
+        " internal_note, absorb_helper_share, failure_reason, created_at, updated_at")
+      .order("updated_at", { ascending: false }).limit(500),
+    db.from("bookings")
+      .select("id, customer_id, provider_id, service_id, total_cents, tip_cents," +
+        " payout_cents, currency, captured_at")
+      .not("captured_at", "is", null).limit(1000),
+  ]);
+
+  const shell = (loadError: string | null, emptyReason: string | null): RefundsView => ({
+    sample: false,
+    can: { request: true, decide: true },
+    empty_reason: emptyReason,
+    load_error: loadError,
+    as_of: "just now",
+    currency: opts.currency ?? "CAD",
+    mode: opts.mode ?? "live",
+    window_label: opts.window ?? "Last 30 days",
+    /* Nothing syncs from the processor, so this is never a sync error. */
+    sync_error: null,
+    totals: {
+      succeeded_cents: 0, processing_cents: 0,
+      awaiting_review_count: 0, failed_count: 0,
+      dating_note: "Dated by the refund, not by the original charge.",
+    },
+    rows: [], total_rows: 0, failures: [], review: null,
+  });
+
+  if (refundsRes.error) {
+    /* A failed read is a failed read. Never "no refunds". */
+    return shell(`Refunds could not be read: ${refundsRes.error.message}`, null);
+  }
+
+  const refunds = (refundsRes.data ?? []) as unknown as RefundDb[];
+  const bookings = new Map<string, BookingForRefund>();
+  for (const b of (bookingsRes.data ?? []) as unknown as BookingForRefund[]) bookings.set(b.id, b);
+
+  const personIds = Array.from(new Set([
+    ...refunds.map((r) => r.requested_by), ...refunds.map((r) => r.decided_by),
+    ...[...bookings.values()].map((b) => b.customer_id),
+    ...[...bookings.values()].map((b) => b.provider_id),
+  ].filter(Boolean) as string[]));
+  const people = new Map<string, { full_name: string | null; is_review: boolean }>();
+  if (personIds.length) {
+    const { data } = await db.from("profiles")
+      .select("id, full_name, is_review_account").in("id", personIds);
+    for (const p of (data ?? []) as { id: string; full_name: string | null; is_review_account: boolean | null }[]) {
+      people.set(p.id, { full_name: p.full_name, is_review: Boolean(p.is_review_account) });
+    }
+  }
+  const nameOf = (id: string | null | undefined, fallback = "Unknown") =>
+    (id ? people.get(id)?.full_name : null) ?? fallback;
+  const shortName = (id: string | null | undefined) => {
+    const full = id ? people.get(id)?.full_name : null;
+    if (!full) return "Unknown";
+    const parts = full.split(" ");
+    return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : parts[0];
+  };
+
+  const isReviewRefund = (r: RefundDb) => {
+    const b = bookings.get(r.booking_id);
+    return Boolean(b?.customer_id && people.get(b.customer_id)?.is_review);
+  };
+  const excluded = refunds.filter(isReviewRefund).length;
+  let scoped = opts.includeReview ? refunds : refunds.filter((r) => !isReviewRefund(r));
+
+  /* Currencies are never summed. One at a time, and the view says which. */
+  const currency = opts.currency
+    ?? bookings.get(scoped[0]?.booking_id ?? "")?.currency
+    ?? "CAD";
+  scoped = scoped.filter((r) => (bookings.get(r.booking_id)?.currency ?? "CAD") === currency);
+
+  const ref = (id: string) => id.slice(0, 4).toUpperCase();
+
+  const toRow = (r: RefundDb): RefundRow => {
+    const b = bookings.get(r.booking_id);
+    return {
+      id: `RF-${ref(r.id)}`,
+      booking_ref: `BK-${ref(r.booking_id)}`,
+      payment_ref: `PY-${ref(r.booking_id)}${r.leg === "tip" ? "T" : ""}`,
+      customer_name: shortName(b?.customer_id),
+      leg: (r.leg === "tip" ? "tip" : "service") as PaymentLeg,
+      amount_cents: r.amount_cents,
+      currency,
+      state: (["awaiting_review", "processing", "succeeded", "failed", "cancelled"]
+        .includes(r.status) ? r.status : "succeeded") as RefundState,
+      mode: opts.mode ?? "live",
+      /* Null until something has actually been submitted to the processor. */
+      processor_refund_id: r.stripe_refund_id,
+      updated_at: ago(r.updated_at),
+      /* A row with no requester predates the console and was written by
+         the refund executor after the fact. */
+      origin: r.requested_by ? "console" : "stripe_sync",
+    };
+  };
+
+  let rows = scoped.map(toRow);
+  if (opts.state && !opts.state.startsWith("State")) {
+    rows = rows.filter((r) => r.state === opts.state);
+  }
+  const search = (opts.search ?? "").trim().toLowerCase();
+  if (search) {
+    rows = rows.filter((r) =>
+      `${r.id} ${r.booking_ref} ${r.payment_ref} ${r.customer_name}`.toLowerCase().includes(search));
+  }
+
+  const totals: RefundTotals = {
+    succeeded_cents: scoped.filter((r) => r.status === "succeeded")
+      .reduce((sum, r) => sum + r.amount_cents, 0),
+    processing_cents: scoped.filter((r) => r.status === "processing")
+      .reduce((sum, r) => sum + r.amount_cents, 0),
+    awaiting_review_count: scoped.filter((r) => r.status === "awaiting_review").length,
+    failed_count: scoped.filter((r) => r.status === "failed").length,
+    dating_note: "Dated by the refund, not by the original charge — a refund in March against a January charge is March's number.",
+  };
+
+  const review = opts.open ? buildReview(opts.open) : null;
+
+  function buildReview(id: string): RefundReview | null {
+    const r = scoped.find((x) => `RF-${ref(x.id)}` === id);
+    if (!r) return null;
+    const b = bookings.get(r.booking_id);
+    const leg = (r.leg === "tip" ? "tip" : "service") as PaymentLeg;
+    const captured = leg === "tip" ? (b?.tip_cents ?? 0) : (b?.total_cents ?? 0);
+
+    /*
+      WHAT IS LEFT, counting what is already in flight. Leaving
+      in-flight requests out of this is how two people each approve
+      half and the second one fails at the processor.
+    */
+    const sameLeg = scoped.filter((x) => x.booking_id === r.booking_id && x.leg === r.leg);
+    const refunded = sameLeg.filter((x) => x.status === "succeeded")
+      .reduce((sum, x) => sum + x.amount_cents, 0);
+    const processing = sameLeg.filter((x) => ["processing", "awaiting_review"].includes(x.status) && x.id !== r.id)
+      .reduce((sum, x) => sum + x.amount_cents, 0);
+
+    const tipLeg = scoped.find((x) => x.booking_id === r.booking_id && x.leg !== r.leg);
+
+    return {
+      id: `RF-${ref(r.id)}`,
+      id_uuid: r.id,
+      updated_at: r.updated_at,
+      state: (r.status as RefundState),
+      mode: opts.mode ?? "live",
+      currency,
+      payment: {
+        ref: `PY-${ref(r.booking_id)}${leg === "tip" ? "T" : ""}`,
+        booking_ref: `BK-${ref(r.booking_id)}`,
+        booking_id: r.booking_id,
+        service: b?.service_id ?? "—",
+        customer_name: shortName(b?.customer_id),
+        helper_name: b?.provider_id ? nameOf(b.provider_id) : null,
+        /* The card is not stored against the booking; naming one would
+           name the wrong card. */
+        card: null,
+      },
+      leg,
+      separate_leg: tipLeg
+        ? {
+            leg: (tipLeg.leg === "tip" ? "tip" : "service") as PaymentLeg,
+            payment_ref: `PY-${ref(tipLeg.booking_id)}${tipLeg.leg === "tip" ? "T" : ""}`,
+            amount_cents: tipLeg.amount_cents,
+          }
+        : null,
+      balances: {
+        captured_cents: captured,
+        refunded_cents: refunded,
+        processing_cents: processing,
+        available_cents: Math.max(0, captured - refunded - processing),
+      },
+      proposal: {
+        kind: r.amount_cents >= captured ? "full" : "partial",
+        amount_cents: r.amount_cents,
+        reason: r.reason,
+        internal_note: r.internal_note ?? "",
+        notify_customer: false,
+      },
+      effects: effectsOf(r, b),
+      blocked_reason:
+        r.status !== "awaiting_review"
+          ? `This refund is ${r.status}. There is nothing to decide.`
+          : r.amount_cents > Math.max(0, captured - refunded - processing)
+            ? "More is requested than is left on this charge once refunds in flight are counted. It would fail at the processor."
+            : null,
+      requested_by: r.requested_by ? nameOf(r.requested_by) : null,
+      requested_at: at(r.requested_at ?? r.created_at),
+      history_count: sameLeg.length,
+    };
+  }
+
+  return {
+    sample: false,
+    can: { request: true, decide: true },
+    load_error: null,
+    empty_reason: rows.length > 0 ? null
+      : refunds.length === 0
+        ? "Nothing has been refunded, and nothing has been asked for."
+        : excluded > 0 && !opts.includeReview
+          ? `No refund to show. ${excluded} of them belong to review or test bookings, which this view excludes.`
+          : "No refund matches these filters.",
+    as_of: "just now",
+    currency,
+    mode: opts.mode ?? "live",
+    window_label: opts.window ?? "Last 30 days",
+    sync_error: null,
+    totals,
+    rows: rows.slice(0, 25),
+    total_rows: rows.length,
+    failures: scoped.filter((r) => r.status === "failed").map((r) => ({
+      id: `RF-${ref(r.id)}`,
+      reason: r.failure_reason ?? "No reason was recorded with the failure.",
+      href: `/admin/refunds?open=RF-${ref(r.id)}`,
+    })),
+    review,
+  };
 }

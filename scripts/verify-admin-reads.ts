@@ -123,3 +123,52 @@ console.log(`  corrected rows visible: ${corrected.map((r) => r.id).join(", ") |
 
 console.log("\nmoney formatter check:", money(9450), money(null));
 console.log();
+
+/* ---------------------------------------------------------------- */
+const { getPaymentsView } = await import("../lib/data/admin-payments.ts");
+for (const inc of [false, true]) {
+  const pay = await getPaymentsView({ window: "Everything", includeReview: inc });
+  console.log(`\nPAYMENTS (review activity ${inc ? "included" : "excluded"})`);
+  console.log(`  sample=${pay.sample} writable=${pay.writable} currency=${pay.currency}`);
+  console.log(`  load_error: ${pay.load_error ?? "none"}`);
+  console.log(`  empty_reason: ${pay.empty_reason ?? "none"}`);
+  console.log(`  other currencies: ${JSON.stringify(pay.other_currencies)}`);
+  console.log(`  captured=${money(pay.totals.captured_cents, pay.currency)} holds=${money(pay.totals.open_holds_cents, pay.currency)} refunded=${money(pay.totals.refunded_cents, pay.currency)} net=${money(pay.totals.net_captured_cents, pay.currency)}`);
+  console.log(`  rows=${pay.rows.length} of ${pay.total_rows}, attention=${pay.totals.needs_attention}`);
+  for (const r of pay.rows.slice(0, 6)) {
+    console.log(`    ${r.id.padEnd(10)} ${r.leg.padEnd(7)} ${r.state.padEnd(20)} ${money(r.amount_cents, r.currency).padStart(10)}` +
+      `  cap=${money(r.captured_cents, r.currency)} ref=${money(r.refunded_cents, r.currency)} left=${money(r.remaining_refundable_cents, r.currency)}`);
+  }
+  if (pay.rows[0]) {
+    const d = (await getPaymentsView({ window: "Everything", includeReview: inc, open: pay.rows[0].id })).detail;
+    if (d) {
+      console.log(`  --- ${d.id} ---`);
+      for (const l of d.breakdown) console.log(`    ${l.label.padEnd(26)} ${money(l.amount_cents, d.currency)}`);
+      for (const a of d.allocation) console.log(`    ${a.label.padEnd(26)} ${money(a.amount_cents, d.currency)}`);
+      console.log(`    ${d.allocation_source}`);
+      console.log(`    events: ${d.events.map((e) => e.label).join(" → ")}`);
+    }
+  }
+}
+console.log();
+
+/* ---------------------------------------------------------------- */
+const { getReviewsView } = await import("../lib/data/admin-reviews.ts");
+for (const inc of [false, true]) {
+  const rv = await getReviewsView({ tab: "published", includeReview: inc });
+  console.log(`\nREVIEWS (review activity ${inc ? "included" : "excluded"})`);
+  console.log(`  sample=${rv.sample} can=${JSON.stringify(rv.can)}`);
+  console.log(`  load_error: ${rv.load_error ?? "none"}`);
+  console.log(`  counts: ${JSON.stringify(rv.counts)} total_reviews=${rv.total_reviews}`);
+  console.log(`  empty_reason: ${rv.empty_reason ?? "none"}`);
+}
+
+const { getRefundsView } = await import("../lib/data/admin-refunds.ts");
+const rf = await getRefundsView({ includeReview: true });
+console.log(`\nREFUNDS`);
+console.log(`  sample=${rf.sample} can=${JSON.stringify(rf.can)}`);
+console.log(`  load_error: ${rf.load_error ?? "none"}`);
+console.log(`  totals: ${JSON.stringify(rf.totals)}`);
+console.log(`  rows=${rf.rows.length} of ${rf.total_rows}`);
+console.log(`  empty_reason: ${rf.empty_reason ?? "none"}`);
+console.log();

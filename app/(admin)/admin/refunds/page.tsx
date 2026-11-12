@@ -59,6 +59,9 @@ export default async function AdminRefundsPage({
     tab,
     open: params.open ?? null,
     start: params.start ?? null,
+    state: params.state ?? null,
+    search: params.q ?? null,
+    includeReview: params.review === "1",
   });
 
   const openId = params.open ?? view.review?.id ?? null;
@@ -84,18 +87,13 @@ export default async function AdminRefundsPage({
             <div className="min-w-0 flex-1">
               <h1 className="text-[28px] leading-tight font-bold text-slate-900 flex flex-wrap items-center gap-2.5">
                 Refunds
-                {view.sample && (
-                  <span className="text-[11px] font-bold uppercase tracking-wide bg-violet-100 text-violet-800 px-2.5 py-1 rounded-md">
-                    Design concept · sample data
-                  </span>
-                )}
               </h1>
               <p className="text-[14px] text-slate-500 mt-0.5">
                 Review requests. Track processing. Confirm outcomes.
               </p>
             </div>
-            <button type="button" disabled={view.sample}
-              title={view.sample ? "Nothing real to export yet" : "Export the filtered refunds"}
+            <button type="button" disabled
+              title="Exporting refunds has not been built."
               className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
               <Download className="w-4 h-4" /> Export
             </button>
@@ -107,18 +105,36 @@ export default async function AdminRefundsPage({
             </Link>
           </header>
 
-          {view.sample && (
-            <div className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
-              <FlaskConical className="w-4 h-4 text-violet-600 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-violet-900">
-                <span className="font-semibold">Every figure here is invented.</span>{" "}
-                No refund, payment or Stripe record sits behind it, and every control that would
-                submit money is switched off. Wiring it is one function:{" "}
-                <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">getRefundsView()</code>{" "}
-                in <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">lib/data/admin-refunds.ts</code>.
+          {/*
+            A FAILED READ IS NOT ZERO REFUNDS. On this screen a zero
+            reads as "nobody asked for their money back", which is a
+            very different thing from "we cannot see who did".
+          */}
+          {view.load_error && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-amber-900">
+                <span className="font-semibold">The refunds could not be read.</span>{" "}
+                {view.load_error} Nothing is shown rather than zeroes.
               </p>
             </div>
           )}
+
+          {/*
+            WHO CARRIES A REFUND IS DECIDED BY ITS REASON, not by
+            whoever happens to approve it. Saying so here is what stops
+            a helper paying for an apology they had no part in.
+          */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+            <p className="text-[12px] text-slate-700">
+              <span className="font-semibold">The reason decides who pays.</span>{" "}
+              Work that was done and refunded as goodwill, a duplicate charge or our own pricing
+              error is carried by Helpward — the helper keeps their share. Work that was not
+              delivered takes the helper&apos;s share back with it. Each request shows which before
+              anybody approves it.
+            </p>
+          </div>
 
           <PaymentFilters asOf={view.as_of} />
 
@@ -283,7 +299,7 @@ export default async function AdminRefundsPage({
           </div>
         </div>
 
-        {review && <RefundReviewPanel review={review} sample={view.sample} />}
+        {review && <RefundReviewPanel review={review} sample={false} can={view.can} />}
 
         {missingReview && (
           <aside className="bg-white rounded-2xl border border-slate-200 px-5 py-10 text-center">

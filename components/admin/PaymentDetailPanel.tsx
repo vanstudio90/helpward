@@ -254,21 +254,25 @@ export function PaymentDetailPanel({ detail, sample }: { detail: PaymentDetail; 
           <ol className="space-y-2.5">
             {detail.events.map((e, i) => (
               <li key={i} className="flex gap-2.5">
-                <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
-                  e.source === "stripe" ? "bg-indigo-400" : "bg-slate-300"
-                }`} />
+                <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 bg-slate-300" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-medium text-slate-900 break-words">{e.label}</p>
                   {e.detail && <p className="text-[12px] text-slate-600">{e.detail}</p>}
-                  <p className="text-[11px] text-slate-400">
-                    {e.source === "stripe" ? "From Stripe" : "From Helpward"} · {e.at}
-                  </p>
+                  <p className="text-[11px] text-slate-400">From Helpward · {e.at}</p>
                 </div>
               </li>
             ))}
+            {/*
+              THIS IS NOT A PROCESSOR LOG, and saying so is the whole
+              point of the line. Nothing here copies Stripe's events;
+              every entry is a timestamp this application wrote, so a
+              gap means Helpward did not record something — not that
+              the processor did nothing.
+            */}
             <li className="text-[11px] text-slate-500 pt-1">
-              Events from Stripe are what the processor told us. Events from Helpward are what this
-              system did about it.
+              Every line here is what Helpward recorded. There is no copy of Stripe&apos;s own event
+              log in this system, so this is the application&apos;s account of the payment and not the
+              processor&apos;s. Stripe&apos;s dashboard remains the authority on what the bank did.
             </li>
           </ol>
         )}

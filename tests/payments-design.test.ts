@@ -1,96 +1,82 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { getPaymentsView } from "../lib/data/admin-payments.ts";
 
 /*
-  THE PAYMENTS SCREEN IS A DESIGN FOR NOW.
+  THE PAYMENTS SCREEN READS REAL MONEY.
 
-  Which makes one test more important than the rest: a payments console
-  that looks real and is not is the most expensive mistake this product
-  could make. These guard the stamp, the switched-off buttons and the
-  three pieces of arithmetic the layout is built around — so that when
-  the page is wired, the wiring has to keep them true.
+  Which makes these tests the ones that matter most: a payments console
+  that looks real and is wrong is the most expensive mistake this
+  product could make. They are SOURCE assertions — getPaymentsView()
+  now needs a database, and a test that needs a service key is a test
+  that gets skipped in CI and then quietly rots. What is checked here
+  is the arithmetic the wiring encodes; the figures it returns are
+  checked against production by a scripted walkthrough.
 */
 
 const page = readFileSync("app/(admin)/admin/payments/page.tsx", "utf8");
 const panel = readFileSync("components/admin/PaymentDetailPanel.tsx", "utf8");
 const data = readFileSync("lib/data/admin-payments.ts", "utf8");
 
-test("invented numbers are labelled as invented", async () => {
-  const view = await getPaymentsView();
-  assert.equal(view.sample, true, "the sample dataset does not flag itself");
-  // The badge and the banner are both tied to that flag, so wiring the
-  // page turns them off and nothing has to remember to remove them.
-  assert.match(page, /\{view\.sample && \(/);
-  assert.match(page, /Design concept · sample data/);
-  assert.match(page, /Every number on this page is invented/);
+test("the page never draws zeroes over a failed read", () => {
+  // A zero here reads as a quiet month, not a broken query.
+  assert.match(data, /A failed read is not an empty ledger/);
+  assert.match(data, /load_error: string \| null;/);
+  assert.match(page, /The payments could not be read/);
+  assert.match(page, /Nothing is shown rather than zeroes/);
 });
 
-test("nothing on a sample page can move money or claim a record", async () => {
-  const view = await getPaymentsView();
-  // Export, saved views, reconciliation, refund review and the Stripe
-  // link are all disabled while the data is sample.
-  const disabled = page.match(/disabled=\{view\.sample\}/g) ?? [];
-  assert.ok(disabled.length >= 4, `only ${disabled.length} controls are switched off on sample data`);
-  assert.match(panel, /disabled=\{sample\}/);
-  assert.match(panel, /there is no Stripe record behind this/);
-  // No real payment intent is implied by the sample.
-  assert.ok(
-    view.detail?.stripe_payment_intent_id?.includes("sample"),
-    "the sample payment claims a real-looking Stripe intent",
-  );
+test("nothing on this screen moves money", () => {
+  /*
+    Refunds are the one act here that takes money back, and they live
+    on their own screen with their own decision trail.
+  */
+  assert.match(data, /NOTHING ON THIS SCREEN MOVES MONEY/);
+  assert.match(data, /writable: false/);
+  assert.doesNotMatch(data, /writable: true/);
+  assert.doesNotMatch(page, /disabled=\{view\.sample\}/);
+  assert.match(page, /disabled=\{!view\.writable\}/);
 });
 
-test("holds are never added to captured", async () => {
-  const view = await getPaymentsView();
-  // Net captured is captures minus refunds. The hold is nobody's
-  // revenue and does not appear in it.
-  assert.equal(
-    view.totals.net_captured_cents,
-    view.totals.captured_cents - view.totals.refunded_cents,
-    "net captured is not captures minus refunds",
-  );
-  assert.notEqual(
-    view.totals.net_captured_cents,
-    view.totals.captured_cents + view.totals.open_holds_cents - view.totals.refunded_cents,
-  );
-  assert.match(page, /before fees and transfers/);
-  assert.match(page, /Holds are not captured funds/);
+test("holds are never added to captured", () => {
+  /*
+    A hold is the bank's money, not ours. Adding it to captured is how
+    a console reports revenue that nobody has been charged.
+  */
+  assert.match(data, /open_holds_cents: openHolds/);
+  assert.match(data, /net_captured_cents: capturedCents - refundedCents/);
+  assert.doesNotMatch(data, /capturedCents \+ openHolds/);
+  // And the holds figure is a balance now, not a window total.
+  assert.match(data, /they are a balance right\s*\n\s*now, which is why they carry an "as of"/);
+  assert.match(data, /holds_as_of: "As of just now"/);
 });
 
-test("a tip is its own payment, not a line in somebody else's", async () => {
-  const view = await getPaymentsView();
-  const tipRow = view.rows.find((r) => r.leg === "tip");
-  assert.ok(tipRow, "the sample has no tip row");
-  const serviceRow = view.rows.find((r) => r.booking_ref === tipRow!.booking_ref && r.leg === "service");
-  assert.ok(serviceRow && serviceRow.id !== tipRow!.id, "the tip shares an id with the service payment");
-  // And the detail points at it rather than folding it in.
-  assert.equal(view.detail?.tip?.payment_id, tipRow!.id);
-  assert.equal(
-    view.detail?.breakdown.find((b) => b.emphasis)?.amount_cents,
-    view.detail?.amount_cents,
-    "the captured total does not match the breakdown",
-  );
+test("a tip is its own payment, not a line in somebody else's", () => {
+  // A separate charge against a separate intent gets a separate row.
+  assert.match(data, /ONE ROW PER CHARGE, NOT PER BOOKING/);
+  assert.match(data, /leg: "tip"/);
+  assert.match(data, /stripe_payment_intent_id: row\.leg === "tip" \? b\.tip_payment_intent_id/);
 });
 
-test("allocation is not a payout", async () => {
-  const view = await getPaymentsView();
-  // Every party's share adds up to what was captured, which is exactly
-  // why it must not be read as money that has moved.
-  const allocated = (view.detail?.allocation ?? [])
-    .reduce((sum, a) => sum + (a.amount_cents ?? 0), 0);
-  assert.equal(allocated, view.detail?.amount_cents);
-  assert.match(panel, /does not confirm a\s*\n?\s*payout/);
-  assert.match(panel, /Excludes processor fees/);
-  // An allocation nobody recorded is shown as unknown, not as zero.
-  assert.match(panel, /Not recorded/);
-  assert.match(panel, /CA\$0\.00 here is how a\s*\n?\s*helper gets paid the wrong amount/);
-  // And it comes from the booking's saved quote, not today's prices.
-  assert.ok(
-    view.detail?.allocation_source.includes("not from today"),
-    "the allocation does not say where it came from",
-  );
+test("allocation is the snapshot, not today's prices", () => {
+  /*
+    A job quoted in January must not be re-split at March's commission,
+    and "we do not know what this settled at" is not CA$0.00.
+  */
+  assert.match(data, /FROM THE FIGURES SAVED WITH THIS\s*\n\s*BOOKING/);
+  assert.match(data, /\{ label: "Helper payout", amount_cents: payout \}/);
+  assert.match(data, /allocation: \{ label: string; amount_cents: number \| null/);
+  /*
+    AND THE SERVICE FEE IS COUNTED ONCE. platform_fee_cents already
+    contains it, so listing both beside each other showed a CA$29.50
+    job as CA$20.00 + CA$9.50 + CA$4.50 = CA$34.00 — four and a half
+    dollars nobody paid.
+  */
+  assert.match(data, /THE SERVICE FEE IS COUNTED ONCE/);
+  assert.match(data, /const commission = platform - serviceFee;/);
+  // If the saved figures do not add up, the panel says so.
+  assert.match(data, /label: "Unaccounted"/);
+  assert.match(data, /do not add up to what was charged/);
 });
 
 test("one currency at a time", () => {
@@ -101,15 +87,37 @@ test("one currency at a time", () => {
   assert.match(data, /currency: string;/);
 });
 
-test("the seam is one function", () => {
-  assert.match(data, /export async function getPaymentsView/);
-  assert.match(data, /Replace the body with real reads/);
-  // The page reads nothing else, so wiring cannot miss a corner.
-  assert.doesNotMatch(page, /createSupabaseServiceClient|createSupabaseServerClient|\.rpc\(/);
+test("the screen does not claim a Stripe mirror it does not have", () => {
+  /*
+    There is no local copy of Stripe's event log. An "event feed" that
+    looked like Stripe's but was assembled here would be the same lie
+    in a different font.
+  */
+  assert.match(data, /WHAT HELPWARD RECORDED, NOT WHAT STRIPE SENT/);
+  assert.match(data, /source: "helpward" as const/);
+  assert.doesNotMatch(data, /source: "stripe"/);
+  // And no reconciliation has run, so the card says so.
+  assert.match(data, /No reconciliation run is recorded/);
 });
 
+test("an empty list explains itself", () => {
+  // A blank payments table is a fault report unless it says why.
+  assert.match(data, /WHY THE LIST IS EMPTY, WHEN IT IS/);
+  assert.match(data, /belongs to a review or test account, which this view excludes/);
+  assert.match(page, /AN EMPTY PAYMENTS LIST IS ALARMING UNLESS IT EXPLAINS/);
+  assert.match(page, /Include review &amp; test activity/);
+});
 
-/* ---- the second payments brief ------------------------------------- */
+test("a stale label never decides a payment's state", () => {
+  /*
+    The first partial refund of a captured booking leaves
+    payment_status reading "captured", and a booking cancelled after
+    authorization keeps reading "authorized" when the hold is gone.
+  */
+  assert.match(data, /`payment_status` is a label that goes stale/);
+  assert.match(data, /function stateOf/);
+  assert.match(data, /if \(captured && refunded > 0\)/);
+});
 
 test("test mode is impossible to miss", () => {
   // A toggle is one chip among several and somebody arriving at a
@@ -119,29 +127,26 @@ test("test mode is impossible to miss", () => {
   assert.match(page, /No real money is involved/);
 });
 
-test("every figure says what dates it", async () => {
-  const view = await getPaymentsView();
-  assert.match(view.totals.captured_dating, /capture/i);
-  assert.match(view.totals.refunded_dating, /refund/i);
-  // Open holds are a balance, not a period total.
-  assert.match(view.totals.holds_as_of, /as of/i);
-  assert.match(page, /Captures are dated by\s*\n?\s*capture and refunds by refund/);
+test("every figure says what dates it", () => {
+  /*
+    A January charge refunded in March is March's refund and January's
+    capture. One date column cannot describe both.
+  */
+  assert.match(data, /EACH DATED BY ITS OWN EVENT/);
+  assert.match(data, /captured_dating: "Dated by capture"/);
+  assert.match(data, /refunded_dating: "Dated by refund"/);
+  assert.match(data, /function datedBy/);
 });
 
-test("a partially refunded row carries more than one amount", async () => {
-  const view = await getPaymentsView();
-  const partial = view.rows.find((r) => r.state === "partially_refunded");
-  assert.ok(partial, "the sample has no partially refunded row");
-  assert.ok(partial!.captured_cents && partial!.refunded_cents, "it carries no context");
-  assert.equal(
-    partial!.remaining_refundable_cents,
-    partial!.captured_cents! - partial!.refunded_cents!,
-    "remaining refundable does not follow from captured minus refunded",
-  );
-  // A hold has no captured figure at all — null, never zero.
-  const hold = view.rows.find((r) => r.state === "authorized");
-  assert.equal(hold!.captured_cents, null, "an open hold reports a captured amount");
-  assert.match(page, /captured ·/);
+test("a partially refunded row carries more than one amount", () => {
+  /*
+    One "Amount" column cannot describe a partly refunded payment:
+    CA$34.50 of what, and what is left?
+  */
+  assert.match(data, /refunded_cents: b\.captured_at \? refunded : null/);
+  assert.match(data, /remaining_refundable_cents: b\.captured_at \? Math\.max/);
+  // Null means not known. Never zero standing in for an unknown.
+  assert.match(data, /never zero standing\s*\n\s*in for an unknown/);
 });
 
 test("the refund workflow is a separate screen", () => {

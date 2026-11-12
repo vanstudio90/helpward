@@ -7,6 +7,10 @@ import {
   X, ExternalLink, Star, Lock, EyeOff, Eye, ShieldCheck, Info, CalendarDays,
   User, Users, Scale, FileText, History, AlertTriangle, CheckSquare, Square,
 } from "lucide-react";
+import {
+  hideReviewAction, restoreReviewAction, setRatingCountsAction,
+  type ModerationResult,
+} from "@/app/(admin)/admin/reviews/actions";
 import type { ReviewDetail } from "@/lib/data/admin-reviews";
 import {
   VISIBILITY_LABEL, VISIBILITY_TONE, REPORT_REASONS, REASON_LABEL,
@@ -36,7 +40,39 @@ import {
 
 type Tab = "review" | "reports" | "history";
 
-export function ReviewPanel({ detail, sample }: { detail: ReviewDetail; sample: boolean }) {
+export function ReviewPanel({
+  detail, sample, can,
+}: {
+  detail: ReviewDetail;
+  sample: boolean;
+  can: { hide: boolean; restore: boolean; set_rating_counts: boolean };
+}) {
+  /*
+    THE SCORE IS A SEPARATE DECISION, AND THE FORM SAYS SO.
+
+    Hiding wording used to remove the customer's stars as a side
+    effect. Now the moderator chooses, in front of the sentence that
+    explains what each choice does to the helper's average — because
+    the one thing this screen must not do is move somebody's public
+    rating without the person moving it knowing.
+  */
+  const [excludeRating, setExcludeRating] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<ModerationResult | null>(null);
+
+  const run = async (key: string, fn: () => Promise<ModerationResult>) => {
+    setBusy(key);
+    setOutcome(null);
+    try {
+      const result = await fn();
+      setOutcome(result);
+      if (result.ok) router.refresh();
+    } catch (e) {
+      setOutcome({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
   const router = useRouter();
   const params = useSearchParams();
   const [tab, setTab] = useState<Tab>("review");
@@ -353,18 +389,103 @@ export function ReviewPanel({ detail, sample }: { detail: ReviewDetail; sample: 
       </div>
 
       <footer className="border-t border-slate-100 px-4 py-3 space-y-2 bg-slate-50/60">
+        {/*
+          WHAT THIS DECISION DOES TO THE HELPER'S AVERAGE, in front of
+          the button that does it. Hiding the words leaves the score
+          counting by default: a customer whose wording we will not
+          publish still had the afternoon they scored.
+        */}
+        {detail.actions.hide && (
+          <label className="flex items-start gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
+            <input type="checkbox" checked={excludeRating} className="mt-0.5"
+              onChange={(e) => setExcludeRating(e.target.checked)} />
+            <span className="min-w-0">
+              <span className="block text-[12px] font-semibold text-slate-800">
+                Also stop this score counting toward the helper&apos;s average
+              </span>
+              <span className="block text-[11px] text-slate-600">
+                {excludeRating
+                  ? "The rating will be excluded. Only correct when there was no experience to score — spam, or a review of somebody else."
+                  : "The rating keeps counting. Hiding the wording does not change the helper's average."}
+              </span>
+            </span>
+          </label>
+        )}
+
+        {outcome && (
+          <div className={`rounded-xl px-3 py-2 border ${
+            outcome.ok ? "bg-emerald-50 border-emerald-200"
+              : outcome.conflict ? "bg-amber-50 border-amber-200"
+              : "bg-rose-50 border-rose-200"
+          }`}>
+            <p className={`text-[12px] font-semibold ${
+              outcome.ok ? "text-emerald-900" : outcome.conflict ? "text-amber-900" : "text-rose-900"
+            }`}>
+              {outcome.ok ? outcome.message : outcome.error}
+            </p>
+            {outcome.ok && outcome.detail && (
+              <p className="text-[11px] text-slate-600 mt-0.5">{outcome.detail}</p>
+            )}
+            {!outcome.ok && outcome.conflict && (
+              <button type="button" onClick={() => { setOutcome(null); router.refresh(); }}
+                className="mt-1 text-[11px] font-semibold text-amber-900 underline underline-offset-2">
+                Reload this review and start from what is recorded now
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" disabled={sample || !reason}
-            title={sample ? "Design concept — decisions are switched off" : undefined}
-            className="inline-flex items-center gap-1.5 bg-brand-600 text-white text-[13px] font-semibold px-3.5 py-2 rounded-xl disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
-            <FileText className="w-4 h-4" /> Record decision
-          </button>
-          {detail.actions.restore && (
-            <button type="button" disabled={sample}
-              className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
-              <Eye className="w-4 h-4" /> Review restoration
+          {detail.actions.hide && (
+            <button type="button"
+              disabled={sample || !can.hide || !reason || busy !== null}
+              title={!reason ? "Choose a reason first. A decision with no grounds is not a decision." : undefined}
+              onClick={() => void run("hide", () => hideReviewAction(
+                detail.uuid, detail.updated_at,
+                note.trim() || REASON_LABEL[reason] || reason,
+                REPORT_REASONS.find((r) => r.value === reason)?.policy ?? null,
+                excludeRating))}
+              className="inline-flex items-center gap-1.5 bg-brand-600 text-white text-[13px] font-semibold px-3.5 py-2 rounded-xl disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
+              <FileText className="w-4 h-4" /> {busy === "hide" ? "Recording…" : "Hide and record decision"}
             </button>
           )}
+          {detail.actions.restore && (
+            <button type="button"
+              disabled={sample || !can.restore || busy !== null}
+              onClick={() => {
+                const why = window.prompt(
+                  "Why is this being published again? A decision reversed with no explanation is one nobody can learn from.",
+                );
+                if (why === null) return;
+                void run("restore", () => restoreReviewAction(detail.uuid, detail.updated_at, why));
+              }}
+              className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+              <Eye className="w-4 h-4" /> {busy === "restore" ? "Restoring…" : "Publish again"}
+            </button>
+          )}
+          {/*
+            THE SCORE ON ITS OWN. "These words break a rule" and "this
+            person was never here" are different findings, so the
+            second gets its own control rather than riding on the first.
+          */}
+          <button type="button"
+            disabled={sample || !can.set_rating_counts || busy !== null}
+            onClick={() => {
+              const counts = detail.rating_treatment.public_effect === "excluded";
+              const why = window.prompt(
+                counts
+                  ? "Why should this score count again? It moves the helper's public average."
+                  : "Why should this score stop counting? It moves the helper's public average.",
+              );
+              if (why === null) return;
+              void run("rating", () => setRatingCountsAction(detail.uuid, detail.updated_at, counts, why));
+            }}
+            className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+            {busy === "rating" ? "Recording…"
+              : detail.rating_treatment.public_effect === "excluded"
+                ? "Let this score count again"
+                : "Stop this score counting"}
+          </button>
           {detail.actions.open_safety_case && (
             <Link href="/admin/disputes"
               className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2 rounded-xl hover:border-rose-300 hover:text-rose-700">
