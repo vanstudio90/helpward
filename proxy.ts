@@ -31,6 +31,11 @@ const CUSTOMER_PREFIXES = [
   "/dashboard", "/services", "/new-request", "/messages",
   "/bookings", "/saved-helpers", "/favorites", "/payments",
   "/analytics", "/settings", "/business", "/referrals",
+  /* Support threads are the customer's own conversation with us, so they
+     belong behind the same gate as their bookings — the page redirects
+     too, but a signed-out visitor should be turned round before a
+     server component ever runs. */
+  "/support",
 ];
 
 const HELPER_PREFIXES = ["/helper"];

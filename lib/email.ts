@@ -36,6 +36,11 @@ export type SendEmailInput = {
   text?: string;        // plain-text fallback; auto-derived from html if absent
   from?: string;
   replyTo?: string;
+  /* Base64 file content, as Resend's API takes it. Used by the support
+     inbox, where the answer to "can you send me the receipt" is a file
+     rather than a sentence. Resend caps a message at 40MB; the console
+     caps a single attachment at 10MB before it gets here. */
+  attachments?: { filename: string; content: string; contentType?: string }[];
 };
 
 export type SendEmailResult =
@@ -58,6 +63,13 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     text: input.text ?? stripHtml(input.html),
   };
   if (input.replyTo) body.reply_to = input.replyTo;
+  if (input.attachments?.length) {
+    body.attachments = input.attachments.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      ...(a.contentType ? { content_type: a.contentType } : {}),
+    }));
+  }
 
   let res: Response;
   try {

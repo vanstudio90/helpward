@@ -70,7 +70,13 @@ export default async function AdminActivityPage({
   const page = Math.max(1, Number(params.page) || 1);
   const kind = params.tab === "requests" || params.tab === "bookings" ? params.tab : "all";
 
-  const [list, services, snapshot] = await Promise.all([
+  /* The panel's read is keyed off ?open=kind:id in the URL, so it is
+     resolved here with the list rather than after it. */
+  const open = params.open?.split(":");
+  const detailKey = open && (open[0] === "booking" || open[0] === "request") && open[1]
+    ? { kind: open[0] as "booking" | "request", id: open[1] } : null;
+
+  const [list, services, snapshot, detail] = await Promise.all([
     getActivity({
       window: windowKey,
       includeReview: params.review === "1",
@@ -85,12 +91,8 @@ export default async function AdminActivityPage({
     }),
     getActiveServices(),
     getOverviewSnapshot({ window: windowKey, includeReview: params.review === "1" }),
+    detailKey ? getActivityDetail(detailKey.kind, detailKey.id) : Promise.resolve(null),
   ]);
-
-  const open = params.open?.split(":");
-  const detail = open && (open[0] === "booking" || open[0] === "request") && open[1]
-    ? await getActivityDetail(open[0], open[1])
-    : null;
 
   if (!list.ok) {
     return (

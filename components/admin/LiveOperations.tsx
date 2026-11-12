@@ -63,6 +63,7 @@ export function LiveOperations({
   const [selected, setSelected] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 640, h: 360 });
+  const [measured, setMeasured] = useState(false);
 
   /* Poll. The snapshot around it refreshes far more slowly, so this is
      the only thing on the page that moves by itself. */
@@ -88,14 +89,36 @@ export function LiveOperations({
     return () => clearInterval(id);
   }, [poll]);
 
+  /*
+    MEASURE BEFORE ASKING FOR A MAP.
+
+    `size` started at 640×360, so the image rendered at that guess, the
+    observer then measured the real container, and a SECOND basemap was
+    fetched through the proxy for every load of this page. `measured`
+    holds the <img> back for one frame — the guessed map was discarded
+    anyway — and the observer is debounced so dragging the window
+    resizes once at the end rather than ordering a map per pixel.
+  */
   useEffect(() => {
     if (!box.current) return;
     const el = box.current;
-    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const measure = () => {
+      setSize({ w: el.clientWidth, h: el.clientHeight });
+      setMeasured(true);
+    };
     measure();
-    const observer = new ResizeObserver(measure);
+
+    const observer = new ResizeObserver(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(measure, 150);
+    });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      if (timer) clearTimeout(timer);
+      observer.disconnect();
+    };
   }, []);
 
   const pins: Pin[] = useMemo(() => {
@@ -174,7 +197,7 @@ export function LiveOperations({
       </header>
 
       <div ref={box} className="relative h-[300px] bg-slate-100">
-        {size.w > 0 && (
+        {measured && size.w > 0 && (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={`/api/admin/map?lng=${view.lng.toFixed(5)}&lat=${view.lat.toFixed(5)}&zoom=${view.zoom.toFixed(2)}&w=${Math.round(size.w)}&h=${Math.round(size.h)}`}

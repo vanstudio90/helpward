@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentUser, getRequestClient } from "@/lib/auth/current-user";
 import { logoutAction } from "@/app/(auth)/auth/actions";
 import {
   LayoutDashboard, Users, ShieldCheck, Calendar, AlertOctagon,
@@ -61,18 +61,16 @@ const NAV = [
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  /*
+    ONE VERIFIED USER PER REQUEST. getCurrentUser() is memoised for the
+    render, so the page below this layout reuses this answer instead of
+    asking the auth service a second time.
+  */
+  const [supabase, user] = await Promise.all([getRequestClient(), getCurrentUser()]);
   if (!user) redirect("/login?next=/admin");
 
   const role = (user.app_metadata?.role as string | undefined) ?? "customer";
   if (role !== "admin") redirect("/dashboard");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .maybeSingle();
 
   /*
     Which project this console is pointed at, read from the Supabase URL
@@ -92,11 +90,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     admin — a bell showing somebody else's unread count would be worse
     than no bell.
   */
-  const { count: unread } = await supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .is("read_at", null);
+  /*
+    THE NAME AND THE BELL ARE TWO INDEPENDENT READS, so they travel
+    together. Asked one after the other they cost two round trips on
+    every admin page for no reason: neither answer depends on the other.
+  */
+  const [{ data: profile }, { count: unread }] = await Promise.all([
+    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .is("read_at", null),
+  ]);
 
   const initials = (profile?.full_name ?? "Admin")
     .split(/\s+/).filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("").toUpperCase();

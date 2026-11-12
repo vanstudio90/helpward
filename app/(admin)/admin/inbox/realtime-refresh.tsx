@@ -17,6 +17,10 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const DEBOUNCE_MS = 2000;
 const TABLES = [
+  // The conversations themselves come first: a customer's reply landing
+  // is the one change on this page somebody is waiting for.
+  "support_cases",
+  "support_messages",
   "disputes",
   "bookings",
   "provider_profiles",
@@ -34,19 +38,45 @@ export function AdminInboxRealtimeRefresh() {
     const supabase = createSupabaseBrowserClient();
     let timer: ReturnType<typeof setTimeout> | null = null;
 
-    const schedule = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        setRefreshing(true);
-        router.refresh();
-        // Reset the spinning state shortly after — router.refresh resolves
-        // server-side; the brief animation is just a "we saw it" signal.
-        setTimeout(() => {
-          setRefreshing(false);
-          setLastRefresh(Date.now());
-        }, 400);
-      }, DEBOUNCE_MS);
+    /*
+      A HIDDEN TAB IS NOT WATCHED, SO IT IS NOT REFRESHED.
+
+      This page re-runs its server reads on every change to eight
+      tables. On a screen somebody is reading, that is the point. On
+      the four admin tabs left open behind it, it was a page render per
+      change, all day. Changes that land while hidden set a flag, and
+      the catch-up happens the moment the tab is looked at again — so
+      nothing is missed, it is just not paid for twice.
+    */
+    let missedWhileHidden = false;
+
+    const run = () => {
+      setRefreshing(true);
+      router.refresh();
+      // Reset the spinning state shortly after — router.refresh resolves
+      // server-side; the brief animation is just a "we saw it" signal.
+      setTimeout(() => {
+        setRefreshing(false);
+        setLastRefresh(Date.now());
+      }, 400);
     };
+
+    const schedule = () => {
+      if (document.visibilityState === "hidden") {
+        missedWhileHidden = true;
+        return;
+      }
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(run, DEBOUNCE_MS);
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && missedWhileHidden) {
+        missedWhileHidden = false;
+        run();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
 
     const channel = supabase.channel("admin-inbox");
     for (const table of TABLES) {
@@ -60,14 +90,18 @@ export function AdminInboxRealtimeRefresh() {
 
     return () => {
       if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
       supabase.removeChannel(channel);
     };
   }, [router]);
 
-  // Render: small fixed-top-right pill so the indicator doesn't compete
-  // with any of the queue cards but stays visible while scrolling.
+  /*
+    Rendered inline in the tab row rather than as a floating pill: the
+    freshness of the list matters exactly where the list is, and a badge
+    fixed over the corner of the screen was covering the thread.
+  */
   return (
-    <div className="fixed top-4 right-4 z-30 inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 bg-white/95 backdrop-blur-md border border-slate-200 rounded-full px-2.5 py-1.5 shadow-sm">
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
       {refreshing ? (
         <RefreshCw className="w-3 h-3 animate-spin text-brand-600" />
       ) : (
@@ -76,8 +110,8 @@ export function AdminInboxRealtimeRefresh() {
           <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
         </span>
       )}
-      {refreshing ? "Refreshing…" : `Live · ${freshness(lastRefresh)}`}
-    </div>
+      {refreshing ? "Refreshing…" : `Updated ${freshness(lastRefresh)}`}
+    </span>
   );
 }
 

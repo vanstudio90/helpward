@@ -39,7 +39,12 @@ export default async function AdminHelpersPage({
     .find((t) => t === params.tab) ?? "queue";
   const page = Math.max(1, Number(params.page) || 1);
 
-  const [queue, admins, snapshot] = await Promise.all([
+  /*
+    THE PANEL'S READ TRAVELS WITH THE LIST. It is keyed off ?open= in
+    the URL, not off anything the list returns, so waiting for the list
+    first was a round trip spent queueing.
+  */
+  const [queue, admins, snapshot, detail] = await Promise.all([
     getHelperQueue({
       tab,
       region: params.region || null,
@@ -53,9 +58,9 @@ export default async function AdminHelpersPage({
     }),
     getAdmins(),
     getOverviewSnapshot({ window: "30d", includeReview: params.review === "1" }),
+    params.open ? getHelperDetail(params.open) : Promise.resolve(null),
   ]);
 
-  const detail = params.open ? await getHelperDetail(params.open) : null;
 
   if (!queue.ok) {
     return (

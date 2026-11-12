@@ -218,9 +218,15 @@ export function NotificationBell({
 // the right move). Keeps the bell from getting actively annoying.
 function hrefFor(type: string, payload: Record<string, unknown>): string | null {
   const bookingId = typeof payload.booking_id === "string" ? payload.booking_id : null;
+  const caseId = typeof payload.case_id === "string" ? payload.case_id : null;
   const requestId = typeof payload.request_id === "string" ? payload.request_id : null;
 
   switch (type) {
+    /* Support's reply is only a reply if it can be read and answered,
+       so it lands on the thread rather than on a dead toast. */
+    case "support_reply":
+      return caseId ? `/support/${caseId}` : "/support";
+
     // Helper-side: new offer lands them on their inbox where the full
     // offer card with accept/decline lives.
     case "new_request_offered":
@@ -301,6 +307,7 @@ function labelFor(type: string) {
     case "portfolio_photo_featured": return "Your helper featured a photo from your booking";
     case "review_received": return "You received a new review";
     case "booking_reminder": return "Your task starts soon";
+    case "support_reply": return "Helpward Support replied";
     case "helper_booking_reminder": return "You have a task starting soon";
     case "booking_no_show": return "Booking auto-cancelled — you didn't arrive";
     default: return type.replace(/_/g, " ");

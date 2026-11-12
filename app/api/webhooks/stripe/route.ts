@@ -128,6 +128,58 @@ export async function POST(req: NextRequest) {
         }
         break;
       }
+      /*
+        A CHARGEBACK IS THE BANK'S DISPUTE, NOT OURS.
+
+        The header of this file has claimed to handle this event since
+        it was written, and nothing did. It now opens a case in the
+        safety console so somebody is accountable for answering it —
+        but as its own thing: the case carries stripe_dispute_id, the
+        console badges it a chargeback, and nothing here changes the
+        booking's payment_status. Stripe decides that one on its own
+        timetable, and overwriting it from here would make the money
+        screen disagree with the processor.
+      */
+      case "charge.dispute.created": {
+        const dispute = event.data.object as Stripe.Dispute;
+        const paymentIntent = dispute.payment_intent ? String(dispute.payment_intent) : null;
+
+        const { data: booking } = paymentIntent
+          ? await admin
+              .from("bookings")
+              .select("id, customer_id, provider_id")
+              .eq("stripe_payment_intent_id", paymentIntent)
+              .maybeSingle()
+          : { data: null };
+
+        // One case per chargeback, however many times Stripe retries.
+        const { data: already } = await admin
+          .from("disputes")
+          .select("id")
+          .eq("stripe_dispute_id", dispute.id)
+          .maybeSingle();
+
+        if (!already) {
+          await admin.from("disputes").insert({
+            booking_id: booking?.id ?? null,
+            customer_id: booking?.customer_id ?? null,
+            helper_id: booking?.provider_id ?? null,
+            opened_by: booking?.customer_id ?? null,
+            kind: "service",
+            category: "billing",
+            priority: "urgent",
+            source: "other",
+            status: "open",
+            stripe_dispute_id: dispute.id,
+            reported_by_name: "Stripe (card issuer)",
+            description:
+              `The card issuer opened a chargeback for ${(dispute.amount / 100).toFixed(2)} ` +
+              `${dispute.currency.toUpperCase()}. Stripe's reason: ${dispute.reason}. ` +
+              `Evidence is due to Stripe by their deadline, which is set on their side, not ours.`,
+          });
+        }
+        break;
+      }
       // Other event types ignored for now
     }
   } catch (err) {

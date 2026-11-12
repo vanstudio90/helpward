@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
 import { isAuthorizedCron } from "@/lib/cron-auth";
+import { recordWorkerRun } from "@/lib/worker-runs";
 
 // Vercel Cron pings this daily (see vercel.json).
 // Picks every account_deletion_requests row in 'pending' status whose
@@ -18,14 +19,34 @@ import { isAuthorizedCron } from "@/lib/cron-auth";
 
 const BATCH_LIMIT = 50;
 
+/*
+  EVERY INVOCATION IS RECORDED, including the ones that do nothing and
+  the ones that never get started. Until this existed the console could
+  not tell a worker that runs cleanly every night with an empty queue
+  from a cron that was never registered — see 0112.
+*/
+const WORKER = "deletions";
+
 export async function GET(req: NextRequest) {
+  const startedAt = new Date();
+
   if (!isAuthorizedCron(req.headers.get("authorization"))) {
+    /* The schedule firing and being refused is the failure most likely
+       to look like silence, so it is the one most worth recording. */
+    await recordWorkerRun({
+      worker: WORKER, outcome: "unauthorized", startedAt,
+      detail: "A request reached this route without a valid cron secret. If the schedule is firing, CRON_SECRET does not match.",
+    });
     return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey) {
+    await recordWorkerRun({
+      worker: WORKER, outcome: "misconfigured", startedAt,
+      detail: "NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set in this environment.",
+    });
     return NextResponse.json({ ok: false, error: "Supabase env vars missing" }, { status: 500 });
   }
 
@@ -40,9 +61,19 @@ export async function GET(req: NextRequest) {
     .limit(BATCH_LIMIT);
 
   if (selErr) {
+    await recordWorkerRun({
+      worker: WORKER, outcome: "failed", startedAt,
+      detail: `The queue could not be read: ${selErr.message}`,
+    });
     return NextResponse.json({ ok: false, error: selErr.message }, { status: 500 });
   }
   if (!due || due.length === 0) {
+    /* THE STEADY STATE. Nothing was due, which is not nothing happening. */
+    await recordWorkerRun({
+      worker: WORKER, outcome: "succeeded", startedAt,
+      itemsConsidered: 0, itemsProcessed: 0,
+      detail: "Ran and found no deletion whose grace period had passed.",
+    });
     return NextResponse.json({ ok: true, deleted: 0 });
   }
 
@@ -106,6 +137,18 @@ export async function GET(req: NextRequest) {
         .eq("id", row.id);
     }
   }
+
+  await recordWorkerRun({
+    worker: WORKER,
+    outcome: failures.length === 0 ? "succeeded" : "failed",
+    startedAt,
+    itemsConsidered: due.length,
+    itemsProcessed: deleted,
+    itemsFailed: failures.length,
+    detail: failures.length === 0
+      ? `Deleted ${deleted} of ${due.length} eligible account${due.length === 1 ? "" : "s"}.`
+      : `${failures.length} of ${due.length} failed: ${failures.map((f) => f.error).join("; ").slice(0, 400)}`,
+  });
 
   return NextResponse.json({
     ok: failures.length === 0,

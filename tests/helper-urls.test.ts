@@ -24,7 +24,11 @@ test("nothing still links to the old path", () => {
     "app/sitemap.ts",
     "app/(helper)/helper/profile/slug-form.tsx",
     "app/(app)/favorites/page.tsx",
-    "app/(admin)/admin/reviews/page.tsx",
+    /* The admin review link moved into the panel when /admin/reviews
+       became the moderation design; the working page still carries its
+       own. Both are checked rather than neither. */
+    "components/admin/ReviewPanel.tsx",
+    "app/(admin)/admin/reviews/classic/page.tsx",
   ]) {
     const src = readFileSync(f, "utf8");
     assert.ok(!src.includes(OLD), `${f} still links to ${OLD}`);

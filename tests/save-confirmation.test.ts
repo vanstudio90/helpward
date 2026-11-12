@@ -146,14 +146,25 @@ test("the base address is not sold as the thing that gets you work", () => {
 });
 
 test("a failed admin query never renders as an empty table", () => {
-  // profiles.phone was dropped by migration 0051 while the admin users
-  // page still selected it, so PostgREST rejected the query, data came
-  // back null, and 94 users rendered as "No users match those filters".
+  /*
+    profiles.phone was dropped by migration 0051 while the admin users
+    page still selected it, so PostgREST rejected the query, data came
+    back null, and 94 customers rendered as "No users match those
+    filters". The page now reads admin_customer_list (0101) instead of
+    building its own select, so the column cannot drift again — but the
+    lesson it taught has to keep holding: a read that failed must say
+    so, and must never be drawn as a list with nothing in it.
+  */
   const users = readFileSync("app/(admin)/admin/users/page.tsx", "utf8");
-  assert.match(users, /const \{ data: rows, error \} = await q;/);
-  assert.match(users, /Could not load users: \{error\.message\}/);
-  // And it must no longer ask profiles for a column that is gone.
-  const select = users.slice(users.indexOf('.select('), users.indexOf('.order('));
-  assert.doesNotMatch(select, /\bphone\b(?!\))/, "still selecting profiles.phone");
-  assert.match(select, /profile_contacts\(phone\)/);
+  assert.match(users, /if \(!list\.ok\)/, "the page does not branch on a failed read");
+  assert.match(users, /\{list\.error\}/, "the reason for the failure is not shown");
+  assert.match(users, /could not be loaded/i);
+  // The empty state is for an empty result, and says so in those words.
+  assert.match(users, /No customers match these filters/);
+
+  // And the reader carries the error rather than discarding it.
+  const reader = readFileSync("lib/data/admin-customers.ts", "utf8");
+  assert.match(reader, /if \(error\) return \{ ok: false, error: describe\(error\) \};/);
+  // A missing migration is named, not reported as an empty customer base.
+  assert.match(reader, /migration 0101/);
 });
