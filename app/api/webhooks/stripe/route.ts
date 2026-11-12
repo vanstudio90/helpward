@@ -7,7 +7,15 @@ import { createSupabaseServiceClient } from "@/lib/supabase/server";
  * Add the endpoint to Stripe dashboard → Developers → Webhooks:
  *   URL: https://helpward.com/api/webhooks/stripe
  *   Events: payment_intent.succeeded, payment_intent.payment_failed,
- *           charge.refunded, charge.dispute.created
+ *           payment_intent.canceled, payment_intent.amount_capturable_updated,
+ *           charge.refunded, charge.dispute.created,
+ *           refund.created, refund.updated, refund.failed
+ *
+ * THE REFUND EVENTS ARE NOT OPTIONAL. Without them a refund that
+ * completes after the response — which is most of them — is never
+ * recorded as completed, and the customer's money is back while this
+ * system still calls the request processing. Subscriptions are checked
+ * by scripts/check-stripe-webhooks.mjs, separately for each mode.
  * Copy the signing secret into STRIPE_WEBHOOK_SECRET on Vercel.
  */
 export async function POST(req: NextRequest) {
@@ -82,6 +90,27 @@ export async function POST(req: NextRequest) {
     Stripe's signal to retry — and the retry is safe precisely because
     this row makes repeated delivery idempotent.
   */
+  /*
+    A DELIVERY WE HAVE ALREADY FINISHED IS NOT DONE AGAIN.
+
+    Stripe delivers at least once. Re-running a completed event is
+    harmless in the ledger now that ingestion is idempotent, but it
+    still appends to the trail and still costs a round trip — and the
+    cheapest correct answer to "I already did this" is to say so.
+  */
+  const { data: seen, error: seenError } = await admin
+    .from("stripe_webhook_events")
+    .select("id, processed_at")
+    .eq("id", event.id)
+    .maybeSingle();
+  if (seenError) {
+    console.error("STRIPE EVENT LOOKUP FAILED", { id: event.id, seenError });
+    return NextResponse.json({ ok: false, reason: "lookup_failed", retry: true }, { status: 500 });
+  }
+  if ((seen as { processed_at: string | null } | null)?.processed_at) {
+    return NextResponse.json({ ok: true, reason: "already_processed" });
+  }
+
   const { error: recordError } = await admin
     .from("stripe_webhook_events")
     .upsert({
@@ -130,6 +159,12 @@ export async function POST(req: NextRequest) {
        metadata field a dashboard refund would not carry. */
     const leg = row.tip_payment_intent_id === intentId ? "tip" : "service";
 
+    /*
+      THE EVENT'S OWN IDENTITY AND AGE GO WITH IT. Without them,
+      ingestion cannot tell a repeat from a new fact, or a stale
+      snapshot from the current one — and an older `pending` delivered
+      after a `succeeded` used to unwind a refund that had completed.
+    */
     const { error: ingestError } = await admin.rpc("ingest_refund_event", {
       p_processor_id: refund.id,
       p_booking: row.id,
@@ -138,6 +173,8 @@ export async function POST(req: NextRequest) {
       p_status: refund.status ?? "pending",
       p_operation: (refund.metadata?.helpward_operation as string | undefined) ?? null,
       p_reason: null,
+      p_event_id: event.id,
+      p_event_at: new Date(event.created * 1000).toISOString(),
     });
     if (ingestError) throw ingestError;
     return { ingested: true as const };
@@ -166,28 +203,38 @@ export async function POST(req: NextRequest) {
 
       case "payment_intent.canceled": {
         const pi = event.data.object as Stripe.PaymentIntent;
-        await admin
+        const { error } = await admin
           .from("bookings")
           .update({ payment_status: "pending", authorized_at: null })
           .eq("stripe_payment_intent_id", pi.id)
           .neq("payment_status", "captured");
+        if (error) throw error;
         break;
       }
 
+      /*
+        EVERY WRITE IS CHECKED, not only the refund ones. These three
+        ignored their errors and the event was still marked processed,
+        so a database outage during a capture confirmation lost it
+        silently — the booking stayed "authorized" and nothing ever
+        came back to correct it.
+      */
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent;
-        await admin
+        const { error } = await admin
           .from("bookings")
           .update({ payment_status: "captured" })
           .eq("stripe_payment_intent_id", pi.id);
+        if (error) throw error;
         break;
       }
       case "payment_intent.payment_failed": {
         const pi = event.data.object as Stripe.PaymentIntent;
-        await admin
+        const { error } = await admin
           .from("bookings")
           .update({ payment_status: "failed" })
           .eq("stripe_payment_intent_id", pi.id);
+        if (error) throw error;
         break;
       }
       /*
@@ -259,23 +306,25 @@ export async function POST(req: NextRequest) {
         const dispute = event.data.object as Stripe.Dispute;
         const paymentIntent = dispute.payment_intent ? String(dispute.payment_intent) : null;
 
-        const { data: booking } = paymentIntent
+        const { data: booking, error: bookingError } = paymentIntent
           ? await admin
               .from("bookings")
               .select("id, customer_id, provider_id")
               .eq("stripe_payment_intent_id", paymentIntent)
               .maybeSingle()
-          : { data: null };
+          : { data: null, error: null };
+        if (bookingError) throw bookingError;
 
         // One case per chargeback, however many times Stripe retries.
-        const { data: already } = await admin
+        const { data: already, error: alreadyError } = await admin
           .from("disputes")
           .select("id")
           .eq("stripe_dispute_id", dispute.id)
           .maybeSingle();
+        if (alreadyError) throw alreadyError;
 
         if (!already) {
-          await admin.from("disputes").insert({
+          const { error: insertError } = await admin.from("disputes").insert({
             booking_id: booking?.id ?? null,
             customer_id: booking?.customer_id ?? null,
             helper_id: booking?.provider_id ?? null,
@@ -292,6 +341,7 @@ export async function POST(req: NextRequest) {
               `${dispute.currency.toUpperCase()}. Stripe's reason: ${dispute.reason}. ` +
               `Evidence is due to Stripe by their deadline, which is set on their side, not ours.`,
           });
+          if (insertError) throw insertError;
         }
         break;
       }

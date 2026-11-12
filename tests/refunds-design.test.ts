@@ -253,3 +253,128 @@ test("the concurrency script says what it actually does", () => {
   // And it does not try to delete from the append-only log.
   assert.doesNotMatch(c, /delete from audit_log/);
 });
+
+/* ------------------------------------------------------------------ */
+/* EVENTS OUT OF ORDER, AND EVENTS ABOUT SOMEBODY ELSE                 */
+/* ------------------------------------------------------------------ */
+
+const identity = readFileSync("supabase/migrations/0121_refund_event_identity.sql", "utf8");
+
+test("an older event cannot undo a finished one", () => {
+  /*
+    pending → succeeded left a booking partial_refund. Delivering the
+    OLDER pending snapshot afterwards — which Stripe does, because
+    delivery is at-least-once and unordered — set the refund back to
+    processing and the booking back to captured.
+  */
+  assert.match(identity, /AN OLDER EVENT UNDID A FINISHED ONE/);
+  assert.match(identity, /p_event_at < v_r\.last_event_at/);
+  assert.match(identity, /'stale_event'/);
+  // A non-final status cannot unwind a final one even without clocks.
+  assert.match(identity, /A NON-FINAL STATUS NEVER OVERWRITES A FINAL ONE/);
+  assert.match(identity, /'would_regress_final_state'/);
+  // Proven both ways in the migration.
+  assert.match(identity, /a stale event unwound a completed refund/);
+  assert.match(identity, /pending overwrote a final state without a timestamp to stop it/);
+  // And the handler supplies what ordering needs.
+  assert.match(webhook, /p_event_id: event\.id/);
+  assert.match(webhook, /p_event_at: new Date\(event\.created \* 1000\)/);
+});
+
+test("the same delivery twice writes nothing at all", () => {
+  assert.match(identity, /'already_applied'/);
+  assert.match(identity, /a repeat delivery appended another audit event/);
+  // The handler short-circuits a delivery it has already finished.
+  assert.match(webhook, /A DELIVERY WE HAVE ALREADY FINISHED IS NOT DONE AGAIN/);
+  assert.match(webhook, /already_processed/);
+});
+
+test("an operation id has to agree with itself", () => {
+  /*
+    An event for booking A, service leg, CA$1.00 carrying booking B's
+    tip-refund operation id marked B's CA$5.00 request succeeded,
+    cleared its reconciliation flag, and recomputed A.
+  */
+  assert.match(identity, /AN IDENTITY CLAIM MUST AGREE WITH ITSELF/);
+  assert.match(identity, /v_candidate\.booking_id = p_booking\s*\n\s*and v_candidate\.leg = p_leg\s*\n\s*and v_candidate\.amount_cents = p_amount_cents/);
+  assert.match(identity, /'quarantined'/);
+  assert.match(identity, /a mismatched operation id was accepted/);
+  assert.match(identity, /a mismatched event cleared somebody else''s reconciliation flag/);
+  // Amount-only matching is gone, not merely discouraged.
+  assert.match(identity, /MATCHING BY AMOUNT ALONE IS GONE/);
+  assert.doesNotMatch(identity, /and status = 'processing'\s*\n\s*order by updated_at desc limit 1/);
+});
+
+test("requires_action is a state, not an error", () => {
+  assert.match(identity, /'requires_action'/);
+  assert.match(identity, /requires_action was not held open as processing/);
+  // The settlement vocabulary agrees with ingestion's.
+  assert.match(identity, /p_status not in \('succeeded', 'pending', 'requires_action', 'failed', 'canceled', 'unknown'\)/);
+});
+
+test("sending enforces the same block approval does", () => {
+  assert.match(identity, /THE BOOKING-WIDE BLOCK, the same one approval enforces/);
+  assert.match(identity, /a send was allowed while another refund on the booking was uncertain/);
+  // It locks the booking first, in the same order as approval.
+  assert.match(identity, /the same order as approval, so two\s*\n\s*sends cannot deadlock/);
+  // And it re-checks the balance, not just the flags.
+  assert.match(identity, /less than when this was approved/);
+});
+
+test("a fast webhook agrees with settlement instead of failing it", () => {
+  /*
+    The webhook often arrives first. Settlement demanded `processing`
+    and refused, so the action told the operator the refund was sent
+    but not recorded — alarming, wrong, and an invitation to go
+    looking for a problem that does not exist.
+  */
+  assert.match(identity, /A FAST WEBHOOK MADE THE SENDER REPORT A FAILURE/);
+  assert.match(identity, /'already_recorded', true/);
+  assert.match(identity, /settlement after a matching webhook reported a failure instead of agreeing/);
+  // A contradiction is still refused rather than smoothed over.
+  assert.match(identity, /a contradictory settlement was accepted/);
+  assert.match(identity, /has to be looked at rather than overwritten/);
+});
+
+test("every webhook write is checked, not only the refund ones", () => {
+  /*
+    payment_intent.succeeded ignored its error and the event was still
+    marked processed, so a database outage during a capture
+    confirmation lost it silently.
+  */
+  assert.match(webhook, /EVERY WRITE IS CHECKED, not only the refund ones/);
+  /*
+    Scoped to the switch itself. The catch block's own logging write is
+    deliberately unchecked — it runs because something already failed,
+    and failing to record why must not replace the original error.
+  */
+  const body = webhook.slice(
+    webhook.indexOf("switch (event.type)"),
+    webhook.indexOf("} catch (err)"),
+  );
+  const unchecked: string[] = [];
+  for (let i = body.indexOf("await admin"); i !== -1; i = body.indexOf("await admin", i + 1)) {
+    /* The result is destructured BEFORE the call and thrown on after
+       it, so both sides of the statement have to be looked at. */
+    const before = body.slice(Math.max(0, i - 120), i);
+    /* Generous, because a dispute insert's object literal is long. */
+    const after = body.slice(i, i + 1400);
+    const captured = /\berror\b/.test(before);
+    const thrown = /if \(\w*[Ee]rror\) throw/.test(after);
+    if (!captured || !thrown) unchecked.push(body.slice(i, i + 120));
+  }
+  assert.equal(unchecked.length, 0,
+    `a write in the switch ignores its error: ${unchecked[0]}`);
+});
+
+test("the events the handler implements are the events it asks for", () => {
+  // Code that handles an event it is never sent is not handling it.
+  const check = readFileSync("scripts/check-stripe-webhooks.mjs", "utf8");
+  for (const ev of ["refund.created", "refund.updated", "refund.failed"]) {
+    assert.ok(webhook.includes(`case "${ev}"`), `${ev} must be handled`);
+    assert.ok(check.includes(`"${ev}"`), `${ev} must be required`);
+  }
+  assert.match(webhook, /THE REFUND EVENTS ARE NOT OPTIONAL/);
+  // Each endpoint is judged against its own handler.
+  assert.match(check, /WHAT EACH HANDLER ACTUALLY IMPLEMENTS, by the route it lives at/);
+});
