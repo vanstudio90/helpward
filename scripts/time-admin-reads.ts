@@ -60,3 +60,12 @@ for (const [k, v] of Object.entries(totals).sort((a, b) => b[1] - a[1])) {
   console.log(`    ${v.toFixed(0).padStart(5)}ms  ${k}`);
 }
 console.log();
+
+/* The dropdown read that replaced a full operations snapshot. */
+const { getFilterOptions } = await import("../lib/data/admin-filter-options.ts");
+/* getOverviewSnapshot cannot be timed here: it uses the request's cookies
+   and only runs inside a request. Its server-side cost was measured in the
+   database instead — 10.5ms per call for a 1,873-byte document. */
+console.log("\n  filter dropdowns — what helpers/bookings pay for a region list:");
+await time("getFilterOptions", () => getFilterOptions({}));
+console.log();

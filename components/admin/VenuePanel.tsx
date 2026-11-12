@@ -7,6 +7,7 @@ import {
   X, MapPin, Lock, Info, Flag, FileText, PencilLine, UploadCloud, ArrowRight,
   ShieldCheck, Users, History, CheckCircle2, XCircle, HelpCircle, AlertTriangle,
 } from "lucide-react";
+import { setVenuePermissionsAction, type VenueResult } from "@/app/(admin)/admin/venues/actions";
 import type { VenueDetail } from "@/lib/data/admin-venues";
 import {
   PERMISSION_LABEL, PERMISSION_TONE, PERMISSION_EFFECT, PERMISSION_ENFORCED,
@@ -35,9 +36,70 @@ import {
 
 type Tab = "rules" | "evidence" | "history";
 
-export function VenuePanel({ venue, sample }: { venue: VenueDetail; sample: boolean }) {
+/*
+  FOUR QUESTIONS, ASKED SEPARATELY. The keys are the database's own, so
+  the form cannot quietly answer a different question from the one it
+  shows — which is the failure that puts a helper in a queue somebody
+  promised was fine.
+*/
+const ANSWER_FIELDS = [
+  { key: "substitutes_allowed", label: "Paid stand-in" },
+  { key: "customer_may_replace", label: "Customer may swap in" },
+  { key: "full_party_required", label: "Full party required" },
+  { key: "numbers_transferable", label: "Numbers transferable" },
+] as const;
+
+export function VenuePanel({
+  venue, sample, can,
+}: {
+  venue: VenueDetail;
+  sample: boolean;
+  can: { record_answers: boolean };
+}) {
   const router = useRouter();
   const params = useSearchParams();
+
+  /*
+    EDITING IS A MODE, NOT A SIDE EFFECT. The answers on screen are
+    what we were told; changing one is a deliberate act with a source
+    attached, so the form only appears when somebody asks for it.
+  */
+  const [editing, setEditing] = useState(false);
+  const [answers, setAnswers] = useState(venue.answers);
+  const [source, setSource] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<VenueResult | null>(null);
+
+  const changed = (Object.keys(answers) as (keyof typeof answers)[])
+    .some((k) => answers[k] !== venue.answers[k]);
+  const recordsAnAnswer = Object.values(answers).some((v) => v !== "unknown");
+
+  const save = async () => {
+    setBusy(true);
+    setResult(null);
+    try {
+      const outcome = await setVenuePermissionsAction(
+        venue.uuid, venue.updated_at,
+        {
+          substitutesAllowed: answers.substitutes_allowed,
+          customerMayReplace: answers.customer_may_replace,
+          fullPartyRequired: answers.full_party_required,
+          numbersTransferable: answers.numbers_transferable,
+        },
+        source, reason || null,
+      );
+      setResult(outcome);
+      if (outcome.ok) {
+        setEditing(false);
+        router.refresh();
+      }
+    } catch (e) {
+      setResult({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
   const [tab, setTab] = useState<Tab>("rules");
 
   const close = () => {
@@ -107,6 +169,68 @@ export function VenuePanel({ venue, sample }: { venue: VenueDetail; sample: bool
             </div>
 
             {/* THE ANSWERS */}
+            {editing ? (
+              <div className="border border-brand-200 bg-brand-50/40 rounded-xl px-3 py-3 space-y-2.5">
+                <p className="text-[12px] text-slate-700">
+                  <span className="font-semibold">These are separate questions.</span>{" "}
+                  A venue that allows a paid stand-in may still refuse to let the customer swap in
+                  at the front. Answer only what you were actually told.
+                </p>
+                {ANSWER_FIELDS.map((f) => (
+                  <label key={f.key} className="flex items-center gap-2">
+                    <span className="text-[13px] text-slate-700 w-[150px] shrink-0">{f.label}</span>
+                    <select
+                      value={answers[f.key]}
+                      onChange={(e) => setAnswers((p) => ({ ...p, [f.key]: e.target.value as VenuePermission }))}
+                      className="flex-1 border border-slate-200 rounded-lg px-2 py-1.5 text-[13px] bg-white">
+                      <option value="unknown">Not checked</option>
+                      <option value="allowed">Allowed</option>
+                      <option value="refused">Refused</option>
+                    </select>
+                  </label>
+                ))}
+                <label className="block">
+                  <span className="block text-[12px] font-semibold text-slate-700">
+                    Source — who told us, and how
+                  </span>
+                  <input value={source} onChange={(e) => setSource(e.target.value)}
+                    placeholder="Duty manager, by phone, 12 Nov"
+                    className="mt-0.5 w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] bg-white" />
+                  {/* The screen already says a permission with no evidence
+                      is somebody's memory of a phone call. The database
+                      refuses it, so the form says so before they type. */}
+                  <span className="block text-[11px] text-slate-500 mt-0.5">
+                    Required for any answer other than &ldquo;not checked&rdquo;. Recorded with your name
+                    and the time.
+                  </span>
+                </label>
+                <label className="block">
+                  <span className="block text-[12px] font-semibold text-slate-700">
+                    Note (optional)
+                  </span>
+                  <input value={reason} onChange={(e) => setReason(e.target.value)}
+                    className="mt-0.5 w-full border border-slate-200 rounded-lg px-2.5 py-1.5 text-[13px] bg-white" />
+                </label>
+                {recordsAnAnswer && (
+                  <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                    Recording a refusal stops new bookings at this venue. It does not cancel any
+                    booking that already exists — you will be told how many name this venue.
+                  </p>
+                )}
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => { setEditing(false); setAnswers(venue.answers); setResult(null); }}
+                    className="text-[13px] font-semibold text-slate-600 px-3 py-2">
+                    Cancel
+                  </button>
+                  <button type="button" onClick={() => void save()}
+                    disabled={busy || !changed || (recordsAnAnswer && source.trim() === "")}
+                    title={!changed ? "Nothing has been changed." : undefined}
+                    className="ml-auto inline-flex items-center gap-1.5 bg-brand-600 text-white text-[13px] font-semibold px-3.5 py-2 rounded-xl disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
+                    {busy ? "Recording…" : "Record answers"}
+                  </button>
+                </div>
+              </div>
+            ) : (
             <dl className="border border-slate-200 rounded-xl divide-y divide-slate-100">
               {venue.rules.map((rule) => (
                 <div key={rule.label} className="flex items-center gap-3 px-3 py-2">
@@ -135,6 +259,30 @@ export function VenuePanel({ venue, sample }: { venue: VenueDetail; sample: bool
                 </dd>
               </div>
             </dl>
+            )}
+
+            {result && (
+              <div className={`rounded-xl px-3 py-2 border ${
+                result.ok ? "bg-emerald-50 border-emerald-200"
+                  : result.conflict ? "bg-amber-50 border-amber-200"
+                  : "bg-rose-50 border-rose-200"
+              }`}>
+                <p className={`text-[12px] font-semibold ${
+                  result.ok ? "text-emerald-900" : result.conflict ? "text-amber-900" : "text-rose-900"
+                }`}>
+                  {result.ok ? result.message : result.error}
+                </p>
+                {result.ok && result.detail && (
+                  <p className="text-[11px] text-slate-600 mt-0.5">{result.detail}</p>
+                )}
+                {!result.ok && result.conflict && (
+                  <button type="button" onClick={() => { setResult(null); router.refresh(); }}
+                    className="mt-1 text-[11px] font-semibold text-amber-900 underline underline-offset-2">
+                    Reload this venue and start from what is recorded now
+                  </button>
+                )}
+              </div>
+            )}
 
             <p className="text-[11px] text-slate-500 flex items-start gap-1.5">
               <Info className="w-3.5 h-3.5 text-slate-400 mt-px shrink-0" />
@@ -271,13 +419,17 @@ export function VenuePanel({ venue, sample }: { venue: VenueDetail; sample: bool
           at. Nothing is silently cancelled and no money moves on its own.
         </p>
         <div className="flex items-center gap-2">
-          <button type="button" disabled={sample}
+          {/*
+            ONE BUTTON, BECAUSE THERE IS ONE ACT. A venue answer is not
+            drafted and published — it is recorded, with a source, the
+            moment somebody tells us. The second button here described a
+            review step that does not exist.
+          */}
+          <button type="button"
+            disabled={sample || !can.record_answers || editing}
+            onClick={() => { setEditing(true); setTab("rules"); }}
             className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
-            <PencilLine className="w-4 h-4" /> Edit draft
-          </button>
-          <button type="button" disabled={sample}
-            className="ml-auto inline-flex items-center gap-1.5 bg-brand-600 text-white text-[13px] font-semibold px-3.5 py-2 rounded-xl disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
-            <UploadCloud className="w-4 h-4" /> Review &amp; publish
+            <PencilLine className="w-4 h-4" /> Record what they said
           </button>
         </div>
       </footer>

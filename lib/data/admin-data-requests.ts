@@ -80,6 +80,8 @@ export type DeletionDetail = {
 
 export type DataRequestDetail = {
   id: string;
+  /* The row's real id. The display id is DR-368A, which is for reading. */
+  uuid: string;
   kind: RequestKind;
   title: string;
   state: ExportState | DeletionState;
@@ -99,6 +101,18 @@ export type DataRequestDetail = {
     contact_requester: boolean;
     cancel_deletion: boolean;
     destructive_requires_reason: true;
+    /*
+      WHAT CAN ACTUALLY BE DONE FROM HERE, and when it cannot, why.
+
+      A control that is on when the act would be refused teaches people
+      to click and read an error. These are computed from the row's
+      real state, so "rebuild" is off while a build is already queued
+      and says so, rather than failing at the database.
+    */
+    retry_export: boolean;
+    retry_blocked_reason: string | null;
+    mark_failed: boolean;
+    cancel_blocked_reason: string | null;
   };
 };
 
@@ -145,6 +159,18 @@ export type DataRequestsView = {
     live. The working editors are still where changes are made.
   */
   writable: boolean;
+  /*
+    WRITING IS ENABLED ONE CONTROL AT A TIME. `writable` stays false for
+    the rest of this screen — export, preview notification, review
+    delivery. These three are true because each has a database function
+    that checks the admin claim, demands a reason, refuses the states
+    where the act would be a lie, and writes its own audit event.
+  */
+  can: {
+    retry_export: boolean;
+    cancel_deletion: boolean;
+    mark_failed: boolean;
+  };
   as_of: string;
   timezone: string;
   load_error: string | null;
@@ -464,6 +490,7 @@ export async function getDataRequestsView(opts: {
       const state = exportState(exportRow.status, exportRow.expires_at);
       return {
         id: `DR-${exportRow.id.slice(0, 4).toUpperCase()}`,
+        uuid: exportRow.id,
         kind: "export",
         title: "Data export",
         state,
@@ -520,6 +547,14 @@ export async function getDataRequestsView(opts: {
           contact_requester: true,
           cancel_deletion: false,
           destructive_requires_reason: true,
+          /* Two builds of the same export race to write one row and
+             orphan the loser's file, so a queued one cannot be requeued. */
+          retry_export: !["pending", "processing"].includes(exportRow.status),
+          retry_blocked_reason: ["pending", "processing"].includes(exportRow.status)
+            ? `This export is already ${exportRow.status}. The worker runs every 30 minutes; a second build would race the first.`
+            : null,
+          mark_failed: ["pending", "processing"].includes(exportRow.status),
+          cancel_blocked_reason: null,
         },
       };
     }
@@ -528,6 +563,7 @@ export async function getDataRequestsView(opts: {
     const steps = deletionSteps(d);
     return {
       id: `DR-${d.id.slice(0, 4).toUpperCase()}`,
+      uuid: d.id,
       kind: "deletion",
       title: "Account deletion",
       state: deletionState(steps, d.status, d.grace_until),
@@ -566,6 +602,19 @@ export async function getDataRequestsView(opts: {
         contact_requester: true,
         cancel_deletion: d.status === "pending",
         destructive_requires_reason: true,
+        retry_export: false,
+        retry_blocked_reason: "This is a deletion. There is nothing to rebuild.",
+        mark_failed: false,
+        /*
+          THE REASON IT CANNOT BE STOPPED IS THE USEFUL PART. "Already
+          deleted" and "the worker is doing it right now" call for
+          different responses, and neither is "try again".
+        */
+        cancel_blocked_reason: d.status === "pending" ? null
+          : d.status === "executed" ? "This account has already been deleted. There is nothing to cancel."
+          : d.status === "executing" ? "The worker is carrying this out right now."
+          : d.status === "cancelled" ? "This deletion was already cancelled."
+          : "This deletion failed. Look at what it did before doing anything else.",
       },
     };
   }
@@ -573,6 +622,7 @@ export async function getDataRequestsView(opts: {
   return {
     sample: false,
     writable: false,
+    can: { retry_export: true, cancel_deletion: true, mark_failed: true },
     as_of: new Date().toISOString(),
     timezone: `${TZ} (local time)`,
     load_error: loadError,

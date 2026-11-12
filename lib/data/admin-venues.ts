@@ -38,6 +38,22 @@ export type VenueRow = {
 
 export type VenueDetail = {
   id: string;
+  /*
+    THE ROW'S REAL IDENTITY AND ITS TOKEN. The display id is VN-0012,
+    which is for reading; writing needs the uuid, and it needs the
+    updated_at the editor was looking at so a write against a row
+    somebody else has moved can be refused rather than applied.
+  */
+  uuid: string;
+  updated_at: string | null;
+  /* The four answers as the database holds them, for the editor. The
+     `rules` list above is the same information arranged for reading. */
+  answers: {
+    substitutes_allowed: VenuePermission;
+    customer_may_replace: VenuePermission;
+    full_party_required: VenuePermission;
+    numbers_transferable: VenuePermission;
+  };
   name: string;
   branch: string;
   permission: VenuePermission;
@@ -92,6 +108,17 @@ export type VenuesView = {
     live. The working editors are still where changes are made.
   */
   writable: boolean;
+  /*
+    WRITING IS ENABLED ONE CONTROL AT A TIME. `writable` stays false for
+    everything with no server behind it — export, evidence, the location
+    review. These two are true because each has a database function that
+    checks the admin claim, validates, writes its own audit event and
+    refuses with a code the screen can explain.
+  */
+  can: {
+    create_venue: boolean;
+    record_answers: boolean;
+  };
   service: string;
   as_of: string;
   /** Set when the register could not be read. Never rendered as "no records". */
@@ -261,6 +288,12 @@ export async function getVenuesView(opts: {
     if (!v) return null;
     const review = reviewOf(v);
     const permission = permissionOf(v);
+    const answers = {
+      substitutes_allowed: v.substitutes_allowed,
+      customer_may_replace: v.customer_may_replace,
+      full_party_required: v.full_party_required,
+      numbers_transferable: v.numbers_transferable,
+    };
 
     const rule = (label: string, value: string | null): {
       label: string; value: VenuePermission | string; kind: "permission" | "text";
@@ -272,6 +305,9 @@ export async function getVenuesView(opts: {
 
     return {
       id: `VN-${v.id.slice(0, 4).toUpperCase()}`,
+      uuid: v.id,
+      updated_at: v.updated_at,
+      answers: answers as VenueDetail["answers"],
       name: v.name,
       branch: v.city ?? v.region ?? "Main",
       permission,
@@ -331,6 +367,7 @@ export async function getVenuesView(opts: {
   return {
     sample: false,
     writable: false,
+    can: { create_venue: true, record_answers: true },
     service: "Wait in Line",
     as_of: new Date().toISOString(),
     load_error: loadError,

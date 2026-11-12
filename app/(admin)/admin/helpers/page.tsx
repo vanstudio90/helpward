@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { getHelperQueue, getHelperDetail, getAdmins, type HelperRow } from "@/lib/data/admin-helpers";
 import { STATE_LABEL, STATE_TONE } from "@/lib/admin-helper-states";
-import { getOverviewSnapshot } from "@/lib/data/admin-overview";
+import { getFilterOptions } from "@/lib/data/admin-filter-options";
 import { age } from "@/lib/admin-format";
 import { HelperQueueControls } from "@/components/admin/HelperQueueControls";
 import { HelperReviewPanel } from "@/components/admin/HelperReviewPanel";
@@ -44,7 +44,7 @@ export default async function AdminHelpersPage({
     the URL, not off anything the list returns, so waiting for the list
     first was a round trip spent queueing.
   */
-  const [queue, admins, snapshot, detail] = await Promise.all([
+  const [queue, admins, options, detail] = await Promise.all([
     getHelperQueue({
       tab,
       region: params.region || null,
@@ -57,7 +57,12 @@ export default async function AdminHelpersPage({
       offset: (page - 1) * PAGE_SIZE,
     }),
     getAdmins(),
-    getOverviewSnapshot({ window: "30d", includeReview: params.review === "1" }),
+    /*
+      THE DROPDOWN'S OWN QUESTION, not the whole operations snapshot.
+      This page used one region list out of a twelve-key document whose
+      region query scans every request ever made, windowed or not.
+    */
+    getFilterOptions({ includeReview: params.review === "1" }),
     params.open ? getHelperDetail(params.open) : Promise.resolve(null),
   ]);
 
@@ -78,7 +83,7 @@ export default async function AdminHelpersPage({
 
   const data = queue.data;
   const pages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
-  const regions = snapshot.ok ? snapshot.data.regions.map((r) => r.name) : [];
+  const regions = options.regions;
 
   const query = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams();
@@ -139,6 +144,17 @@ export default async function AdminHelpersPage({
 
             <div className="px-4 py-3">
               <HelperQueueControls owners={data.owners} regions={regions} />
+              {/*
+                AN EMPTY FILTER EXPLAINS ITSELF. A dropdown with nothing in
+                it reads as broken; saying that every request with a city
+                belongs to a test account turns it into information.
+              */}
+              {options.note && (
+                <p className="flex items-start gap-1.5 text-[11px] text-slate-500 mt-1.5">
+                  <Info className="w-3.5 h-3.5 text-slate-400 mt-px shrink-0" />
+                  {options.note}
+                </p>
+              )}
               <p className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-2">
                 <Info className="w-3.5 h-3.5 text-slate-400" />
                 {params.review === "1"

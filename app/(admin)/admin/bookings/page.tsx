@@ -4,9 +4,10 @@ import {
   ChevronLeft, ChevronRight, Info, CreditCard,
 } from "lucide-react";
 import {
-  getActivity, getActivityDetail, getActiveServices, getOverviewSnapshot,
+  getActivity, getActivityDetail, getActiveServices,
   type WindowKey, type ActivityRow,
 } from "@/lib/data/admin-overview";
+import { getFilterOptions } from "@/lib/data/admin-filter-options";
 import { age, money } from "@/lib/admin-format";
 import { ActivityControls } from "@/components/admin/ActivityControls";
 import { ActivityDetailPanel } from "@/components/admin/ActivityDetailPanel";
@@ -76,7 +77,7 @@ export default async function AdminActivityPage({
   const detailKey = open && (open[0] === "booking" || open[0] === "request") && open[1]
     ? { kind: open[0] as "booking" | "request", id: open[1] } : null;
 
-  const [list, services, snapshot, detail] = await Promise.all([
+  const [list, services, options, detail] = await Promise.all([
     getActivity({
       window: windowKey,
       includeReview: params.review === "1",
@@ -90,7 +91,13 @@ export default async function AdminActivityPage({
       offset: (page - 1) * PAGE_SIZE,
     }),
     getActiveServices(),
-    getOverviewSnapshot({ window: windowKey, includeReview: params.review === "1" }),
+    /*
+      THE TWO DROPDOWNS' OWN QUESTION. This fetched the entire
+      operations snapshot for a region list and a currency list — and
+      the currency list it took from the snapshot was then unioned with
+      CAD and USD anyway, so on this data it contributed nothing at all.
+    */
+    getFilterOptions({ includeReview: params.review === "1" }),
     detailKey ? getActivityDetail(detailKey.kind, detailKey.id) : Promise.resolve(null),
   ]);
 
@@ -110,10 +117,8 @@ export default async function AdminActivityPage({
 
   const data = list.data;
   const pages = Math.max(1, Math.ceil(data.total / PAGE_SIZE));
-  const regions = snapshot.ok ? snapshot.data.regions.map((r) => r.name) : [];
-  const currencies = Array.from(
-    new Set([...(snapshot.ok ? snapshot.data.money.map((m) => m.currency) : []), "CAD", "USD"]),
-  );
+  const regions = options.regions;
+  const currencies = options.currencies;
   const paymentIssues = data.rows.filter((r) => r.payment_status === "failed").length;
 
   const query = (changes: Record<string, string | null>) => {
@@ -138,6 +143,17 @@ export default async function AdminActivityPage({
           </header>
 
           <ActivityControls regions={regions} services={services} currencies={currencies} />
+          {/*
+            AN EMPTY FILTER EXPLAINS ITSELF. A dropdown with nothing in
+            it reads as broken; saying that every request with a city
+            belongs to a test account turns it into information.
+          */}
+          {options.note && (
+            <p className="flex items-start gap-1.5 text-[11px] text-slate-500 mt-1.5">
+              <Info className="w-3.5 h-3.5 text-slate-400 mt-px shrink-0" />
+              {options.note}
+            </p>
+          )}
 
           {/* Counters describe the same filtered set as the table below. */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">

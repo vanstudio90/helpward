@@ -8,6 +8,10 @@ import {
   FileText, MessageSquare, ChevronDown, AlertTriangle, CheckCircle2,
   Circle, XCircle, MinusCircle,
 } from "lucide-react";
+import {
+  retryExportAction, cancelDeletionAction, markExportFailedAction,
+  type RecoveryResult,
+} from "@/app/(admin)/admin/data-requests/actions";
 import type { DataRequestDetail } from "@/lib/data/admin-data-requests";
 import {
   EXPORT_LABEL, EXPORT_TONE, DELETION_LABEL, DELETION_TONE, DELETION_MEANING,
@@ -36,7 +40,43 @@ import {
 
 type Tab = "summary" | "processing" | "audit";
 
-export function DataRequestPanel({ detail, sample }: { detail: DataRequestDetail; sample: boolean }) {
+export function DataRequestPanel({
+  detail, sample, can,
+}: {
+  detail: DataRequestDetail;
+  sample: boolean;
+  can: { retry_export: boolean; cancel_deletion: boolean; mark_failed: boolean };
+}) {
+  /*
+    EVERY ONE OF THESE ASKS FOR A REASON BEFORE ANYTHING HAPPENS.
+
+    These are acts performed on a person's own data at their request,
+    so the record has to carry who did it and why. The prompt is not a
+    confirmation step bolted on — the database refuses the call without
+    a reason, and this is where the operator types it.
+  */
+  const [busy, setBusy] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<RecoveryResult | null>(null);
+
+  const ask = (
+    key: string,
+    question: string,
+    fn: (reason: string) => Promise<RecoveryResult>,
+  ) => async () => {
+    const reason = window.prompt(question);
+    if (reason === null) return;
+    setBusy(key);
+    setOutcome(null);
+    try {
+      const result = await fn(reason);
+      setOutcome(result);
+      if (result.ok) router.refresh();
+    } catch (e) {
+      setOutcome({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(null);
+    }
+  };
   const router = useRouter();
   const params = useSearchParams();
   const [tab, setTab] = useState<Tab>("summary");
@@ -323,23 +363,57 @@ export function DataRequestPanel({ detail, sample }: { detail: DataRequestDetail
               <p className="px-2.5 py-1.5 text-[11px] text-slate-500">
                 Each of these asks for a reason and records who did it.
               </p>
-              <button type="button" disabled={sample}
+              {/*
+                A CONTROL THAT IS ON WHEN THE ACT WOULD BE REFUSED
+                teaches people to click and read an error. Each of
+                these is off when the row's state makes it impossible,
+                and the title says which state that is.
+              */}
+              <button type="button"
+                disabled={sample || !can.retry_export || !detail.actions.retry_export || busy !== null}
+                title={detail.actions.retry_blocked_reason ?? undefined}
+                onClick={ask("retry",
+                  "Why is this export being rebuilt? It is recorded with the request.\n\nThe previous download link dies and does not come back — the new build produces a new one.",
+                  (reason) => retryExportAction(detail.uuid, reason))}
                 className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-slate-50 text-[13px] font-semibold text-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed">
-                Regenerate export
+                {busy === "retry" ? "Queueing…" : "Queue a fresh build"}
               </button>
-              {detail.actions.cancel_deletion && (
-                <button type="button" disabled={sample}
+              {detail.kind === "deletion" && (
+                <button type="button"
+                  disabled={sample || !can.cancel_deletion || !detail.actions.cancel_deletion || busy !== null}
+                  title={detail.actions.cancel_blocked_reason ?? undefined}
+                  onClick={ask("cancel",
+                    "Why is the deletion being cancelled? They asked for it, so the record has to say who stopped it and why.\n\nThe account holder is told in the app.",
+                    (reason) => cancelDeletionAction(detail.uuid, reason))}
                   className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-amber-50 text-[13px] font-semibold text-amber-800 disabled:text-slate-400 disabled:cursor-not-allowed">
-                  Cancel the deletion
+                  {busy === "cancel" ? "Cancelling…" : "Cancel the deletion"}
                 </button>
               )}
-              <button type="button" disabled={sample}
+              <button type="button"
+                disabled={sample || !can.mark_failed || !detail.actions.mark_failed || busy !== null}
+                title={detail.actions.mark_failed ? undefined : "Only a build that is waiting or in progress can be recorded as failed."}
+                onClick={ask("fail",
+                  "What went wrong? A failure with no reason is the thing somebody has to debug later.",
+                  (reason) => markExportFailedAction(detail.uuid, reason))}
                 className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-rose-50 text-[13px] font-semibold text-rose-700 disabled:text-slate-400 disabled:cursor-not-allowed">
-                Mark as failed
+                {busy === "fail" ? "Recording…" : "Mark as failed"}
               </button>
             </div>
           </details>
         </div>
+        {outcome && (
+          <div className={`rounded-xl px-3 py-2 border ${
+            outcome.ok ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200"
+          }`}>
+            <p className={`text-[12px] font-semibold ${outcome.ok ? "text-emerald-900" : "text-rose-900"}`}>
+              {outcome.ok ? outcome.message : outcome.error}
+            </p>
+            {outcome.ok && outcome.detail && (
+              <p className="text-[11px] text-slate-600 mt-0.5">{outcome.detail}</p>
+            )}
+          </div>
+        )}
+
         <p className="text-[11px] text-slate-500 flex items-start gap-1.5">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-px shrink-0" />
           Before retrying anything, check what the first attempt did. A regenerated export and a

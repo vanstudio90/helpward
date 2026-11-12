@@ -8,6 +8,7 @@ import {
   PERMISSION_LABEL, PERMISSION_TONE, REVIEW_LABEL, REVIEW_TONE,
 } from "@/lib/admin-venue-states";
 import { VenuePanel } from "@/components/admin/VenuePanel";
+import { AddVenueDialog } from "@/components/admin/AddVenueDialog";
 
 /*
   COVERAGE & VENUES.
@@ -106,10 +107,7 @@ export default async function AdminVenuesPage({
               className="inline-flex items-center gap-1.5 bg-white border border-slate-200 text-[13px] font-semibold text-slate-700 px-3 py-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
               <Download className="w-4 h-4" /> Export
             </button>
-            <button type="button" disabled={!view.writable}
-              className="inline-flex items-center gap-1.5 bg-brand-600 text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
-              <Plus className="w-4 h-4" /> Add venue
-            </button>
+            <AddVenueDialog disabled={!view.can.create_venue} />
           </header>
 
           {view.sample && (
@@ -217,10 +215,9 @@ export default async function AdminVenuesPage({
                       Nothing has been asked of any venue. Requests still go ahead — customers are
                       told the venue is unverified and helpers check with staff on arrival.
                     </p>
-                    <button type="button" disabled={!view.writable}
-                      className="mt-4 inline-flex items-center gap-1.5 bg-brand-600 text-white text-[13px] font-semibold px-4 py-2 rounded-xl disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed">
-                      <Plus className="w-4 h-4" /> Add venue
-                    </button>
+                    <div className="mt-4 flex justify-center">
+                      <AddVenueDialog disabled={!view.can.create_venue} />
+                    </div>
                   </div>
                 ) : noMatches ? (
                   <div className="px-6 py-12 text-center">
@@ -301,7 +298,7 @@ export default async function AdminVenuesPage({
           )}
         </div>
 
-        {venue && tab === "venues" && <VenuePanel venue={venue} sample={!view.writable} />}
+        {venue && tab === "venues" && <VenuePanel venue={venue} sample={false} can={view.can} />}
       </div>
     </div>
   );

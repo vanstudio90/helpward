@@ -187,3 +187,80 @@ test("the run log is readable by admins and writable by nobody with a browser", 
   // And it is not the audit log.
   assert.match(runsSql, /WHAT THIS TABLE IS NOT/);
 });
+
+/* ------------------------------------------------------------------ */
+/* WRITING: GETTING A STUCK REQUEST MOVING AGAIN                       */
+/* ------------------------------------------------------------------ */
+
+const recoverySql = readFileSync("supabase/migrations/0116_data_request_recovery.sql", "utf8");
+const recoveryActions = readFileSync("app/(admin)/admin/data-requests/actions.ts", "utf8");
+const drPanel = readFileSync("components/admin/DataRequestPanel.tsx", "utf8");
+
+test("a rebuild is not a reissue, and says so", () => {
+  /*
+    The expired archive is gone. Calling this "reissue" invites
+    somebody to promise a customer their original link will start
+    working again.
+  */
+  assert.match(recoverySql, /It is NOT a reissue/);
+  assert.match(recoverySql, /will not come back/);
+  assert.match(recoverySql, /archive_url = null/);
+  assert.match(recoverySql, /the dead link survived the rebuild/);
+  assert.match(drPanel, /The previous download link dies and does not come back/);
+});
+
+test("an export already queued is refused, not queued twice", () => {
+  // Two builds race to write one row and orphan the loser's file.
+  assert.match(recoverySql, /a second build would race the first/);
+  assert.match(recoverySql, /errcode = 'HW112'/);
+  assert.match(recoverySql, /a queued export was queued a second time/);
+  // And the button is off before it is pressed, with the reason.
+  assert.match(reader, /retry_blocked_reason/);
+  assert.match(drPanel, /A CONTROL THAT IS ON WHEN THE ACT WOULD BE REFUSED/);
+  assert.match(drPanel, /title=\{detail\.actions\.retry_blocked_reason/);
+});
+
+test("a completed deletion cannot be cancelled, and the refusal says why", () => {
+  assert.match(recoverySql, /already been deleted. There is nothing to cancel/);
+  assert.match(recoverySql, /carrying this deletion out right now/);
+  assert.match(recoverySql, /errcode = 'HW113'/);
+  assert.match(recoverySql, /a completed deletion was cancelled/);
+  assert.match(recoverySql, /the refusal did not say what actually happened/);
+  // Three different blocked states, three different sentences.
+  assert.match(reader, /THE REASON IT CANNOT BE STOPPED IS THE USEFUL PART/);
+});
+
+test("cancelling somebody's deletion tells them", () => {
+  /* Finding out by noticing you can still log in is not acceptable. */
+  assert.match(recoverySql, /THE PERSON IS TOLD/);
+  assert.match(recoverySql, /'account_deletion_cancelled'/);
+  assert.match(recoverySql, /no notification row was written/);
+  // Whether they were actually told is part of the outcome.
+  assert.match(recoverySql, /could NOT be notified/);
+  assert.match(recoveryActions, /Whether the person was actually told is part of the outcome/);
+});
+
+test("every recovery act requires a reason", () => {
+  assert.match(recoverySql, /EVERY ONE OF THESE NEEDS A REASON/);
+  assert.match(recoverySql, /errcode = 'HW110'/);
+  assert.match(recoverySql, /a rebuild was queued with no reason/);
+  assert.match(recoverySql, /a deletion was cancelled with no reason/);
+  assert.match(drPanel, /EVERY ONE OF THESE ASKS FOR A REASON BEFORE ANYTHING HAPPENS/);
+});
+
+test("none of these hands an operator somebody else's data", () => {
+  assert.match(recoveryActions, /NONE OF THESE IS A DOWNLOAD/);
+  assert.doesNotMatch(recoveryActions, /createSignedUrl|archive_url/);
+});
+
+test("a stuck build can be told the truth about, then rebuilt", () => {
+  assert.match(recoverySql, /A row sitting in 'processing'/);
+  assert.match(recoverySql, /errcode = 'HW114'/);
+  assert.match(recoverySql, /a delivered export was recorded as failed/);
+});
+
+test("the recovery self-test leaves nothing behind", () => {
+  assert.match(recoverySql, /errcode = 'HW999'/);
+  assert.match(recoverySql, /the subtransaction simply never commits/);
+  assert.doesNotMatch(recoverySql, /delete from public\.audit_log/);
+});

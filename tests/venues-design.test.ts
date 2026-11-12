@@ -98,3 +98,86 @@ test("the working directory survives the redesign", () => {
   assert.match(classic, /saveVenueAction|VenueForm/);
   assert.match(classic, /read by checkVenue\(\) on every Wait in Line/);
 });
+
+/* ------------------------------------------------------------------ */
+/* WRITING: CREATING A VENUE, AND RECORDING WHAT IT SAID               */
+/* ------------------------------------------------------------------ */
+
+const writesSql = readFileSync("supabase/migrations/0115_venue_writes.sql", "utf8");
+const venueActions = readFileSync("app/(admin)/admin/venues/actions.ts", "utf8");
+const addDialog = readFileSync("components/admin/AddVenueDialog.tsx", "utf8");
+
+test("a new venue knows nothing", () => {
+  /*
+    checkVenue() lets a booking through on "allowed" and tells the
+    customer the venue is fine. A creation form that can set that is
+    the one thing this register exists to prevent.
+  */
+  assert.match(writesSql, /A NEW VENUE KNOWS NOTHING/);
+  assert.match(writesSql, /'unknown', 'unknown', 'unknown', 'unknown'/);
+  assert.match(writesSql, /a new venue was created with an answer nobody gave/);
+  // The form says so before the button is pressed.
+  assert.match(addDialog, /It is recorded with every answer unknown/);
+});
+
+test("a duplicate is refused, and names the row that already exists", () => {
+  /*
+    lookup_venue() matches the normalised name and takes the most
+    recently confirmed row, so a second one silently shadows the first.
+  */
+  assert.match(writesSql, /A DUPLICATE IS WORSE THAN A MISSING ROW/);
+  assert.match(writesSql, /normalize_municipality\(p_name\)/);
+  assert.match(writesSql, /errcode = 'HW102'/);
+  assert.match(writesSql, /the duplicate refusal did not name the existing venue/);
+});
+
+test("an answer needs a source and a person", () => {
+  assert.match(writesSql, /An answer with no evidence is somebody''s memory of a phone call/);
+  assert.match(writesSql, /errcode = 'HW105'/);
+  // And the missing source is reported before the session problem,
+  // because the operator can fix the first.
+  assert.match(writesSql, /checked first because it is the\s*\n\s*operator's own omission/);
+  assert.match(writesSql, /errcode = 'HW107'/);
+  assert.match(writesSql, /an answer was recorded with no source|an unattributable answer was recorded/);
+  // The form will not submit without one either.
+  assert.match(panel, /recordsAnAnswer && source\.trim\(\) === ""/);
+});
+
+test("recording a refusal does not cancel anybody's booking", () => {
+  assert.match(writesSql, /REFUSING A VENUE DOES NOT CANCEL ANYBODY'S BOOKING/);
+  assert.match(writesSql, /open_requests_at_venue/);
+  assert.match(writesSql, /Nothing has been cancelled and no money has moved/);
+  // The operator is warned before they press it, not after.
+  assert.match(panel, /It does not cancel any\s*\n\s*booking that already exists/);
+});
+
+test("two people editing one venue is a conflict, not a race", () => {
+  assert.match(writesSql, /date_trunc\('milliseconds', v_v\.updated_at\)/);
+  assert.match(writesSql, /errcode = 'HW080'/);
+  assert.match(writesSql, /a stale write was applied/);
+  assert.match(venueActions, /conflict: true/);
+  assert.match(panel, /Reload this venue and start from what is recorded now/);
+});
+
+test("the four questions stay four questions", () => {
+  // The form's keys are the database's own.
+  assert.match(panel, /FOUR QUESTIONS, ASKED SEPARATELY/);
+  assert.match(panel, /key: "substitutes_allowed"/);
+  assert.match(panel, /key: "customer_may_replace"/);
+  assert.match(panel, /key: "full_party_required"/);
+  assert.match(panel, /key: "numbers_transferable"/);
+  // Only the ones that moved are recorded, with what they moved from.
+  assert.match(writesSql, /'before', v_v\.substitutes_allowed::text/);
+});
+
+test("the self-test borrows nobody and leaves nothing", () => {
+  assert.match(writesSql, /THE SUCCESSFUL WRITE, WITHOUT BORROWING A PERSON/);
+  assert.match(writesSql, /errcode = 'HW999'/);
+  assert.doesNotMatch(writesSql, /"sub":/);
+  assert.doesNotMatch(writesSql, /delete from public\.audit_log/);
+});
+
+test("each venue control is enabled on its own", () => {
+  assert.match(reader, /can: \{ create_venue: true, record_answers: true \}/);
+  assert.match(reader, /writable: false/);
+});

@@ -308,7 +308,7 @@ export default async function AdminDataRequestsPage({
           </div>
         </div>
 
-        {detail && <DataRequestPanel detail={detail} sample={!view.writable} />}
+        {detail && <DataRequestPanel detail={detail} sample={false} can={view.can} />}
       </div>
     </div>
   );
