@@ -93,11 +93,6 @@ export default async function AdminVenuesPage({
             </div>
           )}
 
-          {view.sample && (
-                  <span className="text-[11px] font-bold uppercase tracking-wide bg-violet-100 text-violet-800 px-2.5 py-1 rounded-md">
-                    Design concept · fictional venues
-                  </span>
-                )}
               </h1>
               <p className="text-[14px] text-slate-500 mt-0.5">
                 Keep location rules and venue permissions clear.
@@ -110,22 +105,6 @@ export default async function AdminVenuesPage({
             <AddVenueDialog disabled={!view.can.create_venue} />
           </header>
 
-          {view.sample && (
-            <div className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
-              <FlaskConical className="w-4 h-4 text-violet-600 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-violet-900">
-                <span className="font-semibold">These venues are invented.</span>{" "}
-                The rule they describe is not: a refused venue is already blocked on the server for
-                both the website and the app. The directory that records real answers is working at{" "}
-                <Link href="/admin/venues/classic" className="font-semibold underline underline-offset-2">
-                  /admin/venues/classic
-                </Link>, and it currently holds no venues — so every venue is unchecked today.
-                Wiring this design is{" "}
-                <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">getVenuesView()</code>{" "}
-                in <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">lib/data/admin-venues.ts</code>.
-              </p>
-            </div>
-          )}
 
           <nav className="flex flex-wrap items-center gap-5 border-b border-slate-200">
             {TABS.map((t) => (
@@ -176,7 +155,7 @@ export default async function AdminVenuesPage({
                     <Count icon={Clock} tone="amber" label="Due for review" value={view.counts.due_for_review} />
                   </div>
                   <p className="text-[11px] text-slate-500 text-right -mt-2">
-                    Records in this view{view.sample ? " · sample data" : ""}.
+                    Records in this view.
                   </p>
                 </>
               )}

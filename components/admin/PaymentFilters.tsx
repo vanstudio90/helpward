@@ -1,10 +1,11 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import {
   CalendarRange, MapPin, Coins, SlidersHorizontal, FlaskConical, RefreshCw,
 } from "lucide-react";
+import { WINDOW_OPTIONS, DEFAULT_WINDOW } from "@/lib/admin-filters";
 
 /*
   THE FILTERS OVER THE PAYMENTS VIEW.
@@ -22,6 +23,7 @@ import {
 export function PaymentFilters({ asOf }: { asOf: string }) {
   const router = useRouter();
   const params = useSearchParams();
+  const pathname = usePathname();
   const [, start] = useTransition();
 
   const set = (changes: Record<string, string | null>) => {
@@ -31,7 +33,15 @@ export function PaymentFilters({ asOf }: { asOf: string }) {
       else next.set(key, value);
     }
     if (!("page" in changes)) next.delete("page");
-    start(() => router.replace(`/admin/payments?${next.toString()}`, { scroll: false }));
+    /*
+      THE ROUTE IS WHERE WE ARE, not a constant.
+
+      This was hardcoded to /admin/payments, so changing a filter on
+      the Refunds page navigated to Payments — the operator pressed
+      "Test" on refunds and arrived somewhere else entirely, with the
+      refund they were looking at left behind.
+    */
+    start(() => router.replace(`${pathname}?${next.toString()}`, { scroll: false }));
   };
 
   const select =
@@ -42,11 +52,13 @@ export function PaymentFilters({ asOf }: { asOf: string }) {
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative">
         <CalendarRange className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-        <select value={params.get("window") ?? "30d"} onChange={(e) => set({ window: e.target.value })} className={select}>
-          <option value="today">Today</option>
-          <option value="7d">Last 7 days</option>
-          <option value="30d">Last 30 days</option>
-          <option value="90d">Last 90 days</option>
+        {/* The same table the readers use. A value only this control
+            knows about is a filter that silently does nothing. */}
+        <select value={params.get("window") ?? DEFAULT_WINDOW}
+          onChange={(e) => set({ window: e.target.value })} className={select}>
+          {WINDOW_OPTIONS.map((w) => (
+            <option key={w.value} value={w.value}>{w.label}</option>
+          ))}
         </select>
       </div>
 

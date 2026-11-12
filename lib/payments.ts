@@ -1720,3 +1720,277 @@ export async function payCrew(
     failures,
   };
 }
+
+/* ==================================================================== *
+ * ONE CHARGE, ONE AMOUNT                                               *
+ * ==================================================================== */
+/*
+  WHY THIS EXISTS BESIDE refundBooking().
+
+  refundBooking() refunds a BOOKING: it takes an optional job amount,
+  defaults a missing one to "everything left", and takes the tip as a
+  boolean that always means the whole tip. That is the right shape for
+  a cancellation, where the question is "undo this booking", and it is
+  the wrong shape for a console where somebody approves CA$5 against a
+  named charge.
+
+  It was wired to the console anyway, and the defaults did exactly what
+  they are written to do: an approved CA$5 TIP refund arrived as
+  `{ amountCents: undefined, includeTip: true }`, which asked Stripe for
+  the entire CA$224.50 service charge AND the whole CA$10 tip. The
+  console then reported "Approved and sent". Nothing caught it, because
+  every test asserted on the text of the source rather than on what the
+  function does when you call it.
+
+  So this function cannot express that mistake:
+
+  * ONE LEG. The caller names the charge. The other one is never
+    touched, never read, never defaulted into the request.
+  * ONE AMOUNT, EXACTLY. There is no "everything left" fallback. A
+    missing or non-positive amount is refused, not interpreted.
+  * THE PROCESSOR'S OWN STATUS, CARRIED THROUGH. A refund Stripe
+    returns as `pending` is reported as pending. Writing "succeeded"
+    over it is how a console tells a customer their money is back
+    while the bank still has it.
+  * NO BOOKKEEPING. It writes no ledger row and no booking status.
+    The console's request row IS the record, and a second row carrying
+    the same Stripe id collides with 0049's unique index — which is
+    exactly what happened: the ledger insert here raced the settlement
+    update there, one of them failed, and the action reported success
+    regardless.
+  * NOTHING HAPPENS AFTER THE MONEY MOVES. The refund is created and
+    returned. There is no balance re-read between Stripe accepting and
+    this function returning, because a failure in that gap used to be
+    reported to the operator as "no money has moved".
+*/
+
+export type RefundChargeLeg = "service" | "tip";
+
+export type ChargeRefund = {
+  leg: RefundChargeLeg;
+  paymentIntentId: string;
+  refundId: string;
+  /** Stripe's own status. Never coerced to "succeeded". */
+  processorStatus: string;
+  amountCents: number;
+  helperShareReversed: boolean;
+};
+
+/*
+  THE THIRD OUTCOME.
+
+  "It worked" and "it was refused" are not the only answers a payment
+  call can give. A connection that drops after the request leaves may
+  or may not have moved money, and the one thing that must never be
+  said about it is that nothing happened — somebody reading that will
+  refund again. This is its own shape so a caller cannot treat it as a
+  plain failure by forgetting to check a flag.
+*/
+export type PaymentUncertain = {
+  ok: false;
+  uncertain: true;
+  code: string;
+  message: string;
+  /** The key a reconciliation uses to find out what really happened. */
+  operationId: string;
+};
+
+export type ChargeRefundResult =
+  | PaymentOk<{ refund: ChargeRefund }>
+  | PaymentUncertain
+  | PaymentFailure;
+
+/*
+  THE THREE THINGS THIS FUNCTION NEEDS FROM THE WORLD.
+
+  It is a port, not a mock hook. Every failure the retest found lived
+  in the arithmetic between these three calls — which leg, which
+  amount, what the processor said — and none of it could be exercised
+  while the function reached for a live Stripe and a live database by
+  itself. The real implementation is right below; a test supplies
+  three functions and can then ask what was actually requested.
+*/
+export type RefundChargeIO = {
+  loadBooking(bookingId: string): Promise<{
+    id: string;
+    payment_status: string;
+    stripe_payment_intent_id: string | null;
+    tip_payment_intent_id: string | null;
+  } | null>;
+  remainingRefundable(bookingId: string, intentId: string): Promise<number>;
+  createRefund(
+    bookingId: string,
+    params: {
+      payment_intent: string;
+      amount: number;
+      reverse_transfer: boolean;
+      refund_application_fee?: boolean;
+      metadata: Record<string, string>;
+    },
+    idempotencyKey: string,
+  ): Promise<{ id: string; status: string | null; amount: number | null }>;
+};
+
+function liveRefundChargeIO(): RefundChargeIO {
+  return {
+    async loadBooking(bookingId) {
+      const admin = createSupabaseServiceClient();
+      const { data } = await admin
+        .from("bookings")
+        .select("id, payment_status, stripe_payment_intent_id, tip_payment_intent_id")
+        .eq("id", bookingId)
+        .maybeSingle();
+      return (data ?? null) as Awaited<ReturnType<RefundChargeIO["loadBooking"]>>;
+    },
+    async remainingRefundable(bookingId, intentId) {
+      return remainingRefundable(await stripeForBooking(bookingId), intentId);
+    },
+    async createRefund(bookingId, params, idempotencyKey) {
+      const stripe = await stripeForBooking(bookingId);
+      const refund = await stripe.refunds.create(
+        params as Stripe.RefundCreateParams,
+        { idempotencyKey },
+      );
+      return { id: refund.id, status: refund.status ?? null, amount: refund.amount ?? null };
+    },
+  };
+}
+
+/** True when Stripe told us it refused the request outright. */
+function isDefiniteRejection(err: unknown): boolean {
+  const e = err as Stripe.errors.StripeError;
+  return e?.type === "StripeInvalidRequestError"
+    || e?.type === "StripeCardError"
+    || e?.type === "StripeAuthenticationError"
+    || e?.type === "StripePermissionError";
+}
+
+export async function refundCharge(input: {
+  bookingId: string;
+  leg: RefundChargeLeg;
+  amountCents: number;
+  /** True leaves the helper paid and Helpward carries the refund. */
+  absorbHelperShare?: boolean;
+  /*
+    The refund request's own id. It is the idempotency key, so a retry
+    of the same approval can never become a second refund, and two
+    legitimate refunds of equal size are still distinguishable.
+  */
+  operationId: string;
+}, injected?: RefundChargeIO): Promise<ChargeRefundResult> {
+  /* The configuration gate belongs to the real port. A test supplying
+     its own is exercising the arithmetic, not the environment. */
+  if (!injected && !stripeConfigured()) {
+    return fail("not_configured", "Refunds are not available yet.");
+  }
+  const io = injected ?? liveRefundChargeIO();
+
+  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
+    return fail("bad_amount", "A refund amount must be a whole number of cents above zero.");
+  }
+  if (input.leg !== "service" && input.leg !== "tip") {
+    return fail("bad_leg", "A refund is against the service charge or the tip.");
+  }
+
+  const booking = await io.loadBooking(input.bookingId);
+  if (!booking) return fail("no_booking", "Booking not found.");
+
+  const intentId = input.leg === "tip"
+    ? booking.tip_payment_intent_id
+    : booking.stripe_payment_intent_id;
+  if (!intentId) {
+    return fail(
+      "nothing_to_refund",
+      input.leg === "tip"
+        ? "There is no tip charge on this booking."
+        : "This booking was never charged.",
+    );
+  }
+
+  /* A hold is not a capture. Releasing one is a different operation. */
+  if (["pending", "authorized", "failed"].includes(booking.payment_status)) {
+    return fail(
+      "not_captured",
+      "This booking has not been charged — cancel it to release the hold instead.",
+    );
+  }
+
+  const reverse = !input.absorbHelperShare;
+
+  /*
+    EVERY CHECK HAPPENS BEFORE THE MONEY MOVES. Stripe is the authority
+    on what is left; the console's own figure is what the decision was
+    made against, and the two disagreeing is exactly the case this
+    refuses rather than rounds off.
+  */
+  let remaining: number;
+  try {
+    remaining = await io.remainingRefundable(input.bookingId, intentId);
+  } catch (err) {
+    return fromStripeError(err);
+  }
+  if (remaining === 0) {
+    return fail("already_refunded",
+      `Nothing is left to refund on the ${input.leg === "tip" ? "tip" : "service charge"}.`);
+  }
+  if (input.amountCents > remaining) {
+    return fail("exceeds_refundable",
+      `Only ${(remaining / 100).toFixed(2)} is left on the ${input.leg === "tip" ? "tip" : "service charge"}. The approved amount is more than that.`);
+  }
+
+  try {
+    const refund = await io.createRefund(
+      input.bookingId,
+      {
+        payment_intent: intentId,
+        /* EXACTLY what was approved. No fallback, no rounding. */
+        amount: input.amountCents,
+        reverse_transfer: reverse,
+        /* The tip carried no application fee — all of it went to the
+           helper — so there is none to give back on that leg. */
+        ...(input.leg === "service" ? { refund_application_fee: reverse } : {}),
+        metadata: {
+          helpward_booking_id: booking.id,
+          helpward_leg: input.leg,
+          helpward_operation: input.operationId,
+        },
+      },
+      `hw-refund-${input.operationId}-${input.leg}-${input.amountCents}`,
+    );
+
+    return {
+      ok: true,
+      refund: {
+        leg: input.leg,
+        paymentIntentId: intentId,
+        refundId: refund.id,
+        /* Carried through, not interpreted. */
+        processorStatus: refund.status ?? "unknown",
+        amountCents: refund.amount ?? input.amountCents,
+        helperShareReversed: reverse,
+      },
+    };
+  } catch (err) {
+    if (isDefiniteRejection(err)) {
+      const e = err as Stripe.errors.StripeError;
+      console.error("refund rejected by Stripe:", e.message);
+      return fail("refund_rejected", e.message ?? "That refund could not be processed.");
+    }
+    /*
+      A connection that dropped, a timeout, an unknown error: Stripe may
+      have taken the money. Saying "nothing happened" here is how the
+      same refund gets sent twice.
+    */
+    console.error("REFUND OUTCOME UNKNOWN", {
+      bookingId: input.bookingId, leg: input.leg,
+      amountCents: input.amountCents, operationId: input.operationId, err,
+    });
+    return {
+      ok: false,
+      uncertain: true,
+      code: "outcome_unknown",
+      message: "The processor did not answer. The refund may or may not have been taken — it must be checked against Stripe before anything else is sent.",
+      operationId: input.operationId,
+    };
+  }
+}

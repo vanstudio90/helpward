@@ -1,5 +1,6 @@
 import "server-only";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { windowSince, windowLabel, modeOfAccount } from "@/lib/admin-filters";
 import type { PaymentState, PaymentLeg, PaymentMode } from "@/lib/admin-payment-states";
 
 /*
@@ -197,6 +198,7 @@ type BookingDb = {
   service_fee_cents: number | null; tip_cents: number | null;
   total_cents: number | null; platform_fee_cents: number | null;
   payout_cents: number | null; currency: string | null;
+  request_id: string | null;
   stripe_payment_intent_id: string | null; stripe_charge_id: string | null;
   tip_payment_intent_id: string | null; payment_error: string | null;
   authorized_at: string | null; captured_at: string | null;
@@ -311,10 +313,6 @@ function allocationNote(b: BookingDb): string {
     : `${base} THESE DO NOT ADD UP to the amount charged — the difference is shown above.`;
 }
 
-const WINDOW_DAYS: Record<string, number | null> = {
-  "Today": 1, "Last 7 days": 7, "Last 30 days": 30, "Last 90 days": 90, "Everything": null,
-};
-
 export async function getPaymentsView(opts: {
   window?: string; region?: string | null; currency?: string;
   mode?: PaymentMode; tab?: string; open?: string | null;
@@ -322,12 +320,14 @@ export async function getPaymentsView(opts: {
 } = {}): Promise<PaymentsView> {
   const db = createSupabaseServiceClient();
 
-  const days = WINDOW_DAYS[opts.window ?? "Last 30 days"] ?? null;
-  const since = days === null ? null : new Date(Date.now() - days * 86400_000).toISOString();
+  /* One vocabulary, shared with the control. A key the control cannot
+     produce falls back to the default window rather than to "no
+     cutoff" — see lib/admin-filters.ts for the bug that caused. */
+  const since = windowSince(opts.window);
 
   const [bookingsRes, refundsRes] = await Promise.all([
     db.from("bookings")
-      .select("id, customer_id, provider_id, service_id, status, payment_status," +
+      .select("id, request_id, customer_id, provider_id, service_id, status, payment_status," +
         " base_price_cents, distance_cents, service_fee_cents, tip_cents, total_cents," +
         " platform_fee_cents, payout_cents, currency, stripe_payment_intent_id," +
         " stripe_charge_id, tip_payment_intent_id, payment_error, authorized_at," +
@@ -349,7 +349,7 @@ export async function getPaymentsView(opts: {
     as_of: "just now",
     currency: opts.currency ?? "CAD",
     mode: opts.mode ?? "live",
-    window_label: opts.window ?? "Last 30 days",
+    window_label: windowLabel(opts.window),
     region_label: opts.region ?? "All regions",
     total_rows: 0,
     reconciliation: {
@@ -402,9 +402,23 @@ export async function getPaymentsView(opts: {
   const reviewExcluded = allBookings.filter(
     (b) => b.customer_id && people.get(b.customer_id)?.is_review).length;
 
+  /*
+    THE ROW'S MODE COMES FROM THE ACCOUNT THE CHARGE BELONGS TO.
+    Review accounts transact against the test Stripe (stripeForUser →
+    isReviewCustomer), so that is the authority. The filter selects
+    which transactions to show; it does not decide what they were.
+  */
+  const modeOf = (b: BookingDb): PaymentMode =>
+    modeOfAccount(b.customer_id ? people.get(b.customer_id)?.is_review : false);
+
   let bookings = opts.includeReview
     ? allBookings
     : allBookings.filter((b) => !(b.customer_id && people.get(b.customer_id)?.is_review));
+
+  /* And a mode filter EXCLUDES the other mode rather than relabelling it. */
+  const modeFilter: PaymentMode = opts.mode ?? "live";
+  const modeExcluded = bookings.filter((b) => modeOf(b) !== modeFilter).length;
+  bookings = bookings.filter((b) => modeOf(b) === modeFilter);
 
   /*
     CURRENCIES ARE NEVER SUMMED. The view is one currency at a time and
@@ -435,6 +449,25 @@ export async function getPaymentsView(opts: {
     const [first, ...rest] = full.split(" ");
     return rest.length ? `${first} ${rest[rest.length - 1][0]}.` : first;
   };
+
+  /*
+    A BOOKING'S REGION LIVES ON THE REQUEST IT CAME FROM. Bookings
+    carry no region of their own, which is why the control had nothing
+    to filter against.
+  */
+  const regionOf = new Map<string, string | null>();
+  const requestIds = Array.from(new Set(bookings.map((b) => b.request_id).filter(Boolean) as string[]));
+  if (requestIds.length) {
+    const { data } = await db.from("requests")
+      .select("id, pickup_region, pickup_city").in("id", requestIds);
+    const byRequest = new Map<string, string | null>();
+    for (const r of (data ?? []) as { id: string; pickup_region: string | null; pickup_city: string | null }[]) {
+      byRequest.set(r.id, r.pickup_city ?? r.pickup_region);
+    }
+    for (const b of bookings) {
+      if (b.request_id) regionOf.set(b.id, byRequest.get(b.request_id) ?? null);
+    }
+  }
 
   const ref = (id: string) => id.slice(0, 4).toUpperCase();
 
@@ -469,7 +502,7 @@ export async function getPaymentsView(opts: {
       refunded_cents: b.captured_at ? refunded : null,
       remaining_refundable_cents: b.captured_at ? Math.max(0, (b.total_cents ?? 0) - refunded) : null,
       currency,
-      mode: base.mode,
+      mode: modeOf(b),
       dated_by: datedBy(state),
       updated_at: ago(when),
     });
@@ -488,15 +521,39 @@ export async function getPaymentsView(opts: {
         refunded_cents: null,
         remaining_refundable_cents: b.tip_charged_at ? (b.tip_cents ?? 0) : null,
         currency,
-        mode: base.mode,
+        mode: modeOf(b),
         dated_by: "capture",
         updated_at: ago(b.tip_charged_at),
       });
     }
   }
 
+  /*
+    EVERY CONTROL THAT IS ON MUST NARROW THE LIST.
+
+    The tab and the region were accepted and dropped: clicking
+    "Authorized holds" showed captured payments, and choosing a region
+    changed nothing. A filter that looks like it worked is worse than
+    one that is missing, because the reader believes the result.
+  */
+  const inTab = (r: PaymentRow) => {
+    switch (opts.tab) {
+      case "holds": return r.state === "authorized";
+      case "captured": return r.state === "captured";
+      case "refunded": return r.state === "refunded" || r.state === "partially_refunded";
+      case "attention": return r.state === "capture_failed";
+      default: return true;
+    }
+  };
+  const inRegion = (r: PaymentRow) => {
+    if (!opts.region) return true;
+    const booking = r.booking_id ? regionOf.get(r.booking_id) : null;
+    return booking === opts.region;
+  };
+
   const search = (opts.search ?? "").trim().toLowerCase();
   const filtered = rows.filter((r) =>
+    inTab(r) && inRegion(r) &&
     (!opts.state || opts.state.startsWith("State") || r.state === opts.state) &&
     (!search || `${r.id} ${r.booking_ref} ${r.customer_name}`.toLowerCase().includes(search)));
 
@@ -543,7 +600,7 @@ export async function getPaymentsView(opts: {
       customer_name: row.customer_name,
       helper_name: null,
       state: row.state,
-      mode: base.mode,
+      mode: modeOf(b),
       currency,
       amount_cents: row.amount_cents,
       /* The card is not stored against the booking, and guessing one
@@ -613,11 +670,13 @@ export async function getPaymentsView(opts: {
     as_of: "just now",
     total_rows: filtered.length,
     empty_reason: filtered.length > 0 ? null
-      : reviewExcluded > 0 && !opts.includeReview
-        ? `No payment to show. Every booking so far — ${reviewExcluded} of them — belongs to a review or test account, which this view excludes.`
-        : allBookings.length === 0
-          ? "No booking has been paid for yet."
-          : "No payment matches this window and these filters.",
+      : allBookings.length === 0
+        ? "No booking has been paid for yet."
+        : modeExcluded > 0
+          ? `No ${modeFilter} payment to show. ${modeExcluded} payment${modeExcluded === 1 ? " is" : "s are"} on the ${modeFilter === "live" ? "test" : "live"} processor, which this view is not showing — switching the mode shows ${modeExcluded === 1 ? "it" : "them"}.`
+          : reviewExcluded > 0 && !opts.includeReview
+            ? `No payment to show. Every booking so far — ${reviewExcluded} of them — belongs to a review or test account, which this view excludes.`
+            : "No payment matches this window and these filters.",
     totals: {
       captured_cents: capturedCents,
       open_holds_cents: openHolds,

@@ -101,11 +101,6 @@ export default async function AdminServicesPage({
             </div>
           )}
 
-          {view.sample && (
-                  <span className="text-[11px] font-bold uppercase tracking-wide bg-violet-100 text-violet-800 px-2.5 py-1 rounded-md">
-                    Design concept · sample configuration
-                  </span>
-                )}
               </h1>
               <p className="text-[14px] text-slate-500 mt-0.5">
                 Manage the catalogue, booking rules and market prices.
@@ -121,21 +116,6 @@ export default async function AdminServicesPage({
             </button>
           </header>
 
-          {view.sample && (
-            <div className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
-              <FlaskConical className="w-4 h-4 text-violet-600 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-violet-900">
-                <span className="font-semibold">This configuration is illustrative.</span>{" "}
-                It is not read from the catalogue and nothing here can change a price. The editor
-                that does change services is still working at{" "}
-                <Link href="/admin/services/classic" className="font-semibold underline underline-offset-2">
-                  /admin/services/classic
-                </Link>. Wiring this design is one function:{" "}
-                <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">getCatalogueView()</code>{" "}
-                in <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">lib/data/admin-services.ts</code>.
-              </p>
-            </div>
-          )}
 
           {/* FOUR COUNTS */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">

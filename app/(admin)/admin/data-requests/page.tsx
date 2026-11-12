@@ -94,11 +94,6 @@ export default async function AdminDataRequestsPage({
             </div>
           )}
 
-          {view.sample && (
-                <p className="text-[11px] font-bold uppercase tracking-wide text-violet-700">
-                  Design concept · sample requests
-                </p>
-              )}
               <h1 className="text-[28px] leading-tight font-bold text-slate-900">Data requests</h1>
               <p className="text-[14px] text-slate-500 mt-0.5">
                 Manage personal-data exports and account deletion.
@@ -114,21 +109,6 @@ export default async function AdminDataRequestsPage({
             </button>
           </header>
 
-          {view.sample && (
-            <div className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
-              <FlaskConical className="w-4 h-4 text-violet-600 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-violet-900">
-                <span className="font-semibold">These requests are invented.</span>{" "}
-                Nothing here generates a file, sends a notice or deletes anything. The real queue —
-                with the two defects you spotted now fixed — is at{" "}
-                <Link href="/admin/data-requests/classic" className="font-semibold underline underline-offset-2">
-                  /admin/data-requests/classic
-                </Link>. Wiring this design is{" "}
-                <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">getDataRequestsView()</code>{" "}
-                in <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">lib/data/admin-data-requests.ts</code>.
-              </p>
-            </div>
-          )}
 
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5">
             <Count icon={AlertTriangle} tone="amber" label="Needs attention" value={view.counts.needs_attention}

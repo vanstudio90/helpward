@@ -76,11 +76,6 @@ export default async function AdminAuditLogPage({
             <div className="min-w-0 flex-1">
               <h1 className="text-[28px] leading-tight font-bold text-slate-900 flex flex-wrap items-center gap-2.5">
                 Audit log
-                {view.sample && (
-                  <span className="text-[11px] font-bold uppercase tracking-wide bg-violet-100 text-violet-800 px-2.5 py-1 rounded-md">
-                    Design concept · sample events
-                  </span>
-                )}
               </h1>
               <p className="text-[14px] text-slate-500 mt-0.5">
                 Trace who did what, when and to which record.
@@ -96,22 +91,6 @@ export default async function AdminAuditLogPage({
             </button>
           </header>
 
-          {view.sample && (
-            <div className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
-              <FlaskConical className="w-4 h-4 text-violet-600 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-violet-900">
-                <span className="font-semibold">These events are invented.</span>{" "}
-                The real trail is at{" "}
-                <Link href="/admin/audit-log/classic" className="font-semibold underline underline-offset-2">
-                  /admin/audit-log/classic
-                </Link>. Wiring this design is{" "}
-                <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">getAuditView()</code>{" "}
-                in <code className="text-[11px] bg-white/70 px-1 py-0.5 rounded">lib/data/admin-audit.ts</code>,
-                which must establish the append-only claim below from the database rather than
-                assume it.
-              </p>
-            </div>
-          )}
 
           {/*
             THE CLAIM, AND WHETHER IT IS TRUE. This is the sentence the
@@ -335,7 +314,7 @@ export default async function AdminAuditLogPage({
           </div>
         </div>
 
-        {detail && <AuditEventPanel detail={detail} sample={view.sample} />}
+        {detail && <AuditEventPanel detail={detail} sample={!view.writable} />}
       </div>
     </div>
   );

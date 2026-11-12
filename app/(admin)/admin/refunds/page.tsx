@@ -8,6 +8,7 @@ import { REFUND_LABEL, REFUND_TONE, REFUND_MEANING } from "@/lib/admin-refund-st
 import { money } from "@/lib/admin-format";
 import { PaymentFilters } from "@/components/admin/PaymentFilters";
 import { RefundReviewPanel } from "@/components/admin/RefundReviewPanel";
+import { NewRefundForm } from "@/components/admin/NewRefundForm";
 
 /*
   REFUNDS.
@@ -135,6 +136,25 @@ export default async function AdminRefundsPage({
               anybody approves it.
             </p>
           </div>
+
+          {/*
+            THE FORM THE LINK FROM A PAYMENT LEADS TO. Before this,
+            "Review refund" arrived at an empty table with no way to
+            create anything.
+          */}
+          {view.start && (
+            <NewRefundForm target={view.start} canRequest={view.can.request} />
+          )}
+          {params.start && !view.start && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-amber-900">
+                <span className="font-semibold">{params.start} is not a payment this console can refund.</span>{" "}
+                It may be outside the window, in another currency, or on the other processor. Nothing
+                is offered under its reference rather than a form against the wrong charge.
+              </p>
+            </div>
+          )}
 
           <PaymentFilters asOf={view.as_of} />
 

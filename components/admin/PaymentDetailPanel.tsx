@@ -77,7 +77,7 @@ export function PaymentDetailPanel({ detail, sample }: { detail: PaymentDetail; 
           </div>
           <button
             type="button"
-            title={sample ? "Sample data — there is no Stripe record behind this" : "Open in Stripe"}
+            title={detail.stripe_payment_intent_id ? "Open in Stripe" : "No processor record is stored against this payment"}
             disabled={sample}
             className="w-8 h-8 grid place-items-center rounded-lg text-slate-400 hover:text-brand-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -233,7 +233,7 @@ export function PaymentDetailPanel({ detail, sample }: { detail: PaymentDetail; 
                     </Link>
                   ) : (
                     <button type="button" disabled
-                      title="Sample data — no booking behind this"
+                      title="No booking is linked to this payment"
                       className="text-[12px] font-semibold text-white bg-brand-600 px-2.5 py-1.5 rounded-lg opacity-40 cursor-not-allowed">
                       Open booking
                     </button>
@@ -308,7 +308,7 @@ export function PaymentDetailPanel({ detail, sample }: { detail: PaymentDetail; 
 
       <footer className="border-t border-slate-100 px-4 py-2.5 flex items-center gap-2">
         <button type="button" disabled={sample}
-          title={sample ? "Sample data — there is no Stripe record behind this" : "Open this payment in Stripe"}
+          title={detail.stripe_payment_intent_id ? "Open this payment in Stripe" : "No processor record is stored against this payment"}
           className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand-700 disabled:text-slate-400 disabled:cursor-not-allowed">
           <ExternalLink className="w-3.5 h-3.5" /> Open in Stripe
         </button>

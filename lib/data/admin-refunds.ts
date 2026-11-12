@@ -1,5 +1,6 @@
 import "server-only";
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import { windowSince, windowLabel, modeOfAccount } from "@/lib/admin-filters";
 import type { RefundState, EffectState } from "@/lib/admin-refund-states";
 import type { PaymentLeg, PaymentMode } from "@/lib/admin-payment-states";
 
@@ -131,6 +132,23 @@ export type RefundsView = {
   };
   /** Why the list is empty, when it is. Never a blank table. */
   empty_reason: string | null;
+  /*
+    THE PAYMENT SOMEBODY ARRIVED HERE TO REFUND.
+
+    "Review refund" on a payment linked to ?start=PY-…, and this
+    reader accepted the parameter and ignored it — so the only route
+    into the workflow produced an empty table and no form. Eligibility
+    is decided here, on the server, from the charge's own balances.
+  */
+  start: {
+    paymentRef: string;
+    bookingId: string;
+    bookingRef: string;
+    customerName: string;
+    currency: string;
+    legs: { leg: "service" | "tip"; label: string; captured_cents: number; available_cents: number }[];
+    blocked_reason: string | null;
+  } | null;
   /** Set when the read failed. NEVER rendered as zero refunds. */
   load_error: string | null;
   as_of: string;
@@ -170,6 +188,7 @@ function at(iso: string | null): string | null {
 
 type RefundDb = {
   id: string; booking_id: string; leg: string; amount_cents: number;
+  needs_reconciliation?: boolean | null;
   reason: string | null; status: string; stripe_refund_id: string | null;
   requested_by: string | null; requested_at: string | null;
   decided_by: string | null; decided_at: string | null;
@@ -254,7 +273,7 @@ export async function getRefundsView(opts: {
     db.from("refunds")
       .select("id, booking_id, leg, amount_cents, reason, status, stripe_refund_id," +
         " requested_by, requested_at, decided_by, decided_at, decision_reason," +
-        " internal_note, absorb_helper_share, failure_reason, created_at, updated_at")
+        " internal_note, absorb_helper_share, failure_reason, needs_reconciliation, created_at, updated_at")
       .order("updated_at", { ascending: false }).limit(500),
     db.from("bookings")
       .select("id, customer_id, provider_id, service_id, total_cents, tip_cents," +
@@ -270,7 +289,7 @@ export async function getRefundsView(opts: {
     as_of: "just now",
     currency: opts.currency ?? "CAD",
     mode: opts.mode ?? "live",
-    window_label: opts.window ?? "Last 30 days",
+    window_label: windowLabel(opts.window),
     /* Nothing syncs from the processor, so this is never a sync error. */
     sync_error: null,
     totals: {
@@ -278,7 +297,7 @@ export async function getRefundsView(opts: {
       awaiting_review_count: 0, failed_count: 0,
       dating_note: "Dated by the refund, not by the original charge.",
     },
-    rows: [], total_rows: 0, failures: [], review: null,
+    rows: [], total_rows: 0, failures: [], review: null, start: null,
   });
 
   if (refundsRes.error) {
@@ -316,8 +335,23 @@ export async function getRefundsView(opts: {
     const b = bookings.get(r.booking_id);
     return Boolean(b?.customer_id && people.get(b.customer_id)?.is_review);
   };
+  /* THE ROW'S MODE IS THE ACCOUNT'S, not the filter's. See
+     lib/admin-filters.ts — the payments list relabelled the same
+     transaction Live then Test by reading the chip instead. */
+  const modeOfRefund = (r: RefundDb): PaymentMode => {
+    const b = bookings.get(r.booking_id);
+    return modeOfAccount(b?.customer_id ? people.get(b.customer_id)?.is_review : false);
+  };
   const excluded = refunds.filter(isReviewRefund).length;
   let scoped = opts.includeReview ? refunds : refunds.filter((r) => !isReviewRefund(r));
+
+  const modeFilter: PaymentMode = opts.mode ?? "live";
+  const modeExcluded = scoped.filter((r) => modeOfRefund(r) !== modeFilter).length;
+  scoped = scoped.filter((r) => modeOfRefund(r) === modeFilter);
+
+  /* A date range that is set must actually narrow the list. */
+  const since = windowSince(opts.window);
+  if (since) scoped = scoped.filter((r) => (r.updated_at ?? r.created_at) >= since);
 
   /* Currencies are never summed. One at a time, and the view says which. */
   const currency = opts.currency
@@ -339,7 +373,7 @@ export async function getRefundsView(opts: {
       currency,
       state: (["awaiting_review", "processing", "succeeded", "failed", "cancelled"]
         .includes(r.status) ? r.status : "succeeded") as RefundState,
-      mode: opts.mode ?? "live",
+      mode: modeOfRefund(r),
       /* Null until something has actually been submitted to the processor. */
       processor_refund_id: r.stripe_refund_id,
       updated_at: ago(r.updated_at),
@@ -350,6 +384,17 @@ export async function getRefundsView(opts: {
   };
 
   let rows = scoped.map(toRow);
+
+  /* The tab is a filter, not a label. */
+  const TAB_STATES: Record<string, RefundState[]> = {
+    awaiting: ["awaiting_review"],
+    processing: ["processing"],
+    succeeded: ["succeeded"],
+    failed: ["failed", "cancelled"],
+  };
+  const tabStates = opts.tab ? TAB_STATES[opts.tab] : undefined;
+  if (tabStates) rows = rows.filter((r) => tabStates.includes(r.state));
+
   if (opts.state && !opts.state.startsWith("State")) {
     rows = rows.filter((r) => r.state === opts.state);
   }
@@ -368,6 +413,53 @@ export async function getRefundsView(opts: {
     failed_count: scoped.filter((r) => r.status === "failed").length,
     dating_note: "Dated by the refund, not by the original charge — a refund in March against a January charge is March's number.",
   };
+
+  /*
+    THE TARGET OF A NEW REQUEST, resolved from the reference in the
+    link. The booking must exist, must have been captured, and must
+    actually have the charge being refunded — checked here rather than
+    trusted from a query string.
+  */
+  const startTarget = opts.start ? buildStart(opts.start) : null;
+
+  function buildStart(reference: string): RefundsView["start"] {
+    const wanted = reference.replace(/^PY-/i, "").replace(/T$/i, "").toUpperCase();
+    const b = [...bookings.values()].find((x) => ref(x.id) === wanted);
+    if (!b) return null;
+
+    const legFor = (leg: "service" | "tip") => {
+      const captured = leg === "tip" ? (b.tip_cents ?? 0) : (b.total_cents ?? 0);
+      const same = refunds.filter((r) => r.booking_id === b.id && r.leg === leg);
+      const taken = same
+        .filter((r) => ["succeeded", "processing", "awaiting_review"].includes(r.status))
+        .reduce((sum, r) => sum + r.amount_cents, 0);
+      return {
+        leg,
+        label: leg === "tip" ? "Tip" : "Service charge",
+        captured_cents: captured,
+        available_cents: Math.max(0, captured - taken),
+      };
+    };
+
+    const legs = [legFor("service"), ...((b.tip_cents ?? 0) > 0 ? [legFor("tip")] : [])];
+    const unknown = refunds.some((r) => r.booking_id === b.id && r.needs_reconciliation);
+
+    return {
+      paymentRef: reference,
+      bookingId: b.id,
+      bookingRef: `BK-${ref(b.id)}`,
+      customerName: shortName(b.customer_id),
+      currency: b.currency ?? currency,
+      legs,
+      blocked_reason: !b.captured_at
+        ? "This booking was never charged, so there is nothing to refund. Releasing a hold is a different act."
+        : unknown
+          ? "A refund on this booking has an unknown outcome and is waiting to be reconciled. Nothing further may be requested against it until somebody has checked Stripe."
+          : legs.every((l) => l.available_cents === 0)
+            ? "Everything on this payment has already been refunded or reserved."
+            : null,
+    };
+  }
 
   const review = opts.open ? buildReview(opts.open) : null;
 
@@ -396,7 +488,7 @@ export async function getRefundsView(opts: {
       id_uuid: r.id,
       updated_at: r.updated_at,
       state: (r.status as RefundState),
-      mode: opts.mode ?? "live",
+      mode: modeOfRefund(r),
       currency,
       payment: {
         ref: `PY-${ref(r.booking_id)}${leg === "tip" ? "T" : ""}`,
@@ -450,17 +542,20 @@ export async function getRefundsView(opts: {
     empty_reason: rows.length > 0 ? null
       : refunds.length === 0
         ? "Nothing has been refunded, and nothing has been asked for."
-        : excluded > 0 && !opts.includeReview
-          ? `No refund to show. ${excluded} of them belong to review or test bookings, which this view excludes.`
-          : "No refund matches these filters.",
+        : modeExcluded > 0
+          ? `No ${modeFilter} refund to show. ${modeExcluded} ${modeExcluded === 1 ? "is" : "are"} on the ${modeFilter === "live" ? "test" : "live"} processor.`
+          : excluded > 0 && !opts.includeReview
+            ? `No refund to show. ${excluded} of them belong to review or test bookings, which this view excludes.`
+            : "No refund matches these filters.",
     as_of: "just now",
     currency,
     mode: opts.mode ?? "live",
-    window_label: opts.window ?? "Last 30 days",
+    window_label: windowLabel(opts.window),
     sync_error: null,
     totals,
     rows: rows.slice(0, 25),
     total_rows: rows.length,
+    start: startTarget,
     failures: scoped.filter((r) => r.status === "failed").map((r) => ({
       id: `RF-${ref(r.id)}`,
       reason: r.failure_reason ?? "No reason was recorded with the failure.",

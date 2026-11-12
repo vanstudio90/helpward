@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { refundBooking } from "@/lib/payments";
+import { refundCharge } from "@/lib/payments";
+import { recordRefundOutcome, refundSendingEnabled } from "@/lib/refund-approval";
 
 /*
   ASKING FOR A REFUND, AND DECIDING ONE.
@@ -10,21 +11,32 @@ import { refundBooking } from "@/lib/payments";
   THE SPLIT THAT MATTERS: the database decides whether a refund MAY
   happen — who may ask, whether the money is there once refunds in
   flight are counted, who carries the cost, and whether this person is
-  allowed to approve it. Stripe is the only thing that makes it happen,
-  and refundBooking() re-reads the real remaining balance before it
-  sends anything.
+  allowed to approve it. Stripe is the only thing that makes it happen.
 
-  So approval is two steps on purpose. The row moves to `processing`
+  Approval is two steps on purpose. The row moves to `processing`
   first, which is what stops a second approval double-sending while the
   first is at the processor. Only then is the refund sent, and whatever
-  comes back — an id or an error — is written to the same row. A
-  console that marked a refund "succeeded" the moment somebody clicked
-  would be reporting an intention as an outcome.
+  comes back is written to the same row.
 
-  WHAT HAPPENS IF THE SEND FAILS AFTER APPROVAL: the row is recorded as
-  failed, with the processor's reason, and says so. The approval is not
-  silently undone — somebody approved it, and that is part of the
-  record.
+  THREE THINGS THIS FILE GOT WRONG, and what each one now does:
+
+  * IT SENT THE WRONG MONEY. An approved CA$5 TIP refund was handed to
+    refundBooking() as `{ amountCents: undefined, includeTip: true }`,
+    which means "everything left on the service charge, plus the whole
+    tip". It now calls refundCharge(), which takes one named leg and
+    one exact amount and cannot express that request.
+
+  * IT IGNORED THE BOOKKEEPING. The settlement call's own error was
+    never read, so a refund whose record failed to save still reported
+    "Approved and sent". Every settlement response is now checked, and
+    a failure to record is reported as what it is: money that moved and
+    a record that did not.
+
+  * IT CALLED AN UNKNOWN OUTCOME A FAILURE. "The refund was NOT sent
+    and no money has moved" was printed for a case where Stripe may
+    well have taken it. An uncertain outcome is now its own state: the
+    request stays open, flagged for reconciliation, and nothing further
+    may be sent against that booking until somebody has checked.
 */
 
 export type RefundResult =
@@ -98,47 +110,46 @@ export async function decideRefundAction(
     return { ok: true, message: "Declined.", detail: decision.note };
   }
 
-  /*
-    THE ONLY PLACE MONEY ACTUALLY MOVES. refundBooking() reverses the
-    helper's transfer unless this reason absorbs it, refuses to touch
-    the tip unless the refund is against the tip, and reads the real
-    remaining balance from Stripe before sending.
-  */
-  const sent = await refundBooking(decision.booking_id, {
-    amountCents: decision.leg === "tip" ? undefined : decision.amount_cents,
-    includeTip: decision.leg === "tip",
-    absorbHelperShare: decision.absorb_helper_share,
-    reason: "requested_by_customer",
-    /* Two legitimate refunds of the same size are not one retried
-       refund, and Stripe's idempotency cannot tell them apart without
-       this. */
-    operationId: refundId,
-  });
-
-  if (!sent.ok) {
-    await supabase.rpc("admin_refund_settle", {
-      p_refund: refundId, p_succeeded: false,
-      p_processor_id: null, p_failure: sent.message,
-    });
+  if (!refundSendingEnabled()) {
+    /* Approved and left at the door on purpose. The row stays
+       `processing`, which is exactly what it is. */
     revalidatePath("/admin/refunds");
     return {
-      ok: false,
-      error: `Approved, but the refund was NOT sent: ${sent.message}. The request is recorded as failed and no money has moved.`,
+      ok: true,
+      message: "Approved — and NOT sent.",
+      detail: "Sending is switched off until the end-to-end run against Stripe test mode has been done. The decision is recorded and the request is waiting; no money has moved.",
     };
   }
 
-  const leg = sent.legs[0];
-  await supabase.rpc("admin_refund_settle", {
-    p_refund: refundId, p_succeeded: true,
-    p_processor_id: leg?.refundId ?? null, p_failure: null,
+  /*
+    THE ONLY PLACE MONEY ACTUALLY MOVES. One named charge, the exact
+    amount that was approved, and the refund request's own id as the
+    idempotency key — so a retry of this approval can never become a
+    second refund.
+  */
+  const sent = await refundCharge({
+    bookingId: decision.booking_id,
+    leg: decision.leg === "tip" ? "tip" : "service",
+    amountCents: decision.amount_cents,
+    absorbHelperShare: decision.absorb_helper_share,
+    operationId: refundId,
   });
+
+  /* Every settlement response is checked. See lib/refund-approval.ts
+     for why each outcome gets its own sentence. */
+  const outcome = await recordRefundOutcome(
+    sent,
+    async ({ status, processorId, detail }) => {
+      const { error: settleError } = await supabase.rpc("admin_refund_settle", {
+        p_refund: refundId, p_status: status,
+        p_processor_id: processorId, p_detail: detail,
+      });
+      return { error: settleError ? { message: settleError.message } : null };
+    },
+    { refundId, absorbHelperShare: decision.absorb_helper_share },
+  );
+
   revalidatePath("/admin/refunds");
   revalidatePath("/admin/payments");
-  return {
-    ok: true,
-    message: "Approved and sent.",
-    detail: decision.absorb_helper_share
-      ? "The helper keeps their share; Helpward carries this refund."
-      : "The helper's share was taken back with the refund.",
-  };
+  return outcome;
 }

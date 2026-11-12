@@ -17,6 +17,8 @@ const data = readFileSync("lib/data/admin-refunds.ts", "utf8");
 const states = readFileSync("lib/admin-refund-states.ts", "utf8");
 const sql = readFileSync("supabase/migrations/0118_refund_decisions.sql", "utf8");
 const actions = readFileSync("app/(admin)/admin/refunds/actions.ts", "utf8");
+const approval = readFileSync("lib/refund-approval.ts", "utf8");
+const execution = readFileSync("tests/refund-execution.test.ts", "utf8");
 
 test("the reason decides who carries the refund, not whoever clicks", () => {
   /*
@@ -54,13 +56,31 @@ test("asking is not sending", () => {
   assert.match(actions, /THE ONLY PLACE MONEY ACTUALLY MOVES/);
 });
 
-test("a refund that failed is never shown as sent", () => {
-  assert.match(actions, /the refund was NOT sent/);
-  assert.match(actions, /p_succeeded: false/);
-  assert.match(actions, /The approval is not\s*\n\s*silently undone/);
-  assert.match(panel, /so a refund that failed is never shown as sent/);
-  // A failure must carry what the processor said.
-  assert.match(sql, /a refund failed with no reason recorded/);
+test("the outcomes are handled where they can be run", () => {
+  /*
+    THE ASSERTIONS THAT GAVE FALSE COMFORT WERE HERE.
+
+    This suite used to check that the action's source CONTAINED the
+    right phrases. It did, and the code underneath still sent the whole
+    service charge for an approved CA$5 tip refund, ignored a failed
+    settlement write, and called an unknown outcome "no money has
+    moved". Source text cannot catch arithmetic.
+
+    The behaviour now lives in lib/refund-approval.ts and lib/payments.ts
+    behind injectable ports, and tests/refund-execution.test.ts runs it.
+    What is left here is the structural claim: the action does not
+    carry that logic inline any more.
+  */
+  assert.match(actions, /recordRefundOutcome\(/);
+  assert.match(actions, /refundCharge\(/);
+  // Checked on the code, not the comment that names the old call.
+  assert.doesNotMatch(actions.replace(/\/\*[\s\S]*?\*\//g, ""), /refundBooking\(/);
+  // Every settlement response is read, not fired and forgotten.
+  assert.match(approval, /if \(settled\.error\)/);
+  assert.match(approval, /Do not send it again/);
+  // And an unknown outcome never claims nothing happened.
+  assert.match(approval, /NOT known whether this refund was taken/);
+  assert.doesNotMatch(approval, /no money has moved/);
 });
 
 test("succeeded does not mean the customer has the money", () => {
@@ -102,7 +122,28 @@ test("a tip is a different charge and says so", () => {
   assert.match(sql, /A TIP IS A DIFFERENT CHARGE/);
   assert.match(sql, /refunds_leg_check check \(leg in \('service', 'tip'\)\)/);
   assert.match(sql, /case when p_leg = 'tip' then coalesce\(b\.tip_cents, 0\) else b\.total_cents end/);
-  assert.match(actions, /includeTip: decision\.leg === "tip"/);
+  // The executor takes ONE leg and cannot be asked for both.
+  assert.match(actions, /leg: decision\.leg === "tip" \? "tip" : "service"/);
+  assert.match(actions, /amountCents: decision\.amount_cents/);
+  assert.doesNotMatch(actions.replace(/\/\*[\s\S]*?\*\//g, ""), /includeTip/);
+  // Proven by running it, in tests/refund-execution.test.ts.
+  assert.match(execution, /a partial tip refund touches the tip, for exactly the approved amount/);
+});
+
+test("sending is off until the end-to-end run has been done", () => {
+  /*
+    The decision workflow is correct and recorded; the journey against
+    Stripe test mode — partial tips, a pending outcome, an interrupted
+    response, two approvals at once — has not been run. Approving
+    records the decision and deliberately does not send.
+  */
+  assert.match(approval, /SENDING IS OFF UNTIL THE JOURNEY HAS BEEN RUN/);
+  assert.match(approval, /HELPWARD_REFUND_SEND === "on"/);
+  assert.match(actions, /refundSendingEnabled\(\)/);
+  assert.match(actions, /Approved — and NOT sent\./);
+  // The guard sits before the executor, not after it.
+  assert.ok(actions.indexOf("refundSendingEnabled()") < actions.indexOf("refundCharge({"),
+    "the send switch must be checked before anything reaches the processor");
 });
 
 test("a failed synchronisation is never drawn as zero refunds", () => {
