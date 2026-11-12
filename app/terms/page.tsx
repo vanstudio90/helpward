@@ -51,8 +51,8 @@ const AT_A_GLANCE = [
     body: "Helpward keeps 20% of the subtotal plus a flat $4.50 fee. Tips are 100% the helper's." },
   { icon: HandCoins, title: "Charged on completion",
     body: "Your card is held when a helper accepts and charged when the task is marked complete." },
-  { icon: Ban, title: "No cancellation fee",
-    body: "We don't charge one today, and we won't add one retrospectively to an existing booking." },
+  { icon: Ban, title: "Free to cancel until a Helper accepts",
+    body: "After that it is 10% of the booking, shown to you in dollars before you confirm. Bookings made before this fee existed are never charged it." },
   { icon: Scale, title: "No forced arbitration",
     body: "These Terms don't require arbitration or waive class or collective proceedings." },
 ];
@@ -425,12 +425,20 @@ export default function Terms() {
             </Sub>
             <Sub title="After acceptance, before capture">
               <p>
-                Helpward attempts to cancel the payment authorisation. Your bank determines when
-                the released hold disappears from your balance or statement.
+                A Helper who accepts a job sets that time aside and turns down other work for it.
+                Cancelling after acceptance therefore costs 10% of the booking total. The exact
+                amount is shown to you in dollars on the cancel screen, and nothing is charged
+                until you accept it.
               </p>
-              <Callout tone="good" title="Helpward does not currently apply a cancellation fee">
-                And we will not introduce one retrospectively for a booking made without that fee
-                being clearly disclosed.
+              <p>
+                Only that fee is taken. The rest of the authorisation is released in the same
+                step, so you are never charged the full amount and credited afterwards. Your bank
+                determines when the released hold disappears from your balance or statement.
+              </p>
+              <Callout tone="good" title="Bookings made before this fee existed are never charged it">
+                We said we would not introduce a cancellation fee retrospectively for a booking
+                made without it being clearly disclosed, and we have not: a booking created before
+                this policy was published remains free to cancel, whatever this page says today.
               </Callout>
             </Sub>
             <Sub title="If work has already begun">

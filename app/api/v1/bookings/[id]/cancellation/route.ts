@@ -1,6 +1,6 @@
 import { withBearerAuth } from "@/lib/api/bearer";
-import { voidBookingAuthorization } from "@/lib/payments";
-import { stripeConfigured } from "@/lib/stripe";
+import { cancellationFeeFor } from "@/lib/cancellation";
+import { performCancellation } from "@/lib/cancel-booking";
 
 /*
   Cancelling a booking from the native app.
@@ -29,7 +29,7 @@ export async function GET(request: Request, context: Context) {
   return withBearerAuth(async ({ supabase }) => {
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, status, payment_status, total_cents, currency")
+      .select("id, status, payment_status, total_cents, currency, captured_at, created_at")
       .eq("id", id)
       .maybeSingle();
 
@@ -44,35 +44,44 @@ export async function GET(request: Request, context: Context) {
     }
 
     /*
-      THERE IS NO CANCELLATION FEE, because nothing implements one.
+      THERE IS A CANCELLATION FEE NOW, and this is where the app learns
+      what it is.
 
-      cancel_booking() charges nothing, and the void releases the whole
-      hold. So zero is not a placeholder here — it is what will actually
-      happen to this customer's money.
+      This used to return a hard zero, with a note that the help
+      article already promised "a small cancellation fee may apply".
+      The article and the system disagreed and the system won, because
+      the system is what the customer's card follows. They agree now:
+      a helper who has taken the job is owed something for the slot,
+      and it is 10% of the booking.
 
-      It is returned by the SERVER rather than assumed by the app, so the
-      day a fee policy does exist there is exactly one place to put it and
-      the app cannot keep promising zero.
-
-      NOTE: the help article "cancel-or-reschedule-a-booking" says "a small
-      cancellation fee may apply close to the scheduled time". No code
-      charges one. The article and the system disagree, and the system is
-      what the customer's card will follow.
+      The figure comes from the same function the website uses. The app
+      must show it before cancelling and send it back on the POST,
+      which refuses anything that does not match.
     */
-    const feeCents = 0;
+    const fee = cancellationFeeFor(booking, booking.currency ?? "CAD");
     const holdReleaseCents =
-      booking.payment_status === "authorized" ? booking.total_cents : 0;
+      booking.payment_status === "authorized"
+        ? Math.max(0, (booking.total_cents ?? 0) - fee.cents)
+        : 0;
 
     return Response.json({
-      cancellationFeeCents: feeCents,
-      chargeCents: feeCents,
+      cancellationFeeCents: fee.cents,
+      cancellationFeeRate: fee.rate,
+      chargeCents: fee.cents,
+      /** Show this to the customer verbatim; it is already in money. */
+      explanation: fee.explanation,
+      because: fee.because,
+      /** True when the money is already taken and this is a refund. */
+      alreadyCharged: fee.alreadyCharged,
       holdReleaseCents,
       currency: booking.currency,
       holdExists: booking.payment_status === "authorized",
       // Honest about the part Helpward does not control.
       note: holdReleaseCents > 0
-        ? "We release the hold immediately. How quickly it disappears from your statement is up to your bank."
-        : "No money is being held for this booking, so there is nothing to release.",
+        ? "We release the rest of the hold immediately. How quickly it disappears from your statement is up to your bank."
+        : fee.alreadyCharged
+          ? "This booking has already been charged. The balance is returned to your card."
+          : "No money is being held for this booking, so there is nothing to release.",
     });
   })(request);
 }
@@ -80,46 +89,59 @@ export async function GET(request: Request, context: Context) {
 /** Actually cancel. */
 export async function POST(request: Request, context: Context) {
   const { id } = await context.params;
-  return withBearerAuth(async ({ supabase }) => {
+  return withBearerAuth(async ({ supabase, user }) => {
     let reason: string | null = null;
+    let acceptedFeeCents: number | undefined;
     try {
       const body = await request.json();
       const raw = typeof body?.reason === "string" ? body.reason.trim() : "";
       reason = raw ? raw.slice(0, 200) : null;
+      /*
+        THE APP HAS TO SEND BACK WHAT IT SHOWED. The server checks it
+        against the fee as it stands right now, so a screen left open
+        while the job started cannot authorise yesterday's figure.
+      */
+      if (typeof body?.acceptedFeeCents === "number") {
+        acceptedFeeCents = Math.round(body.acceptedFeeCents);
+      }
     } catch {
       // A cancellation with no body is a cancellation with no reason.
     }
 
-    // Run as the CALLER: cancel_booking checks auth.uid() against the
-    // booking's customer, provider or an admin role itself.
-    const { error } = await supabase.rpc("cancel_booking", {
-      p_booking_id: id,
-      p_reason: reason,
+    const outcome = await performCancellation({
+      supabase, bookingId: id, actorId: user.id, reason, acceptedFeeCents,
     });
-    if (error) {
-      return Response.json({ error: error.message }, { status: 400 });
-    }
 
-    // Release the hold rather than refunding it.
-    let released = false;
-    let releaseProblem: string | null = null;
-    if (stripeConfigured()) {
-      const result = await voidBookingAuthorization(id);
-      released = result.ok;
-      if (!result.ok && result.code !== "already_captured") {
-        console.error("could not void authorization on cancel", id, result);
-        releaseProblem = result.message || "The hold could not be released automatically.";
-      }
-    } else {
-      releaseProblem = null; // Nothing was ever held.
+    if (outcome.needsAcceptance) {
+      /*
+        409, not 400: nothing is wrong with the request, the customer
+        simply has not agreed to this amount yet. The fee goes back so
+        the app can show it and ask.
+      */
+      return Response.json({
+        error: outcome.error
+          ?? "This cancellation has a fee. Show it to the customer and send back acceptedFeeCents to confirm.",
+        cancellationFeeCents: outcome.fee.cents,
+        explanation: outcome.fee.explanation,
+        because: outcome.fee.because,
+      }, { status: 409 });
+    }
+    if (outcome.error) {
+      return Response.json({ error: outcome.error }, { status: 400 });
     }
 
     /*
-      The booking IS cancelled even when the void failed, and the response
-      says so separately. Reporting a failed release as a failed
-      cancellation would invite someone to cancel twice; hiding it would
-      leave money held with nobody aware.
+      The booking IS cancelled even when the money step had a problem,
+      and the response says so separately. Reporting a failed release
+      as a failed cancellation would invite someone to cancel twice;
+      hiding it would leave money moved with nobody aware.
     */
-    return Response.json({ cancelled: true, holdReleased: released, releaseProblem });
+    return Response.json({
+      cancelled: true,
+      cancellationFeeChargedCents: outcome.chargedCents,
+      holdReleasedCents: outcome.holdReleasedCents,
+      holdReleased: outcome.holdReleasedCents > 0,
+      note: outcome.note ?? null,
+    });
   })(request);
 }

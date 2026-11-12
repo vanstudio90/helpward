@@ -267,8 +267,12 @@ export default async function PricingPage() {
         <section className="mt-12 rounded-2xl bg-slate-50 border border-slate-100 p-6 sm:p-8">
           <h2 className="text-lg font-bold text-slate-900">Cancelling, refunds and disputes</h2>
           <p className="mt-2 text-sm text-slate-700">
-            There is no cancellation fee. If something goes wrong with a completed job you have
-            24 hours to open a dispute, and a person at Helpward reviews it.
+            Cancelling before a helper takes the job is free — we only place a hold on your card
+            and never take the money, so the hold is simply released. Once a helper has accepted,
+            cancelling costs 10% of the booking, which goes towards the time they set aside. You
+            are shown the exact amount before you confirm, and nothing is charged until you accept
+            it. If something goes wrong with a completed job you have 24 hours to open a dispute,
+            and a person at Helpward reviews it.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link

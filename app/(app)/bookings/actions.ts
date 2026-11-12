@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
-import { voidBookingAuthorization, chargeTip } from "@/lib/payments";
+import { voidBookingAuthorization, captureBookingPayment, chargeTip } from "@/lib/payments";
+import { cancellationFeeFor } from "@/lib/cancellation";
+import { performCancellation } from "@/lib/cancel-booking";
 import { stripeConfigured } from "@/lib/stripe";
 import { validateHandover, isHandoverEmpty } from "@/lib/handover";
 
@@ -92,32 +94,83 @@ export async function setTipAction(bookingId: string, tipDollars: number) {
   return { success: `Tip of $${tipDollars.toFixed(2)} sent to your helper.` };
 }
 
-export async function cancelBookingAction(bookingId: string, reason?: string) {
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("cancel_booking", {
-    p_booking_id: bookingId,
-    p_reason: reason ?? null,
-  });
-  if (error) return { error: error.message };
+/*
+  WHAT CANCELLING WILL COST, BEFORE IT IS CANCELLED.
 
-  // Release the hold rather than refunding it: releasing means the money is
-  // never taken, where capturing and refunding shows the customer a charge
-  // and then a credit days later for a job that never happened.
-  //
-  // Do NOT describe this to a customer as "never appears on your statement".
-  // We do not control the issuer, and a released authorization commonly keeps
-  // showing as pending for a few days before it drops off.
-  if (stripeConfigured()) {
-    const released = await voidBookingAuthorization(bookingId);
-    if (!released.ok && released.code !== "already_captured") {
-      console.error("could not void authorization on cancel", bookingId, released);
-    }
+  The customer is shown this and has to accept it. It is computed on
+  the server from the booking's own figures — a fee the browser worked
+  out is a fee the browser can change.
+*/
+export async function previewCancellationAction(bookingId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Sign in to cancel a booking." };
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, status, total_cents, captured_at, created_at, currency, customer_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!data) return { error: "Booking not found." };
+
+  const booking = data as unknown as {
+    status: string; total_cents: number | null; captured_at: string | null;
+    created_at: string | null; currency: string | null; customer_id: string | null;
+  };
+  /* The row is readable under RLS by both parties; only the customer
+     is being offered a cancellation here. */
+  if (booking.customer_id !== user.id) return { error: "Not your booking." };
+
+  const fee = cancellationFeeFor(booking, booking.currency ?? "CAD");
+  return { fee };
+}
+
+export async function cancelBookingAction(
+  bookingId: string,
+  reason?: string,
+  /*
+    WHAT THE CUSTOMER SAW AND AGREED TO. Checked against what the
+    server computes at the moment of cancelling: if the two disagree —
+    because the job started, or the price moved — the cancellation is
+    refused and they are shown the new figure rather than charged an
+    amount they never accepted.
+  */
+  acceptedFeeCents?: number,
+) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Sign in to cancel a booking." };
+
+  /* One implementation, shared with the app's cancellation endpoint —
+     a second copy of money-moving logic is a second place for the
+     policy to drift. */
+  const outcome = await performCancellation({
+    supabase, bookingId, actorId: user.id, reason, acceptedFeeCents,
+  });
+
+  if (outcome.needsAcceptance) {
+    return { needsAcceptance: true, fee: outcome.fee, error: outcome.error };
   }
+  if (outcome.error) return { error: outcome.error };
+
+  const charged = outcome.chargedCents;
+  const note = outcome.note;
+  const fee = outcome.fee;
+
   revalidatePath("/bookings");
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/dashboard");
   revalidatePath("/admin/bookings");
-  return { success: "Cancelled." };
+
+  return {
+    success: charged > 0
+      ? `Cancelled. A cancellation fee of ${(charged / 100).toFixed(2)} was charged${
+          fee.alreadyCharged ? " and the rest is being returned" : " and the rest of the hold was released"
+        }.`
+      : "Cancelled.",
+    warning: note,
+  };
 }
 
 /*

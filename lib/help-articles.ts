@@ -95,14 +95,14 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: "bookings",
     title: "Cancelling or rescheduling a booking",
     summary:
-      "Cancel a pending request for free from /bookings. Once a helper has accepted, cancellation policies depend on how close you are to the scheduled time.",
+      "Cancel a pending request for free from /bookings. Once a helper has accepted, cancelling costs 10% of the booking — you are shown the exact amount before you confirm.",
     body: [
       { type: "h2", text: "Before a helper accepts" },
       { type: "p", text:
         "Open /bookings, find the Pending tab, and tap Cancel. There's no fee — your card is only authorised once a helper accepts." },
       { type: "h2", text: "After a helper accepts" },
       { type: "p", text:
-        "Open the booking page and tap Cancel booking. A small cancellation fee may apply close to the scheduled time so we can fairly compensate the helper for time blocked off. The exact policy is shown on the cancel screen before you confirm." },
+        "Open the booking page and tap Cancel booking. If no helper has taken the job yet, cancelling is free — we only hold the money, we never take it, and the hold is released. Once a helper has accepted, cancelling costs 10% of the booking, which goes towards the time they set aside for you. The exact amount is shown in dollars on the cancel screen before you confirm, and nothing is charged until you accept it. A released hold can keep showing as pending on your statement for a few days before it drops off — that part is up to your bank." },
       { type: "h2", text: "Need to reschedule?" },
       { type: "p", text:
         "Right now the cleanest path is to cancel and re-submit. A real reschedule flow ships in the next release." },
