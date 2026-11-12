@@ -53,7 +53,7 @@ test("asking is not sending", () => {
   // Approval marks the row processing first, so a second cannot double-send.
   assert.match(sql, /then 'processing' else 'cancelled'/);
   assert.match(sql, /an approved refund was approved a second time/);
-  assert.match(actions, /THE ONLY PLACE MONEY ACTUALLY MOVES/);
+  assert.match(actions, /ONE SENDING ROUTINE, used by approval and by Send now/);
 });
 
 test("the outcomes are handled where they can be run", () => {
@@ -123,8 +123,8 @@ test("a tip is a different charge and says so", () => {
   assert.match(sql, /refunds_leg_check check \(leg in \('service', 'tip'\)\)/);
   assert.match(sql, /case when p_leg = 'tip' then coalesce\(b\.tip_cents, 0\) else b\.total_cents end/);
   // The executor takes ONE leg and cannot be asked for both.
-  assert.match(actions, /leg: decision\.leg === "tip" \? "tip" : "service"/);
-  assert.match(actions, /amountCents: decision\.amount_cents/);
+  assert.match(actions, /leg: ready\.leg === "tip" \? "tip" : "service"/);
+  assert.match(actions, /amountCents: ready\.amount_cents/);
   assert.doesNotMatch(actions.replace(/\/\*[\s\S]*?\*\//g, ""), /includeTip/);
   // Proven by running it, in tests/refund-execution.test.ts.
   assert.match(execution, /a partial tip refund touches the tip, for exactly the approved amount/);
@@ -438,4 +438,71 @@ test("a send claim refuses the second caller", () => {
   assert.match(sticky, /That is a backstop behind this check, not instead of it/);
   // The lease is handed back once the work is done.
   assert.match(actions, /admin_refund_release_claim/);
+});
+
+/* ------------------------------------------------------------------ */
+/* WHO MAY RELEASE A CLAIM, AND WHAT A REASON PROVES                   */
+/* ------------------------------------------------------------------ */
+
+const claims = readFileSync("supabase/migrations/0123_claim_release_and_outcomes.sql", "utf8");
+
+test("releasing a claim needs an admin and the current token", () => {
+  /*
+    The release function was security definer, granted to
+    `authenticated`, and had no admin check — written as a tidy-up
+    helper for an action that had already checked. An exposed RPC is
+    not protected by the screen that usually calls it.
+  */
+  assert.match(claims, /ANY SIGNED-IN USER COULD RELEASE A SEND CLAIM/);
+  assert.match(claims, /The screen is not the check/);
+  assert.match(claims, /a caller with no admin claim released a send claim/);
+  // Fenced on the token, so an expired sender cannot clear a newer lease.
+  assert.match(claims, /where id = p_refund and send_claim_token = p_token/);
+  assert.match(claims, /an expired sender released a newer sender''s lease/);
+  // No single-argument release survives.
+  assert.match(claims, /drop function if exists public\.admin_refund_release_claim\(uuid\)/);
+});
+
+test("the lease is handed back only when the outcome is settled", () => {
+  /*
+    Releasing unconditionally — including after a recording failure or
+    an unknown processor response — made an uncertain operation
+    immediately sendable again.
+  */
+  assert.match(actions, /THE LEASE IS GIVEN BACK ONLY WHEN THE OUTCOME IS SETTLED/);
+  assert.match(actions, /if \(outcome\.ok\) \{\s*\n\s*await supabase\.rpc\("admin_refund_release_claim"/);
+  assert.match(actions, /p_token: ready\.claim_token/);
+});
+
+test("approving and Send now take the same claim", () => {
+  // The approve path used to reach the processor with no claim at all.
+  assert.match(actions, /APPROVING AND SENDING TAKES THE SAME CLAIM AS "SEND NOW"/);
+  assert.match(actions, /async function sendClaimedRefund/);
+  const sends = actions.match(/refundCharge\(\{/g) ?? [];
+  assert.equal(sends.length, 1, "there is one place that sends, used by both paths");
+});
+
+test("identity and payment outcome resolve separately", () => {
+  /*
+    0122 made clearing a quarantine also clear needs_reconciliation.
+    A row can have a wrong-identity event AND an unknown outcome, and
+    a note saying "the outcome is still unknown" unblocked the booking
+    anyway.
+  */
+  assert.match(claims, /THIS CLEARS A QUARANTINE AND NOTHING ELSE/);
+  assert.match(claims, /resolving an identity problem erased an unresolved payment outcome/);
+  // Resolving an outcome means recording what was found, not a sentence.
+  assert.match(claims, /create or replace function public\.admin_refund_resolve_unknown/);
+  assert.match(claims, /A refund that was taken has a processor id/);
+  assert.match(claims, /an outcome was resolved as refunded with no processor id/);
+  assert.match(claims, /the processor id found during reconciliation was not recorded/);
+});
+
+test("approval blocks on the same predicate as request and send", () => {
+  assert.match(claims, /APPROVAL WAS LEFT BEHIND/);
+  assert.match(claims, /v_blocked := public\.booking_refunds_blocked\(v_r\.booking_id\)/);
+  assert.match(claims, /a refund was approved on a booking with an unresolved quarantine/);
+  // A block stops money leaving; it does not trap the queue.
+  assert.match(claims, /DECLINING IS ALWAYS ALLOWED/);
+  assert.match(claims, /a decline was refused on a blocked booking/);
 });

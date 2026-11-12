@@ -126,21 +126,49 @@ export async function decideRefundAction(
   }
 
   /*
-    THE ONLY PLACE MONEY ACTUALLY MOVES. One named charge, the exact
-    amount that was approved, and the refund request's own id as the
-    idempotency key — so a retry of this approval can never become a
-    second refund.
+    APPROVING AND SENDING TAKES THE SAME CLAIM AS "SEND NOW".
+
+    This path used to go straight from the decision to the processor
+    with no claim at all, so an operator pressing Send now on another
+    screen could be sending the same refund at the same moment. The
+    decision transition is atomic, but the SEND that follows it was
+    not fenced by anything.
   */
+  return sendClaimedRefund(supabase, refundId, decision.absorb_helper_share);
+}
+
+/*
+  ONE SENDING ROUTINE, used by approval and by Send now.
+
+  It claims the row (which re-checks the booking-wide block, the
+  balance and the quarantine), sends exactly the approved amount on
+  exactly the approved charge, records what came back, and hands the
+  lease back ONLY when the outcome is settled.
+*/
+async function sendClaimedRefund(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  refundId: string,
+  absorbFallback: boolean,
+): Promise<RefundResult> {
+  const { data, error } = await supabase.rpc("admin_refund_ready_to_send", {
+    p_refund: refundId,
+  });
+  if (error) return fail(error);
+
+  const ready = data as {
+    booking_id: string; leg: string; amount_cents: number;
+    absorb_helper_share: boolean; claim_token: string;
+  };
+  const absorb = ready.absorb_helper_share ?? absorbFallback;
+
   const sent = await refundCharge({
-    bookingId: decision.booking_id,
-    leg: decision.leg === "tip" ? "tip" : "service",
-    amountCents: decision.amount_cents,
-    absorbHelperShare: decision.absorb_helper_share,
+    bookingId: ready.booking_id,
+    leg: ready.leg === "tip" ? "tip" : "service",
+    amountCents: ready.amount_cents,
+    absorbHelperShare: absorb,
     operationId: refundId,
   });
 
-  /* Every settlement response is checked. See lib/refund-approval.ts
-     for why each outcome gets its own sentence. */
   const outcome = await recordRefundOutcome(
     sent,
     async ({ status, processorId, detail }) => {
@@ -150,8 +178,27 @@ export async function decideRefundAction(
       });
       return { error: settleError ? { message: settleError.message } : null };
     },
-    { refundId, absorbHelperShare: decision.absorb_helper_share },
+    { refundId, absorbHelperShare: absorb },
   );
+
+  /*
+    THE LEASE IS GIVEN BACK ONLY WHEN THE OUTCOME IS SETTLED.
+
+    Releasing it unconditionally — including after a recording failure
+    or an unknown processor response — made an uncertain operation
+    immediately sendable again, which is the opposite of what an
+    uncertain operation calls for. When it is not released it simply
+    expires, which is slow on purpose.
+
+    And the token goes with the release: a sender whose lease has
+    already expired must not clear the lease of whoever picked the
+    work up after it.
+  */
+  if (outcome.ok) {
+    await supabase.rpc("admin_refund_release_claim", {
+      p_refund: refundId, p_token: ready.claim_token,
+    });
+  }
 
   revalidatePath("/admin/refunds");
   revalidatePath("/admin/payments");
@@ -181,45 +228,8 @@ export async function sendApprovedRefundAction(refundId: string): Promise<Refund
       error: "Sending is switched off. This request stays approved and unsent until it is enabled.",
     };
   }
-
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("admin_refund_ready_to_send", { p_refund: refundId });
-  if (error) return fail(error);
-
-  const ready = data as {
-    booking_id: string; leg: string; amount_cents: number; absorb_helper_share: boolean;
-  };
-
-  const sent = await refundCharge({
-    bookingId: ready.booking_id,
-    leg: ready.leg === "tip" ? "tip" : "service",
-    amountCents: ready.amount_cents,
-    absorbHelperShare: ready.absorb_helper_share,
-    operationId: refundId,
-  });
-
-  const outcome = await recordRefundOutcome(
-    sent,
-    async ({ status, processorId, detail }) => {
-      const { error: settleError } = await supabase.rpc("admin_refund_settle", {
-        p_refund: refundId, p_status: status,
-        p_processor_id: processorId, p_detail: detail,
-      });
-      return { error: settleError ? { message: settleError.message } : null };
-    },
-    { refundId, absorbHelperShare: ready.absorb_helper_share },
-  );
-
-  /*
-    THE LEASE IS GIVEN BACK. It expires on its own, but holding it for
-    ten minutes after the work is done means a genuine retry — of a
-    refund the processor refused, say — waits for no reason.
-  */
-  await supabase.rpc("admin_refund_release_claim", { p_refund: refundId });
-
-  revalidatePath("/admin/refunds");
-  revalidatePath("/admin/payments");
-  return outcome;
+  return sendClaimedRefund(supabase, refundId, false);
 }
 
 /*
