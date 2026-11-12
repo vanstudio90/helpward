@@ -378,3 +378,64 @@ test("the events the handler implements are the events it asks for", () => {
   // Each endpoint is judged against its own handler.
   assert.match(check, /WHAT EACH HANDLER ACTUALLY IMPLEMENTS, by the route it lives at/);
 });
+
+/* ------------------------------------------------------------------ */
+/* A QUARANTINE THAT STAYS, AND A CLAIM THAT CLAIMS                    */
+/* ------------------------------------------------------------------ */
+
+const sticky = readFileSync("supabase/migrations/0122_quarantine_and_claims.sql", "utf8");
+
+test("a quarantine is not cleared by the next event", () => {
+  /*
+    The first mismatched event quarantined the row; the very next
+    event matched by processor id and cleared needs_reconciliation,
+    quarantine_note still sitting there unread — and the booking-wide
+    block, which only looked at that flag, let another refund through.
+  */
+  assert.match(sticky, /THE QUARANTINE CLEARED ITSELF/);
+  assert.match(sticky, /A QUARANTINE IS NOT CLEARED BY THE NEXT EVENT/);
+  assert.match(sticky, /when quarantine_note is not null and quarantine_cleared_at is null then true/);
+  assert.match(sticky, /the next event cleared a quarantine nobody resolved/);
+  // Only a person clears it, and only with a reason.
+  assert.match(sticky, /create or replace function public\.admin_refund_clear_quarantine/);
+  assert.match(sticky, /a quarantine was cleared with no explanation/);
+});
+
+test("one predicate decides what blocks a booking", () => {
+  // Request, approve and send cannot disagree about what is blocking.
+  assert.match(sticky, /create or replace function public\.booking_refunds_blocked/);
+  assert.match(sticky, /quarantine_cleared_at is null/);
+  assert.match(sticky, /a refund was requested against a quarantined booking/);
+  assert.match(sticky, /the booking was not blocked by an unresolved quarantine/);
+  // And the screen says so rather than offering a button that fails.
+  const panel2 = readFileSync("components/admin/RefundReviewPanel.tsx", "utf8");
+  assert.match(panel2, /A QUARANTINE BLOCKS EVERYTHING ON THE BOOKING/);
+  assert.match(panel2, /clearRefundQuarantineAction/);
+});
+
+test("identity is checked on the processor-id path too", () => {
+  /*
+    An event naming a different booking, leg and amount but carrying a
+    processor id we already knew updated the stored refund and
+    recomputed the booking the EVENT named. The check existed — in the
+    other branch.
+  */
+  assert.match(sticky, /THE SAME CHECK ON BOTH PATHS/);
+  assert.match(sticky, /NOTHING IS CHANGED AND NOTHING IS RECOMPUTED/);
+  assert.match(sticky, /a processor-id event with the wrong leg\/amount was accepted/);
+  assert.match(sticky, /a mismatched event rewrote the stored refund/);
+});
+
+test("a send claim refuses the second caller", () => {
+  assert.match(sticky, /THE CLAIM\. Bumping updated_at claimed nothing/);
+  assert.match(sticky, /send_claim_token/);
+  assert.match(sticky, /errcode = 'HW143'/);
+  assert.match(sticky, /a second caller was also told to send the same refund/);
+  // It expires, so a crashed sender does not block for ever...
+  assert.match(sticky, /IT EXPIRES, because a sender that crashed/);
+  assert.match(sticky, /a re-claim reused the old token/);
+  // ...and idempotency is named as the backstop it is, not the design.
+  assert.match(sticky, /That is a backstop behind this check, not instead of it/);
+  // The lease is handed back once the work is done.
+  assert.match(actions, /admin_refund_release_claim/);
+});

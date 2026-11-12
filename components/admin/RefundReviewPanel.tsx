@@ -7,7 +7,8 @@ import {
   X, ExternalLink, Info, AlertTriangle, Send, Save, CheckCircle2, History, Lock,
 } from "lucide-react";
 import {
-  decideRefundAction, sendApprovedRefundAction, type RefundResult,
+  decideRefundAction, sendApprovedRefundAction, clearRefundQuarantineAction,
+  type RefundResult,
 } from "@/app/(admin)/admin/refunds/actions";
 import type { RefundReview } from "@/lib/data/admin-refunds";
 import {
@@ -337,6 +338,32 @@ export function RefundReviewPanel({
                 Reload this refund and start from what is recorded now
               </button>
             )}
+          </div>
+        )}
+
+        {/*
+          A QUARANTINE BLOCKS EVERYTHING ON THE BOOKING until a person
+          resolves it. It used to clear itself on the next event, which
+          meant the protection expired without anybody looking.
+        */}
+        {review.quarantine && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+            <p className="text-[12px] font-semibold text-amber-900">
+              A processor event disagreed with this record
+            </p>
+            <p className="text-[11px] text-amber-800 mt-0.5">{review.quarantine}</p>
+            <button type="button"
+              disabled={sample || busy !== null}
+              onClick={() => {
+                const why = window.prompt(
+                  "What did you check at the processor, and what did you find? This is recorded with your name, and it unblocks every refund on this booking.",
+                );
+                if (why === null) return;
+                void run("quarantine", () => clearRefundQuarantineAction(review.id_uuid, why));
+              }}
+              className="mt-1.5 text-[11px] font-semibold text-amber-900 underline underline-offset-2 disabled:no-underline disabled:text-slate-400">
+              {busy === "quarantine" ? "Recording…" : "I have checked the processor — resolve this"}
+            </button>
           </div>
         )}
 

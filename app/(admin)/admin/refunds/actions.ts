@@ -53,6 +53,10 @@ function fail(error: { message?: string; code?: string } | null): RefundResult {
     case "HW134": case "HW136": case "HW137":
       return { ok: false, error: message };
     case "HW135": return { ok: false, error: "That refund request no longer exists. Reload the queue." };
+    case "HW139": return { ok: false, error: message };
+    case "HW141": return { ok: false, error: message };
+    case "HW143": return { ok: false, error: message };
+    case "HW144": return { ok: false, error: "There is no open quarantine on this refund." };
     default: return { ok: false, error: error?.message ?? "The refund could not be recorded." };
   }
 }
@@ -206,7 +210,39 @@ export async function sendApprovedRefundAction(refundId: string): Promise<Refund
     { refundId, absorbHelperShare: ready.absorb_helper_share },
   );
 
+  /*
+    THE LEASE IS GIVEN BACK. It expires on its own, but holding it for
+    ten minutes after the work is done means a genuine retry — of a
+    refund the processor refused, say — waits for no reason.
+  */
+  await supabase.rpc("admin_refund_release_claim", { p_refund: refundId });
+
   revalidatePath("/admin/refunds");
   revalidatePath("/admin/payments");
   return outcome;
+}
+
+/*
+  RESOLVING A QUARANTINE.
+
+  A processor event that disagreed with our record blocks every refund
+  action on that booking, and nothing clears it automatically — not
+  even the next event, which was the gap: learning what the processor
+  thinks does not settle a disagreement about whose money it is. A
+  person checks, says what they found, and that is recorded.
+*/
+export async function clearRefundQuarantineAction(
+  refundId: string, reason: string,
+): Promise<RefundResult> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("admin_refund_clear_quarantine", {
+    p_refund: refundId, p_reason: reason,
+  });
+  if (error) return fail(error);
+  revalidatePath("/admin/refunds");
+  return {
+    ok: true,
+    message: "Quarantine resolved.",
+    detail: (data as { note: string }).note,
+  };
 }

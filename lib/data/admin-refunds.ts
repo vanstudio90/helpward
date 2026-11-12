@@ -80,6 +80,13 @@ export type RefundReview = {
   /* Null until the request has actually been handed to the processor.
      An approved row with no id is one that was never sent. */
   processor_refund_id: string | null;
+  /*
+    A PROCESSOR EVENT THAT DISAGREED WITH THIS RECORD. It blocks every
+    refund action on the booking until a person resolves it, and the
+    panel has to say so rather than leaving a button that will be
+    refused.
+  */
+  quarantine: string | null;
   state: RefundState;
   mode: PaymentMode;
   currency: string;
@@ -200,6 +207,8 @@ function at(iso: string | null): string | null {
 type RefundDb = {
   id: string; booking_id: string; leg: string; amount_cents: number;
   needs_reconciliation?: boolean | null;
+  quarantine_note?: string | null;
+  quarantine_cleared_at?: string | null;
   reason: string | null; status: string; stripe_refund_id: string | null;
   requested_by: string | null; requested_at: string | null;
   decided_by: string | null; decided_at: string | null;
@@ -312,7 +321,8 @@ export async function getRefundsView(opts: {
     db.from("refunds")
       .select("id, booking_id, leg, amount_cents, reason, status, stripe_refund_id," +
         " requested_by, requested_at, decided_by, decided_at, decision_reason," +
-        " internal_note, absorb_helper_share, failure_reason, needs_reconciliation, created_at, updated_at")
+        " internal_note, absorb_helper_share, failure_reason, needs_reconciliation," +
+        " quarantine_note, quarantine_cleared_at, created_at, updated_at")
       .order("updated_at", { ascending: false }).limit(500),
     db.from("bookings")
       .select("id, customer_id, provider_id, service_id, total_cents, tip_cents," +
@@ -482,6 +492,8 @@ export async function getRefundsView(opts: {
 
     const legs = [legFor("service"), ...((b.tip_cents ?? 0) > 0 ? [legFor("tip")] : [])];
     const unknown = refunds.some((r) => r.booking_id === b.id && r.needs_reconciliation);
+    const quarantined = refunds.find(
+      (r) => r.booking_id === b.id && r.quarantine_note && !r.quarantine_cleared_at);
 
     return {
       paymentRef: reference,
@@ -492,6 +504,8 @@ export async function getRefundsView(opts: {
       legs,
       blocked_reason: !b.captured_at
         ? "This booking was never charged, so there is nothing to refund. Releasing a hold is a different act."
+        : quarantined
+          ? `A processor event about this booking disagreed with our record and is quarantined: ${quarantined.quarantine_note} Nothing may be requested against it until somebody resolves that.`
         : unknown
           ? "A refund on this booking has an unknown outcome and is waiting to be reconciled. Nothing further may be requested against it until somebody has checked Stripe."
           : legs.every((l) => l.available_cents === 0)
@@ -527,6 +541,7 @@ export async function getRefundsView(opts: {
       id_uuid: r.id,
       updated_at: r.updated_at,
       processor_refund_id: r.stripe_refund_id,
+      quarantine: r.quarantine_cleared_at ? null : r.quarantine_note ?? null,
       state: (r.status as RefundState),
       mode: modeOfRefund(r),
       currency,
@@ -564,7 +579,9 @@ export async function getRefundsView(opts: {
       },
       effects: refundEffects(r, b),
       blocked_reason:
-        r.status !== "awaiting_review"
+        (!r.quarantine_cleared_at && r.quarantine_note)
+          ? r.quarantine_note
+        : r.status !== "awaiting_review"
           ? `This refund is ${r.status}. There is nothing to decide.`
           : r.amount_cents > Math.max(0, captured - refunded - processing)
             ? "More is requested than is left on this charge once refunds in flight are counted. It would fail at the processor."
