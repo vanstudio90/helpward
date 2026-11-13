@@ -296,3 +296,84 @@ test("a recovery that was not raised is not announced as raised", () => {
   assert.match(shared, /action: "refund\.recovery_failed"/);
   assert.match(shared, /Durable, because the log is not/);
 });
+
+/* ------------------------------------------------------------------ */
+/* A CAPTURE NOBODY HEARD BACK FROM                                    */
+/* ------------------------------------------------------------------ */
+
+const lostCapture = readFileSync("supabase/migrations/0129_lost_capture_and_crew.sql", "utf8");
+const webhook2 = readFileSync("app/api/webhooks/stripe/route.ts", "utf8");
+
+test("a lost capture response is reconciled from the event, in full", () => {
+  /*
+    Stripe took the fee and the response never arrived. The webhook
+    set payment_status and nothing else, so the booking read captured
+    with captured_at null, the fee unrecorded, and a stale "Payment
+    failed" still in payment_error — all three written on the response
+    path that was lost.
+  */
+  assert.match(lostCapture, /A LOST CAPTURE RESPONSE LEFT THE BOOKING HALF-WRITTEN/);
+  assert.match(webhook2, /reconcile_capture_from_event/);
+  assert.doesNotMatch(webhook2, /update\(\{ payment_status: "captured" \}\)/);
+  assert.match(lostCapture, /the capture time was still missing after reconciliation/);
+  assert.match(lostCapture, /the stale payment error survived a successful capture/);
+});
+
+test("the fee recorded is what moved, not what was agreed", () => {
+  /*
+    They are the same number when everything works, and the difference
+    is the entire reason for reconciling.
+  */
+  assert.match(lostCapture, /IT MUST NOT ASSUME THE ACCEPTED AMOUNT WAS WHAT MOVED/);
+  assert.match(lostCapture, /v_fee := p_amount_received/);
+  assert.match(lostCapture, /reconciliation recorded the accepted amount instead of the captured one/);
+  assert.match(lostCapture, /a captured amount differing from the accepted one was recorded as matching/);
+  // And the event takes the processor's received amount, not ours.
+  assert.match(webhook2, /p_amount_received: pi\.amount_received/);
+  // Running it twice changes nothing further.
+  assert.match(lostCapture, /a repeated event rewrote the recorded fee/);
+});
+
+/* ------------------------------------------------------------------ */
+/* THE READ I BROKE                                                    */
+/* ------------------------------------------------------------------ */
+
+test("the people on a job can read their own crew shortfall", () => {
+  /*
+    0127 made crew_shortfall server-only. The native helper app reads
+    it with the helper's own session to warn that the crew is not
+    full, and the Swift catch kept the last value — which starts at
+    zero — so a denied read showed "ready" for a job the server would
+    refuse to start.
+  */
+  assert.match(lostCapture, /I BROKE A HELPER'S OWN SCREEN/);
+  assert.match(lostCapture, /create or replace function public\.my_crew_shortfall/);
+  assert.match(lostCapture, /the helper on the job could not read their own crew shortfall/);
+  assert.match(lostCapture, /somebody not on the job read its crew shortfall/);
+  // The arbitrary-booking reader stays shut.
+  assert.match(lostCapture, /The fix is not to reopen it/);
+
+  const crew = readFileSync(
+    "../helpward-ios/Helpward/Helper/Services/HelperCrewService.swift", "utf8");
+  const active = readFileSync(
+    "../helpward-ios/Helpward/Helper/Views/HelperActiveView.swift", "utf8");
+  assert.match(crew, /rpc\("my_crew_shortfall"/);
+  assert.doesNotMatch(crew, /rpc\("crew_shortfall"/);
+  // A failed read says it does not know, rather than showing ready.
+  assert.match(crew, /A FAILED READ IS NOT A FULL CREW/);
+  assert.match(crew, /shortfallKnown = false/);
+  assert.match(active, /NOT KNOWING IS NOT THE SAME AS BEING READY/);
+});
+
+test("the scanner does not take a comment for a check", () => {
+  /*
+    A function whose only mention of auth.uid() was in a COMMENT
+    passed — the scanner read the explanation and believed it.
+  */
+  assert.match(lostCapture, /THE SCANNER BELIEVED A COMMENT/);
+  assert.match(lostCapture, /regexp_replace/);
+  assert.match(lostCapture, /the scanner was satisfied by a comment/);
+  // And it now says what it is rather than implying a guarantee.
+  assert.match(lostCapture, /A HEURISTIC, not a guarantee/);
+  assert.match(lostCapture, /Cross-account execution tests are what establish that/);
+});

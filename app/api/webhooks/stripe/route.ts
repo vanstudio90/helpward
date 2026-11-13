@@ -219,12 +219,25 @@ export async function POST(req: NextRequest) {
         silently — the booking stayed "authorized" and nothing ever
         came back to correct it.
       */
+      /*
+        THE DURABLE HALF OF A CAPTURE.
+
+        This set payment_status and nothing else, so when a capture
+        response was lost the booking ended up captured with
+        captured_at null, the cancellation fee unrecorded and the
+        stale "Payment failed" still in payment_error — all three of
+        which are written on the response path that was lost. The
+        event is the only thing that arrives in that case, so it has
+        to write the whole record, and it takes the fee from what the
+        processor says it RECEIVED rather than from what we expected.
+      */
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent;
-        const { error } = await admin
-          .from("bookings")
-          .update({ payment_status: "captured" })
-          .eq("stripe_payment_intent_id", pi.id);
+        const { error } = await admin.rpc("reconcile_capture_from_event", {
+          p_intent_id: pi.id,
+          p_amount_received: pi.amount_received ?? pi.amount ?? 0,
+          p_charge_id: typeof pi.latest_charge === "string" ? pi.latest_charge : null,
+        });
         if (error) throw error;
         break;
       }
